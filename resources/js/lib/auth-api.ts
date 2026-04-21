@@ -97,7 +97,7 @@ async function ensureCsrfCookie() {
     });
 }
 
-function getStoredToken(): string | null {
+export function getStoredToken(): string | null {
     if (typeof window === 'undefined') {
         return null;
     }

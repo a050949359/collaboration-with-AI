@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 import AuthShell from '../../layouts/AuthShell.vue';
 import { AuthApiError, getAuthApiConfig, loginWithApi } from '../../lib/auth-api';
@@ -16,6 +16,20 @@ const generalError = ref('');
 const successMessage = ref('');
 const fieldErrors = ref<Record<string, string[]>>({});
 const apiHint = computed(() => getAuthApiConfig().loginEndpoint);
+
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('access_token');
+
+    if (!token) {
+        return;
+    }
+
+    const config = getAuthApiConfig();
+    window.localStorage.setItem(config.tokenStorageKey, token);
+    window.history.replaceState({}, document.title, window.location.pathname);
+    window.location.href = '/';
+});
 
 async function submit() {
     generalError.value = '';
@@ -137,7 +151,7 @@ async function submit() {
 
             <div class="mt-6 flex flex-wrap gap-3">
                 <button class="binary-ghost-button" type="button">GitHub</button>
-                <button class="binary-ghost-button" type="button">Google</button>
+                <a class="binary-ghost-button" href="/api/auth/google/redirect">Google</a>
             </div>
         </div>
 

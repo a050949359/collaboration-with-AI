@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
+    'social_auth' => [
+        'frontend_url' => env('FRONTEND_URL'),
+        'redirect_path' => env('SOCIAL_AUTH_REDIRECT_PATH', '/login'),
+    ],
+
 ];
