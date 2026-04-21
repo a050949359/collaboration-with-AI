@@ -1,0 +1,167 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme inline {
+    --font-sans:
+        Inter, ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+    :root {
+        --binary-background: #0b100d;
+        --binary-surface-dim: #0a0f0c;
+        --binary-surface: #0f1511;
+        --binary-surface-lowest: #111813;
+        --binary-surface-low: #15201a;
+        --binary-surface-container: #18241d;
+        --binary-surface-high: #223129;
+        --binary-surface-highest: #2b3b32;
+        --binary-primary: #6bdc9f;
+        --binary-primary-container: #2ca46d;
+        --binary-primary-fixed: #85e7b0;
+        --binary-secondary: #a5d1b4;
+        --binary-tertiary: #ffb3b2;
+        --binary-on-primary-container: #07160e;
+        --binary-outline: rgba(165, 209, 180, 0.45);
+        --binary-outline-variant: rgba(165, 209, 180, 0.15);
+        --binary-text: #dee4dd;
+        --binary-text-muted: #a5d1b4;
+    }
+
+    body {
+        min-height: 100vh;
+        background:
+            radial-gradient(circle at top right, rgba(107, 220, 159, 0.12), transparent 28%),
+            radial-gradient(circle at 20% 80%, rgba(44, 164, 109, 0.16), transparent 24%),
+            linear-gradient(180deg, rgba(11, 16, 13, 0.72), rgba(11, 16, 13, 0.94)),
+            var(--binary-background);
+        color: var(--binary-text);
+    }
+}
+
+@layer components {
+    .binary-page {
+        @apply relative min-h-screen overflow-hidden bg-transparent;
+    }
+
+    .binary-grid {
+        background-image: radial-gradient(rgba(165, 209, 180, 0.1) 1px, transparent 0);
+        background-size: 40px 40px;
+    }
+
+    .binary-shell {
+        @apply relative z-10 flex min-h-screen;
+    }
+
+    .binary-panel {
+        background-color: var(--binary-surface-container);
+    }
+
+    .binary-display {
+        font-family: var(--font-display);
+        letter-spacing: -0.035em;
+    }
+
+    .binary-label {
+        font-family: var(--font-display);
+        letter-spacing: 0.12em;
+    }
+
+    .binary-input {
+        @apply w-full rounded-md border-0 px-4 py-4 text-sm shadow-none outline-none transition;
+        background-color: var(--binary-surface-lowest);
+        color: var(--binary-text);
+        box-shadow: inset 0 -1px 0 rgba(107, 220, 159, 0.12);
+    }
+
+    .binary-input::placeholder {
+        color: rgba(165, 209, 180, 0.34);
+    }
+
+    .binary-input:focus {
+        background-color: var(--binary-surface-low);
+        box-shadow: inset 0 -2px 0 rgba(107, 220, 159, 0.65), 0 0 0 1px rgba(107, 220, 159, 0.08);
+    }
+
+    .binary-button {
+        @apply flex w-full items-center justify-center gap-2 rounded-md px-5 py-4 text-sm font-bold uppercase transition;
+        font-family: var(--font-display);
+        letter-spacing: 0.08em;
+        background: linear-gradient(145deg, var(--binary-primary) 0%, var(--binary-primary-container) 100%);
+        color: var(--binary-on-primary-container);
+    }
+
+    .binary-button:hover {
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22), 0 0 0 4px rgba(107, 220, 159, 0.08);
+    }
+
+    .binary-ghost-button {
+        @apply rounded-full px-4 py-2 text-xs uppercase transition;
+        font-family: var(--font-display);
+        letter-spacing: 0.12em;
+        color: var(--binary-primary);
+        background-color: rgba(24, 36, 29, 0.72);
+    }
+
+    .binary-ghost-button:hover {
+        background-color: rgba(34, 49, 41, 0.92);
+    }
+
+    .binary-glass {
+        background-color: rgba(24, 36, 29, 0.7);
+        backdrop-filter: blur(20px);
+    }
+
+    .binary-chip {
+        @apply rounded-full px-3 py-1;
+        background-color: rgba(165, 209, 180, 0.12);
+        color: var(--binary-secondary);
+    }
+
+    .binary-card {
+        @apply p-8 md:p-10;
+        background-color: var(--binary-surface-container);
+    }
+
+    .binary-card-raised {
+        @apply p-8 md:p-10;
+        background-color: var(--binary-surface-high);
+    }
+
+    .binary-link {
+        @apply transition;
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-decoration-color: transparent;
+        text-underline-offset: 0.35rem;
+    }
+
+    .binary-link:hover {
+        text-decoration-color: var(--binary-primary);
+    }
+
+    .binary-cursor {
+        display: inline-block;
+        width: 8px;
+        height: 1.1em;
+        background-color: var(--binary-primary);
+        vertical-align: middle;
+        animation: binary-blink 1s step-end infinite;
+    }
+}
+
+@keyframes binary-blink {
+    from,
+    to {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}

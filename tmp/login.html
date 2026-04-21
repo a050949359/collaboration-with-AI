@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-Hant"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Inter:wght@300;400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#353534",
+                        "inverse-surface": "#e5e2e1",
+                        "on-primary-container": "#007117",
+                        "error": "#ffb4ab",
+                        "on-error-container": "#ffdad6",
+                        "secondary-container": "#474746",
+                        "tertiary-fixed-dim": "#00daf3",
+                        "on-error": "#690005",
+                        "primary-fixed": "#72ff70",
+                        "on-tertiary": "#00363d",
+                        "on-primary-fixed": "#002203",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "inverse-primary": "#006e16",
+                        "on-secondary": "#313030",
+                        "on-background": "#e5e2e1",
+                        "tertiary-container": "#7fecff",
+                        "on-secondary-fixed-variant": "#474746",
+                        "background": "#131313",
+                        "tertiary": "#ecfcff",
+                        "surface-container-highest": "#353534",
+                        "primary-fixed-dim": "#00e639",
+                        "secondary": "#c8c6c5",
+                        "primary-container": "#00ff41",
+                        "on-secondary-container": "#b7b5b4",
+                        "secondary-fixed": "#e5e2e1",
+                        "tertiary-fixed": "#9cf0ff",
+                        "error-container": "#93000a",
+                        "surface-dim": "#131313",
+                        "on-surface": "#e5e2e1",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-container": "#006b78",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-tint": "#00e639",
+                        "surface-container-low": "#1c1b1b",
+                        "on-primary": "#003907",
+                        "on-tertiary-fixed": "#001f24",
+                        "on-primary-fixed-variant": "#00530e",
+                        "outline-variant": "#3b4b37",
+                        "surface-container": "#201f1f",
+                        "on-tertiary-fixed-variant": "#004f58",
+                        "outline": "#84967e",
+                        "surface": "#131313",
+                        "on-surface-variant": "#b9ccb2",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-bright": "#3a3939",
+                        "primary": "#ebffe2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .terminal-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.2em;
+            background-color: #00ff41;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        input:focus + span.material-symbols-outlined {
+            color: #00ff41;
+        }
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus {
+            -webkit-text-fill-color: #ebffe2;
+            -webkit-box-shadow: 0 0 0px 1000px #1c1b1b inset;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen flex items-center justify-center selection:bg-primary-container selection:text-on-primary-container">
+<div class="w-full max-w-md px-6">
+<!-- Logo/Header Anchor -->
+<div class="mb-12 text-center md:text-left">
+<h1 class="font-headline text-3xl font-black tracking-tighter text-primary-container uppercase">
+                BINARY_EDITORIAL
+            </h1>
+<div class="mt-2 flex items-center justify-center md:justify-start gap-2">
+<span class="text-outline font-label text-xs tracking-widest uppercase">&gt; 系統存取要求</span>
+<span class="terminal-cursor"></span>
+</div>
+</div>
+<!-- Login Container -->
+<div class="bg-surface-container-low p-8 shadow-none border-0 relative overflow-hidden">
+<!-- Subtle Tonal Accent -->
+<div class="absolute top-0 left-0 w-1 h-full bg-primary-container"></div>
+<form action="#" class="space-y-8">
+<!-- Username Field -->
+<div class="space-y-2">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-outline block" for="username">
+                        用戶識別名 / USERNAME
+                    </label>
+<div class="relative">
+<input class="w-full bg-transparent border-0 border-b border-outline-variant py-3 px-0 text-primary focus:ring-0 focus:border-primary-container transition-all placeholder:text-surface-variant font-mono text-sm" id="username" name="username" placeholder="root@terminal" required="" type="text"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="font-label text-xs font-bold uppercase tracking-widest text-outline block" for="password">
+                            存取金鑰 / ACCESS_KEY
+                        </label>
+<a class="font-label text-[10px] uppercase text-outline hover:text-primary transition-colors tracking-tighter" href="#">
+                            忘記密碼?
+                        </a>
+</div>
+<div class="relative">
+<input class="w-full bg-transparent border-0 border-b border-outline-variant py-3 px-0 text-primary focus:ring-0 focus:border-primary-container transition-all placeholder:text-surface-variant font-mono text-sm" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+</div>
+</div>
+<!-- Action Button -->
+<div class="pt-4">
+<button class="w-full bg-primary-container text-on-primary-container font-headline font-black uppercase tracking-tighter py-4 text-sm flex items-center justify-center gap-2 group transition-all hover:bg-primary-fixed active:scale-[0.98]" type="submit">
+                        驗證並登入
+                        <span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</form>
+<!-- Metadata/Footer inside Card -->
+<div class="mt-8 pt-8 border-t border-outline-variant/10 flex flex-col gap-4">
+<div class="flex items-center justify-between text-[10px] font-label text-outline uppercase tracking-widest">
+<span>狀態: 待命</span>
+<span>版本: 2.0.4-LTS</span>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<span class="text-outline">沒有帳號？</span>
+<a class="text-primary font-bold hover:underline decoration-dotted transition-all" href="#">註冊新節點</a>
+</div>
+</div>
+</div>
+<!-- System Notice -->
+<div class="mt-12 opacity-40">
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-outline" data-icon="security">security</span>
+<p class="text-[10px] font-label leading-relaxed text-outline uppercase tracking-tight">
+                    警告：此系統僅供授權人員使用。所有存取嘗試均已被記錄。
+                    <br/>
+                    UNAUTHORIZED ACCESS IS STRICTLY PROHIBITED.
+                </p>
+</div>
+</div>
+</div>
+<!-- Background Decorative Elements (Organic Brutalism style) -->
+<div class="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+<div class="absolute top-0 right-0 w-[40vw] h-[40vw] bg-primary-container/5 blur-[120px]"></div>
+<div class="absolute bottom-0 left-0 w-[30vw] h-[30vw] bg-surface-container-highest/10 blur-[80px]"></div>
+<!-- Minimal Grid Texture Simulation -->
+<div class="absolute inset-0 opacity-[0.03]" style="background-image: radial-gradient(#84967e 1px, transparent 0); background-size: 40px 40px;"></div>
+</div>
+</body></html>

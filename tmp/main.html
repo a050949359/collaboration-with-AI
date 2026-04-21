@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-Hant"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BINARY_EDITORIAL | 後端開發者作品集</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#353534",
+                        "inverse-surface": "#e5e2e1",
+                        "on-primary-container": "#007117",
+                        "error": "#ffb4ab",
+                        "on-error-container": "#ffdad6",
+                        "secondary-container": "#474746",
+                        "tertiary-fixed-dim": "#00daf3",
+                        "on-error": "#690005",
+                        "primary-fixed": "#72ff70",
+                        "on-tertiary": "#00363d",
+                        "on-primary-fixed": "#002203",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "inverse-primary": "#006e16",
+                        "on-secondary": "#313030",
+                        "on-background": "#e5e2e1",
+                        "tertiary-container": "#7fecff",
+                        "on-secondary-fixed-variant": "#474746",
+                        "background": "#131313",
+                        "tertiary": "#ecfcff",
+                        "surface-container-highest": "#353534",
+                        "primary-fixed-dim": "#00e639",
+                        "secondary": "#c8c6c5",
+                        "primary-container": "#00ff41",
+                        "on-secondary-container": "#b7b5b4",
+                        "secondary-fixed": "#e5e2e1",
+                        "tertiary-fixed": "#9cf0ff",
+                        "error-container": "#93000a",
+                        "surface-dim": "#131313",
+                        "on-surface": "#e5e2e1",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-container": "#006b78",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-tint": "#00e639",
+                        "surface-container-low": "#1c1b1b",
+                        "on-primary": "#003907",
+                        "on-tertiary-fixed": "#001f24",
+                        "on-primary-fixed-variant": "#00530e",
+                        "outline-variant": "#3b4b37",
+                        "surface-container": "#201f1f",
+                        "on-tertiary-fixed-variant": "#004f58",
+                        "outline": "#84967e",
+                        "surface": "#131313",
+                        "on-surface-variant": "#b9ccb2",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-bright": "#3a3939",
+                        "primary": "#ebffe2"
+                    },
+                    "borderRadius": {
+                        "none": "0px",
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "0px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Space Grotesk", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #131313;
+            color: #e5e2e1;
+            font-family: 'Inter', sans-serif;
+        }
+        .terminal-cursor::after {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background-color: #00FF41;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .text-phosphor {
+            color: #00FF41;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 right-0 z-50 bg-[#131313]/70 backdrop-blur-xl transition-transform duration-75">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
+<div class="text-xl font-black text-[#00FF41] tracking-tighter font-['Space_Grotesk'] uppercase">
+                BINARY_EDITORIAL
+            </div>
+<div class="hidden md:flex gap-8 items-center font-['Space_Grotesk'] uppercase tracking-tight">
+<a class="text-[#84967e] hover:text-[#ebffe2] transition-colors" href="#projects">Projects</a>
+<a class="text-[#84967e] hover:text-[#ebffe2] transition-colors" href="#articles">Articles</a>
+<a class="text-[#00FF41] border-b-2 border-[#00FF41] pb-1" href="#about">About</a>
+</div>
+<button class="bg-primary-container text-on-primary-container font-['Space_Grotesk'] uppercase text-xs font-bold px-6 py-2 transition-transform duration-75 active:scale-95">
+                Connect
+            </button>
+</div>
+</nav>
+<main class="pt-24">
+<!-- Hero Section -->
+<section class="px-8 max-w-screen-2xl mx-auto py-20 md:py-32 grid grid-cols-1 md:grid-cols-12 gap-8" id="about">
+<div class="md:col-span-8">
+<div class="bg-surface-container-low inline-block px-3 py-1 mb-6">
+<span class="font-label text-xs tracking-widest text-primary-container uppercase">&gt; SYS_INITIALIZED</span>
+</div>
+<h1 class="font-headline text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] mb-8">
+                    HI, I'M A <br/>
+<span class="text-phosphor">BACKEND</span><br/>
+                    DEVELOPER
+                </h1>
+<p class="font-body text-xl md:text-2xl text-on-surface-variant max-w-2xl leading-relaxed">
+                    專注於建構高性能、高併發的分佈式系統。透過簡潔的架構與嚴謹的代碼，將複雜的數據邏輯轉化為極致的後端體驗。
+                </p>
+</div>
+<div class="md:col-span-4 flex flex-col justify-end">
+<div class="bg-surface-container p-6 space-y-4">
+<div class="flex justify-between items-end">
+<span class="font-label text-[10px] text-outline uppercase tracking-widest">Stack.info</span>
+<span class="material-symbols-outlined text-phosphor" data-icon="terminal">terminal</span>
+</div>
+<div class="space-y-2 font-label text-sm">
+<div class="flex justify-between border-b border-outline/10 pb-2">
+<span class="text-on-surface-variant">Language</span>
+<span class="text-primary">Go, Rust, TypeScript</span>
+</div>
+<div class="flex justify-between border-b border-outline/10 pb-2">
+<span class="text-on-surface-variant">Database</span>
+<span class="text-primary">PostgreSQL, Redis</span>
+</div>
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Infra</span>
+<span class="text-primary">K8s, Docker, AWS</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Featured Projects Section -->
+<section class="bg-surface-container-lowest py-24 px-8" id="projects">
+<div class="max-w-screen-2xl mx-auto">
+<div class="flex flex-col md:flex-row justify-between items-baseline mb-16 gap-4">
+<h2 class="font-headline text-4xl md:text-6xl font-black uppercase tracking-tighter">Featured_Projects</h2>
+<div class="font-label text-sm text-outline uppercase tracking-[0.2em]">&gt; VIEW_ALL_REPOSITORY</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-px bg-outline/10">
+<!-- Project 01: High Contrast Bento Card -->
+<div class="md:col-span-8 bg-surface-container-low p-8 group hover:bg-surface-container transition-colors relative overflow-hidden">
+<div class="relative z-10">
+<span class="font-label text-xs text-phosphor mb-4 block">01 / ARCHITECTURE</span>
+<h3 class="font-headline text-3xl font-bold mb-4 uppercase">Distributed Event Mesh</h3>
+<p class="font-body text-on-surface-variant max-w-lg mb-8 leading-relaxed">
+                                基於 NATS 與 Go 開發的異步事件驅動架構，支援每秒 500k+ 訊息吞吐量，實現跨雲端環境的極低延遲數據同步。
+                            </p>
+<div class="flex gap-2">
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-1 uppercase font-label">&gt; Go</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-1 uppercase font-label">&gt; NATS</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-1 uppercase font-label">&gt; gRPC</span>
+</div>
+</div>
+<div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-30 transition-opacity">
+<span class="material-symbols-outlined text-[120px]" data-icon="hub">hub</span>
+</div>
+</div>
+<!-- Project 02: Vertical Bento Card -->
+<div class="md:col-span-4 bg-surface-container-high p-8 group hover:bg-surface-container-highest transition-colors">
+<span class="font-label text-xs text-phosphor mb-4 block">02 / DATABASE</span>
+<h3 class="font-headline text-3xl font-bold mb-4 uppercase">Sharding Proxy</h3>
+<p class="font-body text-on-surface-variant mb-12 leading-relaxed">
+                            自動化的資料庫分庫分表代理層，解決水平擴展瓶頸。
+                        </p>
+<div class="mt-auto">
+<img alt="Project detail" class="w-full h-48 object-cover grayscale contrast-125 mb-6" data-alt="Close-up of a server rack with blinking blue and green lights in a dark data center, high-tech industrial aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCr2lB651zq-oStfQIGbcoN6DD_e9YbtJ0JnubIOmZFotR_JNQqYzMVh8RQDKOOUjh8uK7pMnKVDeZU8a5YZmD6xDIPPHEKILWI2cMbv1sp4vLQfC7YjSaSKTYqBukeO-QVx3TGHGOrF21n_o7Tfrp8uHsPjIVHTZ5-kDSdFSYxWhv_R7PpS3x2mKgLNGjZ2DAwy5a3xGn1JonoYd8zScm0N9p9JHA8vky2-M4ygu-E0StB108uiBXL2IXthdJsMLgLLPWwfPk2Tz_8"/>
+<div class="flex gap-2">
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-1 uppercase font-label">&gt; Rust</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-1 uppercase font-label">&gt; PostgreSQL</span>
+</div>
+</div>
+</div>
+<!-- Project 03: Full Width Tech Section -->
+<div class="md:col-span-12 bg-surface-container-low p-12 border-t border-outline/5 flex flex-col md:flex-row gap-12 items-center">
+<div class="w-full md:w-1/2">
+<span class="font-label text-xs text-phosphor mb-4 block">03 / SECURITY</span>
+<h3 class="font-headline text-3xl md:text-5xl font-bold mb-6 uppercase">Auth-Shield Zero Trust</h3>
+<p class="font-body text-on-surface-variant text-lg leading-relaxed mb-8">
+                                實現基於身份的存取控制系統，結合 OIDC 與自研授權引擎，確保微服務架構中的每一層請求都經過驗證與授權。
+                            </p>
+<button class="outline outline-1 outline-outline/20 text-primary px-8 py-3 font-label text-xs uppercase hover:bg-primary-container hover:text-on-primary-container transition-all">
+                                [ Execute_Analysis ]
+                            </button>
+</div>
+<div class="w-full md:w-1/2 bg-surface-container-lowest p-6 font-label text-sm border-l-4 border-phosphor">
+<div class="flex gap-4 mb-2">
+<span class="text-outline">01</span>
+<span class="text-primary-container">func ValidateIdentity(ctx context.Context) {</span>
+</div>
+<div class="flex gap-4 mb-2">
+<span class="text-outline">02</span>
+<span class="pl-4 text-on-surface">token := ctx.Value("auth_token")</span>
+</div>
+<div class="flex gap-4 mb-2">
+<span class="text-outline">03</span>
+<span class="pl-4 text-on-surface-variant">if token == nil { return ErrUnauthorized }</span>
+</div>
+<div class="flex gap-4 mb-2">
+<span class="text-outline">04</span>
+<span class="pl-4 text-phosphor">// Initializing Zero-Trust Check</span>
+</div>
+<div class="flex gap-4">
+<span class="text-outline">05</span>
+<span class="pl-4 text-primary-container">return Engine.Verify(token)</span>
+</div>
+<div class="flex gap-4 mt-2">
+<span class="text-outline">06</span>
+<span class="text-primary-container">}</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Articles Section -->
+<section class="px-8 max-w-screen-2xl mx-auto py-24" id="articles">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-12">
+<div class="md:col-span-4">
+<h2 class="font-headline text-4xl md:text-6xl font-black uppercase tracking-tighter sticky top-32">
+                        Latest<br/>Articles
+                    </h2>
+</div>
+<div class="md:col-span-8 space-y-12">
+<!-- Article 1 -->
+<article class="group cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label text-xs text-outline uppercase tracking-widest">2024.11.14 / TECH_LOG</span>
+<span class="material-symbols-outlined text-outline group-hover:text-phosphor transition-colors" data-icon="north_east">north_east</span>
+</div>
+<h3 class="font-headline text-3xl font-bold uppercase mb-4 leading-tight group-hover:text-primary-container transition-colors">
+                            深入解析 Go 語言的高併發調度機制與 GC 優化實踐
+                        </h3>
+<p class="font-body text-on-surface-variant leading-relaxed mb-6">
+                            探討 GPM 調度模型在處理大規模長連接時的表現，以及如何透過 pprof 進行內存洩漏定位與優化。
+                        </p>
+<div class="flex gap-4 font-label text-[10px] uppercase text-outline">
+<span>#RUNTIME</span>
+<span>#OPTIMIZATION</span>
+<span>#GO</span>
+</div>
+</article>
+<!-- Article 2 -->
+<div class="h-px bg-outline/10"></div>
+<article class="group cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label text-xs text-outline uppercase tracking-widest">2024.10.28 / ARCHITECTURE</span>
+<span class="material-symbols-outlined text-outline group-hover:text-phosphor transition-colors" data-icon="north_east">north_east</span>
+</div>
+<h3 class="font-headline text-3xl font-bold uppercase mb-4 leading-tight group-hover:text-primary-container transition-colors">
+                            為什麼在 2024 年你應該考慮將核心邏輯遷移至 Rust
+                        </h3>
+<p class="font-body text-on-surface-variant leading-relaxed mb-6">
+                            從內存安全與執行效率的角度出發，分析 Rust 在後端關鍵服務中的落地應用價值。
+                        </p>
+<div class="flex gap-4 font-label text-[10px] uppercase text-outline">
+<span>#RUST</span>
+<span>#SYSTEMS_DESIGN</span>
+<span>#BACKEND</span>
+</div>
+</article>
+<!-- Article 3 -->
+<div class="h-px bg-outline/10"></div>
+<article class="group cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label text-xs text-outline uppercase tracking-widest">2024.10.05 / INFRA</span>
+<span class="material-symbols-outlined text-outline group-hover:text-phosphor transition-colors" data-icon="north_east">north_east</span>
+</div>
+<h3 class="font-headline text-3xl font-bold uppercase mb-4 leading-tight group-hover:text-primary-container transition-colors">
+                            Kubernetes 控制器模式：從原理到自定義 Operator 開發
+                        </h3>
+<p class="font-body text-on-surface-variant leading-relaxed mb-6">
+                            理解 Reconcile Loop 的核心邏輯，並分享如何透過 Kubebuilder 開發高效的資源管理工具。
+                        </p>
+<div class="flex gap-4 font-label text-[10px] uppercase text-outline">
+<span>#K8S</span>
+<span>#OPERATOR</span>
+<span>#CLOUD_NATIVE</span>
+</div>
+</article>
+</div>
+</div>
+</section>
+<!-- Newsletter / Contact CTA -->
+<section class="bg-primary-container py-24">
+<div class="max-w-screen-2xl mx-auto px-8 text-on-primary-container flex flex-col items-center text-center">
+<span class="font-label text-xs uppercase tracking-[0.4em] mb-8">Ready to sync?</span>
+<h2 class="font-headline text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none mb-12">
+                    START_A_<br/>NEW_MODULE
+                </h2>
+<div class="w-full max-w-xl">
+<div class="relative group">
+<input class="w-full bg-transparent border-b-2 border-on-primary-container py-4 font-label text-lg focus:outline-none placeholder:text-on-primary-container/40" placeholder="ENTER_EMAIL_ADDRESS" type="email"/>
+<button class="absolute right-0 bottom-4 font-label font-bold uppercase tracking-widest hover:translate-x-2 transition-transform">
+                            Subscribe
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-[#0e0e0e] flex flex-col md:flex-row justify-between items-center px-8 w-full border-t border-[#3b4b37]/20 py-12">
+<div class="mb-8 md:mb-0">
+<div class="text-sm font-bold text-[#84967e] font-mono uppercase tracking-widest mb-2">BINARY_EDITORIAL</div>
+<div class="text-[#84967e] font-mono text-xs uppercase tracking-widest">© 2024 TERMINAL_SYS. ALL RIGHTS RESERVED.</div>
+</div>
+<div class="flex gap-12 font-mono text-xs uppercase tracking-widest">
+<a class="text-[#84967e] hover:text-[#00FF41] underline decoration-dotted transition-opacity opacity-80 hover:opacity-100" href="#">Github</a>
+<a class="text-[#84967e] hover:text-[#00FF41] underline decoration-dotted transition-opacity opacity-80 hover:opacity-100" href="#">LinkedIn</a>
+<a class="text-[#84967e] hover:text-[#00FF41] underline decoration-dotted transition-opacity opacity-80 hover:opacity-100" href="#">Source</a>
+</div>
+</footer>
+</body></html>

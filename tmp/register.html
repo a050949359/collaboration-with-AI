@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-Hant"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#353534",
+                        "inverse-surface": "#e5e2e1",
+                        "on-primary-container": "#007117",
+                        "error": "#ffb4ab",
+                        "on-error-container": "#ffdad6",
+                        "secondary-container": "#474746",
+                        "tertiary-fixed-dim": "#00daf3",
+                        "on-error": "#690005",
+                        "primary-fixed": "#72ff70",
+                        "on-tertiary": "#00363d",
+                        "on-primary-fixed": "#002203",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "inverse-primary": "#006e16",
+                        "on-secondary": "#313030",
+                        "on-background": "#e5e2e1",
+                        "tertiary-container": "#7fecff",
+                        "on-secondary-fixed-variant": "#474746",
+                        "background": "#131313",
+                        "tertiary": "#ecfcff",
+                        "surface-container-highest": "#353534",
+                        "primary-fixed-dim": "#00e639",
+                        "secondary": "#c8c6c5",
+                        "primary-container": "#00ff41",
+                        "on-secondary-container": "#b7b5b4",
+                        "secondary-fixed": "#e5e2e1",
+                        "tertiary-fixed": "#9cf0ff",
+                        "error-container": "#93000a",
+                        "surface-dim": "#131313",
+                        "on-surface": "#e5e2e1",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-container": "#006b78",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-tint": "#00e639",
+                        "surface-container-low": "#1c1b1b",
+                        "on-primary": "#003907",
+                        "on-tertiary-fixed": "#001f24",
+                        "on-primary-fixed-variant": "#00530e",
+                        "outline-variant": "#3b4b37",
+                        "surface-container": "#201f1f",
+                        "on-tertiary-fixed-variant": "#004f58",
+                        "outline": "#84967e",
+                        "surface": "#131313",
+                        "on-surface-variant": "#b9ccb2",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-bright": "#3a3939",
+                        "primary": "#ebffe2"
+                    },
+                    "borderRadius": {
+                        "none": "0px",
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "0px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Space Grotesk", "monospace"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+        .mono-label { font-family: 'Space Grotesk', monospace; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom Terminal Cursor Effect */
+        .terminal-input:focus + .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.2em;
+            background-color: #00ff41;
+            vertical-align: middle;
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        /* No border radius override for all elements */
+        * { border-radius: 0px !important; }
+    </style>
+</head>
+<body class="bg-background text-on-background selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col">
+<!-- The Shell is suppressed for Transactional Sign-up page per instructions -->
+<main class="flex-grow flex items-stretch min-h-screen">
+<!-- Hero Section: Brutalist Asymmetry -->
+<div class="hidden lg:flex w-1/2 bg-surface-container relative overflow-hidden flex-col justify-between p-16">
+<div class="z-10">
+<div class="text-primary-container mono-label text-sm tracking-[0.2em] mb-8">
+                    &gt; SYSTEM_INITIALIZATION
+                </div>
+<h1 class="text-7xl font-black text-on-surface tracking-tighter leading-none mb-4">
+                    BINARY<br/>EDITORIAL
+                </h1>
+<p class="text-on-surface-variant max-w-sm text-lg leading-relaxed">
+                    加入我們的開發者生態系統。專為構建者設計的純淨、高效、極簡主義空間。
+                </p>
+</div>
+<div class="z-10 mt-auto">
+<div class="flex items-center gap-4 group">
+<div class="w-12 h-1 bg-primary-container transition-all group-hover:w-24"></div>
+<span class="mono-label text-xs uppercase tracking-widest text-outline">v2.0.48_STABLE</span>
+</div>
+</div>
+<!-- Decorative background element (Tonal Transition) -->
+<div class="absolute bottom-0 right-0 w-3/4 h-3/4 bg-surface-container-high opacity-50 translate-x-1/4 translate-y-1/4 rotate-12"></div>
+</div>
+<!-- Form Section -->
+<div class="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16 lg:p-24 bg-background">
+<div class="w-full max-w-md">
+<div class="mb-12">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">terminal</span>
+<span class="mono-label text-xs uppercase tracking-widest text-primary-container">用戶註冊</span>
+</div>
+<h2 class="text-4xl font-bold tracking-tight text-on-surface">創建新帳戶</h2>
+</div>
+<form class="space-y-10">
+<!-- Input Group: Full Name -->
+<div class="relative group">
+<label class="block mono-label text-xs uppercase tracking-widest text-outline group-focus-within:text-primary-container transition-colors mb-2" for="name">
+                            &gt; 全名 / NAME
+                        </label>
+<div class="flex items-center border-b border-outline/20 group-focus-within:border-primary-container transition-colors pb-2">
+<input class="terminal-input w-full bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline/30 px-0 py-1" id="name" name="name" placeholder="輸入您的名稱..." required="" type="text"/>
+<span class="cursor hidden"></span>
+</div>
+</div>
+<!-- Input Group: Email -->
+<div class="relative group">
+<label class="block mono-label text-xs uppercase tracking-widest text-outline group-focus-within:text-primary-container transition-colors mb-2" for="email">
+                            &gt; 電子郵件 / EMAIL
+                        </label>
+<div class="flex items-center border-b border-outline/20 group-focus-within:border-primary-container transition-colors pb-2">
+<input class="terminal-input w-full bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline/30 px-0 py-1" id="email" name="email" placeholder="user@terminal.sys" required="" type="email"/>
+<span class="cursor hidden"></span>
+</div>
+</div>
+<!-- Input Group: Password -->
+<div class="relative group">
+<label class="block mono-label text-xs uppercase tracking-widest text-outline group-focus-within:text-primary-container transition-colors mb-2" for="password">
+                            &gt; 密碼 / PASSWORD
+                        </label>
+<div class="flex items-center border-b border-outline/20 group-focus-within:border-primary-container transition-colors pb-2">
+<input class="terminal-input w-full bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline/30 px-0 py-1" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+<span class="cursor hidden"></span>
+</div>
+</div>
+<!-- Consent / Terms -->
+<div class="flex items-start gap-4">
+<div class="flex items-center h-5">
+<input class="h-4 w-4 bg-surface-container border-outline/20 text-primary-container focus:ring-0 focus:ring-offset-0" id="terms" name="terms" required="" type="checkbox"/>
+</div>
+<div class="text-xs text-on-surface-variant leading-relaxed">
+                            我同意遵守 <a class="text-primary hover:underline decoration-dotted" href="#">服務條款</a> 與 <a class="text-primary hover:underline decoration-dotted" href="#">隱私權政策</a>。系統將自動記錄您的訪問請求。
+                        </div>
+</div>
+<!-- Actions -->
+<div class="pt-4 space-y-6">
+<button class="w-full bg-primary-container text-on-primary-container font-bold py-4 mono-label uppercase tracking-widest hover:bg-primary-fixed transition-all group flex items-center justify-center gap-2" type="submit">
+<span>執行註冊</span>
+<span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<div class="flex items-center justify-between">
+<a class="text-xs mono-label text-outline hover:text-primary transition-colors flex items-center gap-1" href="/login">
+<span class="material-symbols-outlined text-xs">undo</span>
+                                返回登錄界面
+                            </a>
+<div class="flex gap-4">
+<button class="p-2 border border-outline/10 text-on-surface hover:bg-surface-container transition-colors" type="button">
+<img alt="Github Login" class="w-5 h-5 opacity-70" data-alt="minimalist white github logo icon for third party authentication in a terminal themed dark mode UI" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNInuPG4FKk3wwOXOlFzmNSRu0ouW2CJLd2DDjlkRIrpHhVZ9aBkRKSZXAXNDlA7DDONaNd7lvCYECp78cCvAxceeXKR5p7MQfiua815ViQOWTsuusMnNwJFRuTCaBITQXCneDLXArPyewHGcaiU35X-GORQrD_hARdVx5z6kjnBVZczLpwliUgegIhDr4BozbNLQVanuwb-EIzFeHMAQsdx5DUdv8yULR_XW42BAuRXjAEYeIEco5w23T_uMfJycCOszXWzcByumG"/>
+</button>
+<button class="p-2 border border-outline/10 text-on-surface hover:bg-surface-container transition-colors" type="button">
+<img alt="Google Login" class="w-5 h-5 opacity-70" data-alt="minimalist white google G logo icon for third party authentication in a terminal themed dark mode UI" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAglomw1iPpkz5efSgmVt8h4KPqgwp5vyX3uv1xGNDPdTosBFuczDFLmqOlVyoy0Hcdt8lkz6rzr-uUwNNF7z8w70em6brOKh1YNWMMwj_Ko7fosSdiv8qR6-qNr0102HHLC3u9NTZilp1ijIhVMzy64Hkx-j5a7750DsiA0N9Sa4ZkYIU1gI9vXGjmT7CWI6zUvU6fxxLAXMfvLizvwDYHQjfkhfG4l_CBKBI00sCL-11L6w8ngyv13xkgh9yvoGY5xjecvt8afKSo"/>
+</button>
+</div>
+</div>
+</div>
+</form>
+<!-- Footer Metadata for Transactional Screen -->
+<div class="mt-20 pt-8 border-t border-outline/10">
+<p class="mono-label text-[10px] text-outline/40 leading-loose">
+                        CONNECTION_STATUS: SECURE_TLS_1.3<br/>
+                        CLIENT_IP: 192.168.1.1<br/>
+                        © 2024 TERMINAL_SYS. ALL RIGHTS RESERVED.
+                    </p>
+</div>
+</div>
+</div>
+</main>
+<!-- Decorative Texture (Grainy Gradient Overlay) -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay" data-alt="subtle vertical pinstripe texture pattern for added depth and technical aesthetic on dark background" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBTXPN92tYCvKHhbuFIeNmcrSKIeGM91NDe0_mvLzm0DI02c8L51j6ekpeZ6PVttRF6fvKDF9MoWepBe5Qe_FULSKj_9OfjeuRsSCf5gZajGnuQC-biZ5IFuklHxdy_F3KDd9EhTVx8RS5ucCMO1tYlRQhenMg-AxEYB7KWu2wg7B1HfjjKdxcAp5HdTWMAp_Oo-OeQIrW_EeWRHsUPlq7DJjfCmPag4GP5MKd1qQQl4ClDIyZnAzPmnLQoNbk_wkDuG0zZ3yhBAb4z');">
+</div>
+</body></html>
