@@ -60,12 +60,10 @@ class SocialAccountController extends Controller
 
             if (is_string($frontendUrl) && $frontendUrl !== '') {
                 $target = rtrim($frontendUrl, '/').'/'.ltrim((string) $redirectPath, '/');
-                $query = http_build_query([
-                    'access_token' => $token,
-                    'provider' => $provider,
-                ]);
+                $query = http_build_query(['provider' => $provider]);
 
-                return redirect()->away($target.'?'.$query);
+                return redirect()->away($target.'?'.$query)
+                    ->cookie('auth_token', $token, 0, '/', null, app()->isProduction(), true, false, 'Lax');
             }
 
             return response()->json([

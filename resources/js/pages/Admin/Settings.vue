@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
-import { getStoredToken } from '@/lib/auth-api';
 
 const DEFAULTS = {
     site_name: 'BINARY_EDITORIAL',
@@ -16,31 +15,29 @@ const isSaving = ref(false);
 const isLoading = ref(true);
 const successMessage = ref('');
 const errorMessage = ref('');
-
-function getToken(): string | null {
-    return getStoredToken();
-}
+const page = usePage();
 
 onMounted(async () => {
-    const token = getToken();
-    console.log('[Settings] mounted, token:', token ? token.slice(0, 10) + '...' : null);
-    if (!token) {
+    if (!page.props.auth?.user) {
         router.visit('/');
+
         return;
     }
+
     try {
         const res = await fetch('/api/admin/settings', {
-            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
         });
-        console.log('[Settings] API status:', res.status);
+
         if (res.status === 401 || res.status === 403) {
             router.visit('/');
+
             return;
         }
+
         const data = await res.json();
-        console.log('[Settings] API data:', data);
         form.value = { ...DEFAULTS, ...data };
-        console.log('[Settings] form after assign:', form.value);
     } catch {
         errorMessage.value = '載入設定失敗';
     } finally {
@@ -49,9 +46,15 @@ onMounted(async () => {
 });
 
 async function save() {
-    if (isSaving.value) return;
-    const token = getToken();
-    if (!token) { router.visit('/'); return; }
+    if (isSaving.value) {
+return;
+}
+
+    if (!page.props.auth?.user) {
+ router.visit('/');
+
+ return; 
+}
 
     isSaving.value = true;
     successMessage.value = '';
@@ -60,10 +63,10 @@ async function save() {
     try {
         const response = await fetch('/api/admin/settings', {
             method: 'PATCH',
+            credentials: 'include',
             headers: {
                 Accept: 'application/json',
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(form.value),
         });
@@ -72,6 +75,7 @@ async function save() {
 
         if (!response.ok) {
             errorMessage.value = data.message || '儲存失敗';
+
             return;
         }
 

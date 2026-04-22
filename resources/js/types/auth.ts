@@ -10,7 +10,8 @@ export type User = {
 };
 
 export type Auth = {
-    user: User;
+    user: User | null;
+    is_admin: boolean;
 };
 
 export type LoginPayload = {

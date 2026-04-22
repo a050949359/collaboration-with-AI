@@ -2,9 +2,8 @@
 import { Head } from '@inertiajs/vue3';
 import { ref, reactive, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import AppLayout from '../layouts/AppLayout.vue';
 import AirportGlobe from '../components/airports/AirportGlobe.vue';
-import { getStoredToken } from '../lib/auth-api';
+import AppLayout from '../layouts/AppLayout.vue';
 
 const { t } = useI18n();
 
@@ -74,12 +73,6 @@ const typeKeys = [
 const continentKeys = ['AF', 'AN', 'AS', 'EU', 'NA', 'OC', 'SA'] as const;
 
 // ── Helpers ────────────────────────────────────────────────
-function authHeaders(): Record<string, string> {
-    const token = getStoredToken();
-    return token
-        ? { Accept: 'application/json', Authorization: `Bearer ${token}` }
-        : { Accept: 'application/json' };
-}
 
 // ── Airport search ─────────────────────────────────────────
 async function fetchAirports(page = 1) {
@@ -89,16 +82,38 @@ async function fetchAirports(page = 1) {
     const params = new URLSearchParams();
     params.set('page', String(page));
     params.set('per_page', String(filters.per_page));
-    if (filters.search)    params.set('search', filters.search);
-    if (filters.type)      params.set('type', filters.type);
-    if (filters.continent) params.set('continent', filters.continent);
-    if (filters.country)   params.set('country', filters.country.toUpperCase());
-    if (filters.scheduled) params.set('scheduled', filters.scheduled);
+
+    if (filters.search)    {
+params.set('search', filters.search);
+}
+
+    if (filters.type)      {
+params.set('type', filters.type);
+}
+
+    if (filters.continent) {
+params.set('continent', filters.continent);
+}
+
+    if (filters.country)   {
+params.set('country', filters.country.toUpperCase());
+}
+
+    if (filters.scheduled) {
+params.set('scheduled', filters.scheduled);
+}
 
     try {
-        const res = await fetch(`/api/v1/airports?${params}`, { headers: authHeaders() });
+        const res = await fetch(`/api/v1/airports?${params}`, {
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+        });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.message || '查詢失敗');
+
+        if (!res.ok) {
+throw new Error(json.message || '查詢失敗');
+}
+
         airports.value = json.data;
         meta.value = json.meta;
     } catch (e: unknown) {
@@ -110,13 +125,24 @@ async function fetchAirports(page = 1) {
 
 // ── Stats ──────────────────────────────────────────────────
 async function fetchStats() {
-    if (stats.value) return;
+    if (stats.value) {
+return;
+}
+
     isLoadingStats.value = true;
     statsError.value = '';
+
     try {
-        const res = await fetch('/api/v1/airports/stats', { headers: authHeaders() });
+        const res = await fetch('/api/v1/airports/stats', {
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+        });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.message || '統計載入失敗');
+
+        if (!res.ok) {
+throw new Error(json.message || '統計載入失敗');
+}
+
         stats.value = json.data;
     } catch (e: unknown) {
         statsError.value = e instanceof Error ? e.message : '連線失敗';
@@ -127,7 +153,10 @@ async function fetchStats() {
 
 function switchTab(tab: 'search' | 'stats' | 'globe') {
     activeTab.value = tab;
-    if (tab === 'stats') fetchStats();
+
+    if (tab === 'stats') {
+fetchStats();
+}
 }
 
 // ── Computed ───────────────────────────────────────────────
@@ -150,12 +179,7 @@ onMounted(() => fetchAirports());
 <template>
     <Head title="Airports" />
 
-    <AppLayout :nav-links="[
-        { label: 'Projects', href: '/#projects' },
-        { label: 'Articles', href: '/#articles' },
-        { label: 'Airports', href: '/airports', active: true },
-        { label: 'About', href: '/#about' },
-    ]">
+    <AppLayout>
         <main class="pt-24 pb-24">
             <div class="mx-auto max-w-screen-2xl px-6 md:px-8">
 

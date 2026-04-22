@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+
+class AuthTokenFromCookie
+{
+    public function handle(Request $request, Closure $next): mixed
+    {
+        if (!$request->bearerToken()) {
+            $token = $request->cookie('auth_token');
+
+            if ($token && is_string($token)) {
+                $request->headers->set('Authorization', 'Bearer '.$token);
+            }
+        }
+
+        return $next($request);
+    }
+}

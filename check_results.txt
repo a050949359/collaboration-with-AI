@@ -1,0 +1,18 @@
+Lint Check Results:
+- Status: Failed (90 errors)
+- Major Issues:
+  1. Import ordering (import/order): Multiple files have incorrect import sequences.
+  2. Styling/Padding (@stylistic/padding-line-between-statements): Missing blank lines before statements.
+  3. Control structures (curly): Missing braces for 'if' conditions.
+  4. Unused variables (@typescript-eslint/no-unused-vars): Variables 't' and 'props' are defined but unused in AppLayout.vue.
+Note: 88 errors are potentially fixable with 'npm run lint:fix'.
+
+Type Check Results:
+- Status: Failed (17 errors)
+- Major Issues:
+  1. Missing type declarations: 'd3' module lacks declaration file.
+  2. Implicit 'any' types: Multiple parameters in AirportGlobe.vue (d, event, feature) lack types.
+  3. Missing properties: 
+     - 'tokenStorageKey' does not exist on config object in AppLayout.vue.
+     - 'content_error' and 'image_error' do not exist on 'ArticleDetail' type in Generate.vue.
+  4. Type mismatch: 'stackInfo' in Welcome.vue (string[][]) is not assignable to [string, string][] in HeroSection.vue.

@@ -1,6 +1,6 @@
 import { createI18n } from 'vue-i18n';
-import zhTw from './locales/zh-tw';
 import en from './locales/en';
+import zhTw from './locales/zh-tw';
 
 const savedLocale = typeof window !== 'undefined'
     ? (localStorage.getItem('locale') ?? 'zh-tw')

@@ -1,6 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\About\AboutController;
+use App\Http\Controllers\About\ResumeContextController;
+use App\Http\Controllers\Article\ArticleBrowseController;
+use App\Http\Controllers\Article\ArticleEditController;
+use App\Http\Controllers\Article\ArticleGenerationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegistController;
 use App\Http\Controllers\Auth\SocialAccountController;
@@ -9,6 +14,13 @@ use App\Http\Controllers\Airports\AirportController;
 use App\Http\Controllers\Airports\AirportStatsController;
 use App\Http\Controllers\Airports\NearbyAirportController;
 use App\Http\Middleware\EnsureAdmin;
+
+Route::post('/about/ask', [AboutController::class, 'ask'])->middleware('throttle:4,1');
+
+Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
+    Route::get('/about/context', [ResumeContextController::class, 'show']);
+    Route::put('/about/context', [ResumeContextController::class, 'update']);
+});
 
 Route::group(['prefix' => 'auth'], function () {
     Route::post('/register', [RegistController::class, 'register']);
@@ -25,6 +37,21 @@ Route::group(['prefix' => 'auth'], function () {
 Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(function () {
     Route::get('/settings', [SettingsController::class, 'show']);
     Route::patch('/settings', [SettingsController::class, 'update']);
+});
+
+Route::prefix('v1/articles')->group(function () {
+    Route::get('/', [ArticleBrowseController::class, 'publicIndex']);
+    Route::get('/{article}', [ArticleBrowseController::class, 'publicShow']);
+});
+
+Route::middleware('auth:sanctum')->prefix('articles')->group(function () {
+    Route::get('/', [ArticleBrowseController::class, 'authIndex']);
+    Route::post('/', [ArticleGenerationController::class, 'store']);
+    Route::get('/{article}', [ArticleGenerationController::class, 'show']);
+    Route::put('/{article}', [ArticleEditController::class, 'update']);
+    Route::delete('/{article}', [ArticleEditController::class, 'destroy']);
+    Route::post('/{article}/generate-content', [ArticleGenerationController::class, 'generateContent']);
+    Route::post('/{article}/generate-image', [ArticleGenerationController::class, 'generateImage']);
 });
 
 Route::prefix('v1/airports')->group(function () {

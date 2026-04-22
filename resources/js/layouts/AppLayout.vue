@@ -1,24 +1,33 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getAuthApiConfig, logoutWithApi } from '../lib/auth-api';
-import { setLocale, getLocale } from '../i18n';
 
-const { t } = useI18n();
+import { getLocale, setLocale } from '../i18n';
+import { logoutWithApi } from '../lib/auth-api';
+
 const currentLocale = ref(getLocale());
+const { t } = useI18n();
 
-const props = defineProps<{
+defineProps<{
     navLinks?: { label: string; href: string; active?: boolean }[];
 }>();
 
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user);
-const apiUser = ref<null | Record<string, unknown>>(null);
-const effectiveUser = computed(() => currentUser.value ?? apiUser.value);
-const isAdmin = computed(
-    () => !!(page.props.auth?.is_admin || apiUser.value?.role === 'admin'),
-);
+
+const defaultNavLinks = computed(() => {
+    const path = page.url;
+    return [
+        { label: t('articles.nav.projects'), href: '/#projects' },
+        { label: t('articles.nav.articles'), href: '/articles', active: path.startsWith('/articles') },
+        { label: t('articles.nav.airports'), href: '/airports', active: path.startsWith('/airports') },
+        { label: t('articles.nav.about'), href: '/about', active: path.startsWith('/about') },
+        { label: 'LineBot', href: '/linebot', active: path.startsWith('/linebot') },
+    ];
+});
+const effectiveUser = computed(() => currentUser.value);
+const isAdmin = computed(() => !!page.props.auth?.is_admin);
 const isLoggingOut = ref(false);
 
 function toggleLocale() {
@@ -31,26 +40,13 @@ function bindGoogle() {
     window.location.href = '/api/auth/google/redirect';
 }
 
-onMounted(async () => {
-    if (currentUser.value || typeof window === 'undefined') return;
-
-    const config = getAuthApiConfig();
-    const token = window.localStorage.getItem(config.tokenStorageKey);
-    if (!token) return;
-
-    try {
-        const res = await fetch(`${config.baseUrl.replace(/\/$/, '')}/api/auth/me`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) apiUser.value = await res.json();
-    } catch {
-        // keep guest UI
-    }
-});
-
 async function logout() {
-    if (isLoggingOut.value) return;
+    if (isLoggingOut.value) {
+return;
+}
+
     isLoggingOut.value = true;
+
     try {
         await logoutWithApi();
         router.visit('/', { replace: true });
@@ -81,7 +77,7 @@ async function logout() {
                 <div class="hidden items-center gap-8 binary-label text-xs uppercase text-[var(--binary-outline)] md:flex">
                     <slot name="nav-links">
                         <a
-                            v-for="link in (navLinks ?? [])"
+                            v-for="link in (navLinks ?? defaultNavLinks)"
                             :key="link.href"
                             :href="link.href"
                             class="binary-link hover:text-[var(--binary-primary)]"
@@ -129,14 +125,14 @@ async function logout() {
                                     class="w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-text)] transition hover:bg-[var(--binary-surface-container)]"
                                     @click="bindGoogle"
                                 >
-                                    綁定 Google
+                                    {{ t('layout.bind_google') }}
                                 </button>
                                 <a
                                     v-if="isAdmin"
                                     href="/admin/settings"
                                     class="mt-1 block w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-surface-container)]"
                                 >
-                                    系統設定
+                                    {{ t('layout.admin_settings') }}
                                 </a>
                                 <button
                                     type="button"
@@ -144,19 +140,19 @@ async function logout() {
                                     class="mt-1 w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-text)] transition hover:bg-[var(--binary-surface-container)] disabled:opacity-50"
                                     @click="logout"
                                 >
-                                    {{ isLoggingOut ? 'Logging out...' : 'Logout' }}
+                                    {{ isLoggingOut ? t('layout.logging_out') : t('layout.logout') }}
                                 </button>
                             </div>
                         </details>
                     </template>
                     <template v-else>
-                        <Link class="binary-ghost-button hidden sm:inline-flex" href="/login">Login</Link>
+                        <Link class="binary-ghost-button hidden sm:inline-flex" href="/login">{{ t('layout.login') }}</Link>
                         <Link
                             class="rounded-md px-6 py-2 binary-display text-xs font-bold uppercase text-[var(--binary-on-primary-container)]"
                             href="/register"
                             style="background: linear-gradient(145deg, var(--binary-primary) 0%, var(--binary-primary-container) 100%);"
                         >
-                            Register
+                            {{ t('layout.register') }}
                         </Link>
                     </template>
                 </div>

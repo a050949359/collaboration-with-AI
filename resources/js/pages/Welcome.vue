@@ -1,56 +1,46 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import AppLayout from '../layouts/AppLayout.vue';
+import { useI18n } from 'vue-i18n';
+import ArticlesSection from '../components/welcome/ArticlesSection.vue';
 import HeroSection from '../components/welcome/HeroSection.vue';
 import ProjectsSection from '../components/welcome/ProjectsSection.vue';
-import ArticlesSection from '../components/welcome/ArticlesSection.vue';
 import WelcomeAirportSection from '../components/welcome/WelcomeAirportSection.vue';
+import AppLayout from '../layouts/AppLayout.vue';
+
+interface ArticlePreview {
+    date: string;
+    category: string;
+    title: string;
+    description: string;
+    tags: string[];
+}
+
+defineProps<{
+    latestArticles: ArticlePreview[];
+}>();
+
+const { t } = useI18n();
 const featuredProjects = [
     {
         id: '01',
-        category: 'ARCHITECTURE',
-        title: 'Distributed Event Mesh',
+        category: 'AI_COLLAB_DEV',
+        title: 'AI Co-Build Web Studio',
         description:
-            '基於 NATS 與 Go 開發的異步事件驅動架構，支援每秒 500k+ 訊息吞吐量，實現跨雲端環境的極低延遲數據同步。',
-        tags: ['Go', 'NATS', 'gRPC'],
+            '以此專案為核心，先用 Google Stitch 生成網頁風格，再由 GitHub Copilot 完成前端實作，最後聚焦後端工程師與 AI 協作開發與除錯流程，展示從設計到落地的完整實戰。',
+        tags: ['Google Stitch', 'GitHub Copilot', 'Frontend Build', 'AI Debug Flow'],
     },
     {
         id: '02',
-        category: 'DATABASE',
-        title: 'Sharding Proxy',
-        description: '自動化的資料庫分庫分表代理層，解決水平擴展瓶頸。',
-        tags: ['Rust', 'PostgreSQL'],
+        category: 'AI_CONTENT',
+        title: 'AI Article Studio',
+        description:
+            'Article 模組支援草稿建立、AI 文章/封面生成、Queue 非同步處理與狀態輪詢，並整合權限控管、速率限制、標籤回填；圖片寫入失敗時可自動 fallback 到 /tmp 避免流程中斷。',
+        tags: ['Laravel', 'Inertia', 'Vertex AI', 'Queue'],
+        image: '/images/projects/project02.webp',
     },
 ];
 
-const articles = [
-    {
-        date: '2024.11.14',
-        category: 'TECH_LOG',
-        title: '深入解析 Go 語言的高併發調度機制與 GC 優化實踐',
-        description:
-            '探討 GPM 調度模型在處理大規模長連接時的表現，以及如何透過 pprof 進行內存洩漏定位與優化。',
-        tags: ['RUNTIME', 'OPTIMIZATION', 'GO'],
-    },
-    {
-        date: '2024.10.28',
-        category: 'ARCHITECTURE',
-        title: '為什麼在 2024 年你應該考慮將核心邏輯遷移至 Rust',
-        description:
-            '從內存安全與執行效率的角度出發，分析 Rust 在後端關鍵服務中的落地應用價值。',
-        tags: ['RUST', 'SYSTEMS_DESIGN', 'BACKEND'],
-    },
-    {
-        date: '2024.10.05',
-        category: 'INFRA',
-        title: 'Kubernetes 控制器模式：從原理到自定義 Operator 開發',
-        description:
-            '理解 Reconcile Loop 的核心邏輯，並分享如何透過 Kubebuilder 開發高效的資源管理工具。',
-        tags: ['K8S', 'OPERATOR', 'CLOUD_NATIVE'],
-    },
-];
-
-const stackInfo = [
+const stackInfo: [string, string][] = [
     ['Language', 'Go, Rust, TypeScript'],
     ['Database', 'PostgreSQL, Redis'],
     ['Infra', 'K8s, Docker, AWS'],
@@ -60,16 +50,11 @@ const stackInfo = [
 <template>
     <Head title="Home" />
 
-    <AppLayout :nav-links="[
-        { label: 'Projects', href: '#projects' },
-        { label: 'Articles', href: '#articles' },
-        { label: 'Airports', href: '/airports' },
-        { label: 'About', href: '#about' },
-    ]">
+    <AppLayout>
         <main class="pt-24">
             <HeroSection :stack-info="stackInfo" />
             <ProjectsSection :featured-projects="featuredProjects" />
-            <ArticlesSection :articles="articles" />
+            <ArticlesSection :articles="latestArticles" />
             <WelcomeAirportSection />
         </main>
     </AppLayout>

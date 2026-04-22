@@ -2,11 +2,51 @@
 
 use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Article\ArticlePageController;
+use App\Models\Article;
 use Inertia\Inertia;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+Route::get('/', function () {
+    $latestArticles = Article::query()
+        ->where('content_status', 'completed')
+        ->latest()
+        ->limit(3)
+        ->get()
+        ->map(function (Article $article): array {
+            $content = trim(strip_tags((string) $article->content));
+
+            return [
+                'date' => $article->created_at?->format('Y.m.d') ?? '',
+                'category' => $article->category ?: 'UNCATEGORIZED',
+                'title' => $article->title ?: 'Untitled',
+                'description' => $article->summary ?: Str::limit($content, 180, '...'),
+                'tags' => is_array($article->tags) ? $article->tags : [],
+            ];
+        })
+        ->values();
+
+    return Inertia::render('Welcome', [
+        'latestArticles' => $latestArticles,
+    ]);
+})->name('home');
 Route::inertia('/airports', 'Airports')->name('airports');
+Route::inertia('/about', 'About')->name('about');
+Route::inertia('/linebot', 'LineBot')->name('linebot');
+Route::inertia('/articles', 'Articles/Index')->name('articles.index');
+Route::get('/articles/{article}', [ArticlePageController::class, 'show'])
+    ->whereNumber('article')
+    ->name('articles.show');
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/articles/generate', [ArticlePageController::class, 'generateNew'])
+        ->name('articles.generate.new');
+
+    Route::get('/articles/{article}/edit', [ArticlePageController::class, 'edit'])
+        ->whereNumber('article')
+        ->name('articles.edit');
+});
 Route::get('/login', fn () => Inertia::render('Auth/Login'))->name('login');
 Route::get('/register', fn () => Inertia::render('Auth/Register'))->name('register');
 Route::get('/avatar/default/{seed}.svg', [AvatarController::class, 'default'])->name('avatar.default');

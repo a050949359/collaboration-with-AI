@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 import type { Topology } from 'topojson-specification';
+import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 interface AirportItem {
     name: string;
@@ -64,11 +64,15 @@ const alpha2ToNumeric: Record<string, string> = {
 
 const numericToAlpha2 = Object.entries(alpha2ToNumeric).reduce<Record<string, string>>((acc, [alpha2, numeric]) => {
     acc[numeric] = alpha2;
+
     return acc;
 }, {});
 
 function requestRender() {
-    if (renderRequested) return;
+    if (renderRequested) {
+return;
+}
+
     renderRequested = true;
     requestAnimationFrame(() => {
         renderRequested = false;
@@ -93,7 +97,10 @@ function renderPins(items: AirportItem[]) {
     items.forEach((airport) => {
         const lat = airport.location.latitude;
         const lon = airport.location.longitude;
-        if (lat == null || lon == null) return;
+
+        if (lat == null || lon == null) {
+return;
+}
 
         gPins.append('circle')
             .datum([lon, lat] as [number, number])
@@ -116,7 +123,10 @@ async function searchCountryAirports(alpha2: string) {
         const params = new URLSearchParams({ country: alpha2, per_page: '1000' });
         const res = await fetch(`/api/v1/airports?${params}`, { headers: { Accept: 'application/json' } });
         const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || 'Search failed');
+
+        if (!res.ok) {
+throw new Error(json?.message || 'Search failed');
+}
 
         const rows = (json.data ?? []) as AirportItem[];
         airportCount.value = rows.length;
@@ -145,6 +155,7 @@ function rotateToCountry(feature: any) {
         .duration(650)
         .tween('rotate', () => {
             const ir = d3.interpolate(r0, r1);
+
             return (t: number) => {
                 projection.rotate(ir(t));
                 requestRender();
@@ -166,6 +177,7 @@ async function onCountryClick(feature: any) {
         loadError.value = 'Country code unavailable';
         airportCount.value = 0;
         renderPins([]);
+
         return;
     }
 
@@ -173,7 +185,9 @@ async function onCountryClick(feature: any) {
 }
 
 async function initGlobe() {
-    if (!containerEl.value) return;
+    if (!containerEl.value) {
+return;
+}
 
     svgEl = d3.select(containerEl.value)
         .append('svg')
@@ -226,7 +240,10 @@ async function initGlobe() {
     svgEl.call(zoom.transform, d3.zoomIdentity.scale(INITIAL_SCALE));
 
     const world = await d3.json<Topology>('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
-    if (!world) return;
+
+    if (!world) {
+return;
+}
 
     countries = (topojson.feature(world, (world.objects as any).countries) as any).features;
 

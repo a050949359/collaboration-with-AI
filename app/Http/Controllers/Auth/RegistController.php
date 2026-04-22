@@ -24,9 +24,7 @@ class RegistController extends Controller
         return response()->json([
             'message' => '註冊成功',
             'user' => $user,
-            'access_token' => $token,
-            'token_type' => 'Bearer',
             'redirect' => route('home'),
-        ], 201);
+        ], 201)->cookie('auth_token', $token, 0, '/', null, app()->isProduction(), true, false, 'Lax');
     }
 }

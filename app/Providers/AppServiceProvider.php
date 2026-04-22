@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Services\AI\Contracts\GeneratesArticleContent;
+use App\Services\AI\Contracts\GeneratesArticleImage;
+use App\Services\AI\VertexGeminiArticleService;
+use App\Services\AI\VertexImageGenerationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +19,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(GeneratesArticleContent::class, VertexGeminiArticleService::class);
+        $this->app->bind(GeneratesArticleImage::class, VertexImageGenerationService::class);
     }
 
     /**

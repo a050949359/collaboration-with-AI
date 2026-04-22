@@ -9,7 +9,6 @@ declare module 'vite/client' {
         readonly VITE_AUTH_REGISTER_ENDPOINT?: string;
         readonly VITE_AUTH_CSRF_ENDPOINT?: string;
         readonly VITE_AUTH_USE_CSRF?: string;
-        readonly VITE_AUTH_TOKEN_KEY?: string;
         [key: string]: string | boolean | undefined;
     }
 

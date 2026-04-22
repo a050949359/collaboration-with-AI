@@ -32,29 +32,24 @@ class LoginController extends Controller
         $user->tokens()->delete();
 
         // 4. 建立新 Token
-        // 'auth_token' 是 Token 的名稱，你可以自訂
         $token = $user->createToken('auth_token')->plainTextToken;
+        $minutes = $remember ? 60 * 24 * 7 : 0;
 
         return response()->json([
             'message' => '登入成功',
             'user' => $user,
-            'access_token' => $token,
-            'token_type' => 'Bearer',
             'redirect' => route('home'),
-        ]);
-        // 1. 驗證輸入資料（帳號、密碼）
-        // 2. 嘗試登入，生成 token
-        // 3. 回傳登入成功的響應，包含 token
+        ])->cookie('auth_token', $token, $minutes, '/', null, app()->isProduction(), true, false, 'Lax');
     }
 
     public function logout(): JsonResponse
     {
         // 1. 驗證使用者是否已登入
         if (Auth::check()) {
-            // 2. 刪除目前使用者的所有 token（或特定 token）
             Auth::user()->tokens()->delete();
 
-            return response()->json(['message' => '登出成功']);
+            return response()->json(['message' => '登出成功'])
+                ->withoutCookie('auth_token');
         }
 
         return response()->json(['message' => '未登入'], 401);

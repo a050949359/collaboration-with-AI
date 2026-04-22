@@ -17,7 +17,6 @@ type AuthApiConfig = {
     logoutEndpoint: string;
     csrfEndpoint: string;
     useCsrf: boolean;
-    tokenStorageKey: string;
 };
 
 export class AuthApiError extends Error {
@@ -41,7 +40,6 @@ const authApiConfig: AuthApiConfig = {
     logoutEndpoint: import.meta.env.VITE_AUTH_LOGOUT_ENDPOINT || '/api/auth/logout',
     csrfEndpoint: import.meta.env.VITE_AUTH_CSRF_ENDPOINT || '/sanctum/csrf-cookie',
     useCsrf: import.meta.env.VITE_AUTH_USE_CSRF !== 'false',
-    tokenStorageKey: import.meta.env.VITE_AUTH_TOKEN_KEY || 'auth_token',
 };
 
 function resolveUrl(path: string) {
@@ -97,33 +95,11 @@ async function ensureCsrfCookie() {
     });
 }
 
-export function getStoredToken(): string | null {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-
-    return window.localStorage.getItem(authApiConfig.tokenStorageKey);
-}
-
-function clearStoredToken() {
-    if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(authApiConfig.tokenStorageKey);
-    }
-}
-
-async function request<T>(path: string, payload: unknown, withToken = false) {
+async function request<T>(path: string, payload: unknown) {
     const headers: Record<string, string> = {
         Accept: 'application/json',
         'Content-Type': 'application/json',
     };
-
-    if (withToken) {
-        const token = getStoredToken();
-
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-    }
 
     const response = await fetch(resolveUrl(path), {
         method: 'POST',
@@ -146,38 +122,21 @@ async function request<T>(path: string, payload: unknown, withToken = false) {
     return parsed as T;
 }
 
-function persistToken(response: AuthApiResponse) {
-    const token = response.access_token || response.token;
-
-    if (!token || typeof window === 'undefined') {
-        return;
-    }
-
-    window.localStorage.setItem(authApiConfig.tokenStorageKey, token);
-}
-
 export async function loginWithApi(payload: LoginPayload) {
     await ensureCsrfCookie();
 
-    const response = await request<AuthApiResponse>(authApiConfig.loginEndpoint, payload);
-    persistToken(response);
-
-    return response;
+    return request<AuthApiResponse>(authApiConfig.loginEndpoint, payload);
 }
 
 export async function registerWithApi(payload: RegisterPayload) {
     await ensureCsrfCookie();
 
-    const response = await request<AuthApiResponse>(authApiConfig.registerEndpoint, payload);
-    persistToken(response);
-
-    return response;
+    return request<AuthApiResponse>(authApiConfig.registerEndpoint, payload);
 }
 
 export async function logoutWithApi() {
     await ensureCsrfCookie();
-    await request<{ message?: string }>(authApiConfig.logoutEndpoint, {}, true);
-    clearStoredToken();
+    await request<{ message?: string }>(authApiConfig.logoutEndpoint, {});
 }
 
 export function getAuthApiConfig() {
