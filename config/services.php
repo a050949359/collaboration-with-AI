@@ -64,4 +64,14 @@ return [
         ))),
     ],
 
+    'line_bot' => [
+        'internal_api_key' => env('LINE_BOT_INTERNAL_API_KEY'),
+        'article_ready_webhook_url' => env('LINE_BOT_ARTICLE_READY_WEBHOOK_URL'),
+        'outbound_webhook_key' => env('LINE_BOT_OUTBOUND_WEBHOOK_KEY'),
+        'inbound_hmac_secret' => env('LINE_BOT_INBOUND_HMAC_SECRET'),
+        'outbound_hmac_secret' => env('LINE_BOT_OUTBOUND_HMAC_SECRET'),
+        'hmac_required' => env('LINE_BOT_HMAC_REQUIRED', false),
+        'hmac_max_skew_seconds' => env('LINE_BOT_HMAC_MAX_SKEW_SECONDS', 300),
+    ],
+
 ];

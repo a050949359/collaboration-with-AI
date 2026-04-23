@@ -141,6 +141,8 @@ export default {
     airports: {
         title: 'Airport Database',
         subtitle: '84,000+ global airports. Search by name, IATA / ICAO code, filter by type or continent.',
+        source_label: 'Data source: ',
+        source_link: 'OurAirports Credits',
         tab_search: 'Search',
         tab_stats: 'Statistics',
         tab_globe: 'Globe',

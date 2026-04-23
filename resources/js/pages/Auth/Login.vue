@@ -4,6 +4,7 @@ import { computed, reactive, ref } from 'vue';
 
 import AuthShell from '../../layouts/AuthShell.vue';
 import { AuthApiError, getAuthApiConfig, loginWithApi } from '../../lib/auth-api';
+import { routes, api } from '../../lib/routes';
 
 const form = reactive({
     email: '',
@@ -130,14 +131,14 @@ async function submit() {
 
             <div class="mt-6 flex items-center gap-2 text-sm">
                 <span class="text-[var(--binary-text-muted)]">沒有帳號？</span>
-                <Link class="font-semibold text-[var(--binary-primary)] transition hover:underline" href="/register">
+                <Link class="font-semibold text-[var(--binary-primary)] transition hover:underline" :href="routes.register()">
                     立即建立帳號
                 </Link>
             </div>
 
             <div class="mt-6 flex flex-wrap gap-3">
                 <button class="binary-ghost-button" type="button">GitHub</button>
-                <a class="binary-ghost-button" href="/api/auth/google/redirect">Google</a>
+                <a class="binary-ghost-button" :href="api.auth.googleRedirect()">Google</a>
             </div>
         </div>
 

@@ -6,6 +6,8 @@ import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { ArticleApiError, deleteArticle,  fetchAuthArticleDetail, fetchPublicArticleDetail } from '@/lib/articles-api';
 import type {ArticleDetail} from '@/lib/articles-api';
+import { routes } from '@/lib/routes';
+import { useAuth } from '@/composables/useAuth';
 
 const props = defineProps<{
     articleId: number;
@@ -17,13 +19,8 @@ const article = ref<ArticleDetail | null>(null);
 const isLoading = ref(false);
 const isDeleting = ref(false);
 const errorMessage = ref('');
-const page = usePage();
-const isAuthenticated = computed(() => !!page.props.auth?.user);
-const isOwner = computed(() => {
-    const user = page.props.auth?.user;
-
-    return !!user && user.id === article.value?.user_id;
-});
+const { user, isLoggedIn: isAuthenticated } = useAuth();
+const isOwner = computed(() => !!user.value && user.value.id === article.value?.user_id);
 
 const renderedContent = computed(() => article.value?.content || '');
 
@@ -73,7 +70,7 @@ async function handleDeleteArticle() {
 
     try {
         await deleteArticle(article.value.id);
-        router.visit('/articles');
+        router.visit(routes.articles.index());
     } catch (error: unknown) {
         errorMessage.value = error instanceof ArticleApiError
             ? error.message
@@ -109,7 +106,7 @@ onMounted(async () => {
                         </span>
                         <div v-if="isOwner" class="flex items-center gap-2">
                             <a
-                                :href="`/articles/${article.id}/edit`"
+                                :href="routes.articles.edit(article.id)"
                                 class="binary-ghost-button px-4 py-1.5 text-xs"
                             >
                                 {{ t('articles.show.edit') }}

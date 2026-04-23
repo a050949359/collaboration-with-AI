@@ -141,6 +141,8 @@ export default {
     airports: {
         title: '機場資料庫',
         subtitle: '全球 84,000+ 筆機場資料，支援 IATA / ICAO 代碼搜尋、類型篩選與洲別統計。',
+        source_label: '資料來源：',
+        source_link: 'OurAirports Credits',
         tab_search: '搜尋',
         tab_stats: '統計',
         tab_globe: '地球',

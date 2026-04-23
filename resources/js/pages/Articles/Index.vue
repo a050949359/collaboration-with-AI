@@ -6,15 +6,17 @@ import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { ArticleApiError,  fetchAuthArticles, fetchPublicArticles } from '@/lib/articles-api';
 import type {ArticlePreview} from '@/lib/articles-api';
+import { routes } from '@/lib/routes';
+import { useAuth } from '@/composables/useAuth';
 
 const page = usePage();
 const { t } = useI18n();
-const isAuthenticated = computed(() => !!page.props.auth?.user);
+const { isLoggedIn: isAuthenticated } = useAuth();
 const isLoading = ref(false);
 const errorMessage = ref('');
 
 async function handleCreateArticle() {
-    window.location.href = '/articles/generate';
+    window.location.href = routes.articles.generate();
 }
 
 const guestArticles = ref<ArticlePreview[]>([]);
@@ -152,7 +154,7 @@ onMounted(async () => {
 
                     <article v-for="(article, index) in activeItems" :key="article.id" class="group">
                         <div v-if="index > 0" class="mb-12 h-px bg-white/8" />
-                        <a :href="`/articles/${article.id}`" class="block">
+                        <a :href="routes.articles.show(article.id)" class="block">
                             <div class="mb-4 flex items-start justify-between">
                                 <span class="binary-label text-xs uppercase text-[var(--binary-outline)]">
                                     {{ formatDate(article.created_at) }} / {{ article.category || t('articles.index.uncategorized') }}

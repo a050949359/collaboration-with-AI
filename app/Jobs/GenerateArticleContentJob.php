@@ -6,6 +6,7 @@ use App\Enums\ArticleLanguage;
 use App\Enums\ArticleStyle;
 use App\Enums\ArticleTopic;
 use App\Models\Article;
+use App\Jobs\DispatchLineArticleReadyWebhookJob;
 use App\Services\AI\Contracts\GeneratesArticleContent;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -62,6 +63,10 @@ class GenerateArticleContentJob implements ShouldQueue, ShouldBeUnique
             'content_error'        => null,
             'content_generated_at' => now(),
         ]);
+
+        if ($article->created_via === 'line') {
+            DispatchLineArticleReadyWebhookJob::dispatch($article->id);
+        }
     }
 
     public function failed(Throwable $exception): void

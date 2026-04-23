@@ -1,44 +1,46 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
+import { AdminApiError, fetchAdminSettings, saveAdminSettings } from '@/lib/admin-api';
+import type { AdminSettings } from '@/lib/admin-api';
+import { routes } from '@/lib/routes';
+import { useAuth } from '@/composables/useAuth';
 
-const DEFAULTS = {
-    site_name: 'BINARY_EDITORIAL',
+const page = usePage();
+const defaultSiteName = String(page.props.name || 'CHY Lab');
+
+const DEFAULTS: AdminSettings = {
+    site_name: defaultSiteName,
     maintenance_mode: false,
     allow_registration: true,
     max_login_attempts: 5,
     avatar_size: 128,
 };
 
-const form = ref({ ...DEFAULTS });
+const form = ref<AdminSettings>({ ...DEFAULTS });
 const isSaving = ref(false);
 const isLoading = ref(true);
 const successMessage = ref('');
 const errorMessage = ref('');
-const page = usePage();
+const { user } = useAuth();
 
 onMounted(async () => {
-    if (!page.props.auth?.user) {
-        router.visit('/');
+    if (!user.value) {
+        router.visit(routes.home());
 
         return;
     }
 
     try {
-        const res = await fetch('/api/admin/settings', {
-            credentials: 'include',
-            headers: { Accept: 'application/json' },
-        });
-
-        if (res.status === 401 || res.status === 403) {
-            router.visit('/');
+        const data = await fetchAdminSettings();
+        form.value = { ...DEFAULTS, ...data };
+    } catch (error: unknown) {
+        if (error instanceof AdminApiError && (error.status === 401 || error.status === 403)) {
+            router.visit(routes.home());
 
             return;
         }
 
-        const data = await res.json();
-        form.value = { ...DEFAULTS, ...data };
-    } catch {
         errorMessage.value = '載入設定失敗';
     } finally {
         isLoading.value = false;
@@ -51,38 +53,23 @@ return;
 }
 
     if (!page.props.auth?.user) {
- router.visit('/');
+        router.visit(routes.home());
 
- return; 
-}
+        return;
+    }
 
     isSaving.value = true;
     successMessage.value = '';
     errorMessage.value = '';
 
     try {
-        const response = await fetch('/api/admin/settings', {
-            method: 'PATCH',
-            credentials: 'include',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(form.value),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            errorMessage.value = data.message || '儲存失敗';
-
-            return;
-        }
-
-        form.value = { ...DEFAULTS, ...data.settings };
-        successMessage.value = data.message || '設定已更新';
-    } catch {
-        errorMessage.value = '連線異常，請稍後再試';
+        const result = await saveAdminSettings(form.value);
+        form.value = { ...DEFAULTS, ...result.settings };
+        successMessage.value = result.message || '設定已更新';
+    } catch (error: unknown) {
+        errorMessage.value = error instanceof AdminApiError
+            ? error.message
+            : '連線異常，請稍後再試';
     } finally {
         isSaving.value = false;
     }
@@ -114,7 +101,7 @@ return;
                             v-model="form.site_name"
                             class="binary-input"
                             type="text"
-                            placeholder="BINARY_EDITORIAL"
+                            :placeholder="defaultSiteName"
                         >
                     </div>
 
@@ -175,7 +162,7 @@ return;
                     <button
                         type="button"
                         class="binary-ghost-button text-xs"
-                        @click="router.visit('/')"
+                        @click="router.visit(routes.home())"
                     >
                         ← 返回首頁
                     </button>

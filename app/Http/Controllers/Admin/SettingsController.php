@@ -13,14 +13,6 @@ class SettingsController extends Controller
 {
     private const SETTINGS_CACHE_KEY = 'admin_settings';
 
-    private const DEFAULTS = [
-        'site_name'          => 'BINARY_EDITORIAL',
-        'maintenance_mode'   => false,
-        'allow_registration' => true,
-        'max_login_attempts' => 5,
-        'avatar_size'        => 128,
-    ];
-
     public function index(): Response
     {
         return Inertia::render('Admin/Settings');
@@ -54,6 +46,22 @@ class SettingsController extends Controller
 
     private function getSettings(): array
     {
-        return Cache::get(self::SETTINGS_CACHE_KEY, self::DEFAULTS);
+        return Cache::get(self::SETTINGS_CACHE_KEY, $this->defaults());
+    }
+
+    /**
+     * 使用 app.name 作為站台名稱預設值，避免前後端多處硬編碼。
+     *
+     * @return array<string, bool|int|string>
+     */
+    private function defaults(): array
+    {
+        return [
+            'site_name'          => config('app.name'),
+            'maintenance_mode'   => false,
+            'allow_registration' => true,
+            'max_login_attempts' => 5,
+            'avatar_size'        => 128,
+        ];
     }
 }

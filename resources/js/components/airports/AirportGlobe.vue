@@ -1,5 +1,19 @@
 <script setup lang="ts">
-import * as d3 from 'd3';
+import {
+    drag,
+    geoDistance,
+    geoCentroid,
+    geoGraticule,
+    geoOrthographic,
+    geoPath,
+    interpolate,
+    json,
+    select,
+    transition,
+    zoom,
+    zoomIdentity,
+} from 'd3';
+import type { GeoPath, GeoProjection, Selection } from 'd3';
 import * as topojson from 'topojson-client';
 import type { Topology } from 'topojson-specification';
 import { onMounted, ref } from 'vue';
@@ -23,11 +37,11 @@ const W = 780;
 const H = 520;
 const INITIAL_SCALE = 240;
 
-let projection: d3.GeoProjection;
-let path: d3.GeoPath;
-let svgEl: d3.Selection<SVGSVGElement, unknown, null, undefined>;
-let gLand: d3.Selection<SVGGElement, unknown, null, undefined>;
-let gPins: d3.Selection<SVGGElement, unknown, null, undefined>;
+let projection: GeoProjection;
+let path: GeoPath;
+let svgEl: Selection<SVGSVGElement, unknown, null, undefined>;
+let gLand: Selection<SVGGElement, unknown, null, undefined>;
+let gPins: Selection<SVGGElement, unknown, null, undefined>;
 let countries: any[] = [];
 let renderRequested = false;
 
@@ -82,14 +96,14 @@ return;
 
 function render() {
     svgEl.select<SVGPathElement>('.globe-sphere').attr('d', path as any);
-    svgEl.select<SVGPathElement>('.graticule').attr('d', path(d3.geoGraticule()()) as any);
+    svgEl.select<SVGPathElement>('.graticule').attr('d', path(geoGraticule()()) as any);
     gLand.selectAll<SVGPathElement, any>('path').attr('d', path as any);
 
     const center = projection.invert!([W / 2, H / 2])!;
     gPins.selectAll<SVGCircleElement, [number, number]>('circle')
         .attr('cx', d => projection(d)![0])
         .attr('cy', d => projection(d)![1])
-        .attr('visibility', d => d3.geoDistance(d, center) > 1.57 ? 'hidden' : 'visible');
+        .attr('visibility', d => geoDistance(d, center) > 1.57 ? 'hidden' : 'visible');
 }
 
 function renderPins(items: AirportItem[]) {
@@ -147,14 +161,14 @@ function highlightCountryById(countryId: string) {
 }
 
 function rotateToCountry(feature: any) {
-    const centroid = d3.geoCentroid(feature);
+    const centroid = geoCentroid(feature);
     const r0 = projection.rotate();
     const r1: [number, number] = [-centroid[0], -centroid[1]];
 
-    d3.transition()
+    transition()
         .duration(650)
         .tween('rotate', () => {
-            const ir = d3.interpolate(r0, r1);
+            const ir = interpolate(r0, r1);
 
             return (t: number) => {
                 projection.rotate(ir(t));
@@ -189,18 +203,18 @@ async function initGlobe() {
 return;
 }
 
-    svgEl = d3.select(containerEl.value)
+    svgEl = select(containerEl.value)
         .append('svg')
         .attr('viewBox', `0 0 ${W} ${H}`)
         .attr('class', 'h-full w-full cursor-grab active:cursor-grabbing');
 
-    projection = d3.geoOrthographic()
+    projection = geoOrthographic()
         .scale(INITIAL_SCALE)
         .translate([W / 2, H / 2])
         .rotate([0, -22])
         .clipAngle(90);
 
-    path = d3.geoPath().projection(projection);
+    path = geoPath().projection(projection);
 
     svgEl.append('path')
         .datum({ type: 'Sphere' } as any)
@@ -211,7 +225,7 @@ return;
         .attr('d', path as any);
 
     svgEl.append('path')
-        .datum(d3.geoGraticule()())
+        .datum(geoGraticule()())
         .attr('class', 'graticule')
         .attr('fill', 'none')
         .attr('stroke', 'rgba(0,229,255,0.08)')
@@ -221,7 +235,7 @@ return;
     gLand = svgEl.append('g');
     gPins = svgEl.append('g');
 
-    const drag = d3.drag<SVGSVGElement, unknown>()
+    const dragBehavior = drag<SVGSVGElement, unknown>()
         .on('drag', (event) => {
             const r = projection.rotate();
             const k = 75 / projection.scale();
@@ -229,17 +243,17 @@ return;
             requestRender();
         });
 
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
+    const zoomBehavior = zoom<SVGSVGElement, unknown>()
         .scaleExtent([180, 1200])
         .on('zoom', (event) => {
             projection.scale(event.transform.k);
             requestRender();
         });
 
-    svgEl.call(drag).call(zoom);
-    svgEl.call(zoom.transform, d3.zoomIdentity.scale(INITIAL_SCALE));
+    svgEl.call(dragBehavior).call(zoomBehavior);
+    svgEl.call(zoomBehavior.transform, zoomIdentity.scale(INITIAL_SCALE));
 
-    const world = await d3.json<Topology>('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    const world = await json<Topology>('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
 
     if (!world) {
 return;

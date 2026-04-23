@@ -6,6 +6,8 @@ import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { ArticleApiError,  fetchAuthArticleDetail, updateArticle } from '@/lib/articles-api';
 import type {ArticleDetail} from '@/lib/articles-api';
+import { routes } from '@/lib/routes';
+import { useAuth } from '@/composables/useAuth';
 
 const props = defineProps<{
     articleId: number;
@@ -17,7 +19,7 @@ const article = ref<ArticleDetail | null>(null);
 const isLoading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref('');
-const page = usePage();
+const { user } = useAuth();
 
 const title   = ref('');
 const content = ref('');
@@ -30,12 +32,12 @@ async function loadArticle() {
 
     try {
         const loaded = await fetchAuthArticleDetail(props.articleId);
-        const currentUserId = page.props.auth?.user?.id;
+        const currentUserId = user.value?.id;
 
         if (!currentUserId || loaded.user_id !== currentUserId) {
             errorMessage.value = t('articles.edit.no_permission');
             article.value = null;
-            router.visit('/articles');
+            router.visit(routes.articles.index());
 
             return;
         }
@@ -57,9 +59,9 @@ async function save() {
 return;
 }
 
-    if (!article.value || article.value.user_id !== page.props.auth?.user?.id) {
+    if (!article.value || article.value.user_id !== user.value?.id) {
         errorMessage.value = t('articles.edit.no_permission');
-        router.visit('/articles');
+        router.visit(routes.articles.index());
 
         return;
     }
@@ -79,7 +81,7 @@ return;
             summary: summary.value.trim() || null,
             tags,
         });
-        router.visit(`/articles/${props.articleId}`);
+        router.visit(routes.articles.show(props.articleId));
     } catch (error: unknown) {
         errorMessage.value = error instanceof ArticleApiError ? error.message : t('articles.edit.save_failed');
     } finally {
@@ -88,8 +90,8 @@ return;
 }
 
 onMounted(async () => {
-    if (!page.props.auth?.user) {
-        router.visit('/login');
+    if (!user.value) {
+        router.visit(routes.login());
 
         return;
     }
@@ -122,7 +124,7 @@ onMounted(async () => {
                                 {{ t('articles.edit.title') }}
                             </h1>
                             <div class="flex gap-2">
-                                <a :href="`/articles/${articleId}`" class="binary-ghost-button px-4 py-1.5 text-xs">
+                                <a :href="routes.articles.show(articleId)" class="binary-ghost-button px-4 py-1.5 text-xs">
                                     {{ t('articles.edit.back_to_show') }}
                                 </a>
                             </div>

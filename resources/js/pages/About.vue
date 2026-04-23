@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { computed, nextTick, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { api } from '@/lib/routes';
+import { useAuth } from '@/composables/useAuth';
 
 interface Turn {
     role: 'user' | 'model';
     text: string;
 }
 
-const page = usePage();
-const isAdmin = computed(() => !!page.props.auth?.is_admin);
+const { isAdmin } = useAuth();
 
 // ── Chat state ───────────────────────────────────────────
 const history = ref<Turn[]>([]);
@@ -36,7 +37,7 @@ async function send(text?: string) {
     await scrollToBottom();
 
     try {
-        const res = await fetch('/api/about/ask', {
+        const res = await fetch(api.about.ask(), {
             method: 'POST',
             credentials: 'include',
             headers: { Accept: 'application/json', 'Content-Type': 'application/json' },

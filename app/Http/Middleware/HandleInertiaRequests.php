@@ -29,6 +29,17 @@ class HandleInertiaRequests extends Middleware
     /**
      * Define the props that are shared by default.
      *
+     * 這裡定義的資料會在每次 Inertia 請求時自動注入到前端所有頁面的 props 中。
+     * 在 Vue 元件內可透過 `usePage().props` 取得，例如：
+     *
+     *   import { usePage } from '@inertiajs/vue3';
+     *   const page = usePage();
+     *   const user = page.props.auth?.user;      // 目前登入的使用者
+     *   const isAdmin = page.props.auth?.is_admin; // 是否為管理員
+     *
+     * 注意：這裡的 user 是由 AuthTokenFromCookie middleware 先從 cookie 取出 token
+     * 再交由 auth:sanctum guard 解析後得到的。
+     *
      * @see https://inertiajs.com/shared-data
      *
      * @return array<string, mixed>

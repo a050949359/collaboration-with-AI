@@ -24,7 +24,17 @@ const airportProject: Project = {
     image: '/images/projects/project03.webp',
 };
 
-const projects = computed(() => [...props.featuredProjects, airportProject]);
+const lineAutomationProject: Project = {
+    id: '04',
+    category: 'LINE_AUTOMATION',
+    title: 'LINE Article Automation',
+    description:
+        '整合 LINE Bot 與 Laravel 內部 API，支援好友綁定、快速產文、完成通知 webhook，並加上 API key 與 HMAC 驗證，確保跨主機傳輸安全與流程可追蹤。',
+    tags: ['LINE Messaging API', 'Webhook', 'HMAC', 'Queue'],
+    image: '/images/projects/project04.webp',
+};
+
+const projects = computed(() => [...props.featuredProjects, airportProject, lineAutomationProject]);
 </script>
 
 <template>

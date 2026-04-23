@@ -8,9 +8,13 @@ import {
     ArticleApiError,
     
     createArticle,
-    fetchAuthArticleDetail
+    fetchAuthArticleDetail,
+    triggerGenerateContent,
+    triggerGenerateImage,
 } from '@/lib/articles-api';
 import type {ArticleDetail} from '@/lib/articles-api';
+import { routes } from '@/lib/routes';
+import { useAuth } from '@/composables/useAuth';
 
 // ── Enums（與後端 PHP Enum 同步） ────────────────────────
 const TOPICS = [
@@ -45,7 +49,7 @@ const { t } = useI18n();
 // ── State ────────────────────────────────────────────────
 const article = ref<ArticleDetail | null>(null);
 const currentArticleId = ref<number | null>(null);
-const page = usePage();
+const { user } = useAuth();
 
 const topic       = ref<string>('travel');
 const language    = ref<string>('zh-TW');
@@ -175,32 +179,18 @@ return;
             return;
         }
 
-        const res = await fetch(`/api/articles/${articleId}/generate-content`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                topic:    topic.value,
-                language: language.value,
-                style:    style.value,
-                prompt:   extraPrompt.value.trim() || undefined,
-            }),
+        article.value = await triggerGenerateContent(articleId, {
+            topic:    topic.value,
+            language: language.value,
+            style:    style.value,
+            prompt:   extraPrompt.value.trim() || undefined,
         });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            contentMessage.value = data.message ?? t('articles.generate.submit_failed');
-            isGeneratingContent.value = false;
-
-            return;
-        }
-
-        article.value = data.data as ArticleDetail;
         contentMessage.value = t('articles.generate.queued');
         startPolling();
-    } catch {
-        contentMessage.value = t('articles.generate.submit_retry');
+    } catch (error: unknown) {
+        contentMessage.value = error instanceof ArticleApiError
+            ? error.message
+            : t('articles.generate.submit_retry');
         isGeneratingContent.value = false;
     }
 }
@@ -220,37 +210,25 @@ return;
     imageMessage.value = '';
 
     try {
-        const res = await fetch(`/api/articles/${currentArticleId.value}/generate-image`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ aspect_ratio: aspectRatio.value }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            imageMessage.value = res.status === 404
-                ? t('articles.generate.image_not_found')
-                : (data.message ?? t('articles.generate.submit_failed'));
-            isGeneratingImage.value = false;
-
-            return;
-        }
-
-        article.value = data.data as ArticleDetail;
+        article.value = await triggerGenerateImage(currentArticleId.value, aspectRatio.value);
         imageMessage.value = t('articles.generate.queued');
         startPolling();
-    } catch {
-        imageMessage.value = t('articles.generate.submit_retry');
+    } catch (error: unknown) {
+        if (error instanceof ArticleApiError && error.status === 404) {
+            imageMessage.value = t('articles.generate.image_not_found');
+        } else {
+            imageMessage.value = error instanceof ArticleApiError
+                ? error.message
+                : t('articles.generate.submit_retry');
+        }
         isGeneratingImage.value = false;
     }
 }
 
 // ── Lifecycle ────────────────────────────────────────────
 onMounted(async () => {
-    if (!page.props.auth?.user) {
-        router.visit('/login');
+    if (!user.value) {
+        router.visit(routes.login());
 
         return;
     }
@@ -281,14 +259,14 @@ onUnmounted(() => stopPolling());
                             <div class="flex gap-2">
                                 <a
                                     v-if="currentArticleId"
-                                    :href="`/articles/${currentArticleId}/edit`"
+                                    :href="routes.articles.edit(currentArticleId)"
                                     class="binary-ghost-button px-4 py-1.5 text-xs"
                                 >
                                     {{ t('articles.generate.to_edit') }}
                                 </a>
                                 <a
                                     v-if="currentArticleId"
-                                    :href="`/articles/${currentArticleId}`"
+                                    :href="routes.articles.show(currentArticleId)"
                                     class="binary-ghost-button px-4 py-1.5 text-xs"
                                 >
                                     {{ t('articles.generate.to_show') }}

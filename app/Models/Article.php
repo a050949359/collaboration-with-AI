@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'user_id',
+    'created_via',
     'title',
     'category',
     'prompt',
@@ -32,6 +33,7 @@ class Article extends Model
     {
         return [
             'tags' => 'array',
+            'created_via' => 'string',
             'content_generated_at' => 'datetime',
             'image_generated_at' => 'datetime',
         ];

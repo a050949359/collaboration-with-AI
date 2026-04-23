@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Airports\AirportController;
 use App\Http\Controllers\Airports\AirportStatsController;
 use App\Http\Controllers\Airports\NearbyAirportController;
+use App\Http\Controllers\Line\LineArticleController;
+use App\Http\Controllers\Line\LineFriendController;
 use App\Http\Middleware\EnsureAdmin;
 
 Route::post('/about/ask', [AboutController::class, 'ask'])->middleware('throttle:4,1');
@@ -55,8 +57,17 @@ Route::middleware('auth:sanctum')->prefix('articles')->group(function () {
 });
 
 Route::prefix('v1/airports')->group(function () {
-    Route::get('/',        [AirportController::class, 'index'])->middleware('throttle:5,1');   // 搜尋 + 篩選
+    Route::get('/',        [AirportController::class, 'index'])->middleware('throttle:60,1');  // 搜尋 + 篩選
     Route::get('/stats',   AirportStatsController::class);         // 統計
     Route::get('/nearby',  NearbyAirportController::class);        // 附近機場
     Route::get('/{ident}', [AirportController::class, 'show']);    // 單一機場（ident 或 iata）
+});
+
+Route::prefix('line/friends')->group(function () {
+    Route::post('/add', [LineFriendController::class, 'add'])->middleware('throttle:20,1');
+    Route::post('/remove', [LineFriendController::class, 'remove'])->middleware('throttle:20,1');
+});
+
+Route::prefix('line/articles')->group(function () {
+    Route::post('/quick-generate', [LineArticleController::class, 'quickGenerate'])->middleware('throttle:20,1');
 });

@@ -5,6 +5,8 @@ import { useI18n } from 'vue-i18n';
 
 import { getLocale, setLocale } from '../i18n';
 import { logoutWithApi } from '../lib/auth-api';
+import { routes, api } from '../lib/routes';
+import { useAuth } from '../composables/useAuth';
 
 const currentLocale = ref(getLocale());
 const { t } = useI18n();
@@ -14,20 +16,20 @@ defineProps<{
 }>();
 
 const page = usePage();
-const currentUser = computed(() => page.props.auth?.user);
+const { user: currentUser, isAdmin } = useAuth();
+const brandTitle = computed(() => page.props.name || 'CHY Lab');
 
 const defaultNavLinks = computed(() => {
     const path = page.url;
     return [
-        { label: t('articles.nav.projects'), href: '/#projects' },
-        { label: t('articles.nav.articles'), href: '/articles', active: path.startsWith('/articles') },
-        { label: t('articles.nav.airports'), href: '/airports', active: path.startsWith('/airports') },
-        { label: t('articles.nav.about'), href: '/about', active: path.startsWith('/about') },
-        { label: 'LineBot', href: '/linebot', active: path.startsWith('/linebot') },
+        { label: t('articles.nav.projects'), href: `${routes.home()}#projects` },
+        { label: t('articles.nav.articles'), href: routes.articles.index(), active: path.startsWith(routes.articles.index()) },
+        { label: t('articles.nav.airports'), href: routes.airports(), active: path.startsWith(routes.airports()) },
+        { label: t('articles.nav.about'), href: routes.about(), active: path.startsWith(routes.about()) },
+        { label: 'LineBot', href: routes.linebot(), active: path.startsWith(routes.linebot()) },
     ];
 });
 const effectiveUser = computed(() => currentUser.value);
-const isAdmin = computed(() => !!page.props.auth?.is_admin);
 const isLoggingOut = ref(false);
 
 function toggleLocale() {
@@ -37,7 +39,7 @@ function toggleLocale() {
 }
 
 function bindGoogle() {
-    window.location.href = '/api/auth/google/redirect';
+    window.location.href = api.auth.googleRedirect();
 }
 
 async function logout() {
@@ -49,7 +51,7 @@ return;
 
     try {
         await logoutWithApi();
-        router.visit('/', { replace: true });
+        router.visit(routes.home(), { replace: true });
     } finally {
         isLoggingOut.value = false;
     }
@@ -69,8 +71,8 @@ return;
         <nav class="binary-glass fixed left-0 right-0 top-0 z-50">
             <div class="mx-auto flex w-full max-w-screen-2xl items-center justify-between px-6 py-4 md:px-8">
                 <!-- Logo -->
-                <Link href="/" class="binary-display text-xl font-black uppercase tracking-tight text-[var(--binary-primary)]">
-                    BINARY_EDITORIAL
+                <Link :href="routes.home()" class="binary-display text-xl font-black uppercase tracking-tight text-[var(--binary-primary)]">
+                    {{ brandTitle }}
                 </Link>
 
                 <!-- Nav Links -->
@@ -101,7 +103,7 @@ return;
                         <details class="relative">
                             <summary class="flex list-none cursor-pointer items-center gap-2 rounded-md bg-[var(--binary-surface-container)] px-3 py-2 binary-label text-xs font-bold uppercase text-[var(--binary-primary)]">
                                 <img
-                                    :src="String(effectiveUser.avatar || '/avatar/default/user.svg')"
+                                    :src="String(effectiveUser.avatar || routes.assets.avatarDefault('user'))"
                                     alt="avatar"
                                     class="h-7 w-7 rounded-full object-cover"
                                 >
@@ -111,7 +113,7 @@ return;
                             <div class="absolute right-0 mt-2 w-56 rounded-xl bg-[var(--binary-surface-high)] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
                                 <div class="mb-2 flex items-center gap-2 rounded-lg bg-[var(--binary-surface-container)] p-2">
                                     <img
-                                        :src="String(effectiveUser.avatar || '/avatar/default/user.svg')"
+                                        :src="String(effectiveUser.avatar || routes.assets.avatarDefault('user'))"
                                         alt="avatar"
                                         class="h-8 w-8 rounded-full object-cover"
                                     >
@@ -129,7 +131,7 @@ return;
                                 </button>
                                 <a
                                     v-if="isAdmin"
-                                    href="/admin/settings"
+                                    :href="routes.admin.settings()"
                                     class="mt-1 block w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-surface-container)]"
                                 >
                                     {{ t('layout.admin_settings') }}
@@ -146,10 +148,10 @@ return;
                         </details>
                     </template>
                     <template v-else>
-                        <Link class="binary-ghost-button hidden sm:inline-flex" href="/login">{{ t('layout.login') }}</Link>
+                        <Link class="binary-ghost-button hidden sm:inline-flex" :href="routes.login()">{{ t('layout.login') }}</Link>
                         <Link
                             class="rounded-md px-6 py-2 binary-display text-xs font-bold uppercase text-[var(--binary-on-primary-container)]"
-                            href="/register"
+                            :href="routes.register()"
                             style="background: linear-gradient(145deg, var(--binary-primary) 0%, var(--binary-primary-container) 100%);"
                         >
                             {{ t('layout.register') }}

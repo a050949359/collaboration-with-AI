@@ -24,6 +24,7 @@ class ArticleGenerationController extends Controller
     {
         $article = Article::create([
             'user_id' => $request->user()->id,
+            'created_via' => 'web',
             'title' => $request->input('title'),
             'prompt' => $request->input('prompt'),
             'content_status' => 'pending',
@@ -50,12 +51,15 @@ class ArticleGenerationController extends Controller
             return $this->error('權限不足', 403);
         }
 
-        if ($limitError = $this->ensureRateLimit('content')) {
-            return $limitError;
+        if (!$this->canGenerateContent($article)) {
+            return $this->error('文章內容正在生成中，或已生成完成，請勿重複提交。', 409, [
+                'code' => 'duplicate_content_generation',
+                'content_status' => $article->content_status,
+            ]);
         }
 
-        if (!$this->canGenerateContent($article)) {
-            return $this->error('僅能對新草稿使用文章生成。', 422);
+        if ($limitError = $this->ensureRateLimit('content')) {
+            return $limitError;
         }
 
         $topic    = ArticleTopic::from((string) $request->input('topic'));
@@ -89,12 +93,15 @@ class ArticleGenerationController extends Controller
             return $this->error('權限不足', 403);
         }
 
-        if ($limitError = $this->ensureRateLimit('image')) {
-            return $limitError;
+        if (!$this->canGenerateImage($article)) {
+            return $this->error('文章圖片正在生成中，或已生成完成，請勿重複提交。', 409, [
+                'code' => 'duplicate_image_generation',
+                'image_status' => $article->image_status,
+            ]);
         }
 
-        if (!$this->canGenerateImage($article)) {
-            return $this->error('僅能對新草稿使用圖片生成。', 422);
+        if ($limitError = $this->ensureRateLimit('image')) {
+            return $limitError;
         }
 
         $article->update([
@@ -128,7 +135,8 @@ class ArticleGenerationController extends Controller
         $key = sprintf('article:%s-generation:%s', $type, $user->id);
 
         if (RateLimiter::tooManyAttempts($key, 1)) {
-            return $this->error('Too many requests. Please retry later.', 429, [
+            return $this->error('請求過於頻繁，請稍後再試。', 429, [
+                'code' => 'rate_limited',
                 'retry_after' => RateLimiter::availableIn($key),
             ]);
         }
@@ -160,6 +168,7 @@ class ArticleGenerationController extends Controller
         return [
             'id' => $article->id,
             'user_id' => $article->user_id,
+            'created_via' => $article->created_via,
             'title' => $article->title,
             'category' => $article->category,
             'summary' => $article->summary,

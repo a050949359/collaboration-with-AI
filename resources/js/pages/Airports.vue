@@ -190,6 +190,17 @@ onMounted(() => fetchAirports());
                     <p class="mt-3 text-sm text-[var(--binary-text-muted)]">
                         {{ t('airports.subtitle') }}
                     </p>
+                    <p class="mt-2 text-xs text-[var(--binary-outline)]">
+                        {{ t('airports.source_label') }}
+                        <a
+                            href="https://ourairports.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="underline underline-offset-2 hover:text-[var(--binary-primary)]"
+                        >
+                            {{ t('airports.source_link') }}
+                        </a>
+                    </p>
                 </div>
 
                 <!-- Tabs -->
