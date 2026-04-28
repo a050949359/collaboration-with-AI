@@ -1,0 +1,118 @@
+# 專案狀態快照
+
+## Git 狀態
+- 目前分支：main
+- 最近 5 筆 commit：
+  - 41d3552 feature: 前端優化
+  - 85120cf feature: articles complete
+  - 770b011 feat: airport
+  - 1df037d init
+  - f145732 Initial commit
+
+## 目錄結構（部分）
+- app/
+  - Models/
+  - Http/Controllers/
+  - Http/Middleware/
+  - Services/
+  - Jobs/
+  - Events/
+  - Enums/
+  - Traits/
+- config/
+- database/
+- public/
+- resources/
+- routes/
+- storage/
+- tests/
+
+## Laravel 與環境
+- Laravel 版本：13.5.0
+- PHP 版本：8.4.20
+- Composer 版本：2.9.7
+- APP_ENV：local
+- APP_DEBUG：true
+- APP_URL：http://localhost
+- DB_CONNECTION：sqlite
+- QUEUE_CONNECTION：database
+- CACHE_DRIVER：database
+
+## 主要 Composer 套件
+- fakerphp/faker v1.24.1
+- inertiajs/inertia-laravel v3.0.6
+- laravel/framework v13.5.0
+- laravel/pail v1.2.6
+- laravel/pint v1.29.1
+- laravel/sail v1.57.0
+- laravel/sanctum v4.3.1
+- laravel/socialite v5.26.1
+- laravel/tinker v3.0.2
+- laravel/wayfinder v0.1.16
+- mockery/mockery 1.6.12
+- nunomaduro/collision v8.9.3
+- nunomaduro/pao v1.0.4
+- phpunit/phpunit 12.5.23
+
+## 主要 NPM 套件
+- vue ^3.5.13
+- vite ^8.0.0
+- tailwindcss ^4.1.1
+- @inertiajs/vue3 ^3.0.0
+- @vueuse/core ^12.8.2
+- d3 ^7.9.0
+
+## Models
+- Airports
+- Article
+- User
+- SocialAccount
+
+## Controllers
+- SettingsController
+- HomeController
+- ResumeContextController
+- ArticlePageController
+- AboutController
+- ArticleGenerationController
+- ArticleEditController
+- ArticleBrowseController
+- NearbyAirportController
+- AirportController
+- AirportStatsController
+- AvatarController
+- LoginController
+- SocialAccountController
+- LineArticleController
+- LineFriendController
+- RegistController
+
+## Middlewares
+- EnsureAdmin
+- HandleInertiaRequests
+- AuthTokenFromCookie
+
+## Services
+- VertexImageGenerationService
+- VertexGeminiArticleService
+- AIServiceException
+- GeminiChatService
+- GcpAccessTokenProvider
+
+## Jobs
+- GenerateArticleImageJob
+- DispatchLineArticleReadyWebhookJob
+- GenerateArticleContentJob
+
+## 路由（部分）
+- POST api/about/ask → AboutController@ask
+- GET api/about/context → ResumeContextController@show
+- PUT api/about/context → ResumeContextController@update
+- GET api/admin/settings → SettingsController@show
+- PATCH api/admin/settings → SettingsController@update
+
+---
+
+# 初始化完成
+
+如需完整內容請檢查本檔案。
