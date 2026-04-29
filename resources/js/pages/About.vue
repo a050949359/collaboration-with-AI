@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { computed, nextTick, ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { api } from '@/lib/routes';
 import { useAuth } from '@/composables/useAuth';

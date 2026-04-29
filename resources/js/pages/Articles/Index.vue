@@ -9,7 +9,6 @@ import type {ArticlePreview} from '@/lib/articles-api';
 import { routes } from '@/lib/routes';
 import { useAuth } from '@/composables/useAuth';
 
-const page = usePage();
 const { t } = useI18n();
 const { isLoggedIn: isAuthenticated } = useAuth();
 const isLoading = ref(false);

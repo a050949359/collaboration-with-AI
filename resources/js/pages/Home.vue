@@ -19,7 +19,6 @@ defineProps<{
     latestArticles: ArticlePreview[];
 }>();
 
-const { t } = useI18n();
 const featuredProjects = [
     {
         id: '01',
