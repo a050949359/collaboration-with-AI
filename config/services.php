@@ -49,7 +49,7 @@ return [
     'vertex_ai' => [
         'project_id' => env('GCP_PROJECT_ID'),
         'location' => env('GCP_LOCATION', 'us-central1'),
-        'credentials_path' => env('GCP_APPLICATION_CREDENTIALS'),
+        'credentials_path' => env('VERTEX_APPLICATION_CREDENTIALS'),
         'gemini_model' => env('GCP_GEMINI_MODEL', 'gemini-2.5-flash'),
         'image_model' => env('GCP_IMAGE_MODEL', 'imagen-4.0-generate-001'),
         'rate_limit_seconds' => env('ARTICLE_GENERATION_RATE_LIMIT_SECONDS', 3600),
