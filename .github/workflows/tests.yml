@@ -57,7 +57,7 @@ jobs:
       - name: Deploy (local shell)
         run: |
           cd /var/www/collaboration-with-AI
-          git pull origin main
+          git pull 
           composer install --no-interaction --prefer-dist --optimize-autoloader
           npm i
           npm run build
