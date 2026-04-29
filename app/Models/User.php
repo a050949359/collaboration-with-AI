@@ -21,7 +21,11 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
 
-    protected $appends = ['avatar'];
+    protected $appends = ['avatar', 'has_google_account'];
+    public function getHasGoogleAccountAttribute(): bool
+    {
+        return $this->socialAccounts()->where('provider', 'google')->exists();
+    }
 
     public function isAdmin(): bool
     {

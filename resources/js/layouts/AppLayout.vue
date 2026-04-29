@@ -123,6 +123,7 @@ return;
                                     </div>
                                 </div>
                                 <button
+                                    v-if="!effectiveUser.has_google_account"
                                     type="button"
                                     class="w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-text)] transition hover:bg-[var(--binary-surface-container)]"
                                     @click="bindGoogle"
