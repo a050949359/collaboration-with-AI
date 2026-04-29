@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { useI18n } from 'vue-i18n';
 import ArticlesSection from '../components/welcome/ArticlesSection.vue';
 import HeroSection from '../components/welcome/HeroSection.vue';
 import ProjectsSection from '../components/welcome/ProjectsSection.vue';

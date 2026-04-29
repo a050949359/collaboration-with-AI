@@ -79,7 +79,7 @@ class ArticleGenerationTest extends TestCase
                 'style'    => 'practical',
             ]);
 
-        $second->assertStatus(429)
+        $second->assertStatus(409)
             ->assertJsonPath('status', 'error');
     }
 
