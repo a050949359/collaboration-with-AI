@@ -120,19 +120,19 @@ async function submit() {
                 {{ successMessage }}
             </p>
 
+            <div class="pt-4">
+                <button class="binary-button" :disabled="isSubmitting" type="submit">
+                    {{ isSubmitting ? '連線中...' : '驗證並登入' }}
+                    <span aria-hidden="true">-></span>
+                </button>
+            </div>
+
             <div class="mt-4">
                 <Turnstile v-model="form.cf_turnstile_response" />
                 <!-- 顯示後端回傳的驗證錯誤訊息 -->
                 <div v-if="fieldErrors.cf_turnstile_response?.length" class="text-red-500 text-sm mt-1">
                     {{ fieldErrors.cf_turnstile_response[0] }}
                 </div>
-            </div>
-
-            <div class="pt-4">
-                <button class="binary-button" :disabled="isSubmitting" type="submit">
-                    {{ isSubmitting ? '連線中...' : '驗證並登入' }}
-                    <span aria-hidden="true">-></span>
-                </button>
             </div>
         </form>
 

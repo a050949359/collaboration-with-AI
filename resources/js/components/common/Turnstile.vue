@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { onMounted, ref } from 'vue';
 
 const props = defineProps({
@@ -32,6 +32,7 @@ const renderWidget = () => {
     widgetId.value = window.turnstile.render(turnstileBox.value, {
         sitekey: props.siteKey,
         theme: 'auto', // 支援 'light', 'dark', 'auto'
+        size: 'normal',
         callback: (token) => {
             // 驗證成功，將 token 傳回父元件
             emit('update:modelValue', token);
