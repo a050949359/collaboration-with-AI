@@ -69,7 +69,7 @@ async function resendVerification() {
             credentials: 'include',
         });
         showToast('驗證信已寄出，請至信箱收信', 'success');
-    } catch (e) {
+    } catch {
         showToast('重寄失敗，請稍後再試', 'error');
     }
 }
