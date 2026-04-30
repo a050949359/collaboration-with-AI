@@ -60,15 +60,7 @@ defineProps<Props>();
                         <slot />
                     </div>
 
-                    <div class="mt-10 opacity-45">
-                        <p class="binary-label text-[10px] uppercase leading-6 text-[var(--binary-outline)]">
-                            connection_status: secure_tls_1.3
-                            <br>
-                            session_context: authenticated_entry_flow
-                            <br>
-                            {{ mode === 'login' ? 'sign in to continue' : 'create your account to get started' }}
-                        </p>
-                    </div>
+                    
                 </div>
             </section>
         </main>

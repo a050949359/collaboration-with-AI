@@ -137,11 +137,6 @@ async function submit() {
         </form>
 
         <div class="mt-8 border-t border-[rgba(59,75,55,0.18)] pt-8">
-            <div class="flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.18em] text-[var(--binary-outline)]">
-                <span>狀態: 待命</span>
-                <span>版本: 2.0.4-lts</span>
-            </div>
-
             <div class="mt-6 flex items-center gap-2 text-sm">
                 <span class="text-[var(--binary-text-muted)]">沒有帳號？</span>
                 <Link class="font-semibold text-[var(--binary-primary)] transition hover:underline" :href="routes.register()">
@@ -161,14 +156,6 @@ async function submit() {
                 提醒：登入後將依你的權限載入對應功能，若裝置為共用環境請勿勾選保持登入。
                 <br>
                 please keep your account credentials secure.
-            </p>
-        </div>
-
-        <div class="mt-8 border-t border-[rgba(59,75,55,0.18)] pt-6">
-            <p class="binary-label text-[10px] uppercase leading-6 text-[var(--binary-outline)]">
-                api endpoint: {{ apiHint }}
-                <br>
-                expected payload: email, password, remember
             </p>
         </div>
     </AuthShell>
