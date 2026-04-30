@@ -5,53 +5,79 @@
     <meta charset="UTF-8">
     <style>
         body {
-            font-family: sans-serif;
-            background: #f5f5f5;
+            font-family: 'Space Grotesk', 'Segoe UI', Arial, sans-serif;
+            background: #0f1511;
             margin: 0;
+            color: #dee4dd;
         }
-
         .wrap {
-            max-width: 520px;
-            margin: 40px auto;
+            max-width: 480px;
+            margin: 48px auto;
+            background: rgba(15,21,17,0.92);
+            border-radius: 2rem;
+            box-shadow: 0 8px 32px 0 #6bdc9f22;
+            backdrop-filter: blur(20px);
+            overflow: hidden;
         }
-
         .header {
-            background: #1a1a2e;
-            padding: 32px 40px;
-            text-align: center;
-            border-radius: 12px 12px 0 0;
+            padding: 36px 44px 0 44px;
+            text-align: left;
         }
-
         .header h1 {
-            color: #fff;
-            font-size: 20px;
-            margin: 0;
+            color: #6bdc9f;
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+            letter-spacing: -1px;
         }
-
         .body {
-            background: #fff;
-            padding: 36px 40px;
+            padding: 32px 44px 0 44px;
         }
-
+        .body p {
+            color: #dee4dd;
+            font-size: 1.05rem;
+            line-height: 1.7;
+            margin: 0 0 18px 0;
+        }
         .btn {
             display: block;
-            background: #534AB7;
-            color: #fff;
+            width: 100%;
+            background: linear-gradient(145deg,#6bdc9f,#2ca46d);
+            color: #0f1511;
             text-align: center;
-            padding: 13px;
-            border-radius: 8px;
+            padding: 15px 0;
+            border-radius: 0.75rem;
             text-decoration: none;
-            font-size: 15px;
-            margin: 0 0 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 18px 0;
+            box-shadow: 0 2px 8px 0 #6bdc9f22;
+            letter-spacing: 0.5px;
         }
-
+        .btn:hover {
+            filter: brightness(1.08);
+        }
+        .link {
+            display: block;
+            word-break: break-all;
+            font-size: 0.92rem;
+            color: #a5d1b4;
+            margin-bottom: 0;
+            text-decoration: underline dotted;
+            max-width: 100%;
+        }
         .footer {
-            background: #f9f9f9;
-            padding: 20px 40px;
-            text-align: center;
-            font-size: 12px;
-            color: #888;
-            border-radius: 0 0 12px 12px;
+            padding: 28px 44px 28px 44px;
+            text-align: right;
+            font-size: 0.92rem;
+            color: #a5d1b4;
+            background: transparent;
+        }
+        @media (max-width: 600px) {
+            .wrap, .header, .body, .footer {
+                padding-left: 18px !important;
+                padding-right: 18px !important;
+            }
         }
     </style>
 </head>
@@ -63,11 +89,12 @@
         </div>
         <div class="body">
             <p>您好，{{ $user->name }}！</p>
-            <p>請點擊下方按鈕完成驗證：</p> <a class="btn" href="{{ $url }}">驗證電子郵件</a>
-            <p style="font-size:12px;color:#aaa">連結：{{ $url }}</p>
+            <p>請點擊下方按鈕完成驗證：</p>
+            <a class="btn" href="{{ $url }}">驗證電子郵件</a>
+            <span class="link">{{ $url }}</span>
         </div>
         <div class="footer">
-            <p>此連結 60 分鐘後失效</p>
+            此連結 60 分鐘後失效
         </div>
     </div>
 </body>

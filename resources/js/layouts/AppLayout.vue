@@ -1,14 +1,3 @@
-// 全域通知狀態
-const toast = ref<{ message: string; type?: 'success'|'error' }|null>(null);
-let toastTimer: number|null = null;
-
-function showToast(message: string, type: 'success'|'error' = 'success') {
-    toast.value = { message, type };
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => { toast.value = null; }, 3200);
-}
-
-// 允許子元件用 emit 觸發
 defineExpose({ showToast });
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
@@ -41,8 +30,18 @@ const defaultNavLinks = computed(() => {
         { label: 'LineBot', href: routes.linebot(), active: path.startsWith(routes.linebot()) },
     ];
 });
+
 const effectiveUser = computed(() => currentUser.value);
 const isLoggingOut = ref(false);
+
+// 全域通知狀態
+const toast = ref<{ message: string; type?: 'success'|'error' }|null>(null);
+let toastTimer: number|null = null;
+function showToast(message: string, type: 'success'|'error' = 'success') {
+    toast.value = { message, type };
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => { toast.value = null; }, 3200);
+}
 
 function toggleLocale() {
     const next = currentLocale.value === 'zh-tw' ? 'en' : 'zh-tw';
@@ -50,8 +49,29 @@ function toggleLocale() {
     currentLocale.value = next;
 }
 
+
 function bindGoogle() {
     window.location.href = api.auth.googleRedirect();
+}
+
+async function resendVerification() {
+    const _fetch =
+        (typeof window !== 'undefined' && window.fetch) ||
+        (typeof self !== 'undefined' && self.fetch) ||
+        (typeof globalThis !== 'undefined' && globalThis.fetch);
+    if (!_fetch) {
+        showToast('瀏覽器不支援 fetch，請更新瀏覽器', 'error');
+        return;
+    }
+    try {
+        await _fetch(api.auth.resendVerification(), {
+            method: 'POST',
+            credentials: 'include',
+        });
+        showToast('驗證信已寄出，請至信箱收信', 'success');
+    } catch (e) {
+        showToast('重寄失敗，請稍後再試', 'error');
+    }
 }
 
 async function logout() {
@@ -152,7 +172,7 @@ return;
                                     v-if="!effectiveUser.email_verified_at"
                                     type="button"
                                     class="w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-surface-container)]"
-                                    @click="async () => { await fetch(api.auth.resendVerification(), { method: 'POST', credentials: 'include' }); showToast('驗證信已寄出，請至信箱收信', 'success'); }"
+                                    @click="resendVerification"
                                 >
                                     重寄驗證信
                                 </button>
