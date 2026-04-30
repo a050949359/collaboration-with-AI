@@ -18,6 +18,7 @@ export type LoginPayload = {
     email: string;
     password: string;
     remember: boolean;
+    cf_turnstile_response?: string;
 };
 
 export type RegisterPayload = {

@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+
 import { computed, reactive, ref } from 'vue';
 
 import AuthShell from '../../layouts/AuthShell.vue';
 import { AuthApiError, getAuthApiConfig, loginWithApi } from '../../lib/auth-api';
 import { routes, api } from '../../lib/routes';
 
+import Turnstile from '../../components/common/Turnstile.vue';
+
 const form = reactive({
     email: '',
     password: '',
     remember: false,
+    cf_turnstile_response: null,
 });
 
 const isSubmitting = ref(false);
@@ -70,6 +74,7 @@ async function submit() {
                     placeholder="root@terminal.dev"
                     type="email"
                 >
+
                 <p v-if="fieldErrors.email?.length" class="text-xs text-red-300">
                     {{ fieldErrors.email[0] }}
                 </p>
@@ -114,6 +119,14 @@ async function submit() {
             <p v-if="successMessage" class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]">
                 {{ successMessage }}
             </p>
+
+            <div class="mt-4">
+                <Turnstile v-model="form.cf_turnstile_response" />
+                <!-- 顯示後端回傳的驗證錯誤訊息 -->
+                <div v-if="fieldErrors.cf_turnstile_response?.length" class="text-red-500 text-sm mt-1">
+                    {{ fieldErrors.cf_turnstile_response[0] }}
+                </div>
+            </div>
 
             <div class="pt-4">
                 <button class="binary-button" :disabled="isSubmitting" type="submit">

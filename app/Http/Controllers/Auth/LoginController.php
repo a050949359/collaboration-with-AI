@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 
 
 /**
@@ -20,6 +21,16 @@ class LoginController extends Controller
     {
         $credentials = $request->only('email', 'password');
         $remember = $request->boolean('remember');
+        $cfTurnstileResponse = $request->input('cf_turnstile_response');
+
+        $response = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+            'secret' => env('TURNSTILE_SECRET_KEY'),
+            'response' => $cfTurnstileResponse,
+        ]);
+
+        if (! $response->json('success')) {
+            return response()->json(['message' => '機器人驗證失敗，請重新整理頁面後再試一次。'], 401);
+        }
 
         if (!Auth::attempt($credentials, $remember)) {
             return response()->json(['message' => '登入失敗'], 401);
