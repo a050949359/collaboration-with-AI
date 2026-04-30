@@ -5,12 +5,15 @@ import { reactive, ref } from 'vue';
 import AuthShell from '../../layouts/AuthShell.vue';
 import { AuthApiError, registerWithApi } from '../../lib/auth-api';
 
+import Turnstile from '../../components/common/Turnstile.vue';
+
 const form = reactive({
     name: '',
     email: '',
     password: '',
     password_confirmation: '',
     terms: false,
+    cf_turnstile_response: null,
 });
 
 const isSubmitting = ref(false);
@@ -157,6 +160,14 @@ async function submit() {
                     {{ isSubmitting ? '建立中...' : '執行註冊' }}
                     <span aria-hidden="true">-></span>
                 </button>
+            </div>
+
+            <div class="mt-4">
+                <Turnstile v-model="form.cf_turnstile_response" />
+                <!-- 顯示後端回傳的驗證錯誤訊息 -->
+                <div v-if="fieldErrors.cf_turnstile_response?.length" class="text-red-500 text-sm mt-1">
+                    {{ fieldErrors.cf_turnstile_response[0] }}
+                </div>
             </div>
         </form>
 

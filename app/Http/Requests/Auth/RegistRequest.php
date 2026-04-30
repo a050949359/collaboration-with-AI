@@ -34,6 +34,7 @@ class RegistRequest extends FormRequest
             ],
             'password_confirmation' => ['required', 'same:password'],
             'terms' => ['required', 'accepted'],
+            'cf_turnstile_response' => ['required', 'string'],
         ];
     }
 }

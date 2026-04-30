@@ -13,6 +13,16 @@ class RegistController extends Controller
     {
         $validated = $request->validated();
 
+        $cfTurnstileResponse = $request->input('cf_turnstile_response');
+        $response = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+            'secret' => env('TURNSTILE_SECRET_KEY'),
+            'response' => $cfTurnstileResponse,
+        ]);
+
+        if (! $response->json('success')) {
+            return response()->json(['message' => '機器人驗證失敗，請重新整理頁面後再試一次。'], 401);
+        }
+
         $user = User::query()->create([
             'name' => $validated['name'],
             'email' => $validated['email'],
