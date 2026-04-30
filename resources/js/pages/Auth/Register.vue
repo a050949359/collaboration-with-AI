@@ -91,6 +91,7 @@ async function submit() {
                     name="email"
                     placeholder="user@terminal.sys"
                     type="email"
+                    autocomplete="username"
                 >
                 <p v-if="fieldErrors.email?.length" class="text-xs text-red-300">
                     {{ fieldErrors.email[0] }}

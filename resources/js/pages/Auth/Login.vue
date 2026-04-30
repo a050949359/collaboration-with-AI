@@ -20,7 +20,6 @@ const isSubmitting = ref(false);
 const generalError = ref('');
 const successMessage = ref('');
 const fieldErrors = ref<Record<string, string[]>>({});
-const apiHint = computed(() => getAuthApiConfig().loginEndpoint);
 
 async function submit() {
     generalError.value = '';
@@ -73,6 +72,7 @@ async function submit() {
                     name="email"
                     placeholder="root@terminal.dev"
                     type="email"
+                    autocomplete="username"
                 >
 
                 <p v-if="fieldErrors.email?.length" class="text-xs text-red-300">
@@ -96,6 +96,7 @@ async function submit() {
                     name="password"
                     placeholder="••••••••"
                     type="password"
+                    autocomplete="current-password"
                 >
                 <p v-if="fieldErrors.password?.length" class="text-xs text-red-300">
                     {{ fieldErrors.password[0] }}
