@@ -108,6 +108,7 @@ async function submit() {
                     name="password"
                     placeholder="••••••••"
                     type="password"
+                    autocomplete="new-password"
                 >
                 <p v-if="fieldErrors.password?.length" class="text-xs text-red-300">
                     {{ fieldErrors.password[0] }}
@@ -125,6 +126,7 @@ async function submit() {
                     name="password_confirmation"
                     placeholder="••••••••"
                     type="password"
+                    autocomplete="new-password"
                 >
                 <p v-if="fieldErrors.password_confirmation?.length" class="text-xs text-red-300">
                     {{ fieldErrors.password_confirmation[0] }}
