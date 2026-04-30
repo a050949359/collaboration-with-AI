@@ -52,6 +52,7 @@ export const api = {
         logout: () => '/api/auth/logout',
         me: () => '/api/auth/me',
         googleRedirect: () => '/api/auth/google/redirect',
+        resendVerification: () => '/api/email/verification-notification',
     },
 
     admin: {

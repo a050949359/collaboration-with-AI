@@ -19,7 +19,7 @@ class SocialAccountController extends Controller
     {
         abort_unless(in_array($provider, self::SUPPORTED_PROVIDERS, true), 404);
 
-        return Socialite::driver($provider)->stateless()->redirect();
+        return Socialite::driver($provider)->stateless()->with(['prompt' => 'select_account'])->redirect();
     }
 
     public function callback(string $provider): JsonResponse|RedirectResponse
@@ -41,6 +41,11 @@ class SocialAccountController extends Controller
                 ['email' => $email],
                 ['name' => $socialUser->getName() ?: 'Social User']
             );
+            
+            if ($user->wasRecentlyCreated && is_null($user->email_verified_at)) {
+                $user->email_verified_at = now();
+                $user->save();
+            }
 
             $user->socialAccounts()->updateOrCreate(
                 ['provider' => $provider, 'provider_user_id' => $socialUser->getId()],

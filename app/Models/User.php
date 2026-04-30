@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Notifications\VerifyEmailNotification;
+use Illuminate\Support\Facades\URL;
 use App\Support\AvatarGenerator;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,7 +18,7 @@ use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['name', 'email', 'role'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
@@ -71,5 +73,19 @@ class User extends Authenticatable
                 return AvatarGenerator::defaultFor($this->name, $this->email, $this->getKey());
             },
         );
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $url = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            [
+                'id'   => $this->getKey(),
+                'hash' => sha1($this->getEmailForVerification()),
+            ]
+        );
+
+        $this->notify(new VerifyEmailNotification($url));
     }
 }

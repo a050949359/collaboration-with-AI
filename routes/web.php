@@ -25,9 +25,13 @@ Route::prefix('app')->group(function () {
             ->whereNumber('article')
             ->name('articles.edit');
     });
-    Route::get('/login', fn () => Inertia::render('Auth/Login'))->name('login');
-    Route::get('/register', fn () => Inertia::render('Auth/Register'))->name('register');
+
+    Route::inertia('/login', 'Auth/Login')->name('login');
+    Route::inertia('/register', 'Auth/Register')->name('register');
     Route::get('/avatar/default/{seed}.svg', [AvatarController::class, 'default'])->name('avatar.default');
+
+    // 信箱驗證結果頁
+    Route::inertia('/verify-result', 'Auth/VerifyResult')->name('verify.result');
 
     // Admin Inertia shell — auth guard is handled client-side via Bearer token
     Route::prefix('admin')->name('admin.')->group(function () {

@@ -2,13 +2,16 @@
 
 namespace App\Providers;
 
+use App\Notifications\VerifyEmailNotification;
 use App\Services\AI\Contracts\GeneratesArticleContent;
 use App\Services\AI\Contracts\GeneratesArticleImage;
 use App\Services\AI\VertexGeminiArticleService;
 use App\Services\AI\VertexImageGenerationService;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -29,6 +32,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        VerifyEmail::toMailUsing(function ($notifiable, $url) {
+            return new VerifyEmailNotification($url);
+        });
     }
 
     /**

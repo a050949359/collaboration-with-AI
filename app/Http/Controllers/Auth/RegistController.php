@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegistRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Auth\Events\Registered;
 
 class RegistController extends Controller
 {
@@ -30,6 +31,8 @@ class RegistController extends Controller
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        $user->sendEmailVerificationNotification();
 
         return response()->json([
             'message' => '註冊成功',

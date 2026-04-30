@@ -1,3 +1,15 @@
+// 全域通知狀態
+const toast = ref<{ message: string; type?: 'success'|'error' }|null>(null);
+let toastTimer: number|null = null;
+
+function showToast(message: string, type: 'success'|'error' = 'success') {
+    toast.value = { message, type };
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => { toast.value = null; }, 3200);
+}
+
+// 允許子元件用 emit 觸發
+defineExpose({ showToast });
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -107,7 +119,12 @@ return;
                                     alt="avatar"
                                     class="h-7 w-7 rounded-full object-cover"
                                 >
-                                <span class="hidden sm:inline">{{ effectiveUser.name }}</span>
+                                                                <span class="hidden sm:inline flex items-center gap-1">
+                                                                    {{ effectiveUser.name }}
+                                                                    <svg v-if="effectiveUser.email_verified_at" class="inline-block h-4 w-4 text-[#6bdc9f]" viewBox="0 0 20 20" fill="currentColor" aria-label="已驗證信箱">
+                                                                        <path fill-rule="evenodd" d="M16.707 6.293a1 1 0 010 1.414l-6.364 6.364a1 1 0 01-1.414 0l-3.182-3.182a1 1 0 111.414-1.414l2.475 2.475 5.657-5.657a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                                    </svg>
+                                                                </span>
                             </summary>
 
                             <div class="absolute right-0 mt-2 w-56 rounded-xl bg-[var(--binary-surface-high)] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
@@ -129,6 +146,15 @@ return;
                                     @click="bindGoogle"
                                 >
                                     {{ t('layout.bind_google') }}
+                                </button>
+                                <!-- 僅未驗證 email 的登入使用者顯示重寄驗證信 -->
+                                <button
+                                    v-if="!effectiveUser.email_verified_at"
+                                    type="button"
+                                    class="w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-surface-container)]"
+                                    @click="async () => { await fetch(api.auth.resendVerification(), { method: 'POST', credentials: 'include' }); showToast('驗證信已寄出，請至信箱收信', 'success'); }"
+                                >
+                                    重寄驗證信
                                 </button>
                                 <a
                                     v-if="isAdmin"
@@ -162,7 +188,16 @@ return;
             </div>
         </nav>
 
-        <!-- Page content -->
-        <slot />
+                <!-- Toast 通知 -->
+                <transition name="fade">
+                    <div v-if="toast" class="fixed left-1/2 top-8 z-[9999] -translate-x-1/2 rounded-2xl px-8 py-4 shadow-xl"
+                        :class="toast.type === 'success' ? 'bg-[#6bdc9f]/90 text-[#0f1511]' : 'bg-[#ffb3b2]/90 text-[#0f1511]'"
+                        style="font-family:'Space Grotesk',sans-serif;font-size:1.1rem;letter-spacing:-0.5px;min-width:240px;text-align:center;backdrop-filter:blur(12px);">
+                        {{ toast.message }}
+                    </div>
+                </transition>
+
+                <!-- Page content -->
+                <slot />
     </div>
 </template>

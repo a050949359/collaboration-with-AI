@@ -9,6 +9,8 @@ use App\Http\Controllers\Article\ArticleGenerationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegistController;
 use App\Http\Controllers\Auth\SocialAccountController;
+use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Airports\AirportController;
 use App\Http\Controllers\Airports\AirportStatsController;
@@ -33,8 +35,26 @@ Route::group(['prefix' => 'auth'], function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [LoginController::class, 'logout']);
         Route::get('/me', [LoginController::class, 'me']);
+
+        // 點擊信件連結後觸發
+        Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
+            ->middleware(['signed', 'throttle:6,1'])
+            ->name('verification.verify');
+
+        // 重新寄送驗證信
+        Route::post('/email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('verification.send');
     });
+
+     
 });
+
+Route::get('/email/verify/{id}/{hash}', function (Illuminate\Foundation\Auth\EmailVerificationRequest $request) {
+    $request->fulfill();
+ 
+    return redirect('/home');
+})->middleware(['auth', 'signed'])->name('verification.verify');
 
 Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(function () {
     Route::get('/settings', [SettingsController::class, 'show']);

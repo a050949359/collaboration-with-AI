@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 
-import { computed, reactive, ref } from 'vue';
+import { reactive, ref } from 'vue';
 
 import AuthShell from '../../layouts/AuthShell.vue';
-import { AuthApiError, getAuthApiConfig, loginWithApi } from '../../lib/auth-api';
+import { AuthApiError, loginWithApi } from '../../lib/auth-api';
 import { routes, api } from '../../lib/routes';
 
 import Turnstile from '../../components/common/Turnstile.vue';
