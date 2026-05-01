@@ -1,0 +1,14 @@
+meta {
+  name: Update Resume Context
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/about/context
+  body: json {
+    {
+      "context": "Updated context content"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Create Article
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/articles
+  body: json {
+    {
+      "title": "Article Title",
+      "prompt": "Prompt for generation",
+      "category": "Tech"
+    }
+  }
+}

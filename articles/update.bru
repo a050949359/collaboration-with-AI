@@ -1,0 +1,14 @@
+meta {
+  name: Update Article
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/articles/:article
+  body: json {
+    {
+      "title": "Updated Title"
+    }
+  }
+}

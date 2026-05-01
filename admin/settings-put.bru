@@ -1,0 +1,14 @@
+meta {
+  name: Update Settings
+  type: http
+  seq: 2
+}
+
+patch {
+  url: {{baseUrl}}/admin/settings
+  body: json {
+    {
+      "setting_key": "value"
+    }
+  }
+}

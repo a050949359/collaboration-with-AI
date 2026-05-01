@@ -1,0 +1,14 @@
+meta {
+  name: Ask About
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/about/ask
+  body: json {
+    {
+      "question": "Your question here"
+    }
+  }
+}

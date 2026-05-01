@@ -1,0 +1,14 @@
+meta {
+  name: Line Friend Add
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/line/friends/add
+  body: json {
+    {
+      "userId": "line_user_id"
+    }
+  }
+}
