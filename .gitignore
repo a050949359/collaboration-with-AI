@@ -27,3 +27,4 @@ yarn-error.log
 /.zed
 # Lint/Type check results
 check_results.txt
+.aider*
