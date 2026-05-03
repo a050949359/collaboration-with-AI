@@ -138,6 +138,16 @@ export default {
         login: '登入',
         register: '註冊',
     },
+    home: {
+        stack: {
+            language: '程式語言',
+            frontend: '前端',
+            database: '資料庫',
+            os: '作業系統',
+            visualization: '視覺化工具',
+            container: '容器',
+        },
+    },
     airports: {
         title: '機場資料庫',
         subtitle: '全球 84,000+ 筆機場資料，支援 IATA / ICAO 代碼搜尋、類型篩選與洲別統計。',

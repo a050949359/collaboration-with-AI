@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import ArticlesSection from '../components/welcome/ArticlesSection.vue';
 import HeroSection from '../components/welcome/HeroSection.vue';
 import ProjectsSection from '../components/welcome/ProjectsSection.vue';
@@ -17,6 +19,8 @@ interface ArticlePreview {
 defineProps<{
     latestArticles: ArticlePreview[];
 }>();
+
+const { t } = useI18n();
 
 const featuredProjects = [
     {
@@ -38,11 +42,14 @@ const featuredProjects = [
     },
 ];
 
-const stackInfo: [string, string][] = [
-    ['Language', 'Go, Rust, TypeScript'],
-    ['Database', 'PostgreSQL, Redis'],
-    ['Infra', 'K8s, Docker, AWS'],
-];
+const stackInfo = computed<[string, string][]>(() => [
+    [t('home.stack.language'), 'Perl, PHP, Bonfire(CodeIgniter), Laravel, Go(Gin)'],
+    [t('home.stack.frontend'), 'jQuery, Vue'],
+    [t('home.stack.database'), 'MySQL, MongoDB, InfluxDB, Redis'],
+    [t('home.stack.os'), 'Linux'],
+    [t('home.stack.visualization'), 'Grafana'],
+    [t('home.stack.container'), 'Docker'],
+]);
 </script>
 
 <template>

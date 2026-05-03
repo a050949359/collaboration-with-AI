@@ -138,6 +138,16 @@ export default {
         login: 'Login',
         register: 'Register',
     },
+    home: {
+        stack: {
+            language: 'Language',
+            frontend: 'Frontend',
+            database: 'Database',
+            os: 'Operating System',
+            visualization: 'Visualization Tool',
+            container: 'Container',
+        },
+    },
     airports: {
         title: 'Airport Database',
         subtitle: '84,000+ global airports. Search by name, IATA / ICAO code, filter by type or continent.',
