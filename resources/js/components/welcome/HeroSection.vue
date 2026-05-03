@@ -11,14 +11,12 @@ defineProps<{
                 <span class="binary-label text-xs font-bold uppercase text-[var(--binary-primary)]">&gt; architect_mode</span>
             </div>
             <h1 class="binary-display text-5xl font-black leading-[0.9] tracking-tight md:text-8xl">
-                SERIOUS
+                ENGINEERING
                 <br>
-                <span class="text-[var(--binary-primary)]">BACKEND</span>
-                <br>
-                SYSTEMS
+                <span class="text-[var(--binary-primary)]">STUDIO</span>
             </h1>
             <p class="mt-8 max-w-2xl text-xl leading-relaxed text-[var(--binary-text-muted)] md:text-2xl">
-                以深色調、寬呼吸感與不對稱編排，展示偏成熟工程團隊的工作室氣質。不是編輯器風格，而是工程架構作品集。
+                將技術挑戰轉化為精確的系統邏輯。我們在 Laravel、Go 與 AI 整合的交匯點上，尋求效能與擴展性的最佳平衡。這是針對真實生產環境所進行的系統設計與架構紀錄。
             </p>
         </div>
 
