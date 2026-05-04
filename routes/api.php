@@ -46,8 +46,6 @@ Route::group(['prefix' => 'auth'], function () {
             ->middleware('throttle:6,1')
             ->name('verification.send');
     });
-
-     
 });
 
 Route::get('/email/verify/{id}/{hash}', function (Illuminate\Foundation\Auth\EmailVerificationRequest $request) {
@@ -90,4 +88,28 @@ Route::prefix('line/friends')->group(function () {
 
 Route::prefix('line/articles')->group(function () {
     Route::post('/quick-generate', [LineArticleController::class, 'quickGenerate'])->middleware('throttle:20,1');
+});
+
+use App\Http\Controllers\Travel\PassengerController;
+use App\Http\Controllers\Travel\TourController;
+use App\Http\Controllers\Travel\BookingController;
+use App\Http\Controllers\Travel\ExportController;
+
+Route::prefix('v1/tour')->group(function () {
+    // 旅客
+    Route::get('/passengers', [PassengerController::class, 'index']);
+
+    // 行程
+    Route::get('/tours',      [TourController::class, 'index']);
+    Route::post('/tours',     [TourController::class, 'store']);
+    Route::put('/tours/{tour}', [TourController::class, 'update']);
+
+    // 訂單
+    Route::get('/bookings',   [BookingController::class, 'index']);
+    Route::post('/bookings',  [BookingController::class, 'store']);
+
+    // 匯出（Queue 主角）
+    Route::post('/exports',              [ExportController::class, 'store']);
+    Route::get('/exports/{id}/status',   [ExportController::class, 'status']);
+    Route::get('/exports/{id}/download', [ExportController::class, 'download']);
 });
