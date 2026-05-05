@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('export_requests', function (Blueprint $table) {
+        Schema::table('export_tasks', function (Blueprint $table) {
             $table->string('type')->default('tour')->after('id');
             $table->json('params')->nullable()->after('type');
         });
@@ -22,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('export_requests', function (Blueprint $table) {
+        Schema::table('export_tasks', function (Blueprint $table) {
             $table->dropColumn(['type', 'params']);
         });
     }
