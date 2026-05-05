@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
     'file_path',
     'error_message',
 ])]
-class ExportRequest extends Model
+class ExportTask extends Model
 {
     //
 }

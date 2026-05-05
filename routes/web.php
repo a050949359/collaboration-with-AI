@@ -12,6 +12,7 @@ Route::prefix('app')->group(function () {
     Route::inertia('/airports', 'Airports')->name('airports');
     Route::inertia('/about', 'About')->name('about');
     Route::inertia('/linebot', 'LineBot')->name('linebot');
+    Route::inertia('/tour-playground', 'TourPlayground')->name('tour-playground');
     Route::inertia('/articles', 'Articles/Index')->name('articles.index');
     Route::get('/articles/{article}', [ArticlePageController::class, 'show'])
         ->whereNumber('article')

@@ -39,7 +39,7 @@ class Booking extends Model
 
     public function companions()
     {
-        return $this->belongsToMany(Passenger::class, 'booking_companions');
+        return $this->belongsToMany(Passenger::class, 'booking_companions')->withTimestamps();
     }
 
     public function payments()

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\TourType;
 use App\Models\Travel\Tour;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -24,7 +25,7 @@ class FakeTour extends Command
                 $prefix = $type === 'G' ? 'G' : 'F';
 
                 return [
-                    'type'           => $type === 'G' ? 'group' : 'fit',
+                    'type'           => $type === 'G' ? TourType::Group->value : TourType::Fit->value,
                     'departure_date' => $dep,
                     'duration'       => $dur,
                     'return_date'    => (clone $dep)->modify("+{$dur} days"),

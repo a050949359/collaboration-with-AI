@@ -27,7 +27,7 @@ class BookingSeeder extends Seeder
             $usedPassengerIds = [];
 
             if ($isGroup) {
-                $totalPax    = fake()->numberBetween(10, 40);
+                $totalPax = fake()->numberBetween($tour->min_pax - 5, $tour->max_pax);
                 $isChartered = fake()->boolean(5); // 10% 機率包團
 
                 if ($isChartered) {
@@ -90,9 +90,9 @@ class BookingSeeder extends Seeder
     private function createPayment(int $bookingId, float $finalAmount, int $partySize): void
     {
         $isFullPayment = fake()->boolean(20);
-        $amount        = $isFullPayment
+        $amount = $isFullPayment
             ? $finalAmount
-            : fake()->numberBetween(10, 15) * 1000 * $partySize;
+            : min(fake()->numberBetween(10, 15) * 1000 * $partySize, $finalAmount);
 
         BookingPayment::create([
             'booking_id' => $bookingId,

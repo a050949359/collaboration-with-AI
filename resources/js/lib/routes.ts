@@ -37,6 +37,9 @@ export const routes = {
     // LineBot
     linebot: () => `${WEB_PREFIX}/linebot`,
 
+    // Tour Playground
+    tourPlayground: () => `${WEB_PREFIX}/tour-playground`,
+
     // Admin
     admin: {
         settings: () => `${WEB_PREFIX}/admin/settings`,
@@ -82,5 +85,19 @@ export const api = {
         index: () => '/api/v1/airports',
         nearby: () => '/api/v1/airports/nearby',
         stats: () => '/api/v1/airports/stats',
+    },
+
+    tour: {
+        stats: () => '/api/v1/tour/stats',
+        passengers: (filter?: string) => `/api/v1/tour/passengers${filter ? `?filter=${filter}` : ''}`,
+        tours: (hasVacancy?: boolean) => `/api/v1/tour/tours${hasVacancy ? '?has_vacancy=1' : ''}`,
+        storeTour: () => '/api/v1/tour/tours',
+        updateTour: (id: number) => `/api/v1/tour/tours/${id}`,
+        bookings: () => '/api/v1/tour/bookings',
+        storeBooking: () => '/api/v1/tour/bookings',
+        exports: () => '/api/v1/tour/exports',
+        storeExport: () => '/api/v1/tour/exports',
+        exportStatus: (id: number) => `/api/v1/tour/exports/${id}/status`,
+        exportDownload: (id: number) => `/api/v1/tour/exports/${id}/download`,
     },
 } as const;

@@ -28,6 +28,7 @@ const defaultNavLinks = computed(() => {
         { label: t('articles.nav.airports'), href: routes.airports(), active: path.startsWith(routes.airports()) },
         { label: t('articles.nav.about'), href: routes.about(), active: path.startsWith(routes.about()) },
         { label: 'LineBot', href: routes.linebot(), active: path.startsWith(routes.linebot()) },
+        { label: 'Tour', href: routes.tourPlayground(), active: path.startsWith(routes.tourPlayground()) },
     ];
 });
 

@@ -3,6 +3,7 @@
 namespace App\Models\Travel;
 
 use App\Enums\TourType;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,6 +15,11 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
     'min_pax', 'max_pax',
     'tour_leader_id', 'remarks',
 ])]
+
+/**
+ * @property Carbon $departure_date
+ * @property Carbon $return_date
+ */
 class Tour extends Model
 {
     use HasFactory;

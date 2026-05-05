@@ -94,10 +94,17 @@ use App\Http\Controllers\Travel\PassengerController;
 use App\Http\Controllers\Travel\TourController;
 use App\Http\Controllers\Travel\BookingController;
 use App\Http\Controllers\Travel\ExportController;
+use App\Http\Controllers\Travel\StatsController;
+use App\Http\Controllers\Travel\TourFlightController;
+use App\Http\Controllers\Travel\TourHotelController;
 
 Route::prefix('v1/tour')->group(function () {
-    // 旅客
+    // 旅客（靜態路由必須在 {passenger} 之前）
+    Route::get('/passengers/random', [PassengerController::class, 'random']);
+    Route::get('/passengers/lookup', [PassengerController::class, 'lookup']);
+    Route::get('/passengers/{passenger}', [PassengerController::class, 'show']);
     Route::get('/passengers', [PassengerController::class, 'index']);
+    Route::post('/passengers', [PassengerController::class, 'store']);
 
     // 行程
     Route::get('/tours',      [TourController::class, 'index']);
@@ -109,7 +116,20 @@ Route::prefix('v1/tour')->group(function () {
     Route::post('/bookings',  [BookingController::class, 'store']);
 
     // 匯出（Queue 主角）
+    Route::get('/exports',               [ExportController::class, 'index']);
     Route::post('/exports',              [ExportController::class, 'store']);
     Route::get('/exports/{id}/status',   [ExportController::class, 'status']);
     Route::get('/exports/{id}/download', [ExportController::class, 'download']);
+
+    Route::get('/stats', [StatsController::class, 'index']);
+
+    Route::prefix('/{tour}')->group(function () {
+        Route::get('/flights',           [TourFlightController::class, 'index']);
+        Route::post('/flights',          [TourFlightController::class, 'store']);
+        Route::delete('/flights/{flight}', [TourFlightController::class, 'destroy']);
+
+        Route::get('/hotels',           [TourHotelController::class, 'index']);
+        Route::post('/hotels',          [TourHotelController::class, 'store']);
+        Route::delete('/hotels/{hotel}', [TourHotelController::class, 'destroy']);
+    });
 });
