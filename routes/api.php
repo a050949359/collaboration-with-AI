@@ -48,12 +48,6 @@ Route::group(['prefix' => 'auth'], function () {
     });
 });
 
-Route::get('/email/verify/{id}/{hash}', function (Illuminate\Foundation\Auth\EmailVerificationRequest $request) {
-    $request->fulfill();
- 
-    return redirect('/home');
-})->middleware(['auth', 'signed'])->name('verification.verify');
-
 Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(function () {
     Route::get('/settings', [SettingsController::class, 'show']);
     Route::patch('/settings', [SettingsController::class, 'update']);
