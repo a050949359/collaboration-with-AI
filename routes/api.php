@@ -133,8 +133,8 @@ Route::prefix('v1/tour')->group(function () {
     });
 });
 
-Route::get('/debug-ip', fn() => response()->json([
-    'ip'              => request()->ip(),
-    'cf_connecting'   => request()->header('CF-Connecting-IP'),
-    'x_forwarded_for' => request()->header('X-Forwarded-For'),
-]));
+// Route::get('/debug-ip', fn() => response()->json([
+//     'ip'              => request()->ip(),
+//     'cf_connecting'   => request()->header('CF-Connecting-IP'),
+//     'x_forwarded_for' => request()->header('X-Forwarded-For'),
+// ]));
