@@ -47,6 +47,45 @@
 
 ---
 
+## Artisan 指令
+
+### 航空資料補全
+
+資料補全指令從 **Wikidata SPARQL** 抓取，需要網路連線，首次執行即可，之後只在需要更新時重新執行。
+
+#### `airports:enrich`
+
+補全中大型機場的中文名稱、缺少的 IATA / ICAO 代碼。
+
+```bash
+# 預覽（不寫入）
+php artisan airports:enrich --dry-run
+
+# 正式執行
+php artisan airports:enrich
+```
+
+- 只處理 `large_airport` / `medium_airport`（約 5,000 筆）
+- 中文名優先使用 zh-tw label，無則 fallback 到 zh（簡體）
+
+#### `airlines:enrich`
+
+補全航空公司中文名稱，並新增 DB 中缺少的航空公司。
+
+```bash
+# 預覽（不寫入）
+php artisan airlines:enrich --dry-run
+
+# 正式執行
+php artisan airlines:enrich
+```
+
+- 更新現有記錄的 `name_zh_tw`
+- 新增 Wikidata 有但 DB 沒有的航空公司（需有英文名稱才會新增）
+- 新增的記錄包含 IATA、ICAO（若有）、英文名、中文名
+
+---
+
 ## 聯絡/貢獻
 
 歡迎 PR、issue 或討論！

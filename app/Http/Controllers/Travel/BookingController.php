@@ -56,8 +56,7 @@ class BookingController extends Controller
                 'number_of_travelers' => $validated['number_of_travelers'],
                 'discount_amount'     => $validated['discount_amount'] ?? 0,
                 'final_amount'        => $validated['final_amount'],
-                // 位置保留中，等待進入付款流程；逾時自動釋放
-                'status'              => BookingStatus::Reserved,
+                'status'              => BookingStatus::Reserved->value,
             ]);
 
             if (!empty($validated['companions'])) {

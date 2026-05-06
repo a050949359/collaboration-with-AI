@@ -21,11 +21,11 @@ class FakeTour extends Command
             ->sequence(function () {
                 $dep    = fake()->dateTimeBetween('+100 days', '+120 days');
                 $dur    = fake()->numberBetween(5, 14);
-                $type   = fake()->randomElement([...array_fill(0, 9, 'G'), 'F']);
-                $prefix = $type === 'G' ? 'G' : 'F';
+                $type   = fake()->randomElement([...array_fill(0, 9, TourType::Group), TourType::Fit]);
+                $prefix = $type === TourType::Group ? 'G' : 'F';
 
                 return [
-                    'type'           => $type === 'G' ? TourType::Group->value : TourType::Fit->value,
+                    'type'           => $type->value,
                     'departure_date' => $dep,
                     'duration'       => $dur,
                     'return_date'    => (clone $dep)->modify("+{$dur} days"),
