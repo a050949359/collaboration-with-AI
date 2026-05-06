@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Airports;
+namespace App\Http\Controllers\Aviation;
 
 use App\Http\Controllers\Controller;
-use App\Models\Airports\Airports;
+use App\Models\Aviation\Airports;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +14,6 @@ class AirportStatsController extends Controller
 {
     use ApiResponse;
 
-    // GET /api/v1/airports/stats
     public function __invoke(Request $request): JsonResponse
     {
         $stats = Cache::remember('airport_stats', now()->addHours(6), function () {
@@ -41,11 +40,11 @@ class AirportStatsController extends Controller
                 ->toArray();
 
             return [
-                'total'              => Airports::count(),
-                'scheduled_service'  => Airports::where('scheduled_service', true)->count(),
-                'by_type'            => $byType,
-                'by_continent'       => $byContinent,
-                'top_countries'      => $topCountries,
+                'total'             => Airports::count(),
+                'scheduled_service' => Airports::where('scheduled_service', true)->count(),
+                'by_type'           => $byType,
+                'by_continent'      => $byContinent,
+                'top_countries'     => $topCountries,
             ];
         });
 

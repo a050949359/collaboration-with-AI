@@ -12,20 +12,35 @@ import { useAuth } from '../composables/useAuth';
 const currentLocale = ref(getLocale());
 const { t } = useI18n();
 
+interface NavLink {
+    label: string;
+    href?: string;
+    active?: boolean;
+    children?: { label: string; href: string; active?: boolean }[];
+}
+
 defineProps<{
-    navLinks?: { label: string; href: string; active?: boolean }[];
+    navLinks?: NavLink[];
 }>();
 
 const page = usePage();
 const { user: currentUser, isAdmin } = useAuth();
 const brandTitle = computed(() => page.props.name || 'CHY Lab');
 
-const defaultNavLinks = computed(() => {
+const defaultNavLinks = computed((): NavLink[] => {
     const path = page.url;
+    const aviationActive = path.startsWith(routes.airports()) || path.startsWith(routes.airlines());
     return [
         { label: t('articles.nav.projects'), href: `${routes.home()}#projects` },
         { label: t('articles.nav.articles'), href: routes.articles.index(), active: path.startsWith(routes.articles.index()) },
-        { label: t('articles.nav.airports'), href: routes.airports(), active: path.startsWith(routes.airports()) },
+        {
+            label: t('articles.nav.aviation'),
+            active: aviationActive,
+            children: [
+                { label: t('articles.nav.airports'), href: routes.airports(), active: path.startsWith(routes.airports()) },
+                { label: t('articles.nav.airlines'), href: routes.airlines(), active: path.startsWith(routes.airlines()) },
+            ],
+        },
         { label: t('articles.nav.about'), href: routes.about(), active: path.startsWith(routes.about()) },
         { label: 'LineBot', href: routes.linebot(), active: path.startsWith(routes.linebot()) },
         { label: 'Tour', href: routes.tourPlayground(), active: path.startsWith(routes.tourPlayground()) },
@@ -111,15 +126,38 @@ return;
                 <!-- Nav Links -->
                 <div class="hidden items-center gap-8 binary-label text-xs uppercase text-[var(--binary-outline)] md:flex">
                     <slot name="nav-links">
-                        <a
-                            v-for="link in (navLinks ?? defaultNavLinks)"
-                            :key="link.href"
-                            :href="link.href"
-                            class="binary-link hover:text-[var(--binary-primary)]"
-                            :class="link.active ? 'text-[var(--binary-primary)]' : ''"
-                        >
-                            {{ link.label }}
-                        </a>
+                        <template v-for="link in (navLinks ?? defaultNavLinks)" :key="link.label">
+                            <!-- Dropdown -->
+                            <details v-if="link.children" class="relative">
+                                <summary class="flex cursor-pointer list-none items-center gap-1 binary-link hover:text-[var(--binary-primary)]"
+                                    :class="link.active ? 'text-[var(--binary-primary)]' : ''">
+                                    {{ link.label }}
+                                    <svg class="h-3 w-3 opacity-60" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </summary>
+                                <div class="absolute left-0 top-full mt-2 min-w-[120px] rounded-xl bg-[var(--binary-surface-high)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
+                                    <a
+                                        v-for="child in link.children"
+                                        :key="child.href"
+                                        :href="child.href"
+                                        class="block rounded-lg px-3 py-2 text-[var(--binary-text)] transition hover:bg-[var(--binary-surface-container)] hover:text-[var(--binary-primary)]"
+                                        :class="child.active ? 'text-[var(--binary-primary)]' : ''"
+                                    >
+                                        {{ child.label }}
+                                    </a>
+                                </div>
+                            </details>
+                            <!-- Flat link -->
+                            <a
+                                v-else
+                                :href="link.href"
+                                class="binary-link hover:text-[var(--binary-primary)]"
+                                :class="link.active ? 'text-[var(--binary-primary)]' : ''"
+                            >
+                                {{ link.label }}
+                            </a>
+                        </template>
                     </slot>
                 </div>
 

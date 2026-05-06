@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Airports;
+namespace App\Models\Aviation;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Airports extends Model
 {
     protected $fillable = [
-        'ident', 'type', 'name', 'latitude_deg', 'longitude_deg',
+        'ident', 'type', 'name', 'name_zh_tw', 'latitude_deg', 'longitude_deg',
         'elevation_ft', 'continent', 'iso_country', 'iso_region',
         'municipality', 'scheduled_service', 'icao_code', 'iata_code',
         'gps_code', 'local_code', 'home_link', 'wikipedia_link', 'keywords',
@@ -28,6 +28,7 @@ class Airports extends Model
         $query->when($filters['search'] ?? null, fn($q, $s) =>
             $q->where(fn($q) =>
                 $q->where('name', 'like', "%{$s}%")
+                  ->orWhere('name_zh_tw', 'like', "%{$s}%")
                   ->orWhere('municipality', 'like', "%{$s}%")
                   ->orWhere('iata_code', $s)
                   ->orWhere('icao_code', $s)
@@ -36,11 +37,11 @@ class Airports extends Model
         );
 
         $query->when($filters['type'] ?? null, fn($q, $t) =>
-            $q->where('type', $t)
+            $q->whereIn('type', (array) $t)
         );
 
         $query->when($filters['continent'] ?? null, fn($q, $c) =>
-            $q->where('continent', strtoupper($c))
+            $q->whereIn('continent', array_map('strtoupper', (array) $c))
         );
 
         $query->when($filters['country'] ?? null, fn($q, $c) =>

@@ -31,6 +31,9 @@ export const routes = {
     // Airports
     airports: () => `${WEB_PREFIX}/airports`,
 
+    // Airlines
+    airlines: () => `${WEB_PREFIX}/airlines`,
+
     // About
     about: () => `${WEB_PREFIX}/about`,
 
@@ -85,6 +88,10 @@ export const api = {
         index: () => '/api/v1/airports',
         nearby: () => '/api/v1/airports/nearby',
         stats: () => '/api/v1/airports/stats',
+    },
+
+    airlines: {
+        index: () => '/api/v1/airlines',
     },
 
     tour: {

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Airports;
+namespace App\Http\Controllers\Aviation;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Airports\AirportResource;
-use App\Models\Airports\Airports;
+use App\Http\Resources\Aviation\AirportResource;
+use App\Models\Aviation\Airports;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +13,6 @@ class NearbyAirportController extends Controller
 {
     use ApiResponse;
 
-    // GET /api/v1/airports/nearby?lat=25.0777&lng=121.2322&radius=100&type=large_airport
     public function __invoke(Request $request): JsonResponse
     {
         $request->validate([
