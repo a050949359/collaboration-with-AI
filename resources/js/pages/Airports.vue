@@ -47,8 +47,8 @@ interface Stats {
 // ── State ─────────────────────────────────────────────────
 const filters = reactive({
     search: '',
-    type: '',
-    continent: '',
+    types: [] as string[],
+    continents: [] as string[],
     country: '',
     scheduled: '',
     per_page: 20,
@@ -72,8 +72,6 @@ const typeKeys = [
 
 const continentKeys = ['AF', 'AN', 'AS', 'EU', 'NA', 'OC', 'SA'] as const;
 
-// ── Helpers ────────────────────────────────────────────────
-
 // ── Airport search ─────────────────────────────────────────
 async function fetchAirports(page = 1) {
     isLoadingList.value = true;
@@ -83,25 +81,12 @@ async function fetchAirports(page = 1) {
     params.set('page', String(page));
     params.set('per_page', String(filters.per_page));
 
-    if (filters.search)    {
-params.set('search', filters.search);
-}
+    if (filters.search)   params.set('search', filters.search);
+    if (filters.country)  params.set('country', filters.country.toUpperCase());
+    if (filters.scheduled) params.set('scheduled', filters.scheduled);
 
-    if (filters.type)      {
-params.set('type', filters.type);
-}
-
-    if (filters.continent) {
-params.set('continent', filters.continent);
-}
-
-    if (filters.country)   {
-params.set('country', filters.country.toUpperCase());
-}
-
-    if (filters.scheduled) {
-params.set('scheduled', filters.scheduled);
-}
+    filters.types.forEach(t => params.append('type[]', t));
+    filters.continents.forEach(c => params.append('continent[]', c));
 
     try {
         const res = await fetch(`/api/v1/airports?${params}`, {
@@ -110,9 +95,7 @@ params.set('scheduled', filters.scheduled);
         });
         const json = await res.json();
 
-        if (!res.ok) {
-throw new Error(json.message || '查詢失敗');
-}
+        if (!res.ok) throw new Error(json.message || '查詢失敗');
 
         airports.value = json.data;
         meta.value = json.meta;
@@ -197,9 +180,14 @@ onMounted(() => fetchAirports());
                             target="_blank"
                             rel="noopener noreferrer"
                             class="underline underline-offset-2 hover:text-[var(--binary-primary)]"
-                        >
-                            {{ t('airports.source_link') }}
-                        </a>
+                        >{{ t('airports.source_link') }}</a>
+                        <span class="mx-1">/</span>
+                        <a
+                            href="https://www.wikidata.org/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="underline underline-offset-2 hover:text-[var(--binary-primary)]"
+                        >{{ t('airports.source_link_wiki') }}</a>
                     </p>
                 </div>
 
@@ -240,33 +228,70 @@ onMounted(() => fetchAirports());
 
                 <!-- ── Search Tab ── -->
                 <template v-if="activeTab === 'search'">
-                    <!-- Filter Bar -->
+
+                    <!-- Checkbox Filters (auto-apply) -->
+                    <div class="mb-4 space-y-3">
+                        <!-- Type -->
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <span class="binary-label text-[10px] uppercase text-[var(--binary-outline)] w-12 shrink-0">{{ t('airports.col_type') }}</span>
+                            <label
+                                v-for="key in typeKeys"
+                                :key="key"
+                                class="flex cursor-pointer items-center gap-1.5 binary-label text-xs"
+                            >
+                                <input
+                                    v-model="filters.types"
+                                    type="checkbox"
+                                    :value="key"
+                                    class="accent-[var(--binary-primary)]"
+                                    @change="fetchAirports(1)"
+                                >
+                                <span :class="filters.types.includes(key) ? 'text-[var(--binary-primary)]' : 'text-[var(--binary-outline)]'">
+                                    {{ t(`airports.types.${key}`) }}
+                                </span>
+                            </label>
+                        </div>
+                        <!-- Continent -->
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <span class="binary-label text-[10px] uppercase text-[var(--binary-outline)] w-12 shrink-0">{{ t('airports.col_continent') }}</span>
+                            <label
+                                v-for="key in continentKeys"
+                                :key="key"
+                                class="flex cursor-pointer items-center gap-1.5 binary-label text-xs"
+                            >
+                                <input
+                                    v-model="filters.continents"
+                                    type="checkbox"
+                                    :value="key"
+                                    class="accent-[var(--binary-primary)]"
+                                    @change="fetchAirports(1)"
+                                >
+                                <span :class="filters.continents.includes(key) ? 'text-[var(--binary-primary)]' : 'text-[var(--binary-outline)]'">
+                                    {{ t(`airports.continents.${key}`) }}
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Search Bar (manual submit) -->
                     <form
-                        class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6"
+                        class="mb-6 flex items-center gap-2"
                         @submit.prevent="fetchAirports(1)"
                     >
                         <input
                             v-model="filters.search"
-                            class="binary-input col-span-2 lg:col-span-2"
+                            class="binary-input flex-[3]"
                             :placeholder="t('airports.search_placeholder')"
                             type="text"
                         >
-                        <select v-model="filters.type" class="binary-input">
-                            <option value="">{{ t('airports.all_types') }}</option>
-                            <option v-for="key in typeKeys" :key="key" :value="key">{{ t(`airports.types.${key}`) }}</option>
-                        </select>
-                        <select v-model="filters.continent" class="binary-input">
-                            <option value="">{{ t('airports.all_continents') }}</option>
-                            <option v-for="key in continentKeys" :key="key" :value="key">{{ t(`airports.continents.${key}`) }}</option>
-                        </select>
                         <input
                             v-model="filters.country"
-                            class="binary-input"
+                            class="binary-input flex-[3]"
                             :placeholder="t('airports.country_placeholder')"
                             maxlength="2"
                             type="text"
                         >
-                        <button class="binary-button col-span-1 text-xs" type="submit">
+                        <button class="binary-button ml-4 flex-[1] whitespace-nowrap text-xs" type="submit">
                             {{ t('airports.tab_search') }} →
                         </button>
                     </form>
@@ -292,10 +317,9 @@ onMounted(() => fetchAirports());
                             <table class="w-full binary-label text-xs">
                                 <thead class="bg-[var(--binary-surface-high)]">
                                     <tr>
-                                        <th class="px-4 py-3 text-left uppercase text-[var(--binary-outline)]">{{ t('airports.col_ident') }}</th>
                                         <th class="px-4 py-3 text-left uppercase text-[var(--binary-outline)]">{{ t('airports.col_name') }}</th>
-                                        <th class="hidden px-4 py-3 text-left uppercase text-[var(--binary-outline)] md:table-cell">{{ t('airports.col_type') }}</th>
-                                        <th class="hidden px-4 py-3 text-left uppercase text-[var(--binary-outline)] md:table-cell">{{ t('airports.col_iata') }}</th>
+                                        <th class="px-4 py-3 text-left uppercase text-[var(--binary-outline)]">{{ t('airports.col_iata') }}</th>
+                                        <th class="hidden px-4 py-3 text-left uppercase text-[var(--binary-outline)] md:table-cell">{{ t('airports.col_icao') }}</th>
                                         <th class="hidden px-4 py-3 text-left uppercase text-[var(--binary-outline)] lg:table-cell">{{ t('airports.col_city') }}</th>
                                         <th class="hidden px-4 py-3 text-left uppercase text-[var(--binary-outline)] lg:table-cell">{{ t('airports.col_country') }}</th>
                                         <th class="px-4 py-3 text-center uppercase text-[var(--binary-outline)]">{{ t('airports.col_scheduled') }}</th>
@@ -307,13 +331,12 @@ onMounted(() => fetchAirports());
                                         :key="airport.id"
                                         class="border-t border-[var(--binary-outline)]/10 transition hover:bg-[var(--binary-surface-container)]"
                                     >
-                                        <td class="px-4 py-3 font-bold text-[var(--binary-primary)]">{{ airport.ident }}</td>
                                         <td class="px-4 py-3 text-[var(--binary-text)]">{{ airport.name }}</td>
-                                        <td class="hidden px-4 py-3 text-[var(--binary-text-muted)] md:table-cell">
-                                            {{ t(`airports.types.${airport.type}`, airport.type) }}
+                                        <td class="px-4 py-3 font-bold text-[var(--binary-primary)]">
+                                            {{ airport.codes.iata ?? '–' }}
                                         </td>
                                         <td class="hidden px-4 py-3 text-[var(--binary-outline)] md:table-cell">
-                                            {{ airport.codes.iata ?? '–' }}
+                                            {{ airport.codes.icao ?? '–' }}
                                         </td>
                                         <td class="hidden px-4 py-3 text-[var(--binary-text-muted)] lg:table-cell">
                                             {{ airport.location.municipality ?? '–' }}
