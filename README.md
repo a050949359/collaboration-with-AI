@@ -84,6 +84,43 @@ php artisan airlines:enrich
 - 新增 Wikidata 有但 DB 沒有的航空公司（需有英文名稱才會新增）
 - 新增的記錄包含 IATA、ICAO（若有）、英文名、中文名
 
+### 地理資料匯入
+
+#### `import:countries`
+
+從 Wikidata 匯入國家資料（259 筆），包含 ISO 代碼、多語系名稱、首都、電話區碼。
+
+```bash
+# 從 Wikidata 抓取並存到本地快取（storage/app/private/wikidata_countries.json）
+php artisan import:countries --fetch
+
+# 預覽（不寫入，使用快取）
+php artisan import:countries --dry-run
+
+# 正式寫入
+php artisan import:countries
+```
+
+- 重複的首都或電話區碼會保留第一筆，其餘存入 `notes`
+- 快取存在時不重複打 API，加 `--fetch` 強制重抓
+
+#### `import:cities`
+
+從 Wikidata 匯入城市資料（約 4 萬筆），依 Q515（city）所有子類分批透過 Queue 匯入。
+
+```bash
+# 步驟一：查詢子類清單並將所有批次派入 Queue
+php artisan import:cities
+
+# 步驟二：啟動 Queue Worker 執行匯入
+php artisan queue:work --timeout=110
+```
+
+- 使用 cursor-based pagination（以 QID 為游標），避免 SPARQL OFFSET 效能問題
+- 每批 1000 筆，批次間 sleep 10 秒以避免 Wikidata 限速
+- 每批跑完自動鏈接下一批，無需手動干預
+- 失敗批次可用 `php artisan queue:retry all` 重跑，或重新執行 `import:cities` 從頭派發
+
 ---
 
 ## 聯絡/貢獻
