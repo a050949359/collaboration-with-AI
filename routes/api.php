@@ -132,3 +132,9 @@ Route::prefix('v1/tour')->group(function () {
         Route::delete('/hotels/{hotel}', [TourHotelController::class, 'destroy']);
     });
 });
+
+Route::get('/debug-ip', fn(Request $r) => response()->json([
+    'ip'              => $r->ip(),
+    'cf_connecting'   => $r->header('CF-Connecting-IP'),
+    'x_forwarded_for' => $r->header('X-Forwarded-For'),
+]));
