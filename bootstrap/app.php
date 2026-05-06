@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthTokenFromCookie;
+use App\Http\Middleware\TrustProxies;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Rules\NoMaliciousPattern;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(TrustProxies::class);
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

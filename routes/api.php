@@ -12,9 +12,10 @@ use App\Http\Controllers\Auth\SocialAccountController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Admin\SettingsController;
-use App\Http\Controllers\Airports\AirportController;
-use App\Http\Controllers\Airports\AirportStatsController;
-use App\Http\Controllers\Airports\NearbyAirportController;
+use App\Http\Controllers\Aviation\AirportController;
+use App\Http\Controllers\Aviation\AirportStatsController;
+use App\Http\Controllers\Aviation\NearbyAirportController;
+use App\Http\Controllers\Aviation\AirlineController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
 use App\Http\Middleware\EnsureAdmin;
@@ -68,11 +69,15 @@ Route::middleware('auth:sanctum')->prefix('articles')->group(function () {
     Route::post('/{article}/generate-image', [ArticleGenerationController::class, 'generateImage']);
 });
 
-Route::prefix('v1/airports')->group(function () {
-    Route::get('/',        [AirportController::class, 'index'])->middleware('throttle:60,1');  // 搜尋 + 篩選
-    Route::get('/stats',   AirportStatsController::class);         // 統計
-    Route::get('/nearby',  NearbyAirportController::class);        // 附近機場
-    Route::get('/{ident}', [AirportController::class, 'show']);    // 單一機場（ident 或 iata）
+Route::prefix('v1/airports')->middleware('throttle:60,1')->group(function () {
+    Route::get('/',        [AirportController::class, 'index']);
+    Route::get('/stats',   AirportStatsController::class);
+    Route::get('/nearby',  NearbyAirportController::class)->middleware('throttle:30,1');
+    Route::get('/{ident}', [AirportController::class, 'show']);
+});
+
+Route::prefix('v1/airlines')->middleware('throttle:60,1')->group(function () {
+    Route::get('/', [AirlineController::class, 'index']);
 });
 
 Route::prefix('line/friends')->group(function () {
