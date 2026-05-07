@@ -28,8 +28,18 @@ const featuredProjects = [
         category: 'AI_COLLAB_DEV',
         title: 'AI Co-Build Web Studio',
         description:
-            '此網站先用 Google Stitch 生成網頁風格，再由 GitHub Copilot 完成前端實作，最後聚焦後端工程師與 AI 協作開發與除錯流程，展示從設計到落地的完整實戰。',
-        tags: ['Google Stitch', 'GitHub Copilot', 'Frontend Build', 'AI Debug Flow'],
+            '此網站以 Google Stitch 生成視覺風格、GitHub Copilot 完成前端實作為起點，部署於 VPS + Cloudflare + Nginx，後端採 Laravel + Redis Queue，整合 Vertex AI 與 Gemini API，完整呈現後端工程師與 AI 協作從設計、開發到生產落地的全流程。',
+        tags: ['Google Stitch', 'GitHub Copilot', 'Laravel', 'Redis', 'Nginx', 'Cloudflare', 'Vertex AI', 'Gemini API'],
+        commits: [
+            { hash: '8c16504', date: '2026-05-06', message: 'feat(geo): add countries and cities tables with Wikidata import', tag: 'HEAD' },
+            { hash: '11d17e9', date: '2026-05-06', message: 'fix(security): add TrustProxies middleware for Cloudflare' },
+            { hash: '36d216a', date: '2026-05-06', message: 'feat(aviation): add airport and airline data enrichment commands' },
+            { hash: '0bb22ad', date: '2026-04-30', message: 'feat(auth): 完整整合信箱驗證、Google OAuth、全域通知' },
+            { hash: 'd76a837', date: '2026-04-30', message: 'feat(auth): 整合 Cloudflare Turnstile 機器人驗證' },
+            { hash: 'c5308cf', date: '2026-04-29', message: 'docs: 新增 copilot-instructions.md，說明 AI 協作開發規範' },
+            { hash: '85120cf', date: '2026-04-22', message: 'feature: articles complete' },
+            { hash: '1df037d', date: '2026-04-21', message: 'init' },
+        ],
     },
     {
         id: '02',

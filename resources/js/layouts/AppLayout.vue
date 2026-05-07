@@ -8,6 +8,7 @@ import { getLocale, setLocale } from '../i18n';
 import { logoutWithApi } from '../lib/auth-api';
 import { routes, api } from '../lib/routes';
 import { useAuth } from '../composables/useAuth';
+import NavIcon from '../components/NavIcon.vue';
 
 const currentLocale = ref(getLocale());
 const { t } = useI18n();
@@ -16,7 +17,8 @@ interface NavLink {
     label: string;
     href?: string;
     active?: boolean;
-    children?: { label: string; href: string; active?: boolean }[];
+    icon?: string;
+    children?: { label: string; href: string; active?: boolean; icon?: string }[];
 }
 
 defineProps<{
@@ -29,21 +31,23 @@ const brandTitle = computed(() => page.props.name || 'CHY Lab');
 
 const defaultNavLinks = computed((): NavLink[] => {
     const path = page.url;
-    const aviationActive = path.startsWith(routes.airports()) || path.startsWith(routes.airlines());
+    const aviationActive = path.startsWith(routes.airports()) || path.startsWith(routes.airlines()) || path.startsWith(routes.countries());
     return [
-        { label: t('articles.nav.projects'), href: `${routes.home()}#projects` },
-        { label: t('articles.nav.articles'), href: routes.articles.index(), active: path.startsWith(routes.articles.index()) },
+        { label: t('articles.nav.home'), href: routes.home(), icon: 'home', active: path.replace(/\/$/, '') === routes.home().replace(/\/$/, '') },
+        { label: t('articles.nav.articles'), href: routes.articles.index(), icon: 'articles', active: path.startsWith(routes.articles.index()) },
         {
             label: t('articles.nav.aviation'),
+            icon: 'aviation',
             active: aviationActive,
             children: [
-                { label: t('articles.nav.airports'), href: routes.airports(), active: path.startsWith(routes.airports()) },
-                { label: t('articles.nav.airlines'), href: routes.airlines(), active: path.startsWith(routes.airlines()) },
+                { label: t('articles.nav.airports'),  href: routes.airports(),  icon: 'airports',  active: path.startsWith(routes.airports()) },
+                { label: t('articles.nav.airlines'),  href: routes.airlines(),  icon: 'airlines',  active: path.startsWith(routes.airlines()) },
+                { label: t('articles.nav.countries'), href: routes.countries(), icon: 'countries', active: path.startsWith(routes.countries()) },
             ],
         },
-        { label: t('articles.nav.about'), href: routes.about(), active: path.startsWith(routes.about()) },
-        { label: 'LineBot', href: routes.linebot(), active: path.startsWith(routes.linebot()) },
-        { label: 'Tour', href: routes.tourPlayground(), active: path.startsWith(routes.tourPlayground()) },
+        { label: t('articles.nav.about'), href: routes.about(), icon: 'about', active: path.startsWith(routes.about()) },
+        { label: 'LineBot', href: routes.linebot(), icon: 'linebot', active: path.startsWith(routes.linebot()) },
+        { label: 'Tour', href: routes.tourPlayground(), icon: 'tour', active: path.startsWith(routes.tourPlayground()) },
     ];
 });
 
@@ -111,8 +115,8 @@ return;
         <!-- Background -->
         <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
             <div class="absolute inset-0 binary-grid opacity-[0.03]" />
-            <div class="absolute right-0 top-0 h-[40vw] w-[40vw] bg-[#6bdc9f]/[0.06] blur-[140px]" />
-            <div class="absolute bottom-0 left-0 h-[30vw] w-[30vw] bg-[#2ca46d]/16 blur-[120px]" />
+            <div class="absolute right-0 top-0 h-[40vw] w-[40vw] bg-[var(--binary-primary)]/[0.06] blur-[140px]" />
+            <div class="absolute bottom-0 left-0 h-[30vw] w-[30vw] bg-[var(--binary-primary-container)]/16 blur-[120px]" />
         </div>
 
         <!-- Navbar -->
@@ -129,21 +133,23 @@ return;
                         <template v-for="link in (navLinks ?? defaultNavLinks)" :key="link.label">
                             <!-- Dropdown -->
                             <details v-if="link.children" class="relative">
-                                <summary class="flex cursor-pointer list-none items-center gap-1 binary-link hover:text-[var(--binary-primary)]"
+                                <summary class="flex cursor-pointer list-none items-center gap-1.5 binary-link hover:text-[var(--binary-primary)]"
                                     :class="link.active ? 'text-[var(--binary-primary)]' : ''">
+                                    <NavIcon v-if="link.icon" :name="link.icon" />
                                     {{ link.label }}
                                     <svg class="h-3 w-3 opacity-60" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                     </svg>
                                 </summary>
-                                <div class="absolute left-0 top-full mt-2 min-w-[120px] rounded-xl bg-[var(--binary-surface-high)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
+                                <div class="absolute left-0 top-full mt-2 min-w-[140px] rounded-xl bg-[var(--binary-surface-high)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
                                     <a
                                         v-for="child in link.children"
                                         :key="child.href"
                                         :href="child.href"
-                                        class="block rounded-lg px-3 py-2 text-[var(--binary-text)] transition hover:bg-[var(--binary-surface-container)] hover:text-[var(--binary-primary)]"
+                                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-[var(--binary-text)] transition hover:bg-[var(--binary-surface-container)] hover:text-[var(--binary-primary)]"
                                         :class="child.active ? 'text-[var(--binary-primary)]' : ''"
                                     >
+                                        <NavIcon v-if="child.icon" :name="child.icon" />
                                         {{ child.label }}
                                     </a>
                                 </div>
@@ -152,9 +158,10 @@ return;
                             <a
                                 v-else
                                 :href="link.href"
-                                class="binary-link hover:text-[var(--binary-primary)]"
+                                class="binary-link flex items-center gap-1.5 hover:text-[var(--binary-primary)]"
                                 :class="link.active ? 'text-[var(--binary-primary)]' : ''"
                             >
+                                <NavIcon v-if="link.icon" :name="link.icon" />
                                 {{ link.label }}
                             </a>
                         </template>
@@ -180,7 +187,7 @@ return;
                                 >
                                                                 <span class="hidden sm:inline flex items-center gap-1">
                                                                     {{ effectiveUser.name }}
-                                                                    <svg v-if="effectiveUser.email_verified_at" class="inline-block h-4 w-4 text-[#6bdc9f]" viewBox="0 0 20 20" fill="currentColor" aria-label="已驗證信箱">
+                                                                    <svg v-if="effectiveUser.email_verified_at" class="inline-block h-4 w-4 text-[var(--binary-primary)]" viewBox="0 0 20 20" fill="currentColor" aria-label="已驗證信箱">
                                                                         <path fill-rule="evenodd" d="M16.707 6.293a1 1 0 010 1.414l-6.364 6.364a1 1 0 01-1.414 0l-3.182-3.182a1 1 0 111.414-1.414l2.475 2.475 5.657-5.657a1 1 0 011.414 0z" clip-rule="evenodd" />
                                                                     </svg>
                                                                 </span>
@@ -250,8 +257,8 @@ return;
                 <!-- Toast 通知 -->
                 <transition name="fade">
                     <div v-if="toast" class="fixed left-1/2 top-8 z-[9999] -translate-x-1/2 rounded-2xl px-8 py-4 shadow-xl"
-                        :class="toast.type === 'success' ? 'bg-[#6bdc9f]/90 text-[#0f1511]' : 'bg-[#ffb3b2]/90 text-[#0f1511]'"
-                        style="font-family:'Space Grotesk',sans-serif;font-size:1.1rem;letter-spacing:-0.5px;min-width:240px;text-align:center;backdrop-filter:blur(12px);">
+                        :class="toast.type === 'success' ? 'bg-[var(--binary-primary)]/90 text-[var(--binary-on-primary-container)]' : 'bg-[var(--binary-tertiary)]/90 text-[var(--binary-on-primary-container)]'"
+                        style="font-size:1.1rem;letter-spacing:-0.5px;min-width:240px;text-align:center;backdrop-filter:blur(12px);">
                         {{ toast.message }}
                     </div>
                 </transition>

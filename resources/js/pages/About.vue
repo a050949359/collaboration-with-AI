@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { nextTick, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { api } from '@/lib/routes';
+import { api, routes } from '@/lib/routes';
 import { useAuth } from '@/composables/useAuth';
+
+const { t } = useI18n();
 
 interface Turn {
     role: 'user' | 'model';
@@ -119,35 +122,35 @@ function toggleContextPanel() {
 
     <AppLayout>
             <template v-if="!isLoggedIn">
-                <div class="flex flex-col items-center justify-center min-h-[60vh] bg-[#0f1511]">
+                <div class="flex flex-col items-center justify-center min-h-[60vh] bg-[var(--binary-surface)]">
                     <div
                         class="w-full max-w-xl px-10 py-12"
-                        style="background:rgba(15,21,17,0.92);backdrop-filter:blur(20px);border-radius:2rem;box-shadow:0 8px 32px 0 rgba(107,220,159,0.10);font-family:'Space Grotesk',sans-serif;"
+                        style="background:rgba(15,21,17,0.92);backdrop-filter:blur(20px);border-radius:2rem;box-shadow:0 8px 32px 0 rgba(107,220,159,0.10);"
                     >
-                        <h2 class="text-[2rem] font-bold mb-4 text-[#6bdc9f] tracking-tight text-left" style="letter-spacing:-1px;">請先登入</h2>
-                        <p class="text-[#dee4dd] text-lg mb-8 text-left leading-relaxed">您尚未登入，請先登入帳號才能瀏覽本頁面。<br>登入後可體驗完整互動功能。</p>
+                        <h2 class="text-[2rem] font-bold mb-4 text-[var(--binary-primary)] tracking-tight text-left" style="letter-spacing:-1px;">{{ t('about.auth_required_title') }}</h2>
+                        <p class="text-[var(--binary-text)] text-lg mb-8 text-left leading-relaxed">{{ t('about.auth_required_body') }}</p>
                         <div class="flex justify-end">
-                            <a href="/app/login"
+                            <a :href="routes.login()"
                                 class="px-8 py-3 rounded-md text-base font-semibold"
-                                style="background:linear-gradient(145deg,#6bdc9f,#2ca46d);color:#0f1511;box-shadow:0 2px 8px 0 rgba(107,220,159,0.10);"
-                            >前往登入</a>
+                                style="background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container));color:var(--binary-on-primary-container);box-shadow:0 2px 8px 0 rgba(107,220,159,0.10);"
+                            >{{ t('about.auth_required_action') }}</a>
                         </div>
                     </div>
                 </div>
             </template>
             <template v-else-if="user && !user.email_verified_at">
-                <div class="flex flex-col items-center justify-center min-h-[60vh] bg-[#0f1511]">
+                <div class="flex flex-col items-center justify-center min-h-[60vh] bg-[var(--binary-surface)]">
                     <div
                         class="w-full max-w-xl px-10 py-12"
-                        style="background:rgba(15,21,17,0.92);backdrop-filter:blur(20px);border-radius:2rem;box-shadow:0 8px 32px 0 rgba(255,179,178,0.10);font-family:'Space Grotesk',sans-serif;"
+                        style="background:rgba(15,21,17,0.92);backdrop-filter:blur(20px);border-radius:2rem;box-shadow:0 8px 32px 0 rgba(255,179,178,0.10);"
                     >
-                        <h2 class="text-[2rem] font-bold mb-4 text-[#ffb3b2] tracking-tight text-left" style="letter-spacing:-1px;">請完成信箱驗證</h2>
-                        <p class="text-[#dee4dd] text-lg mb-8 text-left leading-relaxed">您的帳號尚未完成 email 驗證，請至信箱點擊驗證連結。<br>如未收到信件，請檢查垃圾郵件或重新寄送。</p>
+                        <h2 class="text-[2rem] font-bold mb-4 text-[var(--binary-tertiary)] tracking-tight text-left" style="letter-spacing:-1px;">{{ t('about.verify_required_title') }}</h2>
+                        <p class="text-[var(--binary-text)] text-lg mb-8 text-left leading-relaxed">{{ t('about.verify_required_body') }}</p>
                         <div class="flex justify-end">
-                            <a href="/app"
+                            <a :href="routes.home()"
                                 class="px-8 py-3 rounded-md text-base font-semibold"
-                                style="background:linear-gradient(145deg,#6bdc9f,#2ca46d);color:#0f1511;box-shadow:0 2px 8px 0 rgba(107,220,159,0.10);"
-                            >回首頁</a>
+                                style="background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container));color:var(--binary-on-primary-container);box-shadow:0 2px 8px 0 rgba(107,220,159,0.10);"
+                            >{{ t('about.verify_required_action') }}</a>
                         </div>
                     </div>
                 </div>

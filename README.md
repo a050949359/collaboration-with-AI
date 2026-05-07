@@ -123,10 +123,6 @@ php artisan queue:work --timeout=110
 
 ---
 
-## 聯絡/貢獻
-
-歡迎 PR、issue 或討論！
-
 ## 主要功能
 
 - 文章管理（產生、編輯、瀏覽、Webhook 推送）

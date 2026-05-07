@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+interface Commit {
+    hash: string;
+    date: string;
+    message: string;
+    tag?: string;
+}
+
 interface Project {
     id: string;
     category: string;
@@ -8,6 +15,7 @@ interface Project {
     description: string;
     tags: string[];
     image?: string;
+    commits?: Commit[];
 }
 
 const props = defineProps<{
@@ -77,6 +85,32 @@ const projects = computed(() => [...props.featuredProjects, airportProject, line
                         >
                     </div>
 
+                    <!-- Commit log panel -->
+                    <div
+                        v-else-if="project.commits"
+                        class="w-full rounded-[1.5rem] bg-[var(--binary-surface-lowest)] p-6 binary-label text-xs md:w-1/2"
+                        style="box-shadow: inset 4px 0 0 0 var(--binary-primary);"
+                    >
+                        <div class="mb-4 flex items-center gap-2 text-[var(--binary-outline)]">
+                            <span class="text-[var(--binary-primary)]">*</span>
+                            <span>git log --oneline {{ project.id }}/main</span>
+                        </div>
+                        <div
+                            v-for="commit in project.commits"
+                            :key="commit.hash"
+                            class="mb-3 flex items-start gap-3"
+                        >
+                            <span class="shrink-0 font-mono text-[var(--binary-primary)] opacity-70">{{ commit.hash }}</span>
+                            <span class="shrink-0 text-[var(--binary-outline)]">{{ commit.date }}</span>
+                            <span class="text-[var(--binary-text-muted)] leading-relaxed">{{ commit.message }}</span>
+                            <span
+                                v-if="commit.tag"
+                                class="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[9px] uppercase bg-[var(--binary-primary)]/10 text-[var(--binary-primary)]"
+                            >{{ commit.tag }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Fallback terminal panel -->
                     <div
                         v-else
                         class="w-full rounded-[1.5rem] bg-[var(--binary-surface-lowest)] p-6 binary-label text-sm md:w-1/2"
@@ -91,15 +125,15 @@ const projects = computed(() => [...props.featuredProjects, airportProject, line
                             <span class="pl-4 text-[var(--binary-text)]">&gt; domain: {{ project.category }}</span>
                         </div>
                         <div
-                            v-for="(tag, tagIndex) in project.tags.slice(0, 3)"
+                            v-for="(tag, tagIndex) in project.tags"
                             :key="`${project.id}-panel-${tag}`"
                             class="mb-2 flex gap-4"
                         >
-                            <span class="text-[var(--binary-outline)]">{{ `0${tagIndex + 3}`.slice(-2) }}</span>
+                            <span class="text-[var(--binary-outline)]">{{ String(tagIndex + 3).padStart(2, '0') }}</span>
                             <span class="pl-4 text-[var(--binary-text-muted)]">&gt; stack: {{ tag }}</span>
                         </div>
                         <div class="mt-2 flex gap-4">
-                            <span class="text-[var(--binary-outline)]">06</span>
+                            <span class="text-[var(--binary-outline)]">{{ String(project.tags.length + 3).padStart(2, '0') }}</span>
                             <span class="text-[var(--binary-primary)]">status: online</span>
                         </div>
                     </div>

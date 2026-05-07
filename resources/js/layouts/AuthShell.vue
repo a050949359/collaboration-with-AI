@@ -13,8 +13,8 @@ defineProps<Props>();
     <div class="binary-page">
         <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
             <div class="absolute inset-0 binary-grid opacity-[0.04]" />
-            <div class="absolute right-0 top-0 h-[42vw] w-[42vw] bg-[#6bdc9f]/[0.08] blur-[140px]" />
-            <div class="absolute bottom-0 left-0 h-[34vw] w-[34vw] bg-[#2ca46d]/20 blur-[110px]" />
+            <div class="absolute right-0 top-0 h-[42vw] w-[42vw] bg-[var(--binary-primary)]/[0.08] blur-[140px]" />
+            <div class="absolute bottom-0 left-0 h-[34vw] w-[34vw] bg-[var(--binary-primary-container)]/20 blur-[110px]" />
         </div>
 
         <main class="binary-shell">
