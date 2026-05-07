@@ -16,4 +16,9 @@ class City extends Model
         'longitude',
         'population',
     ];
+
+    public function country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Country::class, 'country_code', 'code');
+    }
 }

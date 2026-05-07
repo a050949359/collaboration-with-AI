@@ -16,6 +16,7 @@ use App\Http\Controllers\Aviation\AirportController;
 use App\Http\Controllers\Aviation\AirportStatsController;
 use App\Http\Controllers\Aviation\NearbyAirportController;
 use App\Http\Controllers\Aviation\AirlineController;
+use App\Http\Controllers\Aviation\CountryController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
 use App\Http\Middleware\EnsureAdmin;
@@ -78,6 +79,11 @@ Route::prefix('v1/airports')->middleware('throttle:60,1')->group(function () {
 
 Route::prefix('v1/airlines')->middleware('throttle:60,1')->group(function () {
     Route::get('/', [AirlineController::class, 'index']);
+});
+
+Route::prefix('v1/countries')->middleware('throttle:60,1')->group(function () {
+    Route::get('/',      [CountryController::class, 'index']);
+    Route::get('/{code}', [CountryController::class, 'show']);
 });
 
 Route::prefix('line/friends')->group(function () {
