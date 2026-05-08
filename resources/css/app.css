@@ -282,3 +282,22 @@
     95%           { opacity: 0.3; }
 }
 
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(107, 220, 159, 0.25);
+    border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 220, 159, 0.5);
+}
+

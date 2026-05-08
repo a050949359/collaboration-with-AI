@@ -27,12 +27,24 @@ class CityPreviewController extends Controller
 
         $sparql = <<<SPARQL
 SELECT DISTINCT ?city ?nameEn ?nameZhTw ?description WHERE {
-  SERVICE wikibase:mwapi {
-    bd:serviceParam wikibase:api "EntitySearch" ;
-                    wikibase:endpoint "www.wikidata.org" ;
-                    mwapi:search "{$cityName}" ;
-                    mwapi:language "zh-tw" .
-    ?city wikibase:apiOutputItem mwapi:item .
+  {
+    SERVICE wikibase:mwapi {
+      bd:serviceParam wikibase:api "EntitySearch" ;
+                      wikibase:endpoint "www.wikidata.org" ;
+                      mwapi:search "{$cityName}" ;
+                      mwapi:language "zh-tw" ;
+                      mwapi:limit "20" .
+      ?city wikibase:apiOutputItem mwapi:item .
+    }
+  } UNION {
+    SERVICE wikibase:mwapi {
+      bd:serviceParam wikibase:api "EntitySearch" ;
+                      wikibase:endpoint "www.wikidata.org" ;
+                      mwapi:search "{$cityName}" ;
+                      mwapi:language "en" ;
+                      mwapi:limit "20" .
+      ?city wikibase:apiOutputItem mwapi:item .
+    }
   }
   ?city wdt:P17/wdt:P297 "{$countryCode}" .
   OPTIONAL { ?city rdfs:label ?nameEn   . FILTER(LANG(?nameEn)   = "en") }
