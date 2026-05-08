@@ -37,6 +37,9 @@ export const routes = {
     // Countries
     countries: () => `${WEB_PREFIX}/countries`,
 
+    // City Search
+    citySearch: (countryCode?: string) => `${WEB_PREFIX}/city-search${countryCode ? `?country=${countryCode}` : ''}`,
+
     // About
     about: () => `${WEB_PREFIX}/about`,
 
@@ -100,6 +103,15 @@ export const api = {
     countries: {
         index: () => '/api/v1/countries',
         show:  (code: string) => `/api/v1/countries/${code}`,
+    },
+
+    cities: {
+        index:   () => '/api/v1/cities',
+        preview: () => '/api/v1/cities/preview',
+        search:  {
+            index: ()        => '/api/v1/cities/search',
+            show:  (id: number) => `/api/v1/cities/search/${id}`,
+        },
     },
 
     tour: {

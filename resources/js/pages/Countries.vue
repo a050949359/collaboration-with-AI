@@ -1,61 +1,59 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ref, reactive, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLayout from '../layouts/AppLayout.vue';
-import { api } from '../lib/routes';
+import { api, routes } from '../lib/routes';
 
 const { t } = useI18n();
 
 interface Country {
-    code:          string;
-    alpha3:        string | null;
-    numeric:       string | null;
-    name_en:       string;
-    name_zh_tw:    string | null;
-    capital:       string | null;
-    phone_code:    string | null;
-    is_recognized: boolean;
+    code:       string;
+    alpha3:     string | null;
+    name_en:    string;
+    name_zh_tw: string | null;
+    capital:    string | null;
+    phone_code: string | null;
 }
 
-interface Meta {
-    current_page: number;
-    last_page:    number;
-    per_page:     number;
-    total:        number;
+interface City {
+    id:          number;
+    name_en:     string;
+    name_zh_tw:  string | null;
+    population:  number | null;
+    timezone:    string | null;
+    description: string | null;
+    image_url:   string | null;
 }
 
-const countries = ref<Country[]>([]);
-const meta      = ref<Meta | null>(null);
-const isLoading = ref(false);
-const error     = ref<string | null>(null);
 
-const filters = reactive({
-    search:     '',
-    recognized: '' as '' | '1' | '0',
-    page:       1,
+const allCountries    = ref<Country[]>([]);
+const isLoading       = ref(false);
+const error           = ref<string | null>(null);
+const selectedCountry = ref<Country | null>(null);
+const cities          = ref<City[]>([]);
+const isCityLoading   = ref(false);
+const search          = ref('');
+
+const countries = computed(() => {
+    const q = search.value.trim().toUpperCase();
+    if (!q) return allCountries.value;
+    return allCountries.value.filter(c =>
+        c.code.includes(q) ||
+        c.alpha3?.includes(q) ||
+        c.name_en.toUpperCase().includes(q) ||
+        (c.name_zh_tw ?? '').includes(search.value.trim())
+    );
 });
 
-let searchTimer: number | null = null;
-
-function flagEmoji(code: string): string {
-    return [...code.toUpperCase()].map(c => String.fromCodePoint(127397 + c.charCodeAt(0))).join('');
-}
-
-async function fetchCountries(page = 1) {
+async function fetchCountries() {
     isLoading.value = true;
     error.value     = null;
-
     try {
-        const params = new URLSearchParams({ per_page: '50', page: String(page) });
-        if (filters.search)     params.set('search', filters.search);
-        if (filters.recognized) params.set('recognized', filters.recognized);
-
-        const res  = await fetch(`${api.countries.index()}?${params}`);
-        const json = await res.json();
-        countries.value = json.data;
-        meta.value      = json.meta;
-        filters.page    = page;
+        const params    = new URLSearchParams({ per_page: '300', recognized: '1' });
+        const res       = await fetch(`${api.countries.index()}?${params}`);
+        const json      = await res.json();
+        allCountries.value = json.data;
     } catch {
         error.value = t('common.error_connection');
     } finally {
@@ -63,12 +61,21 @@ async function fetchCountries(page = 1) {
     }
 }
 
-function onSearchInput() {
-    if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = window.setTimeout(() => fetchCountries(1), 300);
+async function selectCountry(country: Country) {
+    selectedCountry.value = country;
+    cities.value          = [];
+    isCityLoading.value   = true;
+    try {
+        const params = new URLSearchParams({ country_code: country.code });
+        const res    = await fetch(`${api.cities.index()}?${params}`);
+        const json   = await res.json();
+        cities.value = json.data ?? [];
+    } finally {
+        isCityLoading.value = false;
+    }
 }
 
-onMounted(() => fetchCountries(1));
+onMounted(() => fetchCountries());
 </script>
 
 <template>
@@ -77,116 +84,84 @@ onMounted(() => fetchCountries(1));
 
         <div class="mx-auto max-w-screen-xl px-6 pb-24 pt-32 md:px-8">
             <!-- Header -->
-            <div class="mb-10 pt-8">
+            <div class="mb-8 pt-8">
                 <span class="binary-label mb-2 block text-xs font-bold uppercase text-[var(--binary-primary)]">&gt; country_database</span>
                 <h1 class="binary-display text-5xl font-black uppercase tracking-tight md:text-7xl">{{ t('countries.title').toUpperCase() }}</h1>
                 <p class="mt-3 text-sm text-[var(--binary-text-muted)]">{{ t('countries.subtitle') }}</p>
-                <p class="mt-2 text-xs text-[var(--binary-outline)]">
-                    {{ t('countries.source_label') }}
-                    <a
-                        href="https://www.wikidata.org/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="underline underline-offset-2 hover:text-[var(--binary-primary)]"
-                    >{{ t('countries.source_link_wiki') }}</a>
-                </p>
             </div>
 
-            <!-- Filters -->
-            <div class="mb-8 flex flex-wrap gap-3">
-                <input
-                    v-model="filters.search"
-                    type="text"
-                    :placeholder="t('common.search') + ' — name, ISO code'"
-                    class="w-full max-w-sm rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-4 py-2 text-sm text-[var(--binary-text)] placeholder:text-[var(--binary-outline)] focus:border-[var(--binary-primary)] focus:outline-none"
-                    @input="onSearchInput"
-                >
-                <select
-                    v-model="filters.recognized"
-                    class="rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-3 py-2 text-sm text-[var(--binary-text)] focus:border-[var(--binary-primary)] focus:outline-none"
-                    @change="fetchCountries(1)"
-                >
-                    <option value="">{{ t('common.all') }}</option>
-                    <option value="1">{{ t('countries.recognized') }}</option>
-                    <option value="0">{{ t('countries.unrecognized') }}</option>
-                </select>
-            </div>
-
-            <!-- Loading -->
-            <div v-if="isLoading" class="py-20 text-center binary-label text-sm text-[var(--binary-outline)]">
-                {{ t('common.loading') }}
-            </div>
-
-            <!-- Error -->
-            <div v-else-if="error" class="py-20 text-center binary-label text-sm text-red-400">
-                {{ error }}
-            </div>
-
-            <!-- Table -->
-            <template v-else>
-                <div v-if="countries.length === 0" class="py-20 text-center binary-label text-sm text-[var(--binary-outline)]">
-                    {{ t('common.no_data') }}
-                </div>
-
-                <div v-else class="overflow-x-auto rounded-xl border border-[var(--binary-outline-variant)]">
-                    <table class="w-full text-sm">
-                        <thead class="bg-[var(--binary-surface-container)] binary-label text-[10px] uppercase tracking-wider text-[var(--binary-outline)]">
-                            <tr>
-                                <th class="px-4 py-3 text-left">{{ t('countries.col_code') }}</th>
-                                <th class="px-4 py-3 text-left">{{ t('countries.col_name_zh') }}</th>
-                                <th class="px-4 py-3 text-left">{{ t('countries.col_name_en') }}</th>
-                                <th class="px-4 py-3 text-left">{{ t('countries.col_alpha3') }}</th>
-                                <th class="px-4 py-3 text-left">{{ t('countries.col_status') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-[var(--binary-outline-variant)]">
-                            <tr
-                                v-for="country in countries"
-                                :key="country.code"
-                                class="hover:bg-[var(--binary-surface-container)] transition-colors"
-                            >
-                                <td class="px-4 py-3 font-mono font-bold text-[var(--binary-primary)]">
-                                    <span class="mr-2 text-base">{{ flagEmoji(country.code) }}</span>{{ country.code }}
-                                </td>
-                                <td class="px-4 py-3 text-[var(--binary-text)]">{{ country.name_zh_tw ?? '—' }}</td>
-                                <td class="px-4 py-3 text-[var(--binary-text)]">{{ country.name_en }}</td>
-                                <td class="px-4 py-3 font-mono text-[var(--binary-outline)]">{{ country.alpha3 ?? '—' }}</td>
-                                <td class="px-4 py-3">
-                                    <span
-                                        class="binary-label rounded px-2 py-0.5 text-[10px] uppercase"
-                                        :class="country.is_recognized
-                                            ? 'bg-green-500/10 text-green-400'
-                                            : 'bg-yellow-500/10 text-yellow-400'"
-                                    >
-                                        {{ country.is_recognized ? t('countries.recognized') : t('countries.unrecognized') }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Pagination -->
-                <div v-if="meta && meta.last_page > 1" class="mt-6 flex items-center justify-between binary-label text-xs text-[var(--binary-outline)]">
-                    <span>{{ t('common.total', { total: meta.total, current: meta.current_page, last: meta.last_page }) }}</span>
-                    <div class="flex gap-2">
-                        <button
-                            :disabled="meta.current_page <= 1"
-                            class="rounded px-3 py-1.5 transition hover:text-[var(--binary-primary)] disabled:opacity-30"
-                            @click="fetchCountries(meta!.current_page - 1)"
+            <!-- Split layout -->
+            <div class="flex gap-4" style="height: 620px;">
+                <!-- Left: country list -->
+                <div class="flex w-60 flex-shrink-0 flex-col rounded-xl border border-[var(--binary-outline-variant)] overflow-hidden">
+                    <div class="bg-[var(--binary-surface-container)] flex items-center gap-2 px-4 py-3 flex-shrink-0 border-b border-[var(--binary-outline-variant)]">
+                        <input
+                            v-model="search"
+                            type="text"
+                            :placeholder="t('common.search')"
+                            class="min-w-0 flex-1 bg-transparent text-sm text-[var(--binary-text)] placeholder:text-[var(--binary-outline)] outline-none"
                         >
-                            {{ t('common.prev_page') }}
-                        </button>
+                        <span v-if="allCountries.length" class="binary-label flex-shrink-0 text-xs text-[var(--binary-outline)]">{{ countries.length }}</span>
+                    </div>
+                    <div v-if="isLoading" class="flex flex-1 items-center justify-center text-xs text-[var(--binary-outline)]">{{ t('common.loading') }}</div>
+                    <div v-else-if="error" class="flex flex-1 items-center justify-center text-xs text-red-400">{{ error }}</div>
+                    <div v-else class="flex-1 overflow-y-auto">
                         <button
-                            :disabled="meta.current_page >= meta.last_page"
-                            class="rounded px-3 py-1.5 transition hover:text-[var(--binary-primary)] disabled:opacity-30"
-                            @click="fetchCountries(meta!.current_page + 1)"
+                            v-for="country in countries"
+                            :key="country.code"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition hover:bg-[var(--binary-surface-container)]"
+                            :class="selectedCountry?.code === country.code ? 'bg-[var(--binary-surface-container)] text-[var(--binary-primary)]' : 'text-[var(--binary-text)]'"
+                            @click="selectCountry(country)"
                         >
-                            {{ t('common.next_page') }}
+                            <span class="font-mono text-xs text-[var(--binary-outline)] w-7 flex-shrink-0">{{ country.code }}</span>
+                            <span class="truncate">{{ country.name_zh_tw ?? country.name_en }}</span>
                         </button>
                     </div>
                 </div>
-            </template>
+
+                <!-- Right: cities -->
+                <div class="flex flex-1 flex-col rounded-xl border border-[var(--binary-outline-variant)] overflow-hidden">
+                    <div class="bg-[var(--binary-surface-container)] binary-label px-4 py-2 text-[10px] uppercase tracking-wider text-[var(--binary-outline)] flex items-center justify-between flex-shrink-0">
+                        <span>
+                            <template v-if="selectedCountry">
+                                {{ selectedCountry.name_zh_tw ?? selectedCountry.name_en }}
+                                <span class="ml-1 font-mono">{{ selectedCountry.code }}</span>
+                                <span v-if="cities.length" class="ml-1 opacity-60">{{ cities.length }} {{ t('countries.cities') }}</span>
+                            </template>
+                            <template v-else>{{ t('countries.select_hint') }}</template>
+                        </span>
+                        <a
+                            v-if="selectedCountry"
+                            :href="routes.citySearch(selectedCountry.code)"
+                            target="_blank"
+                            class="binary-label text-[10px] uppercase text-[var(--binary-primary)] hover:underline"
+                        >
+                            + {{ t('countries.add_city') }}
+                        </a>
+                    </div>
+
+                    <div v-if="!selectedCountry" class="flex flex-1 items-center justify-center text-sm text-[var(--binary-outline)]">{{ t('countries.select_hint') }}</div>
+                    <div v-else-if="isCityLoading" class="flex flex-1 items-center justify-center text-xs text-[var(--binary-outline)]">{{ t('common.loading') }}</div>
+                    <div v-else-if="cities.length === 0" class="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-[var(--binary-outline)]">
+                        <span>{{ t('common.no_data') }}</span>
+                        <a
+                            :href="routes.citySearch(selectedCountry.code)"
+                            target="_blank"
+                            class="binary-label text-xs uppercase text-[var(--binary-primary)] hover:underline"
+                        >{{ t('countries.add_city') }}</a>
+                    </div>
+                    <div v-else class="flex-1 overflow-y-auto">
+                        <div class="grid grid-cols-2 gap-px bg-[var(--binary-outline-variant)] md:grid-cols-3 lg:grid-cols-4">
+                            <div v-for="city in cities" :key="city.id" class="bg-[var(--binary-surface-dim)] px-4 py-3">
+                                <p class="text-sm font-medium text-[var(--binary-text)]">{{ city.name_zh_tw ?? city.name_en }}</p>
+                                <p class="text-xs text-[var(--binary-outline)]">{{ city.name_en }}</p>
+                                <p v-if="city.population" class="mt-0.5 binary-label text-[10px] text-[var(--binary-text-muted)]">{{ city.population.toLocaleString() }}</p>
+                                <p v-if="city.timezone" class="binary-label text-[10px] text-[var(--binary-outline)]">{{ city.timezone }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </AppLayout>
 </template>

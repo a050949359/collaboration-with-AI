@@ -12,6 +12,7 @@ Route::prefix('app')->group(function () {
     Route::inertia('/airports', 'Airports')->name('airports');
     Route::inertia('/airlines', 'Airlines')->name('airlines');
     Route::inertia('/countries', 'Countries')->name('countries');
+    Route::inertia('/city-search', 'CitySearch')->name('city-search');
     Route::inertia('/about', 'About')->name('about');
     Route::inertia('/linebot', 'LineBot')->name('linebot');
     Route::inertia('/tour-playground', 'TourPlayground')->name('tour-playground');
