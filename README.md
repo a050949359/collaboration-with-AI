@@ -123,6 +123,54 @@ php artisan queue:work --timeout=110
 
 ---
 
+## WebSocket 即時功能（Laravel Reverb）
+
+### 安裝
+
+```bash
+php artisan install:broadcasting
+```
+
+此指令會自動安裝 `laravel/reverb`、`laravel-echo`、`pusher-js`，並設定 `.env` 與 broadcasting config。
+
+### 啟動 Reverb Server
+
+```bash
+php artisan reverb:start
+```
+
+開發時需同時執行：
+
+```bash
+php artisan serve
+php artisan reverb:start
+php artisan queue:work
+npm run dev
+```
+
+### 功能模組
+
+#### 抽卡同步（Gacha Room）
+
+多人房間內同步抽卡結果，所有玩家即時看到彼此的抽卡動畫。
+
+```bash
+# 建立房間
+POST /api/gacha/rooms
+
+# 加入房間
+POST /api/gacha/rooms/{code}/join
+
+# 抽卡（server-side 隨機，結果廣播給全房間）
+POST /api/gacha/rooms/{room}/draw
+```
+
+- Presence Channel：`room.{roomId}`（追蹤在線玩家）
+- Broadcast Event：`CardDrawn`（推播抽卡結果與動畫）
+- 隨機邏輯在 server 執行，防止客戶端作弊
+
+---
+
 ## 主要功能
 
 - 文章管理（產生、編輯、瀏覽、Webhook 推送）
