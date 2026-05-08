@@ -15,6 +15,8 @@ class CityPreviewController extends Controller
     private const SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql';
     private const USER_AGENT      = 'collaboration-with-AI/1.0 (haroldchen@besttour.com.tw)';
 
+    private const ACTION_ENDPOINT = 'https://www.wikidata.org/w/api.php';
+
     public function __invoke(Request $request): JsonResponse
     {
         $request->validate([
@@ -25,27 +27,35 @@ class CityPreviewController extends Controller
         $cityName    = $request->input('city_name');
         $countryCode = strtoupper($request->input('country_code'));
 
+        // Step 1: fast text search via Action API (dedicated endpoint, no SPARQL overhead)
+        $qids = [];
+        foreach (['zh-tw', 'en'] as $lang) {
+            $res = Http::withHeaders(['User-Agent' => self::USER_AGENT])
+                ->timeout(5)
+                ->get(self::ACTION_ENDPOINT, [
+                    'action'   => 'wbsearchentities',
+                    'search'   => $cityName,
+                    'language' => $lang,
+                    'type'     => 'item',
+                    'format'   => 'json',
+                    'limit'    => 15,
+                ]);
+            if ($res->successful()) {
+                foreach ($res->json('search') ?? [] as $item) {
+                    $qids[$item['id']] = true;
+                }
+            }
+        }
+
+        if (empty($qids)) {
+            return $this->success(collect());
+        }
+
+        // Step 2: filter by country + fetch labels via VALUES SPARQL (no text search, fast lookup)
+        $values = implode(' ', array_map(fn($q) => "wd:$q", array_keys($qids)));
         $sparql = <<<SPARQL
-SELECT DISTINCT ?city ?nameEn ?nameZhTw ?description WHERE {
-  {
-    SERVICE wikibase:mwapi {
-      bd:serviceParam wikibase:api "EntitySearch" ;
-                      wikibase:endpoint "www.wikidata.org" ;
-                      mwapi:search "{$cityName}" ;
-                      mwapi:language "zh-tw" ;
-                      mwapi:limit "20" .
-      ?city wikibase:apiOutputItem mwapi:item .
-    }
-  } UNION {
-    SERVICE wikibase:mwapi {
-      bd:serviceParam wikibase:api "EntitySearch" ;
-                      wikibase:endpoint "www.wikidata.org" ;
-                      mwapi:search "{$cityName}" ;
-                      mwapi:language "en" ;
-                      mwapi:limit "20" .
-      ?city wikibase:apiOutputItem mwapi:item .
-    }
-  }
+SELECT ?city ?nameEn ?nameZhTw ?description WHERE {
+  VALUES ?city { {$values} }
   ?city wdt:P17/wdt:P297 "{$countryCode}" .
   OPTIONAL { ?city rdfs:label ?nameEn   . FILTER(LANG(?nameEn)   = "en") }
   OPTIONAL { ?city rdfs:label ?nameZhTw . FILTER(LANG(?nameZhTw) = "zh-tw") }
@@ -57,7 +67,7 @@ SPARQL;
         $response = Http::withHeaders([
             'Accept'     => 'application/sparql-results+json',
             'User-Agent' => self::USER_AGENT,
-        ])->timeout(15)->get(self::SPARQL_ENDPOINT, ['query' => $sparql, 'format' => 'json']);
+        ])->timeout(10)->get(self::SPARQL_ENDPOINT, ['query' => $sparql, 'format' => 'json']);
 
         if (!$response->successful()) {
             return $this->error('Wikidata unavailable', 503);
