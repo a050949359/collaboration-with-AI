@@ -38,7 +38,7 @@ class CityPreviewController extends Controller
                     'language' => $lang,
                     'type'     => 'item',
                     'format'   => 'json',
-                    'limit'    => 15,
+                    'limit'    => 20,
                 ]);
             if ($res->successful()) {
                 foreach ($res->json('search') ?? [] as $item) {
@@ -61,7 +61,7 @@ SELECT ?city ?nameEn ?nameZhTw ?description WHERE {
   OPTIONAL { ?city rdfs:label ?nameZhTw . FILTER(LANG(?nameZhTw) = "zh-tw") }
   OPTIONAL { ?city schema:description ?description . FILTER(LANG(?description) = "zh-tw") }
 }
-LIMIT 5
+LIMIT 10
 SPARQL;
 
         $response = Http::withHeaders([
