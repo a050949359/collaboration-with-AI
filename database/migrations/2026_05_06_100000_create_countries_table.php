@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('phone_code', 20)->nullable();
             $table->char('parent_code', 2)->nullable()->comment('parent country, e.g. GU -> US');
             $table->text('notes')->nullable();
+            $table->boolean('is_recognized')->default(false);
             $table->timestamps();
         });
     }

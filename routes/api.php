@@ -17,6 +17,9 @@ use App\Http\Controllers\Aviation\AirportStatsController;
 use App\Http\Controllers\Aviation\NearbyAirportController;
 use App\Http\Controllers\Aviation\AirlineController;
 use App\Http\Controllers\Aviation\CountryController;
+use App\Http\Controllers\Aviation\CityController;
+use App\Http\Controllers\Aviation\CityPreviewController;
+use App\Http\Controllers\Aviation\CitySearchController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
 use App\Http\Middleware\EnsureAdmin;
@@ -84,6 +87,17 @@ Route::prefix('v1/airlines')->middleware('throttle:60,1')->group(function () {
 Route::prefix('v1/countries')->middleware('throttle:60,1')->group(function () {
     Route::get('/',      [CountryController::class, 'index']);
     Route::get('/{code}', [CountryController::class, 'show']);
+});
+
+Route::prefix('v1/cities')->middleware('throttle:60,1')->group(function () {
+    Route::get('/', [CityController::class, 'index']);
+    Route::get('/preview', CityPreviewController::class)->middleware('throttle:20,1');
+});
+
+Route::prefix('v1/cities/search')->middleware(['auth:sanctum', 'verified', 'throttle:30,1'])->group(function () {
+    Route::get('/',       [CitySearchController::class, 'index']);
+    Route::post('/',      [CitySearchController::class, 'store']);
+    Route::get('/{id}',   [CitySearchController::class, 'show']);
 });
 
 Route::prefix('line/friends')->group(function () {

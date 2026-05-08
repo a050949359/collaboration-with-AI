@@ -10,11 +10,19 @@ class City extends Model
         'wikidata_id',
         'name_en',
         'name_zh_tw',
-        'name_zh',
         'country_code',
         'latitude',
         'longitude',
         'population',
+        'timezone',
+        'elevation',
+        'area',
+        'description',
+        'image_url',
+        'wikipedia_url',
+        'phone_code',
+        'postal_code',
+        'submitted_by',
     ];
 
     public function country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
