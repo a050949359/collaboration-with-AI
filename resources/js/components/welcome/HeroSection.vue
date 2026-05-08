@@ -5,8 +5,8 @@ defineProps<{
 </script>
 
 <template>
-    <section id="about" class="mx-auto grid max-w-screen-2xl grid-cols-1 gap-8 px-6 py-20 md:grid-cols-12 md:py-32 md:px-8">
-        <div class="md:col-span-8">
+    <section id="about" class="mx-auto grid h-screen max-w-screen-2xl grid-cols-1 items-center gap-8 px-6 pt-24 pb-60 md:grid-cols-12 md:px-8">
+        <div class="md:col-start-2 md:col-span-6">
             <div class="mb-6 inline-block rounded-full bg-[var(--binary-surface-container)] px-4 py-2">
                 <span class="binary-label text-xs font-bold uppercase text-[var(--binary-primary)]">&gt; architect_mode</span>
             </div>
@@ -21,7 +21,7 @@ defineProps<{
             </p>
         </div>
 
-        <div class="flex flex-col justify-end md:col-span-4">
+        <div class="flex flex-col justify-center md:col-span-4">
             <div class="binary-card-raised rounded-[1.5rem]">
                 <div class="mb-4 flex items-end justify-between">
                     <div class="flex items-center gap-1">

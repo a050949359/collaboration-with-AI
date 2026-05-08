@@ -1,7 +1,7 @@
 defineExpose({ showToast });
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { getLocale, setLocale } from '../i18n';
@@ -53,6 +53,38 @@ const defaultNavLinks = computed((): NavLink[] => {
 
 const effectiveUser = computed(() => currentUser.value);
 const isLoggingOut = ref(false);
+
+// ── Rain config ──────────────────────────────────────────
+const RAIN_CHARS = 'ｦｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆｰﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ01';
+// 其他選項：
+// const RAIN_CHARS = '0123456789ABCDEF';          // hex
+// const RAIN_CHARS = '{}[]<>/\\|;:=+-*01';        // code
+// ─────────────────────────────────────────────────────────
+
+const rainRef = ref<HTMLElement | null>(null);
+onMounted(() => {
+    const rain = rainRef.value;
+    if (!rain) return;
+    const colCount = Math.floor(window.innerWidth / 14);
+    const chars = RAIN_CHARS;
+    for (let i = 0; i < colCount; i++) {
+        const col = document.createElement('div');
+        col.className = 'bg-anim-rain-col';
+        col.style.left = (i * 14 + Math.random() * 8) + 'px';
+        const dur = 14 + Math.random() * 18;
+        col.style.animationDuration = dur + 's';
+        col.style.animationDelay = (-Math.random() * dur) + 's';
+        const charCount = 12 + Math.floor(Math.random() * 14);
+        let html = '';
+        for (let j = 0; j < charCount; j++) {
+            const ch = chars[Math.floor(Math.random() * chars.length)];
+            const delay = (Math.random() * 1.4).toFixed(2);
+            html += `<span style="animation-delay: -${delay}s;">${ch}</span>`;
+        }
+        col.innerHTML = html;
+        rain.appendChild(col);
+    }
+});
 
 // 全域通知狀態
 const toast = ref<{ message: string; type?: 'success'|'error' }|null>(null);
@@ -114,16 +146,24 @@ return;
     <div class="binary-page selection:bg-[var(--binary-primary-container)] selection:text-[var(--binary-on-primary-container)]">
         <!-- Background -->
         <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-            <div class="absolute inset-0 binary-grid opacity-[0.03]" />
-            <div class="absolute right-0 top-0 h-[40vw] w-[40vw] bg-[var(--binary-primary)]/[0.06] blur-[140px]" />
-            <div class="absolute bottom-0 left-0 h-[30vw] w-[30vw] bg-[var(--binary-primary-container)]/16 blur-[120px]" />
+            <div class="bg-anim-glow" />
+            <div class="bg-anim-grid" />
+            <div ref="rainRef" class="bg-anim-rain" />
         </div>
+
+        <!-- Overlay: transparent blur above animation, below content -->
+        <!-- <div class="pointer-events-none fixed inset-0" style="z-index: -5; background: rgba(11, 16, 13, 0); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);" /> -->
 
         <!-- Navbar -->
         <nav class="binary-glass fixed left-0 right-0 top-0 z-50">
             <div class="mx-auto flex w-full max-w-screen-2xl items-center justify-between px-6 py-4 md:px-8">
                 <!-- Logo -->
-                <Link :href="routes.home()" class="binary-display text-xl font-black uppercase tracking-tight text-[var(--binary-primary)]">
+                <Link :href="routes.home()" class="flex items-center gap-3 binary-display text-xl font-black uppercase tracking-tight text-[var(--binary-primary)]">
+                    <div class="nav-glyph">
+                        <div class="layer"><div class="square outer" /></div>
+                        <div class="layer"><div class="square" /></div>
+                        <div class="layer"><div class="square inner" /></div>
+                    </div>
                     {{ brandTitle }}
                 </Link>
 
