@@ -28,11 +28,14 @@ interface City {
 }
 
 interface Candidate {
-    qid:         string;
-    name_en:     string | null;
-    name_zh_tw:  string | null;
-    description: string | null;
-    url:         string;
+    qid:          string;
+    name_en:      string | null;
+    name_zh_tw:   string | null;
+    description:  string | null;
+    aliases:      string[];
+    url:          string;
+    existing:     boolean;
+    country_code: string | null;
 }
 
 interface JobRecord {
@@ -301,21 +304,29 @@ onMounted(() => fetchCountries());
                                     <div
                                         v-for="c in candidates"
                                         :key="c.qid"
-                                        class="flex items-start justify-between gap-4 rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-5 py-4"
+                                        class="flex items-start justify-between gap-4 rounded-xl border bg-[var(--binary-surface-container)] px-5 py-4"
+                                        :class="c.existing ? 'border-[var(--binary-outline)]' : 'border-[var(--binary-outline-variant)]'"
                                     >
                                         <div class="min-w-0 flex-1">
-                                            <p class="font-medium text-[var(--binary-text)]">{{ c.name_zh_tw ?? c.name_en }}</p>
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <p class="font-medium text-[var(--binary-text)]">{{ c.name_zh_tw ?? c.name_en }}</p>
+                                                <span v-if="c.existing" class="binary-label rounded px-1.5 py-0.5 text-[10px] uppercase bg-[var(--binary-primary)]/10 text-[var(--binary-primary)]">
+                                                    已存在 {{ c.country_code }}
+                                                </span>
+                                            </div>
                                             <p v-if="c.name_zh_tw && c.name_en" class="text-xs text-[var(--binary-outline)]">{{ c.name_en }}</p>
                                             <p v-if="c.description" class="mt-1 text-xs text-[var(--binary-text-muted)]">{{ c.description }}</p>
+                                            <p v-if="c.aliases.length" class="mt-1 text-[10px] text-[var(--binary-outline)]">{{ c.aliases.join(' · ') }}</p>
                                             <a :href="c.url" target="_blank" class="mt-1 inline-block binary-label text-[10px] uppercase text-[var(--binary-primary)] hover:underline">
                                                 {{ c.qid }} ↗
                                             </a>
                                         </div>
                                         <button
-                                            :disabled="isSubmitting"
-                                            class="binary-label flex-shrink-0 rounded-lg bg-[var(--binary-primary)]/10 px-3 py-1.5 text-[10px] uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-primary)]/20 disabled:opacity-40"
-                                            @click="confirmCandidate(c)"
-                                        >{{ t('city_search.confirm') }}</button>
+                                            :disabled="isSubmitting || c.existing"
+                                            class="binary-label flex-shrink-0 rounded-lg px-3 py-1.5 text-[10px] uppercase transition disabled:opacity-40"
+                                            :class="c.existing ? 'bg-[var(--binary-surface-high)] text-[var(--binary-outline)] cursor-not-allowed' : 'bg-[var(--binary-primary)]/10 text-[var(--binary-primary)] hover:bg-[var(--binary-primary)]/20'"
+                                            @click="!c.existing && confirmCandidate(c)"
+                                        >{{ c.existing ? '已存在' : t('city_search.confirm') }}</button>
                                     </div>
                                 </div>
                             </template>

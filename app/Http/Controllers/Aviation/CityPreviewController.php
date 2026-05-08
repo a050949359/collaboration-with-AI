@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Aviation;
 
 use App\Http\Controllers\Controller;
+use App\Models\Aviation\City;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,24 +13,20 @@ class CityPreviewController extends Controller
 {
     use ApiResponse;
 
-    private const SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql';
     private const USER_AGENT      = 'collaboration-with-AI/1.0 (haroldchen@besttour.com.tw)';
-
     private const ACTION_ENDPOINT = 'https://www.wikidata.org/w/api.php';
 
     public function __invoke(Request $request): JsonResponse
     {
         $request->validate([
-            'city_name'    => ['required', 'string', 'max:100'],
-            'country_code' => ['required', 'string', 'size:2'],
+            'city_name' => ['required', 'string', 'max:100'],
         ]);
 
-        $cityName    = $request->input('city_name');
-        $countryCode = strtoupper($request->input('country_code'));
+        $cityName = $request->input('city_name');
 
-        // Step 1: fast text search via Action API (dedicated endpoint, no SPARQL overhead)
-        $qids = [];
-        foreach (['zh-tw', 'en'] as $lang) {
+        $byQid = [];
+
+        foreach (['zh-tw' => 'name_zh_tw', 'en' => 'name_en'] as $lang => $nameField) {
             $res = Http::withHeaders(['User-Agent' => self::USER_AGENT])
                 ->timeout(5)
                 ->get(self::ACTION_ENDPOINT, [
@@ -38,53 +35,52 @@ class CityPreviewController extends Controller
                     'language' => $lang,
                     'type'     => 'item',
                     'format'   => 'json',
-                    'limit'    => 20,
+                    'limit'    => 10,
                 ]);
-            if ($res->successful()) {
-                foreach ($res->json('search') ?? [] as $item) {
-                    $qids[$item['id']] = true;
+
+            if (!$res->successful()) continue;
+
+            foreach ($res->json('search') ?? [] as $item) {
+                $id = $item['id'] ?? '';
+                if (!preg_match('/^Q\d+$/', $id)) continue;
+
+                if (!isset($byQid[$id])) {
+                    $byQid[$id] = ['name_zh_tw' => null, 'name_en' => null, 'description' => null, 'aliases' => []];
+                }
+
+                $byQid[$id][$nameField] = $item['label'] ?? null;
+
+                if (!$byQid[$id]['description'] || $lang === 'zh-tw') {
+                    $byQid[$id]['description'] = $item['description'] ?? null;
+                }
+
+                foreach ($item['aliases'] ?? [] as $alias) {
+                    if (!in_array($alias, $byQid[$id]['aliases'])) {
+                        $byQid[$id]['aliases'][] = $alias;
+                    }
                 }
             }
         }
 
-        if (empty($qids)) {
+        if (empty($byQid)) {
             return $this->success(collect());
         }
 
-        // Step 2: filter by country + fetch labels via VALUES SPARQL (no text search, fast lookup)
-        $values = implode(' ', array_map(fn($q) => "wd:$q", array_keys($qids)));
-        $sparql = <<<SPARQL
-SELECT ?city ?nameEn ?nameZhTw ?description WHERE {
-  VALUES ?city { {$values} }
-  ?city wdt:P17/wdt:P297 "{$countryCode}" .
-  OPTIONAL { ?city rdfs:label ?nameEn   . FILTER(LANG(?nameEn)   = "en") }
-  OPTIONAL { ?city rdfs:label ?nameZhTw . FILTER(LANG(?nameZhTw) = "zh-tw") }
-  OPTIONAL { ?city schema:description ?description . FILTER(LANG(?description) = "zh-tw") }
-}
-LIMIT 10
-SPARQL;
+        $existingCities = City::whereIn('wikidata_id', array_keys($byQid))
+            ->pluck('country_code', 'wikidata_id');
 
-        $response = Http::withHeaders([
-            'Accept'     => 'application/sparql-results+json',
-            'User-Agent' => self::USER_AGENT,
-        ])->timeout(10)->get(self::SPARQL_ENDPOINT, ['query' => $sparql, 'format' => 'json']);
-
-        if (!$response->successful()) {
-            return $this->error('Wikidata unavailable', 503);
-        }
-
-        $bindings = $response->json('results.bindings') ?? [];
-
-        $candidates = collect($bindings)->map(function ($b) {
-            $qid = basename($b['city']['value'] ?? '');
+        $candidates = collect($byQid)->map(function ($data, $qid) use ($existingCities) {
             return [
-                'qid'        => $qid,
-                'name_en'    => $b['nameEn']['value']      ?? null,
-                'name_zh_tw' => $b['nameZhTw']['value']    ?? null,
-                'description'=> $b['description']['value'] ?? null,
-                'url'        => "https://www.wikidata.org/wiki/{$qid}",
+                'qid'          => $qid,
+                'name_en'      => $data['name_en'],
+                'name_zh_tw'   => $data['name_zh_tw'],
+                'description'  => $data['description'],
+                'aliases'      => $data['aliases'],
+                'url'          => "https://www.wikidata.org/wiki/{$qid}",
+                'existing'     => $existingCities->has($qid),
+                'country_code' => $existingCities->get($qid),
             ];
-        })->filter(fn($c) => $c['qid'])->values();
+        })->values();
 
         return $this->success($candidates);
     }
