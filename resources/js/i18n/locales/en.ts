@@ -227,6 +227,7 @@ export default {
         recognized: 'Recognized',
         unrecognized: 'Unrecognized',
         cities: 'cities',
+        tab_cities: 'Cities',
         select_hint: '← Select a country',
         add_city: 'Add City',
     },

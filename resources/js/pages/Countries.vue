@@ -284,7 +284,7 @@ onMounted(() => fetchCountries());
                                         ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
                                         : 'border-transparent text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
                                     @click="citySubTab = 'list'"
-                                >{{ t('countries.cities') }}</button>
+                                >{{ t('countries.tab_cities') }}</button>
                                 <button
                                     class="binary-label border-b-2 pb-2 text-[10px] uppercase transition"
                                     :class="citySubTab === 'add'

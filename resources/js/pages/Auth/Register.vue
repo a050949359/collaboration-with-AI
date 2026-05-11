@@ -184,7 +184,7 @@ async function submit() {
         </form>
 
         <div class="mt-8 flex items-center justify-between gap-4">
-            <Link class="binary-label text-[10px] uppercase text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)]" href="/login">
+            <Link class="binary-label text-[10px] uppercase text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)]" href="/app/login">
                 <span aria-hidden="true">&lt;-</span>
                 返回登入界面
             </Link>

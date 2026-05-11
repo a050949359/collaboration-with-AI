@@ -69,7 +69,7 @@ async function submit() {
         <form class="space-y-8" @submit.prevent="submit">
             <div class="space-y-2">
                 <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="email">
-                    帳號識別 / email
+                    電子郵件 / email
                 </label>
                 <input
                     id="email"
@@ -89,7 +89,7 @@ async function submit() {
             <div class="space-y-2">
                 <div class="flex items-center justify-between gap-4">
                     <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="password">
-                        存取金鑰 / access_key
+                        密碼 / password
                     </label>
                     <a class="binary-label text-[10px] uppercase text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)]" href="#">
                         忘記密碼

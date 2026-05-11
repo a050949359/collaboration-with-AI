@@ -4,6 +4,7 @@ import type {
     RegisterPayload,
     ValidationErrors,
 } from '@/types';
+import { api } from './routes';
 
 type ApiErrorPayload = {
     message?: string;
@@ -12,9 +13,6 @@ type ApiErrorPayload = {
 
 type AuthApiConfig = {
     baseUrl: string;
-    loginEndpoint: string;
-    registerEndpoint: string;
-    logoutEndpoint: string;
     csrfEndpoint: string;
     useCsrf: boolean;
 };
@@ -35,9 +33,6 @@ export class AuthApiError extends Error {
 
 const authApiConfig: AuthApiConfig = {
     baseUrl: (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, ''),
-    loginEndpoint: import.meta.env.VITE_AUTH_LOGIN_ENDPOINT || '/api/auth/login',
-    registerEndpoint: import.meta.env.VITE_AUTH_REGISTER_ENDPOINT || '/api/auth/register',
-    logoutEndpoint: import.meta.env.VITE_AUTH_LOGOUT_ENDPOINT || '/api/auth/logout',
     csrfEndpoint: import.meta.env.VITE_AUTH_CSRF_ENDPOINT || '/sanctum/csrf-cookie',
     useCsrf: import.meta.env.VITE_AUTH_USE_CSRF !== 'false',
 };
@@ -125,18 +120,18 @@ async function request<T>(path: string, payload: unknown) {
 export async function loginWithApi(payload: LoginPayload) {
     await ensureCsrfCookie();
 
-    return request<AuthApiResponse>(authApiConfig.loginEndpoint, payload);
+    return request<AuthApiResponse>(api.auth.login(), payload);
 }
 
 export async function registerWithApi(payload: RegisterPayload) {
     await ensureCsrfCookie();
 
-    return request<AuthApiResponse>(authApiConfig.registerEndpoint, payload);
+    return request<AuthApiResponse>(api.auth.register(), payload);
 }
 
 export async function logoutWithApi() {
     await ensureCsrfCookie();
-    await request<{ message?: string }>(authApiConfig.logoutEndpoint, {});
+    await request<{ message?: string }>(api.auth.logout(), {});
 }
 
 export function getAuthApiConfig() {

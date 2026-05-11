@@ -227,6 +227,7 @@ export default {
         recognized: '正式國家',
         unrecognized: '未承認',
         cities: '個城市',
+        tab_cities: '城市',
         select_hint: '← 點選左側國家',
         add_city: '新增城市',
     },
