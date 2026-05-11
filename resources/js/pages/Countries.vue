@@ -42,17 +42,21 @@ interface JobRecord {
     id:           number;
     city_name:    string;
     wikidata_qid: string;
+    country_code: string;
     status:       'pending' | 'processing' | 'success' | 'failed';
     error:        string | null;
     city:         { name_zh_tw: string | null; name_en: string } | null;
     created_at:   string;
 }
 
+// ── Main tabs ──
+const mainTab = ref<'cities' | 'jobs'>('cities');
+
 // ── Countries ──
-const allCountries    = ref<Country[]>([]);
-const isLoading       = ref(false);
-const error           = ref<string | null>(null);
-const search          = ref('');
+const allCountries = ref<Country[]>([]);
+const isLoading    = ref(false);
+const error        = ref<string | null>(null);
+const search       = ref('');
 
 const countries = computed(() => {
     const q = search.value.trim().toUpperCase();
@@ -65,24 +69,22 @@ const countries = computed(() => {
     );
 });
 
-// ── Selected country ──
+// ── Cities panel ──
 const selectedCountry = ref<Country | null>(null);
-const activeTab       = ref<'cities' | 'add' | 'jobs'>('cities');
-
-// ── Cities ──
-const cities        = ref<City[]>([]);
-const isCityLoading = ref(false);
+const cities          = ref<City[]>([]);
+const isCityLoading   = ref(false);
+const citySubTab      = ref<'list' | 'add'>('list');
 
 // ── City search ──
-const cityName      = ref('');
-const candidates    = ref<Candidate[]>([]);
-const isSearching   = ref(false);
-const isSubmitting  = ref(false);
-const searchError   = ref<string | null>(null);
+const cityName     = ref('');
+const candidates   = ref<Candidate[]>([]);
+const isSearching  = ref(false);
+const isSubmitting = ref(false);
+const searchError  = ref<string | null>(null);
 
 // ── Jobs ──
 const jobs      = ref<JobRecord[]>([]);
-let pollTimer: number | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 async function fetchCountries() {
     isLoading.value = true;
@@ -101,12 +103,11 @@ async function fetchCountries() {
 
 async function selectCountry(country: Country) {
     selectedCountry.value = country;
-    activeTab.value       = 'cities';
+    citySubTab.value      = 'list';
     candidates.value      = [];
     cityName.value        = '';
     searchError.value     = null;
     fetchCities();
-    fetchJobs();
 }
 
 async function fetchCities() {
@@ -129,7 +130,7 @@ async function searchCity() {
     searchError.value = null;
     candidates.value  = [];
     try {
-        const params = new URLSearchParams({ city_name: cityName.value, country_code: selectedCountry.value.code });
+        const params = new URLSearchParams({ city_name: cityName.value });
         const res    = await fetch(`${api.cities.preview()}?${params}`);
         const json   = await res.json();
         candidates.value = json.data ?? [];
@@ -156,12 +157,11 @@ async function confirmCandidate(candidate: Candidate) {
             }),
         });
         if (res.ok) {
-            const json = await res.json();
             candidates.value = [];
             cityName.value   = '';
-            activeTab.value  = 'jobs';
-            fetchJobs();
-            startPolling(json.data.job_id);
+            mainTab.value    = 'jobs';
+            await fetchJobs();
+            startPolling();
         }
     } finally {
         isSubmitting.value = false;
@@ -169,31 +169,34 @@ async function confirmCandidate(candidate: Candidate) {
 }
 
 async function fetchJobs() {
-    if (!selectedCountry.value) return;
+    if (!user.value) return;
     try {
-        const params = new URLSearchParams({ country_code: selectedCountry.value.code });
-        const res    = await fetch(`${api.cities.search.index()}?${params}`, { credentials: 'include' });
+        const res  = await fetch(api.cities.search.index(), { credentials: 'include' });
         if (!res.ok) return;
         const json = await res.json();
         jobs.value = json.data ?? [];
     } catch { /* not logged in, ignore */ }
 }
 
-function startPolling(jobId: number) {
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = window.setInterval(async () => {
-        const res  = await fetch(api.cities.search.show(jobId), { credentials: 'include' });
-        const json = await res.json();
-        const job  = json.data;
-        const idx  = jobs.value.findIndex(j => j.id === jobId);
-        if (idx >= 0) jobs.value[idx] = job;
-        else jobs.value.unshift(job);
-        if (job.status === 'success' || job.status === 'failed') {
+function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(async () => {
+        await fetchJobs();
+        const hasActive = jobs.value.some(j => j.status === 'pending' || j.status === 'processing');
+        if (!hasActive) {
             clearInterval(pollTimer!);
             pollTimer = null;
-            if (job.status === 'success') fetchCities();
+            if (selectedCountry.value) fetchCities();
         }
     }, 2500);
+}
+
+async function openJobsTab() {
+    mainTab.value = 'jobs';
+    await fetchJobs();
+    if (jobs.value.some(j => j.status === 'pending' || j.status === 'processing')) {
+        startPolling();
+    }
 }
 
 onMounted(() => fetchCountries());
@@ -205,14 +208,32 @@ onMounted(() => fetchCountries());
 
         <div class="mx-auto max-w-screen-xl px-6 pb-24 pt-32 md:px-8">
             <!-- Header -->
-            <div class="mb-8 pt-8">
+            <div class="mb-6 pt-8">
                 <span class="binary-label mb-2 block text-xs font-bold uppercase text-[var(--binary-primary)]">&gt; country_database</span>
                 <h1 class="binary-display text-5xl font-black uppercase tracking-tight md:text-7xl">{{ t('countries.title').toUpperCase() }}</h1>
                 <p class="mt-3 text-sm text-[var(--binary-text-muted)]">{{ t('countries.subtitle') }}</p>
             </div>
 
-            <!-- Split layout -->
-            <div class="flex gap-4" style="height: 640px;">
+            <!-- Top-level tabs -->
+            <div class="mb-5 flex items-center border-b border-[var(--binary-outline-variant)]">
+                <button
+                    class="binary-label mr-6 pb-2.5 text-[10px] uppercase border-b-2 transition"
+                    :class="mainTab === 'cities'
+                        ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                        : 'border-transparent text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
+                    @click="mainTab = 'cities'"
+                >{{ t('countries.title') }}</button>
+                <button
+                    class="binary-label mr-6 pb-2.5 text-[10px] uppercase border-b-2 transition"
+                    :class="mainTab === 'jobs'
+                        ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                        : 'border-transparent text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
+                    @click="openJobsTab"
+                >{{ t('city_search.tab_jobs') }}</button>
+            </div>
+
+            <!-- ── Tab: cities ── -->
+            <div v-if="mainTab === 'cities'" class="flex gap-4" style="height: 640px;">
                 <!-- Left: country list -->
                 <div class="flex w-60 flex-shrink-0 flex-col rounded-xl border border-[var(--binary-outline-variant)] overflow-hidden">
                     <div class="bg-[var(--binary-surface-container)] flex items-center gap-2 px-4 py-3 flex-shrink-0 border-b border-[var(--binary-outline-variant)]">
@@ -231,7 +252,9 @@ onMounted(() => fetchCountries());
                             v-for="country in countries"
                             :key="country.code"
                             class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition hover:bg-[var(--binary-surface-container)]"
-                            :class="selectedCountry?.code === country.code ? 'bg-[var(--binary-surface-container)] text-[var(--binary-primary)]' : 'text-[var(--binary-text)]'"
+                            :class="selectedCountry?.code === country.code
+                                ? 'bg-[var(--binary-surface-container)] text-[var(--binary-primary)]'
+                                : 'text-[var(--binary-text)]'"
                             @click="selectCountry(country)"
                         >
                             <span class="font-mono text-xs text-[var(--binary-outline)] w-7 flex-shrink-0">{{ country.code }}</span>
@@ -240,32 +263,40 @@ onMounted(() => fetchCountries());
                     </div>
                 </div>
 
-                <!-- Right panel -->
+                <!-- Right: country detail panel -->
                 <div class="flex flex-1 flex-col rounded-xl border border-[var(--binary-outline-variant)] overflow-hidden">
-                    <!-- No country selected -->
                     <div v-if="!selectedCountry" class="flex flex-1 items-center justify-center text-sm text-[var(--binary-outline)]">
                         {{ t('countries.select_hint') }}
                     </div>
-
                     <template v-else>
-                        <!-- Tabs -->
-                        <div class="flex items-center border-b border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-4 flex-shrink-0">
-                            <button
-                                v-for="tab in (['cities', 'add', 'jobs'] as const)"
-                                :key="tab"
-                                class="binary-label mr-4 py-2.5 text-[10px] uppercase transition border-b-2"
-                                :class="activeTab === tab
-                                    ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
-                                    : 'border-transparent text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
-                                @click="activeTab = tab; if(tab === 'jobs') fetchJobs()"
-                            >
-                                {{ tab === 'cities' ? (selectedCountry.name_zh_tw ?? selectedCountry.name_en) : tab === 'add' ? t('countries.add_city') : t('city_search.tab_jobs') }}
-                                <span v-if="tab === 'cities' && cities.length" class="ml-1 opacity-60">{{ cities.length }}</span>
-                            </button>
+                        <!-- Country header -->
+                        <div class="bg-[var(--binary-surface-container)] flex-shrink-0 border-b border-[var(--binary-outline-variant)]">
+                            <div class="flex items-center gap-3 px-5 py-3">
+                                <span class="font-mono text-xs text-[var(--binary-outline)]">{{ selectedCountry.code }}</span>
+                                <span class="text-sm font-medium text-[var(--binary-text)]">{{ selectedCountry.name_zh_tw ?? selectedCountry.name_en }}</span>
+                                <span v-if="cities.length" class="binary-label text-[10px] text-[var(--binary-outline)]">{{ cities.length }} {{ t('countries.cities') }}</span>
+                            </div>
+                            <!-- Sub-tabs (only for verified users) -->
+                            <div v-if="user && user.email_verified_at" class="flex px-5">
+                                <button
+                                    class="binary-label mr-5 border-b-2 pb-2 text-[10px] uppercase transition"
+                                    :class="citySubTab === 'list'
+                                        ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                                        : 'border-transparent text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
+                                    @click="citySubTab = 'list'"
+                                >{{ t('countries.cities') }}</button>
+                                <button
+                                    class="binary-label border-b-2 pb-2 text-[10px] uppercase transition"
+                                    :class="citySubTab === 'add'
+                                        ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                                        : 'border-transparent text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
+                                    @click="citySubTab = 'add'"
+                                >{{ t('countries.add_city') }}</button>
+                            </div>
                         </div>
 
-                        <!-- Tab: cities -->
-                        <div v-if="activeTab === 'cities'" class="flex-1 overflow-y-auto">
+                        <!-- Sub-tab: city list -->
+                        <div v-if="citySubTab === 'list'" class="flex-1 overflow-y-auto">
                             <div v-if="isCityLoading" class="flex h-full items-center justify-center text-xs text-[var(--binary-outline)]">{{ t('common.loading') }}</div>
                             <div v-else-if="cities.length === 0" class="flex h-full items-center justify-center text-sm text-[var(--binary-outline)]">{{ t('common.no_data') }}</div>
                             <div v-else class="grid grid-cols-2 gap-px bg-[var(--binary-outline-variant)] md:grid-cols-3 lg:grid-cols-4">
@@ -278,87 +309,91 @@ onMounted(() => fetchCountries());
                             </div>
                         </div>
 
-                        <!-- Tab: add city -->
-                        <div v-else-if="activeTab === 'add'" class="flex-1 overflow-y-auto px-6 py-5">
-                            <div v-if="!user" class="flex h-full items-center justify-center text-sm text-[var(--binary-outline)]">{{ t('city_search.login_required') }}</div>
-                            <div v-else-if="!user.email_verified_at" class="flex h-full items-center justify-center text-sm text-[var(--binary-outline)]">{{ t('city_search.verify_required') }}</div>
-                            <template v-else>
-                                <div class="mb-5 flex gap-3">
-                                    <input
-                                        v-model="cityName"
-                                        type="text"
-                                        :placeholder="t('city_search.placeholder')"
-                                        class="flex-1 rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-4 py-2 text-sm text-[var(--binary-text)] placeholder:text-[var(--binary-outline)] focus:border-[var(--binary-primary)] focus:outline-none"
-                                        @keydown.enter="searchCity"
-                                    >
-                                    <button
-                                        :disabled="isSearching || !cityName"
-                                        class="binary-label rounded-lg bg-[var(--binary-surface-container)] px-4 py-2 text-xs uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-surface-high)] disabled:opacity-40"
-                                        @click="searchCity"
-                                    >
-                                        {{ isSearching ? t('common.loading') : t('city_search.search') }}
-                                    </button>
-                                </div>
-                                <div v-if="searchError" class="mb-4 text-sm text-[var(--binary-tertiary)]">{{ searchError }}</div>
-                                <div v-if="candidates.length" class="space-y-3">
-                                    <div
-                                        v-for="c in candidates"
-                                        :key="c.qid"
-                                        class="flex items-start justify-between gap-4 rounded-xl border bg-[var(--binary-surface-container)] px-5 py-4"
-                                        :class="c.existing ? 'border-[var(--binary-outline)]' : 'border-[var(--binary-outline-variant)]'"
-                                    >
-                                        <div class="min-w-0 flex-1">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <p class="font-medium text-[var(--binary-text)]">{{ c.name_zh_tw ?? c.name_en }}</p>
-                                                <span v-if="c.existing" class="binary-label rounded px-1.5 py-0.5 text-[10px] uppercase bg-[var(--binary-primary)]/10 text-[var(--binary-primary)]">
-                                                    已存在 {{ c.country_code }}
-                                                </span>
-                                            </div>
-                                            <p v-if="c.name_zh_tw && c.name_en" class="text-xs text-[var(--binary-outline)]">{{ c.name_en }}</p>
-                                            <p v-if="c.description" class="mt-1 text-xs text-[var(--binary-text-muted)]">{{ c.description }}</p>
-                                            <p v-if="c.aliases.length" class="mt-1 text-[10px] text-[var(--binary-outline)]">{{ c.aliases.join(' · ') }}</p>
-                                            <a :href="c.url" target="_blank" class="mt-1 inline-block binary-label text-[10px] uppercase text-[var(--binary-primary)] hover:underline">
-                                                {{ c.qid }} ↗
-                                            </a>
-                                        </div>
-                                        <button
-                                            :disabled="isSubmitting || c.existing"
-                                            class="binary-label flex-shrink-0 rounded-lg px-3 py-1.5 text-[10px] uppercase transition disabled:opacity-40"
-                                            :class="c.existing ? 'bg-[var(--binary-surface-high)] text-[var(--binary-outline)] cursor-not-allowed' : 'bg-[var(--binary-primary)]/10 text-[var(--binary-primary)] hover:bg-[var(--binary-primary)]/20'"
-                                            @click="!c.existing && confirmCandidate(c)"
-                                        >{{ c.existing ? '已存在' : t('city_search.confirm') }}</button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-
-                        <!-- Tab: jobs -->
-                        <div v-else class="flex-1 overflow-y-auto px-6 py-5">
-                            <div v-if="!user" class="flex h-full items-center justify-center text-sm text-[var(--binary-outline)]">{{ t('city_search.login_required') }}</div>
-                            <div v-else-if="jobs.length === 0" class="flex h-full items-center justify-center text-sm text-[var(--binary-outline)]">{{ t('common.no_data') }}</div>
-                            <div v-else class="space-y-3">
-                                <div
-                                    v-for="job in jobs"
-                                    :key="job.id"
-                                    class="flex items-center gap-4 rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-5 py-3"
+                        <!-- Sub-tab: add city -->
+                        <div v-else-if="citySubTab === 'add'" class="flex-1 overflow-y-auto px-5 py-4">
+                            <!-- City name + search -->
+                            <div class="mb-5 flex gap-3">
+                                <input
+                                    v-model="cityName"
+                                    type="text"
+                                    :placeholder="t('city_search.placeholder')"
+                                    class="flex-1 rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-4 py-2.5 text-sm text-[var(--binary-text)] placeholder:text-[var(--binary-outline)] focus:border-[var(--binary-primary)] focus:outline-none"
+                                    @keydown.enter="searchCity"
                                 >
-                                    <span
-                                        class="binary-label flex-shrink-0 rounded px-2 py-0.5 text-[10px] uppercase"
-                                        :class="{
-                                            'bg-yellow-500/10 text-yellow-400': job.status === 'pending' || job.status === 'processing',
-                                            'bg-green-500/10 text-green-400':   job.status === 'success',
-                                            'bg-red-500/10 text-red-400':       job.status === 'failed',
-                                        }"
-                                    >{{ job.status }}</span>
+                                <button
+                                    :disabled="isSearching || !cityName"
+                                    class="binary-label rounded-lg bg-[var(--binary-surface-container)] px-4 py-2.5 text-xs uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-surface-high)] disabled:opacity-40"
+                                    @click="searchCity"
+                                >
+                                    {{ isSearching ? t('common.loading') : t('city_search.search') }}
+                                </button>
+                            </div>
+
+                            <div v-if="searchError" class="mb-4 text-sm text-[var(--binary-tertiary)]">{{ searchError }}</div>
+
+                            <!-- Candidates -->
+                            <div v-if="candidates.length" class="space-y-3">
+                                <div
+                                    v-for="c in candidates"
+                                    :key="c.qid"
+                                    class="flex items-start justify-between gap-4 rounded-xl border bg-[var(--binary-surface-container)] px-5 py-4"
+                                    :class="c.existing ? 'border-[var(--binary-outline)]' : 'border-[var(--binary-outline-variant)]'"
+                                >
                                     <div class="min-w-0 flex-1">
-                                        <p class="text-sm text-[var(--binary-text)]">{{ job.city?.name_zh_tw ?? job.city?.name_en ?? job.city_name }}</p>
-                                        <p class="binary-label text-[10px] text-[var(--binary-outline)]">{{ job.wikidata_qid }}</p>
-                                        <p v-if="job.error" class="text-xs text-red-400">{{ job.error }}</p>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <p class="font-medium text-[var(--binary-text)]">{{ c.name_zh_tw ?? c.name_en }}</p>
+                                            <span v-if="c.existing" class="binary-label rounded px-1.5 py-0.5 text-[10px] uppercase bg-[var(--binary-primary)]/10 text-[var(--binary-primary)]">
+                                                已存在 {{ c.country_code }}
+                                            </span>
+                                        </div>
+                                        <p v-if="c.name_zh_tw && c.name_en" class="text-xs text-[var(--binary-outline)]">{{ c.name_en }}</p>
+                                        <p v-if="c.description" class="mt-1 text-xs text-[var(--binary-text-muted)]">{{ c.description }}</p>
+                                        <p v-if="c.aliases.length" class="mt-1 text-[10px] text-[var(--binary-outline)]">{{ c.aliases.join(' · ') }}</p>
+                                        <a :href="c.url" target="_blank" class="mt-1 inline-block binary-label text-[10px] uppercase text-[var(--binary-primary)] hover:underline">
+                                            {{ c.qid }} ↗
+                                        </a>
                                     </div>
+                                    <button
+                                        :disabled="isSubmitting || c.existing"
+                                        class="binary-label flex-shrink-0 rounded-lg px-3 py-1.5 text-[10px] uppercase transition disabled:opacity-40"
+                                        :class="c.existing
+                                            ? 'bg-[var(--binary-surface-high)] text-[var(--binary-outline)] cursor-not-allowed'
+                                            : 'bg-[var(--binary-primary)]/10 text-[var(--binary-primary)] hover:bg-[var(--binary-primary)]/20'"
+                                        @click="!c.existing && confirmCandidate(c)"
+                                    >{{ c.existing ? '已存在' : t('city_search.confirm') }}</button>
                                 </div>
                             </div>
                         </div>
                     </template>
+                </div>
+            </div>
+
+            <!-- ── Tab: jobs ── -->
+            <div v-else class="mx-auto max-w-2xl">
+                <div v-if="!user" class="flex h-48 items-center justify-center text-sm text-[var(--binary-outline)]">{{ t('city_search.login_required') }}</div>
+                <div v-else-if="jobs.length === 0" class="flex h-48 items-center justify-center text-sm text-[var(--binary-outline)]">{{ t('common.no_data') }}</div>
+                <div v-else class="space-y-3">
+                    <div
+                        v-for="job in jobs"
+                        :key="job.id"
+                        class="flex items-center gap-4 rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-5 py-3"
+                    >
+                        <span
+                            class="binary-label flex-shrink-0 rounded px-2 py-0.5 text-[10px] uppercase"
+                            :class="{
+                                'bg-yellow-500/10 text-yellow-400': job.status === 'pending' || job.status === 'processing',
+                                'bg-green-500/10 text-green-400':   job.status === 'success',
+                                'bg-red-500/10 text-red-400':       job.status === 'failed',
+                            }"
+                        >{{ job.status }}</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm text-[var(--binary-text)]">{{ job.city?.name_zh_tw ?? job.city?.name_en ?? job.city_name }}</p>
+                            <p class="binary-label text-[10px] text-[var(--binary-outline)]">
+                                {{ job.country_code }} · {{ job.wikidata_qid }}
+                            </p>
+                            <p v-if="job.error" class="text-xs text-red-400">{{ job.error }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

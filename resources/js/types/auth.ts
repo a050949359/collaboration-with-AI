@@ -27,6 +27,7 @@ export type RegisterPayload = {
     password: string;
     password_confirmation: string;
     terms: boolean;
+    cf_turnstile_response?: string | null;
 };
 
 export type ValidationErrors = Record<string, string[]>;

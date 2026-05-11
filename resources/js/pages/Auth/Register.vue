@@ -4,8 +4,11 @@ import { reactive, ref } from 'vue';
 
 import AuthShell from '../../layouts/AuthShell.vue';
 import { AuthApiError, registerWithApi } from '../../lib/auth-api';
+import { encryptPassword } from '../../lib/crypto';
 
 import Turnstile from '../../components/common/Turnstile.vue';
+
+const turnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED !== 'false';
 
 const form = reactive({
     name: '',
@@ -28,12 +31,17 @@ async function submit() {
     isSubmitting.value = true;
 
     try {
+        const [encPwd, encPwdConfirm] = await Promise.all([
+            encryptPassword(form.password),
+            encryptPassword(form.password_confirmation),
+        ]);
         const response = await registerWithApi({
             name: form.name,
             email: form.email,
-            password: form.password,
-            password_confirmation: form.password_confirmation,
+            password: encPwd,
+            password_confirmation: encPwdConfirm,
             terms: form.terms,
+            cf_turnstile_response: form.cf_turnstile_response ?? undefined,
         });
 
         successMessage.value = response.message || '註冊成功，前端已收到 API 回應。';
@@ -44,6 +52,8 @@ async function submit() {
         if (error instanceof AuthApiError) {
             generalError.value = error.message;
             fieldErrors.value = error.fieldErrors;
+        } else if (error instanceof Error) {
+            generalError.value = error.message;
         } else {
             generalError.value = '註冊失敗，請稍後再試。';
         }
@@ -165,9 +175,8 @@ async function submit() {
                 </button>
             </div>
 
-            <div class="mt-4">
+            <div v-if="turnstileEnabled" class="mt-4">
                 <Turnstile v-model="form.cf_turnstile_response" />
-                <!-- 顯示後端回傳的驗證錯誤訊息 -->
                 <div v-if="fieldErrors.cf_turnstile_response?.length" class="text-red-500 text-sm mt-1">
                     {{ fieldErrors.cf_turnstile_response[0] }}
                 </div>

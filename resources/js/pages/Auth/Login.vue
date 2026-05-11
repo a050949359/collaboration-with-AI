@@ -5,9 +5,12 @@ import { reactive, ref } from 'vue';
 
 import AuthShell from '../../layouts/AuthShell.vue';
 import { AuthApiError, loginWithApi } from '../../lib/auth-api';
+import { encryptPassword } from '../../lib/crypto';
 import { routes, api } from '../../lib/routes';
 
 import Turnstile from '../../components/common/Turnstile.vue';
+
+const turnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED !== 'false';
 
 const form = reactive({
     email: '',
@@ -30,8 +33,9 @@ async function submit() {
     try {
         const response = await loginWithApi({
             email: form.email,
-            password: form.password,
+            password: await encryptPassword(form.password),
             remember: form.remember,
+            cf_turnstile_response: form.cf_turnstile_response ?? undefined,
         });
 
         successMessage.value = response.message || '登入成功，前端已收到 API 回應。';
@@ -42,6 +46,8 @@ async function submit() {
         if (error instanceof AuthApiError) {
             generalError.value = error.message;
             fieldErrors.value = error.fieldErrors;
+        } else if (error instanceof Error) {
+            generalError.value = error.message;
         } else {
             generalError.value = '登入失敗，請稍後再試。';
         }
@@ -128,9 +134,8 @@ async function submit() {
                 </button>
             </div>
 
-            <div class="mt-4">
+            <div v-if="turnstileEnabled" class="mt-4">
                 <Turnstile v-model="form.cf_turnstile_response" />
-                <!-- 顯示後端回傳的驗證錯誤訊息 -->
                 <div v-if="fieldErrors.cf_turnstile_response?.length" class="text-red-500 text-sm mt-1">
                     {{ fieldErrors.cf_turnstile_response[0] }}
                 </div>

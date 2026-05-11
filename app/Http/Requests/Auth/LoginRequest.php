@@ -26,7 +26,7 @@ class LoginRequest extends FormRequest
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
             'remember' => ['sometimes', 'boolean'],
-            'cf_turnstile_response' => ['required', 'string'],
+            'cf_turnstile_response' => [app()->isLocal() ? 'nullable' : 'required', 'string'],
         ];
     }
 }

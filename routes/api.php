@@ -7,7 +7,9 @@ use App\Http\Controllers\Article\ArticleBrowseController;
 use App\Http\Controllers\Article\ArticleEditController;
 use App\Http\Controllers\Article\ArticleGenerationController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PublicKeyController;
 use App\Http\Controllers\Auth\RegistController;
+use App\Http\Middleware\DecryptPasswordFields;
 use App\Http\Controllers\Auth\SocialAccountController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -32,8 +34,9 @@ Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
 });
 
 Route::group(['prefix' => 'auth'], function () {
-    Route::post('/register', [RegistController::class, 'register']);
-    Route::post('/login', [LoginController::class, 'login']);
+    Route::get('/key', PublicKeyController::class);
+    Route::post('/register', [RegistController::class, 'register'])->middleware(DecryptPasswordFields::class);
+    Route::post('/login', [LoginController::class, 'login'])->middleware(DecryptPasswordFields::class);
     Route::get('/{provider}/redirect', [SocialAccountController::class, 'redirect'])->where(['provider' => 'google']);
     Route::get('/{provider}/callback', [SocialAccountController::class, 'callback'])->where(['provider' => 'google']);
 
