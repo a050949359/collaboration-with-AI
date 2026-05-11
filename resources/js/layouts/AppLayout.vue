@@ -55,19 +55,19 @@ const effectiveUser = computed(() => currentUser.value);
 const isLoggingOut = ref(false);
 
 // ── Rain config ──────────────────────────────────────────
-const RAIN_CHARS = 'ｦｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆｰﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ01';
-// 其他選項：
-// const RAIN_CHARS = '0123456789ABCDEF';          // hex
-// const RAIN_CHARS = '{}[]<>/\\|;:=+-*01';        // code
-// ─────────────────────────────────────────────────────────
+const RAIN_CHAR_SETS = [
+    'ｦｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆｰﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ',
+    '0123456789ABCDEF',
+    '∀∂∃∅∇∈∉∋∑−∕∗∙√∞∟∠∧∨∩∪∫∼≅≈≠≡≤≥⊂⊃',
+];
 
 const rainRef = ref<HTMLElement | null>(null);
 onMounted(() => {
     const rain = rainRef.value;
     if (!rain) return;
     const colCount = Math.floor(window.innerWidth / 14);
-    const chars = RAIN_CHARS;
     for (let i = 0; i < colCount; i++) {
+        const chars = RAIN_CHAR_SETS[Math.floor(Math.random() * RAIN_CHAR_SETS.length)];
         const col = document.createElement('div');
         col.className = 'bg-anim-rain-col';
         col.style.left = (i * 14 + Math.random() * 8) + 'px';

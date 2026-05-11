@@ -12,7 +12,7 @@ interface Project {
     id: string;
     category: string;
     title: string;
-    description: string;
+    description: string | string[];
     tags: string[];
     image?: string;
     commits?: Commit[];
@@ -24,11 +24,14 @@ const props = defineProps<{
 
 const airportProject: Project = {
     id: '03',
-    category: 'AIRPORT_PLATFORM',
-    title: 'Global Airport Intelligence',
-    description:
-        '提供機場資料搜尋、洲別/類型統計與互動地球視圖。可點擊國家即時查詢該國機場，並把經緯度標示為大頭針，同時對查詢 API 加上每分鐘限流控制。',
-    tags: ['Data import', 'Dashboard', 'D3 Globe', 'Rate Limit'],
+    category: 'AVIATION_PLATFORM',
+    title: 'Global Aviation & Geo Intelligence',
+    description: [
+        '機場：洲別／類型統計儀表板，D3 互動地球視圖，可點擊國家即時查詢並標示大頭針。',
+        '航空公司 ＆ 國家：透過 Wikidata SPARQL 批次匯入，補全中文名稱與 ISO 代碼。',
+        '城市：即時搜尋 Wikidata 候選城市，確認後以非同步 Job 寫入；查詢 API 加上每分鐘限流控制。',
+    ],
+    tags: ['Airports', 'Airlines', 'Countries', 'Cities', 'Wikidata', 'D3 Globe', 'Queue', 'Rate Limit'],
     image: '/images/projects/project03.webp',
 };
 
@@ -63,7 +66,13 @@ const projects = computed(() => [...props.featuredProjects, airportProject, line
                     <div class="w-full md:w-1/2">
                         <span class="binary-label mb-4 block text-xs font-bold text-[var(--binary-primary)]">{{ project.id }} / {{ project.category }}</span>
                         <h3 class="binary-display mb-6 text-3xl font-bold uppercase md:text-5xl">{{ project.title }}</h3>
-                        <p class="mb-8 text-lg leading-relaxed text-[var(--binary-text-muted)]">
+                        <ol v-if="Array.isArray(project.description)" class="mb-8 space-y-3 text-base leading-relaxed text-[var(--binary-text-muted)]">
+                            <li v-for="(item, i) in project.description" :key="i" class="flex gap-3">
+                                <span class="binary-label shrink-0 text-[var(--binary-primary)]">{{ i + 1 }}.</span>
+                                <span>{{ item }}</span>
+                            </li>
+                        </ol>
+                        <p v-else class="mb-8 text-lg leading-relaxed text-[var(--binary-text-muted)]">
                             {{ project.description }}
                         </p>
                         <div class="flex flex-wrap gap-2">

@@ -20,7 +20,10 @@ defineProps<Props>();
         <main class="binary-shell mx-auto w-full max-w-5xl">
             <section class="relative hidden w-1/2 flex-col justify-between bg-[var(--binary-surface)] px-12 py-16 lg:flex">
                 <div>
-                    <p class="binary-label mb-8 text-xs font-bold uppercase text-[var(--binary-primary)]">
+                    <a href="/app/" class="binary-label mb-8 inline-flex items-center gap-2 text-xs font-bold uppercase text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)]">
+                        <span aria-hidden="true">&lt;-</span> 返回首頁
+                    </a>
+                    <p class="binary-label mb-8 mt-6 text-xs font-bold uppercase text-[var(--binary-primary)]">
                         > ACCOUNT_CENTER
                     </p>
                     <h1 class="binary-display text-6xl font-bold uppercase leading-[0.92] tracking-tight text-[var(--binary-text)] xl:text-7xl">
@@ -44,6 +47,9 @@ defineProps<Props>();
 
             <section class="flex w-full items-center justify-center px-6 py-10 md:px-10 lg:w-1/2 lg:px-14">
                 <div class="w-full max-w-md">
+                    <a href="/app/" class="binary-label mb-8 inline-flex items-center gap-2 text-xs font-bold uppercase text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)] lg:hidden">
+                        <span aria-hidden="true">&lt;-</span> 返回首頁
+                    </a>
                     <div class="mb-12">
                         <p class="binary-label mb-4 text-xs font-bold uppercase text-[var(--binary-primary)]">
                             {{ eyebrow }}
