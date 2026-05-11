@@ -9,6 +9,6 @@ class AvatarGenerator
         $seed = trim((string) ($name ?: $email ?: $id ?: 'user'));
         $encodedSeed = rawurlencode($seed);
 
-        return url('/app/avatar/default/'.$encodedSeed.'.svg');
+        return url('/app/avatar/default/'.$encodedSeed);
     }
 }

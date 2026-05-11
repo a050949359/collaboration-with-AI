@@ -32,7 +32,7 @@ Route::prefix('app')->group(function () {
 
     Route::inertia('/login', 'Auth/Login')->name('login');
     Route::inertia('/register', 'Auth/Register')->name('register');
-    Route::get('/avatar/default/{seed}.svg', [AvatarController::class, 'default'])->name('avatar.default');
+    Route::get('/avatar/default/{seed}', [AvatarController::class, 'default'])->name('avatar.default');
 
     // 信箱驗證結果頁
     Route::inertia('/verify-result', 'Auth/VerifyResult')->name('verify.result');

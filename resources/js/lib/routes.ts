@@ -13,7 +13,7 @@ export const routes = {
 
     // Assets
     assets: {
-        avatarDefault: (seed: string) => `${WEB_PREFIX}/avatar/default/${encodeURIComponent(seed)}.svg`,
+        avatarDefault: (seed: string) => `${WEB_PREFIX}/avatar/default/${encodeURIComponent(seed)}`,
     },
 
     // Auth
