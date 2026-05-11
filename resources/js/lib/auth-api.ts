@@ -11,12 +11,6 @@ type ApiErrorPayload = {
     errors?: ValidationErrors;
 };
 
-type AuthApiConfig = {
-    baseUrl: string;
-    csrfEndpoint: string;
-    useCsrf: boolean;
-};
-
 export class AuthApiError extends Error {
     status: number;
     fieldErrors: ValidationErrors;
@@ -31,18 +25,14 @@ export class AuthApiError extends Error {
     }
 }
 
-const authApiConfig: AuthApiConfig = {
-    baseUrl: (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, ''),
-    csrfEndpoint: import.meta.env.VITE_AUTH_CSRF_ENDPOINT || '/sanctum/csrf-cookie',
-    useCsrf: import.meta.env.VITE_AUTH_USE_CSRF !== 'false',
-};
+const baseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 function resolveUrl(path: string) {
     if (/^https?:\/\//.test(path)) {
         return path;
     }
 
-    return `${authApiConfig.baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+    return `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 function extractErrorMessage(payload: unknown, fallback: string) {
@@ -50,9 +40,7 @@ function extractErrorMessage(payload: unknown, fallback: string) {
         return fallback;
     }
 
-    const maybePayload = payload as ApiErrorPayload;
-
-    return maybePayload.message || fallback;
+    return (payload as ApiErrorPayload).message || fallback;
 }
 
 function extractFieldErrors(payload: unknown) {
@@ -60,9 +48,7 @@ function extractFieldErrors(payload: unknown) {
         return {};
     }
 
-    const maybePayload = payload as ApiErrorPayload;
-
-    return maybePayload.errors || {};
+    return (payload as ApiErrorPayload).errors || {};
 }
 
 async function parseResponse(response: Response) {
@@ -77,29 +63,11 @@ async function parseResponse(response: Response) {
     return text ? { message: text } : null;
 }
 
-async function ensureCsrfCookie() {
-    if (!authApiConfig.useCsrf) {
-        return;
-    }
-
-    await fetch(resolveUrl(authApiConfig.csrfEndpoint), {
-        credentials: 'include',
-        headers: {
-            Accept: 'application/json',
-        },
-    });
-}
-
 async function request<T>(path: string, payload: unknown) {
-    const headers: Record<string, string> = {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-    };
-
     const response = await fetch(resolveUrl(path), {
         method: 'POST',
         credentials: 'include',
-        headers,
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
 
@@ -118,24 +86,13 @@ async function request<T>(path: string, payload: unknown) {
 }
 
 export async function loginWithApi(payload: LoginPayload) {
-    await ensureCsrfCookie();
-
     return request<AuthApiResponse>(api.auth.login(), payload);
 }
 
 export async function registerWithApi(payload: RegisterPayload) {
-    await ensureCsrfCookie();
-
     return request<AuthApiResponse>(api.auth.register(), payload);
 }
 
 export async function logoutWithApi() {
-    await ensureCsrfCookie();
     await request<{ message?: string }>(api.auth.logout(), {});
-}
-
-export function getAuthApiConfig() {
-    return {
-        ...authApiConfig,
-    };
 }

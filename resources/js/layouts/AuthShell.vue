@@ -17,8 +17,8 @@ defineProps<Props>();
             <div class="absolute bottom-0 left-0 h-[34vw] w-[34vw] bg-[var(--binary-primary-container)]/20 blur-[110px]" />
         </div>
 
-        <main class="binary-shell">
-            <section class="relative hidden w-1/2 flex-col justify-between bg-[var(--binary-surface)] px-16 py-18 lg:flex">
+        <main class="binary-shell mx-auto w-full max-w-5xl">
+            <section class="relative hidden w-1/2 flex-col justify-between bg-[var(--binary-surface)] px-12 py-16 lg:flex">
                 <div>
                     <p class="binary-label mb-8 text-xs font-bold uppercase text-[var(--binary-primary)]">
                         > ACCOUNT_CENTER
@@ -42,7 +42,7 @@ defineProps<Props>();
                 </div>
             </section>
 
-            <section class="flex w-full items-center justify-center px-6 py-10 md:px-12 lg:w-1/2 lg:px-20">
+            <section class="flex w-full items-center justify-center px-6 py-10 md:px-10 lg:w-1/2 lg:px-14">
                 <div class="w-full max-w-md">
                     <div class="mb-12">
                         <p class="binary-label mb-4 text-xs font-bold uppercase text-[var(--binary-primary)]">
