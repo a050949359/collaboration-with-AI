@@ -6,10 +6,22 @@
 - Vue 3 / Vite / Tailwind CSS
 - Inertia.js / @vueuse/core / d3
 - MySQL、SQLite
-
+- Redis
 
 ---
 
+## 主要功能
+- 文章管理（產生、編輯、瀏覽、Webhook 推送）
+- 資料查詢
+   - 全球機場
+   - 航空公司
+   - 國家城市
+- 使用者註冊、登入、社群帳號綁定
+- 管理員設定（顯示、更新）
+- AI 內容產生（文章、圖片，Gemini/Vertex 整合）
+- Tou假資料生成、使用者功能、管理者功能
+
+---
 
 ## 安裝與啟動
 
@@ -19,31 +31,34 @@
    cd collaboration-with-AI
    composer install
    npm install
-   cp .env.example .env
+   cp .env.example .env (.env 內容需自行補完)
    php artisan key:generate
    ```
-2. 啟動本地開發環境：
+
+2. 填入必要的第三方金鑰（`.env`）：
+
+   | 金鑰 | 取得來源 | 必填 |
+   |------|----------|------|
+   | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/) → OAuth 2.0 | Google 登入 |
+   | `VITE_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | [Cloudflare Turnstile](https://dash.cloudflare.com/) | 機器人驗證（本地可設 `VITE_TURNSTILE_ENABLED=false`） |
+   | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/) | LLM 對話 |
+   | `GCP_PROJECT_ID` / `VERTEX_APPLICATION_CREDENTIALS` | Google Cloud → Service Account | AI 圖片產生（Vertex） |
+
+3. 產生 RSA 金鑰（用於登入／註冊密碼加密傳輸, 需確認檔案權限）：
+   ```bash
+   mkdir -p storage/app/private
+   openssl genrsa -out storage/app/private/private.pem 4096
+   openssl rsa -in storage/app/private/private.pem -pubout -out storage/app/private/public.pem
+   ```
+
+3. 資料匯入 (可選):
+   航空資料, 中大型機場補全, 國家資料, 國家資料補全
+   
+4. 啟動本地開發環境：
    ```bash
    php artisan serve
    npm run dev
    ```
-
----
-
-
-## 測試
-
-涵蓋 Model、Controller、API 路由、AI 產生流程、權限驗證等單元與功能測試，確保主要功能與安全性。
-
----
-
-## 重要檔案與目錄
-
-- `.env.example`：環境變數範例
-
-- `phpunit.xml`：測試設定
-- `project-status.yml`：專案快照與結構
-- `app/`、`routes/`、`resources/`：主要程式碼
 
 ---
 
@@ -84,7 +99,7 @@ php artisan airlines:enrich
 - 新增 Wikidata 有但 DB 沒有的航空公司（需有英文名稱才會新增）
 - 新增的記錄包含 IATA、ICAO（若有）、英文名、中文名
 
-### 地理資料匯入
+### 國家資料匯入
 
 #### `import:countries`
 
@@ -104,9 +119,9 @@ php artisan import:countries
 - 重複的首都或電話區碼會保留第一筆，其餘存入 `notes`
 - 快取存在時不重複打 API，加 `--fetch` 強制重抓
 
-#### `import:cities`
+#### `import:cities` (棄用中)
 
-從 Wikidata 匯入城市資料（約 4 萬筆），依 Q515（city）所有子類分批透過 Queue 匯入。
+從 Wikidata 匯入城市資料（約 4 萬筆），依 Q515（city）所有子類分批透過 Queue 匯入。 
 
 ```bash
 # 步驟一：查詢子類清單並將所有批次派入 Queue
@@ -123,7 +138,7 @@ php artisan queue:work --timeout=110
 
 ---
 
-## WebSocket 即時功能（Laravel Reverb）
+## WebSocket 即時功能（Laravel Reverb）(未完成)
 
 ### 安裝
 
@@ -169,15 +184,3 @@ POST /api/gacha/rooms/{room}/draw
 - Broadcast Event：`CardDrawn`（推播抽卡結果與動畫）
 - 隨機邏輯在 server 執行，防止客戶端作弊
 
----
-
-## 主要功能
-
-- 文章管理（產生、編輯、瀏覽、Webhook 推送）
-- 機場資料查詢（附近機場、統計、詳細資訊）
-- 使用者註冊、登入、社群帳號綁定
-- 管理員設定（顯示、更新）
-- AI 內容產生（文章、圖片，Gemini/Vertex 整合）
-- Line Bot 相關功能（好友、文章推播）
-- 前端採用 Vue 3、Inertia.js、Tailwind CSS
-- API 路由已涵蓋查詢、更新、產生等多種操作
