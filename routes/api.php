@@ -24,6 +24,7 @@ use App\Http\Controllers\Aviation\CityPreviewController;
 use App\Http\Controllers\Aviation\CitySearchController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
+use App\Http\Controllers\MiniOrch\MiniOrchController;
 use App\Http\Middleware\EnsureAdmin;
 
 Route::post('/about/ask', [AboutController::class, 'ask'])->middleware('throttle:4,1');
@@ -153,6 +154,15 @@ Route::prefix('v1/tour')->group(function () {
         Route::get('/hotels',           [TourHotelController::class, 'index']);
         Route::post('/hotels',          [TourHotelController::class, 'store']);
         Route::delete('/hotels/{hotel}', [TourHotelController::class, 'destroy']);
+    });
+});
+
+Route::prefix('mini-orch')->group(function () {
+    Route::get('/dashboard', [MiniOrchController::class, 'dashboard']);
+
+    Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+        Route::post('/runs',        [MiniOrchController::class, 'createRun']);
+        Route::get('/runs/{runId}', [MiniOrchController::class, 'getRun']);
     });
 });
 

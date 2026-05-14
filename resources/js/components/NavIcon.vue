@@ -84,6 +84,17 @@ defineProps<{ name: string; size?: number }>();
             <circle class="fill-default anim-eye-r" cx="20" cy="16" r="1.4"/>
         </template>
 
+        <!-- orch (mini-orch server monitor) -->
+        <template v-else-if="name === 'orch'">
+            <rect class="stroke-default" x="6" y="4" width="20" height="24" rx="2" stroke-width="1.5"/>
+            <rect class="stroke-default" x="9" y="8"  width="14" height="4" rx="1" stroke-width="1.2"/>
+            <rect class="stroke-default" x="9" y="14" width="14" height="4" rx="1" stroke-width="1.2"/>
+            <rect class="stroke-default" x="9" y="20" width="14" height="4" rx="1" stroke-width="1.2"/>
+            <circle class="fill-default anim-led-1" cx="20" cy="10" r="1.2"/>
+            <circle class="fill-default anim-led-2" cx="20" cy="16" r="1.2"/>
+            <circle class="fill-default anim-led-3" cx="20" cy="22" r="1.2"/>
+        </template>
+
         <!-- tour -->
         <template v-else-if="name === 'tour'">
             <ellipse class="stroke-default anim-pin-ring" cx="16" cy="26" rx="6" ry="2" stroke-width="1.5"/>
@@ -227,6 +238,15 @@ defineProps<{ name: string; size?: number }>();
 @keyframes ringScale {
     from { transform: scaleX(1);   opacity: 1; }
     to   { transform: scaleX(1.3); opacity: 0.4; }
+}
+
+/* Orch server LEDs blink in sequence */
+.nav-icon:hover .anim-led-1 { animation: ledBlink 1s ease-in-out 0s    infinite; }
+.nav-icon:hover .anim-led-2 { animation: ledBlink 1s ease-in-out 0.3s  infinite; }
+.nav-icon:hover .anim-led-3 { animation: ledBlink 1s ease-in-out 0.6s  infinite; }
+@keyframes ledBlink {
+    0%,100% { opacity: 1; }
+    50%     { opacity: 0.15; }
 }
 
 /* Home / folder open */

@@ -64,6 +64,10 @@ return [
         ))),
     ],
 
+    'mini_orch' => [
+        'host' => env('MINI_ORCH_HOST', ''),
+    ],
+
     'line_bot' => [
         'internal_api_key' => env('LINE_BOT_INTERNAL_API_KEY'),
         'article_ready_webhook_url' => env('LINE_BOT_ARTICLE_READY_WEBHOOK_URL'),

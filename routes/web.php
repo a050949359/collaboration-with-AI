@@ -4,7 +4,7 @@ use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Article\ArticlePageController;
-use Inertia\Inertia;
+use App\Http\Controllers\MiniOrch\MiniOrchController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('app')->group(function () {
@@ -28,7 +28,10 @@ Route::prefix('app')->group(function () {
         Route::get('/articles/{article}/edit', [ArticlePageController::class, 'edit'])
             ->whereNumber('article')
             ->name('articles.edit');
+
     });
+
+    Route::get('/mini-orch', [MiniOrchController::class, 'page'])->name('mini-orch');
 
     Route::inertia('/login', 'Auth/Login')->name('login');
     Route::inertia('/register', 'Auth/Register')->name('register');

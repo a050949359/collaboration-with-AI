@@ -49,6 +49,9 @@ export const routes = {
     // Tour Playground
     tourPlayground: () => `${WEB_PREFIX}/tour-playground`,
 
+    // Mini Orch
+    miniOrch: () => `${WEB_PREFIX}/mini-orch`,
+
     // Admin
     admin: {
         settings: () => `${WEB_PREFIX}/admin/settings`,
@@ -112,6 +115,12 @@ export const api = {
             index: ()        => '/api/v1/cities/search',
             show:  (id: number) => `/api/v1/cities/search/${id}`,
         },
+    },
+
+    miniOrch: {
+        dashboard: () => '/api/mini-orch/dashboard',
+        createRun: () => '/api/mini-orch/runs',
+        getRun: (runId: string) => `/api/mini-orch/runs/${runId}`,
     },
 
     tour: {
