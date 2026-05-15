@@ -103,6 +103,24 @@ defineProps<{ name: string; size?: number }>();
                 <circle class="fill-default" cx="16" cy="13" r="2.4"/>
             </g>
         </template>
+
+        <!-- lab (dropdown group icon) -->
+        <template v-else-if="name === 'lab'">
+            <path class="stroke-default" d="M12 4 V14 L6 24 a1 1 0 0 0 0.9 1.5 H25.1 a1 1 0 0 0 0.9 -1.5 L20 14 V4" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <line class="stroke-default" x1="10" y1="4" x2="22" y2="4" stroke-width="1.5" stroke-linecap="round"/>
+            <circle class="fill-default anim-led-1" cx="12" cy="20" r="1.4"/>
+            <circle class="fill-default anim-led-2" cx="17" cy="22" r="1.4"/>
+            <circle class="fill-default anim-led-3" cx="22" cy="20" r="1.4"/>
+        </template>
+
+        <!-- gacha -->
+        <template v-else-if="name === 'gacha'">
+            <circle class="stroke-default" cx="16" cy="16" r="11" stroke-width="1.5"/>
+            <circle class="stroke-default" cx="16" cy="16" r="6" stroke-width="1.5" opacity="0.5"/>
+            <circle class="fill-default anim-radar-blip" cx="16" cy="10" r="1.6"/>
+            <circle class="fill-default" cx="16" cy="16" r="1.6"/>
+            <path class="stroke-default anim-radar-arm" d="M16 16 L16 5" stroke-width="1.5" stroke-linecap="round" opacity="0"/>
+        </template>
     </svg>
 </template>
 

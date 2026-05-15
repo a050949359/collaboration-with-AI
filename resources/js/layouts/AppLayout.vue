@@ -47,8 +47,16 @@ const defaultNavLinks = computed((): NavLink[] => {
         },
         { label: t('articles.nav.about'), href: routes.about(), icon: 'about', active: path.startsWith(routes.about()) },
         { label: 'LineBot', href: routes.linebot(), icon: 'linebot', active: path.startsWith(routes.linebot()) },
-        { label: 'Tour', href: routes.tourPlayground(), icon: 'tour', active: path.startsWith(routes.tourPlayground()) },
-        { label: 'mini-orch', href: routes.miniOrch(), icon: 'orch', active: path.startsWith(routes.miniOrch()) },
+        {
+            label: 'Lab',
+            icon: 'lab',
+            active: path.startsWith(routes.tourPlayground()) || path.startsWith(routes.miniOrch()) || path.startsWith(routes.gacha()),
+            children: [
+                { label: 'Tour', href: routes.tourPlayground(), icon: 'tour', active: path.startsWith(routes.tourPlayground()) },
+                { label: 'mini-orch', href: routes.miniOrch(), icon: 'orch', active: path.startsWith(routes.miniOrch()) },
+                { label: 'Gacha', href: routes.gacha(), icon: 'gacha', active: path.startsWith(routes.gacha()) },
+            ],
+        },
     ];
 });
 

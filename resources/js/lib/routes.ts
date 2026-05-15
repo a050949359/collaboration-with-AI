@@ -52,6 +52,9 @@ export const routes = {
     // Mini Orch
     miniOrch: () => `${WEB_PREFIX}/mini-orch`,
 
+    // Gacha
+    gacha: () => `${WEB_PREFIX}/gacha`,
+
     // Admin
     admin: {
         settings: () => `${WEB_PREFIX}/admin/settings`,
