@@ -13,7 +13,7 @@ type RunEntry = {
 
 const iframeRef = ref<HTMLIFrameElement | null>(null);
 const showRunForm = ref(false);
-const runBody = ref('{\n  "target_url": "http://",\n  "concurrency": 10,\n  "duration": 30\n}');
+const runBody = ref('{\n  "vus": 20,\n  "duration": "30s",\n  "api_url": "http://"\n}');
 const parseError = ref('');
 const submitting = ref(false);
 const submitError = ref('');
