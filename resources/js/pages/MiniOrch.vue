@@ -177,12 +177,11 @@ onUnmounted(() => {
             </div>
 
             <!-- Dashboard iframe -->
-            <div class="flex-1 min-h-[480px] rounded-lg overflow-hidden border border-[--binary-outline-variant]">
+            <div class="flex-1 min-h-[480px] relative rounded-lg overflow-hidden border border-[--binary-outline-variant]">
                 <iframe
                     ref="iframeRef"
                     :src="api.miniOrch.dashboard()"
-                    class="w-full h-full border-0"
-                    style="min-height: 480px;"
+                    class="absolute inset-0 w-full h-full border-0"
                     title="mini-orch dashboard"
                 />
             </div>
