@@ -157,6 +157,7 @@ Route::prefix('v1/tour')->group(function () {
     });
 });
 
+
 Route::prefix('mini-orch')->group(function () {
     Route::get('/dashboard', [MiniOrchController::class, 'dashboard']);
 

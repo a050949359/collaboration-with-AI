@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('avatar')->nullable()->comment('頭像識別碼');
             $table->boolean('is_host')->default(false);
             $table->unsignedTinyInteger('level')->default(1)->comment('玩家等級');
+            $table->unsignedSmallInteger('draws_used')->default(0)->comment('已抽次數');
             $table->timestamps();
         });
     }

@@ -32,6 +32,7 @@ Route::prefix('app')->group(function () {
     });
 
     Route::get('/mini-orch', [MiniOrchController::class, 'page'])->name('mini-orch');
+    Route::inertia('/gacha', 'Gacha')->name('gacha');
 
     Route::inertia('/login', 'Auth/Login')->name('login');
     Route::inertia('/register', 'Auth/Register')->name('register');

@@ -6,7 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class GachaPlayer extends Model
 {
-    protected $fillable = ['room_id', 'name', 'avatar', 'is_host', 'level'];
+    protected $fillable = ['room_id', 'name', 'avatar', 'is_host', 'level', 'draws_used'];
+
+    public function hasDrawsRemaining(): bool
+    {
+        $limit = $this->room->draws_per_user;
+        return $limit === 0 || $this->draws_used < $limit;
+    }
 
     public function room()
     {
