@@ -300,8 +300,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import Matter from 'matter-js';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
@@ -411,7 +411,10 @@ function onSliderInput(key: PhysicsKey, event: Event) {
 }
 
 function applyPhysicsChange(key: PhysicsKey) {
-    if (!engine) return;
+    if (!engine) {
+return;
+}
+
     if (key === 'gravity') {
         engine.gravity.y = physics.gravity;
     } else if (key === 'bounce' || key === 'friction') {
@@ -456,7 +459,11 @@ function createBalls(count: number) {
 
 function rebuildBalls() {
     const dynamic = Composite.allBodies(engine.world).filter((b) => !b.isStatic);
-    if (dynamic.length) Composite.remove(engine.world, dynamic);
+
+    if (dynamic.length) {
+Composite.remove(engine.world, dynamic);
+}
+
     createBalls(physics.count);
 }
 
@@ -501,12 +508,16 @@ function applyAgitation() {
 }
 
 async function startSync() {
-    if (syncing.value) return;
+    if (syncing.value) {
+return;
+}
+
     syncing.value = true;
     extractionDots.value = [];
 
     if (skipAnim.value) {
         resolveResults();
+
         return;
     }
 
@@ -531,6 +542,7 @@ function resolveResults() {
     const results: DrawResult[] = Array.from({ length: count }, (_, i) => {
         const qualityName = count === 10 ? tenPullQualities[i] : selectedQuality.value;
         const tier = QUALITY_TIERS.find((q) => q.name === qualityName) ?? QUALITY_TIERS[0];
+
         return { quality: tier, code: `V-SYNC_${Math.floor(Math.random() * 9000) + 1000}` };
     });
 
@@ -554,10 +566,21 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    if (agitationHandler) Events.off(engine, 'afterUpdate', agitationHandler);
-    if (runner) Runner.stop(runner);
-    if (render) Render.stop(render);
-    if (engine) Engine.clear(engine);
+    if (agitationHandler) {
+Events.off(engine, 'afterUpdate', agitationHandler);
+}
+
+    if (runner) {
+Runner.stop(runner);
+}
+
+    if (render) {
+Render.stop(render);
+}
+
+    if (engine) {
+Engine.clear(engine);
+}
 });
 </script>
 
