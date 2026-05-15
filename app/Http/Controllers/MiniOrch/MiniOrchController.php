@@ -14,7 +14,7 @@ class MiniOrchController extends Controller
 {
     private function baseUrl(): string
     {
-        return rtrim(config('services.mini_orch.host', ''), '/');
+        return 'https://' . rtrim(config('services.mini_orch.host', ''), '/');
     }
 
     public function page(): InertiaResponse
@@ -25,7 +25,7 @@ class MiniOrchController extends Controller
     public function dashboard(): Response
     {
         try {
-            $res = Http::timeout(8)->get($this->baseUrl() . ':5000/dashboard');
+            $res = Http::withoutVerifying()->timeout(8)->get($this->baseUrl() . ':5000/dashboard');
 
             return response($res->body(), $res->status())
                 ->header('Content-Type', 'text/html; charset=utf-8');
@@ -44,7 +44,7 @@ class MiniOrchController extends Controller
         ]);
 
         try {
-            $res = Http::timeout(30)
+            $res = Http::withoutVerifying()->timeout(30)
                 ->post($this->baseUrl() . ':5001/api/v1/loadtest/runs', $validated);
 
             return response()->json($res->json(), $res->status());
@@ -60,7 +60,7 @@ class MiniOrchController extends Controller
         }
 
         try {
-            $res = Http::timeout(10)
+            $res = Http::withoutVerifying()->timeout(10)
                 ->get($this->baseUrl() . ':5001/api/v1/loadtest/runs/' . $runId);
 
             return response()->json($res->json(), $res->status());
