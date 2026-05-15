@@ -45,7 +45,20 @@ const lineAutomationProject: Project = {
     image: '/images/projects/project04.webp',
 };
 
-const projects = computed(() => [...props.featuredProjects, airportProject, lineAutomationProject]);
+const miniOrchProject: Project = {
+    id: '05',
+    category: 'HOME_LAB_INFRA',
+    title: 'Mini Orchestrator & Home Lab',
+    description: [
+        '雙節點實體網路環境，以 Ansible 自動化部署服務，涵蓋 Let\'s Encrypt 自簽憑證自動更新與 SNMP 監控。',
+        '以 Go 實作 Worker 服務，搭配 Redis 作為任務佇列；API 全程走 HTTPS，透過 k6 持續壓測驗證穩定性。',
+        '在 Laravel 後台整合 mini-orch 代理介面，一鍵觸發壓測並即時追蹤 Run 狀態。',
+    ],
+    tags: ['Ansible', 'Go', 'Python', 'Redis', 'Let\'s Encrypt', 'SNMP', 'k6', 'HTTPS API', 'Laravel Proxy'],
+    image: '/images/projects/project05.webp',
+};
+
+const projects = computed(() => [...props.featuredProjects, airportProject, lineAutomationProject, miniOrchProject]);
 </script>
 
 <template>
