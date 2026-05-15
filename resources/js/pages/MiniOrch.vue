@@ -18,13 +18,31 @@ const parseError = ref('');
 const submitting = ref(false);
 const submitError = ref('');
 const runs = ref<RunEntry[]>([]);
+const iframeError = ref(false);
 
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
+let loadTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+
+function startLoadTimeout() {
+    if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
+    loadTimeoutTimer = setTimeout(() => { iframeError.value = true; }, 15_000);
+}
+
+function onIframeLoad() {
+    if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
+    iframeError.value = false;
+}
+
+function onIframeError() {
+    if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
+    iframeError.value = true;
+}
 
 function refreshDashboard() {
     if (!iframeRef.value) return;
-    // Force iframe reload by briefly clearing src
+    iframeError.value = false;
+    startLoadTimeout();
     const src = iframeRef.value.src;
     iframeRef.value.src = '';
     iframeRef.value.src = src;
@@ -96,20 +114,22 @@ function statusClass(status: string) {
 }
 
 onMounted(() => {
-    autoRefreshTimer = setInterval(refreshDashboard, 30_000);
+    startLoadTimeout();
+    autoRefreshTimer = setInterval(refreshDashboard, 600_000);
     pollTimer = setInterval(pollRuns, 5_000);
 });
 
 onUnmounted(() => {
     if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     if (pollTimer) clearInterval(pollTimer);
+    if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
 });
 </script>
 
 <template>
     <Head title="mini-orch" />
     <AppLayout>
-        <div class="flex flex-col h-full min-h-[calc(100vh-4rem)] gap-3 p-4">
+        <div class="flex flex-col min-h-screen gap-3 px-4 pb-4 pt-20">
 
             <!-- Header bar -->
             <div class="flex items-center gap-3 flex-wrap">
@@ -177,13 +197,29 @@ onUnmounted(() => {
             </div>
 
             <!-- Dashboard iframe -->
-            <div class="flex-1 min-h-[480px] relative rounded-lg overflow-hidden border border-[--binary-outline-variant]">
+            <div class="flex-1 min-h-[480px] relative rounded-lg overflow-hidden border border-[--binary-outline-variant] mx-6">
                 <iframe
                     ref="iframeRef"
                     :src="api.miniOrch.dashboard()"
                     class="absolute inset-0 w-full h-full border-0"
                     title="mini-orch dashboard"
+                    @load="onIframeLoad"
+                    @error="onIframeError"
                 />
+                <!-- Error overlay -->
+                <Transition name="fade">
+                    <div
+                        v-if="iframeError"
+                        class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[--binary-surface-low]"
+                    >
+                        <span class="font-mono text-2xl text-[--binary-tertiary]">✕</span>
+                        <p class="font-mono text-sm text-[--binary-text-muted]">mini-orch unreachable</p>
+                        <button
+                            class="px-3 py-1.5 text-xs font-mono rounded border border-[--binary-outline] text-[--binary-text-muted] hover:text-[--binary-text] hover:border-[--binary-primary] transition-colors"
+                            @click="refreshDashboard"
+                        >↺ retry</button>
+                    </div>
+                </Transition>
             </div>
 
         </div>
@@ -199,5 +235,13 @@ onUnmounted(() => {
 .slide-down-leave-to {
     opacity: 0;
     transform: translateY(-6px);
+}
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
 }
 </style>
