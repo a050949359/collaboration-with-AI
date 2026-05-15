@@ -37,9 +37,15 @@ class MiniOrchController extends Controller
 
     public function createRun(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'vus'      => ['required', 'integer', 'min:1', 'max:1000'],
+            'duration' => ['required', 'string', 'regex:/^\d+s$/'],
+            'api_url'  => ['required', 'url', 'max:2048'],
+        ]);
+
         try {
             $res = Http::timeout(30)
-                ->post($this->baseUrl() . ':5001/api/v1/loadtest/runs', $request->all());
+                ->post($this->baseUrl() . ':5001/api/v1/loadtest/runs', $validated);
 
             return response()->json($res->json(), $res->status());
         } catch (\Throwable $e) {
@@ -49,6 +55,10 @@ class MiniOrchController extends Controller
 
     public function getRun(string $runId): JsonResponse
     {
+        if (!preg_match('/^[a-zA-Z0-9_\-]+$/', $runId)) {
+            return response()->json(['message' => 'Invalid run ID'], 400);
+        }
+
         try {
             $res = Http::timeout(10)
                 ->get($this->baseUrl() . ':5001/api/v1/loadtest/runs/' . $runId);
