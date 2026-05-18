@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Story;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Story\CreateSessionRequest;
 use App\Http\Requests\Story\PlayerTurnRequest;
+use App\Jobs\StoryAdvanceJob;
 use App\Models\Story\StoryCharacter;
 use App\Models\Story\StoryItem;
 use App\Models\Story\StorySegment;
@@ -103,6 +104,9 @@ class StorySessionController extends Controller
                 'status'          => 'active',
                 'next_advance_at' => now()->addMinutes($session->advance_interval_minutes),
             ]);
+
+            StoryAdvanceJob::dispatch($session->id)
+                ->delay(now()->addMinutes($session->advance_interval_minutes));
         } else {
             $session->update(['status' => $newStatus]);
         }
