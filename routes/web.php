@@ -3,6 +3,7 @@
 use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Middleware\EnsureAdmin;
 use App\Http\Controllers\Article\ArticlePageController;
 use App\Http\Controllers\MiniOrch\MiniOrchController;
 use Illuminate\Support\Facades\Route;
@@ -33,7 +34,9 @@ Route::prefix('app')->group(function () {
 
     Route::get('/mini-orch', [MiniOrchController::class, 'page'])->name('mini-orch');
     Route::inertia('/gacha', 'Gacha')->name('gacha');
-    Route::inertia('/story-relay', 'StoryRelay')->name('story-relay');
+    Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
+        Route::inertia('/story-relay', 'StoryRelay')->name('story-relay');
+    });
 
     Route::inertia('/login', 'Auth/Login')->name('login');
     Route::inertia('/register', 'Auth/Register')->name('register');

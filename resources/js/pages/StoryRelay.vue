@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
 import { useAuth } from '@/composables/useAuth';
@@ -315,9 +316,10 @@ onMounted(loadSessions);
 </script>
 
 <template>
+    <AppLayout>
     <Head title="Story Relay" />
 
-    <div class="flex h-screen overflow-hidden bg-[var(--binary-bg)] font-mono">
+    <div class="mx-auto mt-24 flex h-[calc(100vh-6rem)] w-full max-w-screen-2xl overflow-hidden px-6 font-mono md:px-8">
 
         <!-- ── Left panel: session list ─────────────────── -->
         <aside class="flex w-3/12 flex-col border-r border-[var(--binary-outline)]/20 bg-[var(--binary-surface)]">
@@ -600,4 +602,5 @@ onMounted(loadSessions);
 
         </main>
     </div>
+    </AppLayout>
 </template>

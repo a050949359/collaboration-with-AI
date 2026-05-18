@@ -113,6 +113,19 @@ defineProps<{ name: string; size?: number }>();
             <circle class="fill-default anim-led-3" cx="22" cy="20" r="1.4"/>
         </template>
 
+        <!-- story (open book) -->
+        <template v-else-if="name === 'story'">
+            <path class="stroke-default anim-book-left"  d="M16 7 Q 10 7 5 10 L5 24 Q 10 21 16 22 Z" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <path class="stroke-default anim-book-right" d="M16 7 Q 22 7 27 10 L27 24 Q 22 21 16 22 Z" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <line class="stroke-default" x1="16" y1="7" x2="16" y2="22" stroke-width="1.5" stroke-linecap="round"/>
+            <line class="stroke-default anim-story-1" x1="8"  y1="14"   x2="14" y2="13.5" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+            <line class="stroke-default anim-story-2" x1="8"  y1="17"   x2="14" y2="16.5" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+            <line class="stroke-default anim-story-3" x1="8"  y1="20"   x2="14" y2="19.5" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+            <line class="stroke-default anim-story-1" x1="18" y1="13.5" x2="24" y2="14"   stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+            <line class="stroke-default anim-story-2" x1="18" y1="16.5" x2="24" y2="17"   stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+            <line class="stroke-default anim-story-3" x1="18" y1="19.5" x2="24" y2="20"   stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+        </template>
+
         <!-- gacha -->
         <template v-else-if="name === 'gacha'">
             <circle class="stroke-default" cx="16" cy="16" r="11" stroke-width="1.5"/>
@@ -265,6 +278,20 @@ defineProps<{ name: string; size?: number }>();
 @keyframes ledBlink {
     0%,100% { opacity: 1; }
     50%     { opacity: 0.15; }
+}
+
+/* Open book — pages spread + lines shimmer */
+.nav-icon:hover .anim-book-left  { animation: bookSpreadLeft  0.35s ease-out forwards; }
+.nav-icon:hover .anim-book-right { animation: bookSpreadRight 0.35s ease-out forwards; }
+@keyframes bookSpreadLeft  { to { transform: translateX(-1.5px); } }
+@keyframes bookSpreadRight { to { transform: translateX( 1.5px); } }
+
+.nav-icon:hover .anim-story-1 { animation: storyLine 0.5s ease 0s    forwards; }
+.nav-icon:hover .anim-story-2 { animation: storyLine 0.5s ease 0.1s  forwards; }
+.nav-icon:hover .anim-story-3 { animation: storyLine 0.5s ease 0.2s  forwards; }
+@keyframes storyLine {
+    from { opacity: 0.25; }
+    to   { opacity: 1; }
 }
 
 /* Home / folder open */

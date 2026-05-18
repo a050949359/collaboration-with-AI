@@ -1,6 +1,6 @@
 <?php
 
-use App\Jobs\StoryAdvanceJob;
+use App\Jobs\Story\StoryOrchestrateJob;
 use App\Models\Story\StorySession;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -12,9 +12,14 @@ Artisan::command('inspire', function () {
 
 Schedule::command('bookings:release-expired')->everyMinute();
 
-// Safety net: dispatch advance job for any active session whose next_advance_at is overdue
+// StoryClock: sole entry point — claims next_advance_at immediately to prevent duplicates
 Schedule::call(function () {
     StorySession::where('status', 'active')
         ->where('next_advance_at', '<=', now())
-        ->each(fn($session) => StoryAdvanceJob::dispatch($session->id));
-})->everyFiveMinutes()->name('story-advance-watchdog')->withoutOverlapping();
+        ->each(function (StorySession $session) {
+            $session->update([
+                'next_advance_at' => now()->addMinutes($session->advance_interval_minutes),
+            ]);
+            StoryOrchestrateJob::dispatch($session->id);
+        });
+})->everyMinute()->name('story-clock')->withoutOverlapping();

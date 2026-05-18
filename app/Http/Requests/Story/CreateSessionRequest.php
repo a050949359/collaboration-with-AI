@@ -20,6 +20,7 @@ class CreateSessionRequest extends FormRequest
             'setting.world'                  => ['required', 'string'],
             'setting.opening'                => ['required', 'string'],
             'advance_interval_minutes'       => ['nullable', 'integer', 'min:10', 'max:1440'],
+            'chars_per_round'                => ['nullable', 'integer', 'min:1', 'max:10'],
             'content_rating'                 => ['nullable', 'string', 'in:general,mature'],
             'characters'                     => ['required', 'array', 'min:2'],
             'characters.*.name'              => ['required', 'string', 'max:50'],

@@ -14,11 +14,11 @@ return new class extends Migration
         Schema::create('story_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('session_id')->constrained('story_sessions')->cascadeOnDelete();
-            $table->string('name');
-            $table->text('description');
-            $table->foreignId('holder_character_id')->nullable()->constrained('story_characters')->nullOnDelete();
-            $table->string('location_hint')->nullable();
-            $table->boolean('is_preset')->default(false);
+            $table->string('name');                                                                            // 道具名稱
+            $table->text('description');                                                                       // 道具描述，帶入角色 LLM prompt
+            $table->foreignId('holder_character_id')->nullable()->constrained('story_characters')->nullOnDelete(); // null = 道具在世界某處，非角色持有
+            $table->string('location_hint')->nullable();                                                       // 未被持有時的位置描述
+            $table->boolean('is_preset')->default(false);                                                      // true = 建立故事時預設放入的關鍵道具
             $table->timestamps();
         });
     }

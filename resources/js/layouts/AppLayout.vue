@@ -50,12 +50,12 @@ const defaultNavLinks = computed((): NavLink[] => {
         {
             label: 'Lab',
             icon: 'lab',
-            active: path.startsWith(routes.tourPlayground()) || path.startsWith(routes.miniOrch()) || path.startsWith(routes.gacha()) || path.startsWith(routes.storyRelay()),
+            active: path.startsWith(routes.tourPlayground()) || path.startsWith(routes.miniOrch()) || path.startsWith(routes.gacha()) || (isAdmin.value && path.startsWith(routes.storyRelay())),
             children: [
-                { label: 'Tour',        href: routes.tourPlayground(), icon: 'tour',  active: path.startsWith(routes.tourPlayground()) },
-                { label: 'mini-orch',   href: routes.miniOrch(),       icon: 'orch',  active: path.startsWith(routes.miniOrch()) },
-                { label: 'Gacha',       href: routes.gacha(),          icon: 'gacha', active: path.startsWith(routes.gacha()) },
-                { label: 'Story Relay', href: routes.storyRelay(),     icon: 'story', active: path.startsWith(routes.storyRelay()) },
+                { label: 'Tour',      href: routes.tourPlayground(), icon: 'tour',  active: path.startsWith(routes.tourPlayground()) },
+                { label: 'mini-orch', href: routes.miniOrch(),       icon: 'orch',  active: path.startsWith(routes.miniOrch()) },
+                { label: 'Gacha',     href: routes.gacha(),          icon: 'gacha', active: path.startsWith(routes.gacha()) },
+                ...(isAdmin.value ? [{ label: 'Story', href: routes.storyRelay(), icon: 'story', active: path.startsWith(routes.storyRelay()) }] : []),
             ],
         },
     ];

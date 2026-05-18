@@ -31,6 +31,7 @@ class GeminiStoryService
         array $items = [],
         string $contentRating = 'general',
         ?string $sceneDescription = null,
+        bool $needsComplete = false,
     ): string {
         $systemPrompt = $this->buildCharacterPrompt(
             $setting,
@@ -50,10 +51,11 @@ class GeminiStoryService
             ];
         }
 
-        $messages[] = [
-            'role' => 'user',
-            'text' => "現在輪到你（{$characterName}）繼續故事，請接續上面的內容寫下一段。",
-        ];
+        $turnInstruction = $needsComplete
+            ? "現在輪到你（{$characterName}）繼續故事，請接續上面的內容寫下一段。故事即將進入尾聲，請引導情節走向自然的結局。"
+            : "現在輪到你（{$characterName}）繼續故事，請接續上面的內容寫下一段。";
+
+        $messages[] = ['role' => 'user', 'text' => $turnInstruction];
 
         return $this->storyGemini->generate($systemPrompt, $messages);
     }

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Story;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Story\CreateSessionRequest;
 use App\Http\Requests\Story\PlayerTurnRequest;
-use App\Jobs\StoryAdvanceJob;
+use App\Jobs\Story\StoryOrchestrateJob;
 use App\Models\Story\StoryCharacter;
 use App\Models\Story\StoryItem;
 use App\Models\Story\StorySegment;
@@ -13,7 +13,6 @@ use App\Models\Story\StorySession;
 use App\Services\AI\GeminiStoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 
 class StorySessionController extends Controller
@@ -42,6 +41,7 @@ class StorySessionController extends Controller
             'setting'                  => $request->array('setting'),
             'world_state'              => $request->input('setting.opening', ''),
             'advance_interval_minutes' => $request->integer('advance_interval_minutes', 120),
+            'chars_per_round'          => $request->integer('chars_per_round', 1),
             'content_rating'           => $request->string('content_rating', 'general')->toString(),
         ]);
 
@@ -56,7 +56,7 @@ class StorySessionController extends Controller
             ]);
         }
 
-        foreach ($request->array('items', []) as $item) {
+        foreach ((array) $request->input('items', []) as $item) {
             $holderCharacter = null;
             if (!empty($item['holder'])) {
                 $holderCharacter = $session->characters()
@@ -114,8 +114,18 @@ class StorySessionController extends Controller
                 'next_advance_at' => now()->addMinutes($session->advance_interval_minutes),
             ]);
 
-            StoryAdvanceJob::dispatch($session->id)
-                ->delay(now()->addMinutes($session->advance_interval_minutes));
+            StoryOrchestrateJob::dispatch($session->id);
+        } elseif ($newStatus === 'completed' && in_array($session->status, ['active', 'paused'], true)) {
+            $currentMaxTurn = $session->segments()->max('turn_number') ?? 0;
+
+            $session->update([
+                'status'                 => 'active',
+                'needs_complete'         => true,
+                'complete_deadline_turn' => $currentMaxTurn + 20,
+                'next_advance_at'        => now()->addMinutes($session->advance_interval_minutes),
+            ]);
+
+            StoryOrchestrateJob::dispatch($session->id);
         } else {
             $session->update(['status' => $newStatus]);
         }
