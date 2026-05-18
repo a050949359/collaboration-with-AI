@@ -20,6 +20,15 @@ class StorySessionController extends Controller
 {
     public function __construct(private GeminiStoryService $story) {}
 
+    public function index(): JsonResponse
+    {
+        $sessions = StorySession::select(['id', 'title', 'status', 'content_rating', 'next_advance_at', 'updated_at'])
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return response()->json($sessions);
+    }
+
     public function store(CreateSessionRequest $request): JsonResponse
     {
         if (StorySession::where('status', 'active')->exists()) {

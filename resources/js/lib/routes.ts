@@ -142,6 +142,7 @@ export const api = {
         session:       (id: number) => `/api/v1/story/sessions/${id}`,
         sessionStatus: (id: number) => `/api/v1/story/sessions/${id}/status`,
         playerTurn:    (id: number) => `/api/v1/story/sessions/${id}/player-turn`,
+        publicKey:     () => '/api/auth/key',
     },
 
     tour: {

@@ -184,6 +184,7 @@ Route::prefix('v1/story')->middleware('throttle:30,1')->group(function () {
     Route::post('/setup/generate', [StorySetupController::class, 'generate']);
     Route::post('/setup/refine',   [StorySetupController::class, 'refine']);
 
+    Route::get('/sessions',                               [StorySessionController::class, 'index']);
     Route::post('/sessions',                              [StorySessionController::class, 'store']);
     Route::get('/sessions/{session}',                    [StorySessionController::class, 'show']);
     Route::patch('/sessions/{session}/status',           [StorySessionController::class, 'updateStatus']);
