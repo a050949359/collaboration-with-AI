@@ -24,6 +24,16 @@ use App\Models\User;
     'guest_id',
 ])]
 
+/**
+ * @property int         $id
+ * @property int         $article_id
+ * @property int|null    $user_id
+ * @property string|null $guest_id
+ * @property string|null $guest_name
+ * @property int|null    $parent_id
+ * @property string      $body
+ * @property bool|null   $can_edit  Set per-request by ArticleCommentController::index()
+ */
 class ArticleComment extends Model
 {
     use HasFactory, SoftDeletes;

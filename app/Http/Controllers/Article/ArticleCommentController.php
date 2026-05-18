@@ -7,10 +7,11 @@ use App\Http\Requests\Article\ArticleCommentBodyRequest;
 use App\Http\Requests\Article\ArticleCommentRequest;
 use App\Models\Article\Article;
 use App\Models\Article\ArticleComment;
+use Illuminate\Http\Request;
 
 class ArticleCommentController extends Controller
 {
-    public function index(Article $article)
+    public function index(Request $request, Article $article)
     {
         $comments = ArticleComment::query()
             ->where('article_id', $article->id)
@@ -18,6 +19,21 @@ class ArticleCommentController extends Controller
             ->with('children.user')
             ->whereNull('parent_id')
             ->get();
+
+        $cookieGuestId = $request->cookie('guest_id');
+        $userId = auth()->id();
+
+        $comments->each(function (ArticleComment $comment) use ($cookieGuestId, $userId) {
+            $comment->can_edit = $userId
+                ? $userId === $comment->user_id
+                : ($cookieGuestId !== null && $cookieGuestId === $comment->guest_id);
+
+            $comment->children->each(function (ArticleComment $child) use ($cookieGuestId, $userId) {
+                $child->can_edit = $userId
+                    ? $userId === $child->user_id
+                    : ($cookieGuestId !== null && $cookieGuestId === $child->guest_id);
+            });
+        });
 
         return response()->json($comments);
     }
