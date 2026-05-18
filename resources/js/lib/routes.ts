@@ -90,6 +90,12 @@ export const api = {
     publicArticles: {
         index: () => '/api/v1/articles',
         show: (id: number) => `/api/v1/articles/${id}`,
+        comments: (articleId: number) => `/api/v1/articles/${articleId}/comments`,
+    },
+
+    comments: {
+        update: (id: number) => `/api/v1/comments/${id}`,
+        destroy: (id: number) => `/api/v1/comments/${id}`,
     },
 
     about: {

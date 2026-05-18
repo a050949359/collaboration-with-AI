@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Article;
+use App\Models\Article\Article;
 use App\Support\LineBotHmac;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

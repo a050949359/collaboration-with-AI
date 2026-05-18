@@ -181,6 +181,72 @@ export async function deleteArticle(articleId: number): Promise<void> {
     await parseJson<ApiEnvelope<null>>(response);
 }
 
+export type CommentUser = {
+    id: number;
+    name: string;
+    avatar: string | null;
+};
+
+export type ArticleComment = {
+    id: number;
+    user_id: number | null;
+    guest_name: string | null;
+    parent_id: number | null;
+    body: string;
+    created_at: string;
+    user: CommentUser | null;
+    children: ArticleComment[];
+};
+
+export async function fetchComments(articleId: number): Promise<ArticleComment[]> {
+    const response = await fetch(resolveUrl(api.publicArticles.comments(articleId)), {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+    });
+
+    return parseJson<ArticleComment[]>(response);
+}
+
+export async function postComment(
+    articleId: number,
+    data: { body: string; guest_name?: string; parent_id?: number | null },
+): Promise<void> {
+    const response = await fetch(resolveUrl(api.publicArticles.comments(articleId)), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+
+    await parseJson<{ message: string }>(response);
+}
+
+export async function updateComment(
+    commentId: number,
+    data: { body: string; guest_name?: string },
+): Promise<void> {
+    const response = await fetch(resolveUrl(api.comments.update(commentId)), {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+
+    await parseJson<{ message: string }>(response);
+}
+
+export async function deleteComment(commentId: number): Promise<void> {
+    const response = await fetch(resolveUrl(api.comments.destroy(commentId)), {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+    });
+
+    if (response.status !== 204) {
+        await parseJson<null>(response);
+    }
+}
+
 export type GenerateContentPayload = {
     topic: string;
     language: string;

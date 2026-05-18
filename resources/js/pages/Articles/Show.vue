@@ -3,6 +3,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import CommentBoard from '@/components/articles/CommentBoard.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { ArticleApiError, deleteArticle,  fetchAuthArticleDetail, fetchPublicArticleDetail } from '@/lib/articles-api';
 import type {ArticleDetail} from '@/lib/articles-api';
@@ -144,6 +145,8 @@ onMounted(async () => {
                     <div class="mt-8 flex flex-wrap gap-3 binary-label text-[10px] uppercase text-[var(--binary-outline)]">
                         <span v-for="tag in article.tags" :key="tag">#{{ tag }}</span>
                     </div>
+
+                    <CommentBoard :article-id="props.articleId" />
                 </article>
             </section>
         </main>

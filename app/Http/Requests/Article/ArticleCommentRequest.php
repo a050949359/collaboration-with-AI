@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Http\Requests\Article;
+
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class ArticleCommentRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'parent_id' => ['nullable', Rule::exists('article_comments', 'id')
+                ->where('article_id', $this->route('article')?->id)],
+            'guest_name' => ['nullable', 'string', 'max:50', Rule::requiredIf(!auth()->check())],
+            'body' => ['required', 'string', 'max:500'],
+        ];
+    }
+}

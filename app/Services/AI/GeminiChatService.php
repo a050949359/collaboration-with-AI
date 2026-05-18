@@ -2,146 +2,36 @@
 
 namespace App\Services\AI;
 
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class GeminiChatService
 {
-    private string $apiKey;
-    private string $defaultModel;
-
-    /**
-     * @var array<int, string>
-     */
-    private array $models;
-
-    public function __construct()
-    {
-        $this->apiKey = (string) config('services.gemini.api_key', '');
-        $this->defaultModel = (string) config('services.gemini.model', 'gemini-2.5-flash');
-
-        $configured = config('services.gemini.models', []);
-        $this->models = is_array($configured)
-            ? array_values(array_filter(array_map('strval', $configured)))
-            : [];
-
-        if ($this->models === []) {
-            $this->models = [$this->defaultModel];
-        }
-    }
+    public function __construct(private GeminiService $gemini) {}
 
     /**
      * Send a multi-turn chat message grounded on imported resume context.
      *
-     * @param  array<int, array{role: string, text: string}>  $history  Previous turns [['role'=>'user'|'model', 'text'=>'...']]
-     * @return string  The model reply text
+     * @param  array<int, array{role: string, text: string}>  $history
      */
     public function chat(string $message, array $history = []): string
     {
-        if ($this->apiKey === '') {
-            throw new AIServiceException('GEMINI_API_KEY is not configured.');
-        }
-
-        $contents = [];
-
         $context = $this->loadContext();
+
         if ($context === '') {
             return '目前尚未匯入任何履歷背景資料，請先由管理員在 About 頁面匯入 Context。';
         }
 
-        $contents[] = [
-            'role' => 'user',
-            'parts' => [['text' => $this->buildSystemPrompt($context)]],
-        ];
-        $contents[] = [
-            'role' => 'model',
-            'parts' => [['text' => '了解，我會根據這份背景資料來回答訪客的問題。']],
-        ];
+        $messages   = $history;
+        $messages[] = ['role' => 'user', 'text' => $message];
 
-        // Append conversation history
-        foreach ($history as $turn) {
-            $contents[] = [
-                'role'  => $turn['role'],
-                'parts' => [['text' => $turn['text']]],
-            ];
-        }
-
-        // Append current message
-        $contents[] = [
-            'role'  => 'user',
-            'parts' => [['text' => $message]],
-        ];
-
-        $attempted = [];
-
-        foreach ($this->models as $_unused) {
-            $model = $this->nextModel();
-            $response = Http::withQueryParameters(['key' => $this->apiKey])
-                ->acceptJson()
-                ->timeout(30)
-                ->post($this->endpointForModel($model), [
-                    'contents' => $contents,
-                ]);
-
-            Log::debug('GeminiChat response', ['status' => $response->status(), 'model' => $model]);
-
-            if ($response->ok()) {
-                return $this->extractText($response->json());
-            }
-
-            $attempted[] = $model.':'.$response->status();
-
-            // Skip unavailable model (404) or quota/rate-limited model (429) and try next one.
-            if (!in_array($response->status(), [404, 429], true)) {
-                throw new AIServiceException('Gemini chat request failed: '.$response->status().' (model: '.$model.')');
-            }
-        }
-
-        throw new AIServiceException(
-            'Gemini chat request failed across models ['.implode(', ', $attempted).'] '
-            .'(404: model unavailable, 429: quota/rate limit).'
-        );
+        return $this->gemini->generate($this->buildSystemPrompt($context), $messages);
     }
 
-    private function endpointForModel(string $model): string
-    {
-        return sprintf(
-            'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
-            $model,
-        );
-    }
-
-    private function nextModel(): string
-    {
-        if (count($this->models) <= 1) {
-            return $this->models[0] ?? $this->defaultModel;
-        }
-
-        $cacheKey = 'gemini_chat_model_rotation_index';
-
-        if (!Cache::has($cacheKey)) {
-            Cache::forever($cacheKey, 0);
-        }
-
-        $next = (int) Cache::increment($cacheKey);
-        $index = ($next - 1) % count($this->models);
-
-        return $this->models[$index] ?? $this->defaultModel;
-    }
-
-    /**
-     * Save resume context to private storage.
-     */
     public function saveContext(string $context): void
     {
         Storage::put('private/resume_context.md', $context);
     }
 
-    /**
-     * Load resume context from private storage.
-     */
     public function loadContext(): string
     {
         if (!Storage::exists('private/resume_context.md')) {
@@ -164,30 +54,5 @@ class GeminiChatService
             $context,
             '--- 資料結束 ---',
         ]);
-    }
-
-    /**
-     * @param mixed $payload
-     */
-    private function extractText(mixed $payload): string
-    {
-        if (!is_array($payload)) {
-            return '';
-        }
-
-        $candidates = $payload['candidates'] ?? [];
-
-        if (!is_array($candidates) || !isset($candidates[0]['content']['parts'])) {
-            return '';
-        }
-
-        $texts = [];
-        foreach ($candidates[0]['content']['parts'] as $part) {
-            if (is_array($part) && isset($part['text']) && is_string($part['text'])) {
-                $texts[] = trim($part['text']);
-            }
-        }
-
-        return trim(implode("\n", array_filter($texts)));
     }
 }

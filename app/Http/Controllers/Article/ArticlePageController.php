@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Article;
 
 use App\Http\Controllers\Controller;
-use App\Models\Article;
+use App\Models\Article\Article;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;

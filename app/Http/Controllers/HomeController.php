@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Article;
+use App\Models\Article\Article;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;

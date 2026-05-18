@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\About\AboutController;
 use App\Http\Controllers\About\ResumeContextController;
 use App\Http\Controllers\Article\ArticleBrowseController;
+use App\Http\Controllers\Article\ArticleCommentController;
 use App\Http\Controllers\Article\ArticleEditController;
 use App\Http\Controllers\Article\ArticleGenerationController;
 use App\Http\Controllers\Auth\LoginController;
@@ -25,6 +26,8 @@ use App\Http\Controllers\Aviation\CitySearchController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
 use App\Http\Controllers\MiniOrch\MiniOrchController;
+use App\Http\Controllers\Story\StorySetupController;
+use App\Http\Controllers\Story\StorySessionController;
 use App\Http\Middleware\EnsureAdmin;
 
 Route::post('/about/ask', [AboutController::class, 'ask'])->middleware('throttle:4,1');
@@ -65,6 +68,16 @@ Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(
 Route::prefix('v1/articles')->group(function () {
     Route::get('/', [ArticleBrowseController::class, 'publicIndex']);
     Route::get('/{article}', [ArticleBrowseController::class, 'publicShow']);
+    
+    // comments
+    Route::get('/{article}/comments', [ArticleCommentController::class, 'index']);
+    Route::post('/{article}/comments', [ArticleCommentController::class, 'store'])->middleware('throttle:10,1');
+
+});
+
+Route::prefix('v1/comments')->middleware('throttle:20,1')->group(function () {
+    Route::put('/{articleComment}', [ArticleCommentController::class, 'update']);
+    Route::delete('/{articleComment}', [ArticleCommentController::class, 'destroy']);
 });
 
 Route::middleware('auth:sanctum')->prefix('articles')->group(function () {
@@ -165,6 +178,16 @@ Route::prefix('mini-orch')->group(function () {
         Route::post('/runs',        [MiniOrchController::class, 'createRun']);
         Route::get('/runs/{runId}', [MiniOrchController::class, 'getRun']);
     });
+});
+
+Route::prefix('v1/story')->middleware('throttle:30,1')->group(function () {
+    Route::post('/setup/generate', [StorySetupController::class, 'generate']);
+    Route::post('/setup/refine',   [StorySetupController::class, 'refine']);
+
+    Route::post('/sessions',                              [StorySessionController::class, 'store']);
+    Route::get('/sessions/{session}',                    [StorySessionController::class, 'show']);
+    Route::patch('/sessions/{session}/status',           [StorySessionController::class, 'updateStatus']);
+    Route::post('/sessions/{session}/player-turn',       [StorySessionController::class, 'playerTurn']);
 });
 
 // Route::get('/debug-ip', fn() => response()->json([

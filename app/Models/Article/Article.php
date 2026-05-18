@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Article;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -42,5 +42,10 @@ class Article extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(ArticleComment::class);
     }
 }

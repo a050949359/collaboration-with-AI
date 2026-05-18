@@ -8,7 +8,7 @@ use App\Http\Requests\Article\GenerateArticleImageRequest;
 use App\Http\Requests\Article\StoreArticleRequest;
 use App\Jobs\GenerateArticleContentJob;
 use App\Jobs\GenerateArticleImageJob;
-use App\Models\Article;
+use App\Models\Article\Article;
 use App\Enums\ArticleTopic;
 use App\Enums\ArticleLanguage;
 use App\Enums\ArticleStyle;

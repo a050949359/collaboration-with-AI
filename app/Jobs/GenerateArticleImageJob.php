@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\ArticleTopic;
-use App\Models\Article;
+use App\Models\Article\Article;
 use App\Services\AI\Contracts\GeneratesArticleImage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;

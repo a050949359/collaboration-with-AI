@@ -7,7 +7,7 @@ use App\Enums\ArticleStyle;
 use App\Enums\ArticleTopic;
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerateArticleContentJob;
-use App\Models\Article;
+use App\Models\Article\Article;
 use App\Models\SocialAccount;
 use App\Support\LineBotHmac;
 use Illuminate\Http\JsonResponse;

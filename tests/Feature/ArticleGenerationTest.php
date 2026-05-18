@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\GenerateArticleContentJob;
 use App\Jobs\GenerateArticleImageJob;
-use App\Models\Article;
+use App\Models\Article\Article;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;

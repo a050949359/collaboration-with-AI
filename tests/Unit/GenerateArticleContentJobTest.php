@@ -6,7 +6,7 @@ use App\Enums\ArticleLanguage;
 use App\Enums\ArticleStyle;
 use App\Enums\ArticleTopic;
 use App\Jobs\GenerateArticleContentJob;
-use App\Models\Article;
+use App\Models\Article\Article;
 use App\Models\User;
 use App\Services\AI\Contracts\GeneratesArticleContent;
 use Illuminate\Foundation\Testing\RefreshDatabase;

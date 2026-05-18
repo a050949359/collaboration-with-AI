@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Article;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Article\UpdateArticleRequest;
-use App\Models\Article;
+use App\Models\Article\Article;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
