@@ -49,14 +49,11 @@ class ArticleCommentController extends Controller
                 'body' => $request->body,
                 'parent_id' => $request->parent_id,
             ]);
+            $response = response()->json(['message' => 'Comment created.'], 201);
         } else {
-            if (!request()->cookie('guest_id')) {
-                // 為訪客生成一個 UUID，並設置在 cookie 中，過期時間為 1 年
-                $guestId = (string) \Illuminate\Support\Str::uuid();
-                cookie()->queue(cookie('guest_id', $guestId, 60 * 24 * 365)); // 1 年
-            } else {
-               $guestId = request()->cookie('guest_id');
-            }
+            $existingGuestId = $request->cookie('guest_id');
+            $guestId = $existingGuestId ?? (string) \Illuminate\Support\Str::uuid();
+            $isNewGuest = $existingGuestId === null;
 
             ArticleComment::create([
                 'article_id' => $article->id,
@@ -66,9 +63,15 @@ class ArticleCommentController extends Controller
                 'body' => $request->body,
                 'parent_id' => $request->parent_id,
             ]);
+
+            $response = response()->json(['message' => 'Comment created.'], 201);
+
+            if ($isNewGuest) {
+                $response->withCookie(cookie('guest_id', $guestId, 60 * 24 * 365));
+            }
         }
 
-        return response()->json(['message' => 'Comment created.'], 201);
+        return $response;
     }
 
     public function update(ArticleCommentBodyRequest $request, ArticleComment $articleComment)
