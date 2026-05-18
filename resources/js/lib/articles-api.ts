@@ -196,6 +196,7 @@ export type ArticleComment = {
     created_at: string;
     user: CommentUser | null;
     children: ArticleComment[];
+    can_edit: boolean;
 };
 
 export async function fetchComments(articleId: number): Promise<ArticleComment[]> {

@@ -16,7 +16,7 @@ import { routes } from '@/lib/routes';
 const props = defineProps<{ articleId: number }>();
 
 const { t } = useI18n();
-const { user, isLoggedIn } = useAuth();
+const { isLoggedIn } = useAuth();
 
 const comments = ref<ArticleComment[]>([]);
 const isLoading = ref(false);
@@ -112,11 +112,6 @@ async function handleDelete(comment: ArticleComment) {
     } catch (e: unknown) {
         deleteError.value = e instanceof ArticleApiError ? e.message : t('articles.comments.delete_failed');
     }
-}
-
-function isMine(comment: ArticleComment): boolean {
-    if (!user.value || !comment.user_id) return false;
-    return user.value.id === comment.user_id;
 }
 
 function authorName(comment: ArticleComment): string {
@@ -251,7 +246,7 @@ onMounted(loadComments);
                     >
                         {{ t('articles.comments.reply') }}
                     </button>
-                    <template v-if="isMine(comment)">
+                    <template v-if="comment.can_edit">
                         <button
                             class="binary-label text-[10px] uppercase text-[var(--binary-outline)] transition-colors hover:text-[var(--binary-text)]"
                             type="button"
@@ -359,7 +354,7 @@ onMounted(loadComments);
 
                         <p v-else class="text-sm leading-relaxed text-[var(--binary-text)]">{{ reply.body }}</p>
 
-                        <div v-if="isMine(reply)" class="mt-2 flex gap-4">
+                        <div v-if="reply.can_edit" class="mt-2 flex gap-4">
                             <button
                                 class="binary-label text-[10px] uppercase text-[var(--binary-outline)] transition-colors hover:text-[var(--binary-text)]"
                                 type="button"
