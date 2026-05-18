@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
 import { useAuth } from '@/composables/useAuth';
-import { api, routes } from '@/lib/routes';
+import { api } from '@/lib/routes';
 
 // ── Types ─────────────────────────────────────────────────
 
