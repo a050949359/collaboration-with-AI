@@ -55,6 +55,9 @@ export const routes = {
     // Gacha
     gacha: () => `${WEB_PREFIX}/gacha`,
 
+    // Story Relay
+    storyRelay: () => `${WEB_PREFIX}/story-relay`,
+
     // Admin
     admin: {
         settings: () => `${WEB_PREFIX}/admin/settings`,
@@ -130,6 +133,15 @@ export const api = {
         dashboard: () => '/api/mini-orch/dashboard',
         createRun: () => '/api/mini-orch/runs',
         getRun: (runId: string) => `/api/mini-orch/runs/${runId}`,
+    },
+
+    story: {
+        setupGenerate: () => '/api/v1/story/setup/generate',
+        setupRefine:   () => '/api/v1/story/setup/refine',
+        sessions:      () => '/api/v1/story/sessions',
+        session:       (id: number) => `/api/v1/story/sessions/${id}`,
+        sessionStatus: (id: number) => `/api/v1/story/sessions/${id}/status`,
+        playerTurn:    (id: number) => `/api/v1/story/sessions/${id}/player-turn`,
     },
 
     tour: {
