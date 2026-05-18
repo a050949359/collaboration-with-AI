@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Article;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ArticleCommentBodyRequest extends FormRequest
@@ -18,12 +17,11 @@ class ArticleCommentBodyRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'id' => 'required|exists:article_comments,id',
             'guest_name' => 'nullable|string|max:255',
             'body' => 'required|string',
         ];
