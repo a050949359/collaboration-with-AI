@@ -11,41 +11,39 @@ type RunEntry = {
     result?: Record<string, unknown>;
 };
 
-const iframeRef = ref<HTMLIFrameElement | null>(null);
 const showRunForm = ref(false);
 const runBody = ref('{\n  "vus": 20,\n  "duration": "30s",\n  "api_url": "http://"\n}');
 const parseError = ref('');
 const submitting = ref(false);
 const submitError = ref('');
 const runs = ref<RunEntry[]>([]);
-const iframeError = ref(false);
+const dashboardHtml = ref('');
+const dashboardLoading = ref(false);
+const dashboardError = ref('');
 
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
-let loadTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+let dashboardAbort: AbortController | null = null;
 
-function startLoadTimeout() {
-    if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
-    loadTimeoutTimer = setTimeout(() => { iframeError.value = true; }, 15_000);
-}
-
-function onIframeLoad() {
-    if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
-    iframeError.value = false;
-}
-
-function onIframeError() {
-    if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
-    iframeError.value = true;
-}
-
-function refreshDashboard() {
-    if (!iframeRef.value) return;
-    iframeError.value = false;
-    startLoadTimeout();
-    const src = iframeRef.value.src;
-    iframeRef.value.src = '';
-    iframeRef.value.src = src;
+async function refreshDashboard() {
+    if (dashboardAbort) dashboardAbort.abort();
+    dashboardAbort = new AbortController();
+    dashboardLoading.value = true;
+    dashboardError.value = '';
+    try {
+        const res = await fetch(api.miniOrch.dashboard(), {
+            signal: dashboardAbort.signal,
+            credentials: 'include',
+        });
+        dashboardHtml.value = await res.text();
+        if (!res.ok) dashboardError.value = `HTTP ${res.status}`;
+    } catch (e: unknown) {
+        if ((e as Error).name !== 'AbortError') {
+            dashboardError.value = e instanceof Error ? e.message : 'unreachable';
+        }
+    } finally {
+        dashboardLoading.value = false;
+    }
 }
 
 function validateBody(): boolean {
@@ -114,7 +112,7 @@ function statusClass(status: string) {
 }
 
 onMounted(() => {
-    startLoadTimeout();
+    refreshDashboard();
     autoRefreshTimer = setInterval(refreshDashboard, 600_000);
     pollTimer = setInterval(pollRuns, 5_000);
 });
@@ -122,7 +120,7 @@ onMounted(() => {
 onUnmounted(() => {
     if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     if (pollTimer) clearInterval(pollTimer);
-    if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
+    if (dashboardAbort) dashboardAbort.abort();
 });
 </script>
 
@@ -196,30 +194,23 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <!-- Dashboard iframe -->
+            <!-- Dashboard -->
             <div class="flex-1 min-h-[480px] relative rounded-lg overflow-hidden border border-[--binary-outline-variant] mx-6">
-                <iframe
-                    ref="iframeRef"
-                    :src="api.miniOrch.dashboard()"
-                    class="absolute inset-0 w-full h-full border-0"
-                    title="mini-orch dashboard"
-                    @load="onIframeLoad"
-                    @error="onIframeError"
-                />
-                <!-- Error overlay -->
-                <Transition name="fade">
-                    <div
-                        v-if="iframeError"
-                        class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[--binary-surface-low]"
-                    >
-                        <span class="font-mono text-2xl text-[--binary-tertiary]">✕</span>
-                        <p class="font-mono text-sm text-[--binary-text-muted]">mini-orch unreachable</p>
-                        <button
-                            class="px-3 py-1.5 text-xs font-mono rounded border border-[--binary-outline] text-[--binary-text-muted] hover:text-[--binary-text] hover:border-[--binary-primary] transition-colors"
-                            @click="refreshDashboard"
-                        >↺ retry</button>
-                    </div>
-                </Transition>
+                <!-- Loading -->
+                <div v-if="dashboardLoading" class="absolute inset-0 flex items-center justify-center bg-[--binary-surface-low]">
+                    <span class="font-mono text-xs text-[--binary-text-muted] animate-pulse">connecting…</span>
+                </div>
+                <!-- Error -->
+                <div v-else-if="dashboardError" class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[--binary-surface-low]">
+                    <span class="font-mono text-2xl text-[--binary-tertiary]">✕</span>
+                    <p class="font-mono text-sm text-[--binary-text-muted]">{{ dashboardError }}</p>
+                    <button
+                        class="px-3 py-1.5 text-xs font-mono rounded border border-[--binary-outline] text-[--binary-text-muted] hover:text-[--binary-text] hover:border-[--binary-primary] transition-colors"
+                        @click="refreshDashboard"
+                    >↺ retry</button>
+                </div>
+                <!-- Content -->
+                <div v-else v-html="dashboardHtml" class="w-full h-full overflow-auto p-4" />
             </div>
 
         </div>
