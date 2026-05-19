@@ -25,6 +25,7 @@ use App\Http\Controllers\Aviation\CityPreviewController;
 use App\Http\Controllers\Aviation\CitySearchController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
+use App\Http\Controllers\Lab\WsLabController;
 use App\Http\Controllers\MiniOrch\MiniOrchController;
 use App\Http\Controllers\Story\CharacterController;
 use App\Http\Controllers\Story\StorySetupController;
@@ -171,6 +172,14 @@ Route::prefix('v1/tour')->group(function () {
     });
 });
 
+
+Route::prefix('ws-lab')->middleware(['auth:sanctum', 'verified'])->group(function () {
+    Route::get('/status',        [WsLabController::class, 'status']);
+    Route::post('/start',        [WsLabController::class, 'start']);
+    Route::post('/stop',         [WsLabController::class, 'stop']);
+    Route::post('/stream/start', [WsLabController::class, 'streamStart']);
+    Route::post('/stream/stop',  [WsLabController::class, 'streamStop']);
+});
 
 Route::prefix('mini-orch')->group(function () {
     Route::get('/dashboard', [MiniOrchController::class, 'dashboard']);

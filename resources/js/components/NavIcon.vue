@@ -84,6 +84,14 @@ defineProps<{ name: string; size?: number }>();
             <circle class="fill-default anim-eye-r" cx="20" cy="16" r="1.4"/>
         </template>
 
+        <!-- wslab (websocket oscilloscope) -->
+        <template v-else-if="name === 'wslab'">
+            <rect class="stroke-default" x="4" y="6" width="24" height="18" rx="2" stroke-width="1.5"/>
+            <polyline class="stroke-default anim-ws-line" points="6,20 10,14 13,18 17,10 21,16 26,11" stroke-width="1.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+            <line class="stroke-default" x1="4" y1="28" x2="28" y2="28" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+            <line class="stroke-default" x1="16" y1="24" x2="16" y2="28" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+        </template>
+
         <!-- orch (mini-orch server monitor) -->
         <template v-else-if="name === 'orch'">
             <rect class="stroke-default" x="6" y="4" width="20" height="24" rx="2" stroke-width="1.5"/>
@@ -272,6 +280,13 @@ defineProps<{ name: string; size?: number }>();
 }
 
 /* Orch server LEDs blink in sequence */
+/* WS Lab — signal pulse */
+.nav-icon:hover .anim-ws-line { animation: wsPulse 0.6s ease-in-out infinite alternate; }
+@keyframes wsPulse {
+    from { opacity: 0.5; stroke-width: 1.2px; }
+    to   { opacity: 1;   stroke-width: 1.8px; }
+}
+
 .nav-icon:hover .anim-led-1 { animation: ledBlink 1s ease-in-out 0s    infinite; }
 .nav-icon:hover .anim-led-2 { animation: ledBlink 1s ease-in-out 0.3s  infinite; }
 .nav-icon:hover .anim-led-3 { animation: ledBlink 1s ease-in-out 0.6s  infinite; }

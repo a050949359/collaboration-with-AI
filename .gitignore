@@ -28,3 +28,7 @@ yarn-error.log
 # Lint/Type check results
 check_results.txt
 .aider*
+# ws-lab
+/storage/app/ws-lab
+/storage/app/ws-lab.pid
+/cmd/ws-lab/go.sum

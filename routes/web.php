@@ -33,6 +33,7 @@ Route::prefix('app')->group(function () {
     });
 
     Route::get('/mini-orch', [MiniOrchController::class, 'page'])->name('mini-orch');
+    Route::inertia('/ws-lab', 'WsLab')->name('ws-lab');
     Route::inertia('/gacha', 'Gacha')->name('gacha');
     Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
         Route::inertia('/story-relay', 'StoryRelay')->name('story-relay');

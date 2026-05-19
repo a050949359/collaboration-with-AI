@@ -52,6 +52,9 @@ export const routes = {
     // Mini Orch
     miniOrch: () => `${WEB_PREFIX}/mini-orch`,
 
+    // WS Lab
+    wsLab: () => `${WEB_PREFIX}/ws-lab`,
+
     // Gacha
     gacha: () => `${WEB_PREFIX}/gacha`,
 
@@ -133,6 +136,14 @@ export const api = {
         dashboard: () => '/api/mini-orch/dashboard',
         createRun: () => '/api/mini-orch/runs',
         getRun: (runId: string) => `/api/mini-orch/runs/${runId}`,
+    },
+
+    wsLab: {
+        status:      () => '/api/ws-lab/status',
+        start:       () => '/api/ws-lab/start',
+        stop:        () => '/api/ws-lab/stop',
+        streamStart: () => '/api/ws-lab/stream/start',
+        streamStop:  () => '/api/ws-lab/stream/stop',
     },
 
     characters: {
