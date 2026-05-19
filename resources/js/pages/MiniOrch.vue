@@ -17,32 +17,15 @@ const parseError = ref('');
 const submitting = ref(false);
 const submitError = ref('');
 const runs = ref<RunEntry[]>([]);
-const dashboardHtml = ref('');
-const dashboardLoading = ref(false);
-const dashboardError = ref('');
+const iframeRef = ref<HTMLIFrameElement | null>(null);
+const iframeSrc = ref(api.miniOrch.dashboard());
 
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
-let dashboardAbort: AbortController | null = null;
 
-async function refreshDashboard() {
-    if (dashboardAbort) dashboardAbort.abort();
-    dashboardAbort = new AbortController();
-    dashboardLoading.value = true;
-    dashboardError.value = '';
-    try {
-        const res = await fetch(api.miniOrch.dashboard(), {
-            signal: dashboardAbort.signal,
-            credentials: 'include',
-        });
-        dashboardHtml.value = await res.text();
-        if (!res.ok) dashboardError.value = `HTTP ${res.status}`;
-    } catch (e: unknown) {
-        if ((e as Error).name !== 'AbortError') {
-            dashboardError.value = e instanceof Error ? e.message : 'unreachable';
-        }
-    } finally {
-        dashboardLoading.value = false;
+function refreshDashboard() {
+    if (iframeRef.value) {
+        iframeRef.value.src = api.miniOrch.dashboard();
     }
 }
 
@@ -73,7 +56,6 @@ async function submitRun() {
             submitError.value = data?.message ?? `Error ${res.status}`;
             return;
         }
-        // Accept run_id in common response shapes
         const runId: string = String(data.run_id ?? data.id ?? Object.values(data)[0] ?? '');
         runs.value.unshift({
             run_id: runId,
@@ -112,7 +94,6 @@ function statusClass(status: string) {
 }
 
 onMounted(() => {
-    refreshDashboard();
     autoRefreshTimer = setInterval(refreshDashboard, 600_000);
     pollTimer = setInterval(pollRuns, 5_000);
 });
@@ -120,7 +101,6 @@ onMounted(() => {
 onUnmounted(() => {
     if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     if (pollTimer) clearInterval(pollTimer);
-    if (dashboardAbort) dashboardAbort.abort();
 });
 </script>
 
@@ -194,23 +174,14 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <!-- Dashboard -->
-            <div class="flex-1 min-h-[480px] relative rounded-lg overflow-hidden border border-[--binary-outline-variant] mx-6">
-                <!-- Loading -->
-                <div v-if="dashboardLoading" class="absolute inset-0 flex items-center justify-center bg-[--binary-surface-low]">
-                    <span class="font-mono text-xs text-[--binary-text-muted] animate-pulse">connecting…</span>
-                </div>
-                <!-- Error -->
-                <div v-else-if="dashboardError" class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[--binary-surface-low]">
-                    <span class="font-mono text-2xl text-[--binary-tertiary]">✕</span>
-                    <p class="font-mono text-sm text-[--binary-text-muted]">{{ dashboardError }}</p>
-                    <button
-                        class="px-3 py-1.5 text-xs font-mono rounded border border-[--binary-outline] text-[--binary-text-muted] hover:text-[--binary-text] hover:border-[--binary-primary] transition-colors"
-                        @click="refreshDashboard"
-                    >↺ retry</button>
-                </div>
-                <!-- Content -->
-                <div v-else v-html="dashboardHtml" class="w-full h-full overflow-auto p-4" />
+            <!-- Dashboard iframe -->
+            <div class="flex-1 min-h-[480px] rounded-lg overflow-hidden border border-[--binary-outline-variant] mx-6">
+                <iframe
+                    ref="iframeRef"
+                    :src="iframeSrc"
+                    class="w-full h-full min-h-[480px]"
+                    frameborder="0"
+                />
             </div>
 
         </div>
@@ -226,13 +197,5 @@ onUnmounted(() => {
 .slide-down-leave-to {
     opacity: 0;
     transform: translateY(-6px);
-}
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
 }
 </style>
