@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Services\AI;
+namespace App\Services\Chat;
 
+use App\Services\AI\Gemini\GeminiService;
 use Illuminate\Support\Facades\Storage;
 
 class GeminiChatService

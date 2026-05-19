@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Services\AI;
+namespace App\Services\AI\Gemini;
 
+use App\Services\AI\AIServiceException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,12 +19,12 @@ class GeminiService
     public function __construct(?string $fixedModel = null)
     {
         $this->apiKey = (string) config('services.gemini.api_key', '');
-        $this->defaultModel = (string) config('services.gemini.model', 'gemini-2.5-flash');
-
         if ($fixedModel !== null) {
+            $this->defaultModel = $fixedModel;
             $this->models = [$fixedModel];
             $this->useRotation = false;
         } else {
+            $this->defaultModel = (string) config('services.gemini.model');
             $configured = config('services.gemini.models', []);
             $this->models = \is_array($configured)
                 ? array_values(array_filter(array_map('strval', $configured)))
@@ -41,23 +42,15 @@ class GeminiService
      * Send a generation request with a system prompt and optional message history.
      *
      * @param  array<int, array{role: string, text: string}>  $messages
+     * @param  array<string, mixed>  $generationConfig  e.g. ['responseMimeType' => 'application/json', 'responseSchema' => [...]]
      */
-    public function generate(string $systemPrompt, array $messages = []): string
+    public function generate(string $systemPrompt, array $messages = [], array $generationConfig = []): string
     {
         if ($this->apiKey === '') {
             throw new AIServiceException('GEMINI_API_KEY is not configured.');
         }
 
         $contents = [];
-
-        $contents[] = [
-            'role'  => 'user',
-            'parts' => [['text' => $systemPrompt]],
-        ];
-        $contents[] = [
-            'role'  => 'model',
-            'parts' => [['text' => '了解。']],
-        ];
 
         foreach ($messages as $turn) {
             $contents[] = [
@@ -69,15 +62,25 @@ class GeminiService
         $attempted = [];
 
         foreach ($this->models as $_unused) {
-            $model    = $this->nextModel();
+            $model = $this->nextModel();
+            $body  = [
+                'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
+                'contents'           => $contents,
+            ];
+            if ($generationConfig !== []) {
+                $body['generationConfig'] = $generationConfig;
+            }
+
             $response = Http::withQueryParameters(['key' => $this->apiKey])
                 ->acceptJson()
-                ->timeout(30)
-                ->post($this->endpointForModel($model), [
-                    'contents' => $contents,
-                ]);
+                ->timeout(90)
+                ->post($this->endpointForModel($model), $body);
 
-            Log::debug('GeminiService response', ['status' => $response->status(), 'model' => $model]);
+            Log::debug('GeminiService response', [
+                'status'   => $response->status(),
+                'model'    => $model,
+                'endpoint' => $this->endpointForModel($model),
+            ]);
 
             if ($response->ok()) {
                 return $this->extractText($response->json());
@@ -85,7 +88,7 @@ class GeminiService
 
             $attempted[] = $model . ':' . $response->status();
 
-            if (!in_array($response->status(), [404, 429], true)) {
+            if (!in_array($response->status(), [404, 429, 500, 503], true)) {
                 throw new AIServiceException('Gemini request failed: ' . $response->status() . ' (model: ' . $model . ')');
             }
         }

@@ -1,16 +1,56 @@
 <?php
 
-namespace App\Services\AI;
+namespace App\Services\Story;
+
+use App\Services\AI\Gemini\GeminiService;
 
 class GeminiStoryService
 {
     private GeminiService $storyGemini;
     private GeminiService $stateGemini;
 
+    /** generationConfig for generateSetup / refineSetup */
+    private const SETUP_SCHEMA = [
+        'responseMimeType' => 'application/json',
+        'responseSchema'   => [
+            'type'       => 'object',
+            'properties' => [
+                'world'      => ['type' => 'string'],
+                'opening'    => ['type' => 'string'],
+                'characters' => [
+                    'type'  => 'array',
+                    'items' => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'name'        => ['type' => 'string'],
+                            'persona'     => ['type' => 'string'],
+                            'secret'      => ['type' => 'string', 'nullable' => true],
+                            'is_narrator' => ['type' => 'boolean'],
+                        ],
+                        'required' => ['name', 'persona', 'is_narrator'],
+                    ],
+                ],
+                'items' => [
+                    'type'  => 'array',
+                    'items' => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'name'        => ['type' => 'string'],
+                            'description' => ['type' => 'string'],
+                            'holder'      => ['type' => 'string', 'nullable' => true],
+                        ],
+                        'required' => ['name', 'description'],
+                    ],
+                ],
+            ],
+            'required' => ['world', 'opening', 'characters', 'items'],
+        ],
+    ];
+
     public function __construct()
     {
-        $storyModel = (string) config('services.gemini.story_model', config('services.gemini.model', 'gemini-2.5-flash'));
-        $stateModel = (string) config('services.gemini.story_state_model', config('services.gemini.model', 'gemini-2.5-pro'));
+        $storyModel = (string) config('services.gemini.story_model');
+        $stateModel = (string) config('services.gemini.story_state_model');
 
         $this->storyGemini = new GeminiService($storyModel);
         $this->stateGemini = new GeminiService($stateModel);
@@ -33,7 +73,7 @@ class GeminiStoryService
         ?string $sceneDescription = null,
         bool $needsComplete = false,
     ): string {
-        $systemPrompt = $this->buildCharacterPrompt(
+        $systemPrompt = $this->buildSegmentPrompt(
             $setting,
             $worldState,
             $characterName,
@@ -52,8 +92,8 @@ class GeminiStoryService
         }
 
         $turnInstruction = $needsComplete
-            ? "現在輪到你（{$characterName}）繼續故事，請接續上面的內容寫下一段。故事即將進入尾聲，請引導情節走向自然的結局。"
-            : "現在輪到你（{$characterName}）繼續故事，請接續上面的內容寫下一段。";
+            ? "請以【{$characterName}】的視角，接續上面的內容繼續講述這個故事。故事即將進入尾聲，請引導情節走向自然的結局。"
+            : "請以【{$characterName}】的視角，接續上面的內容繼續講述這個故事。";
 
         $messages[] = ['role' => 'user', 'text' => $turnInstruction];
 
@@ -114,17 +154,16 @@ class GeminiStoryService
             '類型基調：' . $this->genreHint($genre),
             '輸出格式為 JSON，包含以下欄位：',
             '- world：世界觀描述（時代、地點、規則，100 字以內）',
-            '- characters：角色陣列，每個角色有 name、persona（個性與動機）、secret（秘密，可空）',
-            '- opening：故事起手式（交給第一個角色的開場情境，50 字以內）',
+            '- characters：視角人物陣列，每個人物有 name、persona（個性、動機、觀察世界的方式）、secret（秘密，可空）、is_narrator（布林值：true 表示故事會以此角色視角輪流敘述，false 表示此角色存在於故事中但不主動敘述，適合設為配角或反派）',
+            '- opening：故事起手式（設定初始場景與張力，50 字以內）',
             '- items：初始關鍵道具陣列，每個道具有 name、description、holder（持有者名稱或 null）',
-            '只輸出合法 JSON，不加任何說明文字。',
         ]);
 
         $messages = [
             ['role' => 'user', 'text' => "關鍵字：{$keywords}"],
         ];
 
-        return $this->storyGemini->generate($systemPrompt, $messages);
+        return $this->storyGemini->generate($systemPrompt, $messages, self::SETUP_SCHEMA);
     }
 
     /**
@@ -138,7 +177,6 @@ class GeminiStoryService
             '你是一位故事背景設計師，使用者已對你的草稿進行修改，請根據修改後的版本做最終優化。',
             '目標：補足前後矛盾、強化角色個性與世界觀的一致性、讓開場更吸引人。',
             '保留使用者的所有修改意圖，不要推翻使用者的決定，只做潤飾與補強。',
-            '只輸出合法 JSON，格式與輸入相同，不加任何說明文字。',
         ]);
 
         $notesText = $userNotes !== '' ? "\n\n使用者補充說明：{$userNotes}" : '';
@@ -152,7 +190,7 @@ class GeminiStoryService
             ],
         ];
 
-        return $this->storyGemini->generate($systemPrompt, $messages);
+        return $this->storyGemini->generate($systemPrompt, $messages, self::SETUP_SCHEMA);
     }
 
     /** @return string */
@@ -195,61 +233,7 @@ class GeminiStoryService
         return $this->storyGemini->generate($systemPrompt, $messages);
     }
 
-    /**
-     * Generate an external event to break a story deadlock.
-     *
-     * Called when N consecutive rounds show no meaningful progress.
-     * Uses the powerful state model — same LLM family as the State LLM.
-     *
-     * @param  array<int, array{name: string, description: string, holder: string|null}>  $items
-     * @param  array<int, array{character: string, content: string}>  $recentSegments
-     */
-    public function generateExternalEvent(
-        string $setting,
-        string $worldState,
-        array $items = [],
-        array $recentSegments = [],
-    ): string {
-        $systemPrompt = implode("\n\n", [
-            '你是故事世界的「命運之手」，負責在故事陷入停滯時引入外部事件，強制推進劇情。',
-            '你的事件必須：',
-            '1. 與世界觀一致，不違反世界規則',
-            '2. 讓目前的角色無法繼續迴避衝突或維持現狀',
-            '3. 控制在 100 字以內，以旁白口吻描述，不替任何角色做決定',
-            '4. 可以是自然災害、陌生人闖入、重要道具消失、突發消息等',
-            "【不可變世界規則】\n{$setting}\n【規則結束】",
-        ]);
-
-        $itemsList = empty($items)
-            ? '（目前無道具）'
-            : implode("\n", array_map(
-                fn($item) => '- ' . $item['name'] . '（' . ($item['holder'] ?? '無人持有') . '）',
-                $items,
-            ));
-
-        $recentText = empty($recentSegments)
-            ? '（無近期段落）'
-            : implode("\n\n", array_map(
-                fn($seg) => "[{$seg['character']}] {$seg['content']}",
-                $recentSegments,
-            ));
-
-        $messages = [
-            [
-                'role' => 'user',
-                'text' => implode("\n\n", [
-                    "【目前世界狀態】\n{$worldState}",
-                    "【道具清單】\n{$itemsList}",
-                    "【近期段落（故事已停滯）】\n{$recentText}",
-                    '故事已停滯，請生成一個外部事件，讓各角色不得不做出反應。',
-                ]),
-            ],
-        ];
-
-        return $this->stateGemini->generate($systemPrompt, $messages);
-    }
-
-    private function buildCharacterPrompt(
+    private function buildSegmentPrompt(
         string $setting,
         string $worldState,
         string $characterName,
@@ -274,17 +258,19 @@ class GeminiStoryService
             : null;
 
         return implode("\n\n", array_filter([
-            "你正在扮演故事中的角色「{$characterName}」。",
-            "【角色設定】\n{$characterPersona}",
+            "你是一位說書人，正在以故事角色「{$characterName}」的視角講述這個故事。",
+            "【{$characterName} 的角色設定】\n{$characterPersona}",
             "【不可變世界規則】\n{$setting}",
             "【目前世界狀態】\n{$worldState}",
             $scenePart,
             "【道具清單】\n{$itemsList}",
             implode("\n", [
-                '【規則】',
-                '- 以第一人稱或第三人稱敘述均可，保持角色個性一致',
-                '- 每次只寫 150 ～ 300 字，不要替其他角色做決定',
-                '- 可以使用、傳遞或發現道具，但不能憑空創造不合理的物品',
+                '【敘事規則】',
+                "- 以{$characterName}的視角（第一人稱或第三人稱限知皆可）書寫一段完整的故事場景",
+                '- 可以描述主角的所見、所感、心理活動，以及周圍其他角色的對話與行動',
+                '- 每段 150 ～ 300 字，讓故事自然往前推進',
+                '- 故事內時間必須從上一段結束的時間點自然延續，不可倒退或重複已發生的情節',
+                '- 道具可以被使用、傳遞或發現，但不能憑空出現不合理的物品',
                 '- 不得違反世界規則，例如在無魔法的世界施展魔法',
                 "- {$contentRule}",
             ]),

@@ -56,12 +56,14 @@ return [
     ],
 
     'gemini' => [
-        'api_key' => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
-        'models' => array_values(array_filter(array_map(
+        'api_key'           => env('GEMINI_API_KEY'),
+        'model'             => env('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
+        'models'            => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('GEMINI_CHAT_MODELS', '')),
         ))),
+        'story_model'       => env('GEMINI_STORY_MODEL', 'gemma-4-26b-a4b-it'),
+        'story_state_model' => env('GEMINI_STORY_STATE_MODEL', 'gemma-4-26b-a4b-it'),
     ],
 
     'mini_orch' => [
