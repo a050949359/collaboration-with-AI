@@ -15,11 +15,13 @@ class StoryCharacter extends Model
         'type',
         'model_config',
         'turn_order',
+        'is_narrator',
         'status',
     ];
 
     protected $casts = [
         'model_config' => 'array',
+        'is_narrator'  => 'boolean',
     ];
 
     public function session(): BelongsTo

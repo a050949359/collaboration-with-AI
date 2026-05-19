@@ -19,6 +19,7 @@ return new class extends Migration
             $table->enum('type', ['llm', 'player', 'npc'])->default('llm');                             // llm：自動推進；player：等待真人輸入；npc：被動，不佔輪次
             $table->json('model_config')->nullable();                                                    // 覆蓋預設 model 設定（temperature 等），null 使用全域設定
             $table->unsignedTinyInteger('turn_order')->default(0);                                      // 輪次順序，StoryOrchestrateJob 依此推進
+            $table->boolean('is_narrator')->default(true);                                               // true：以此角色視角敘述；false：全知旁觀敘述，角色仍參與行動
             $table->enum('status', ['active', 'unconscious', 'captured', 'dead'])->default('active');   // 非 active 時 StoryOrchestrateJob 自動跳過
             $table->timestamps();
         });

@@ -10,7 +10,7 @@ use App\Models\Story\StoryCharacter;
 use App\Models\Story\StoryItem;
 use App\Models\Story\StorySegment;
 use App\Models\Story\StorySession;
-use App\Services\AI\GeminiStoryService;
+use App\Services\Story\GeminiStoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -40,8 +40,8 @@ class StorySessionController extends Controller
             'title'                    => $request->string('title')->toString(),
             'setting'                  => $request->array('setting'),
             'world_state'              => $request->input('setting.opening', ''),
-            'advance_interval_minutes' => $request->integer('advance_interval_minutes', 120),
-            'chars_per_round'          => $request->integer('chars_per_round', 1),
+            'advance_interval_minutes' => $request->integer('advance_interval_minutes', 30),
+            'rounds_per_advance'       => $request->integer('rounds_per_advance', 1),
             'content_rating'           => $request->string('content_rating', 'general')->toString(),
         ]);
 
@@ -53,6 +53,7 @@ class StorySessionController extends Controller
                 'type'         => $char['type'] ?? 'llm',
                 'model_config' => $char['model_config'] ?? null,
                 'turn_order'   => $index,
+                'is_narrator'  => $char['is_narrator'] ?? true,
             ]);
         }
 

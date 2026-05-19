@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Story;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Story\GenerateSetupRequest;
 use App\Http\Requests\Story\RefineSetupRequest;
-use App\Services\AI\GeminiStoryService;
+use App\Services\Story\GeminiStoryService;
 use Illuminate\Http\JsonResponse;
 
 class StorySetupController extends Controller

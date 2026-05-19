@@ -29,45 +29,45 @@ class StoryOrchestrateJob implements ShouldQueue
         // Use the most recent character segment to determine starting point.
         // This handles both normal rounds and resume-after-failure correctly.
         $lastSegment  = StorySegment::where('session_id', $session->id)
-            ->whereNotNull('character_id')
+            ->whereHas('character', fn($q) => $q->where('type', 'llm')->where('is_narrator', true))
             ->orderByDesc('turn_number')
             ->with('character')
             ->first();
         $currentOrder = $lastSegment?->character?->turn_order ?? -1;
 
         // Active LLM characters after current turn_order, wrapping around
-        $after  = $session->characters()->where('status', 'active')->where('type', 'llm')
+        $after  = $session->characters()->where('status', 'active')->where('type', 'llm')->where('is_narrator', true)
             ->orderBy('turn_order')->where('turn_order', '>', $currentOrder)->get();
-        $before = $session->characters()->where('status', 'active')->where('type', 'llm')
+        $before = $session->characters()->where('status', 'active')->where('type', 'llm')->where('is_narrator', true)
             ->orderBy('turn_order')->where('turn_order', '<=', $currentOrder)->get();
 
-        $chars = $after->merge($before)->take($session->chars_per_round);
+        $narrators = $after->merge($before);
 
-        if ($chars->isEmpty()) {
+        if ($narrators->isEmpty()) {
             Log::warning("StoryOrchestrate: no active LLM characters in session {$session->id}, pausing");
             $session->update(['status' => 'paused']);
             return;
         }
 
-        $delay = $session->advance_interval_minutes * 60; // seconds
+        $delay    = $session->advance_interval_minutes * 60; // seconds
+        $rounds   = max(1, (int) $session->rounds_per_advance);
+        $jobs     = [];
+        $lastChar = null;
 
-        $jobs = [];
-
-        foreach ($chars as $i => $char) {
-            $job = new StorySegmentJob($session->id, $char->id);
-            if ($i > 0) {
-                $job->delay($delay);
+        for ($round = 0; $round < $rounds; $round++) {
+            foreach ($narrators as $char) {
+                $job = new StorySegmentJob($session->id, $char->id);
+                if (!empty($jobs)) {
+                    $job->delay($delay);
+                }
+                $jobs[]   = $job;
+                $lastChar = $char;
             }
-            $jobs[] = $job;
         }
 
-        $jobs[] = (new StoryStateJob($session->id, $chars->last()->id))->delay($delay);
+        $jobs[] = (new StoryStateJob($session->id, $lastChar->id))->delay($delay);
 
-        if ($session->needs_event) {
-            array_unshift($jobs, new StoryEventJob($session->id));
-        }
-
-        Log::info("StoryOrchestrate: session {$session->id} chain=" . count($jobs) . " jobs, chars=" . $chars->pluck('name')->implode(','));
+        Log::info("StoryOrchestrate: session {$session->id} rounds={$rounds} chain=" . \count($jobs) . " jobs, narrators=" . $narrators->pluck('name')->implode(','));
 
         Bus::chain($jobs)
             ->catch(function (\Throwable $e) use ($session) {

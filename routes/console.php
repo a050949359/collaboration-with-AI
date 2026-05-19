@@ -22,4 +22,4 @@ Schedule::call(function () {
             ]);
             StoryOrchestrateJob::dispatch($session->id);
         });
-})->everyMinute()->name('story-clock')->withoutOverlapping();
+})->hourly()->name('story-clock')->withoutOverlapping();

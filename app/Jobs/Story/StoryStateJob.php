@@ -4,7 +4,7 @@ namespace App\Jobs\Story;
 
 use App\Models\Story\StorySegment;
 use App\Models\Story\StorySession;
-use App\Services\AI\GeminiStoryService;
+use App\Services\Story\GeminiStoryService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -67,27 +67,21 @@ class StoryStateJob implements ShouldQueue
 
         $pendingScene = $this->extractLocation($newWorldState, $session->pending_scene_location);
 
-        $roundsWithoutProgress = $lastSegment->is_event ? 0 : $session->rounds_without_progress + 1;
-        $needsEvent            = $roundsWithoutProgress >= 3;
-
         // Story has reached its conclusion deadline
         $storyCompleted = $session->needs_complete
             && $session->complete_deadline_turn !== null
             && $lastSegment->turn_number >= $session->complete_deadline_turn;
 
         $session->update([
-            'world_state'             => $newWorldState,
-            'rounds_without_progress' => $needsEvent ? 0 : $roundsWithoutProgress,
-            'needs_event'             => $needsEvent,
-            'pending_scene_location'  => $pendingScene,
-            'current_character_id'    => $this->lastCharacterId,
-            'next_advance_at'         => now()->addMinutes($session->advance_interval_minutes),
-            'state_last_turn'         => $lastSegment->turn_number,
-            'status'                  => $storyCompleted ? 'completed' : $session->status,
+            'world_state'            => $newWorldState,
+            'pending_scene_location' => $pendingScene,
+            'current_character_id'   => $this->lastCharacterId,
+            'next_advance_at'        => now()->addMinutes($session->advance_interval_minutes),
+            'state_last_turn'        => $lastSegment->turn_number,
+            'status'                 => $storyCompleted ? 'completed' : $session->status,
         ]);
 
         Log::info("StoryState: session {$session->id} state updated, next advance in {$session->advance_interval_minutes}min"
-            . ($needsEvent ? ' [stall → event queued]' : '')
             . ($pendingScene ? " [new scene: {$pendingScene}]" : ''));
     }
 

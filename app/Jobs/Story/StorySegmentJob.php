@@ -6,7 +6,7 @@ use App\Models\Story\StoryCharacter;
 use App\Models\Story\StoryScene;
 use App\Models\Story\StorySegment;
 use App\Models\Story\StorySession;
-use App\Services\AI\GeminiStoryService;
+use App\Services\Story\GeminiStoryService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;

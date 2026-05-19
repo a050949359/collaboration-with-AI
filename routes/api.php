@@ -26,6 +26,7 @@ use App\Http\Controllers\Aviation\CitySearchController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
 use App\Http\Controllers\MiniOrch\MiniOrchController;
+use App\Http\Controllers\Story\CharacterController;
 use App\Http\Controllers\Story\StorySetupController;
 use App\Http\Controllers\Story\StorySessionController;
 use App\Http\Middleware\EnsureAdmin;
@@ -178,6 +179,17 @@ Route::prefix('mini-orch')->group(function () {
         Route::post('/runs',        [MiniOrchController::class, 'createRun']);
         Route::get('/runs/{runId}', [MiniOrchController::class, 'getRun']);
     });
+});
+
+Route::prefix('v1/characters')->middleware('throttle:20,1')->group(function () {
+    Route::get('/',                              [CharacterController::class, 'index']);
+    Route::post('/',                             [CharacterController::class, 'store']);
+    Route::get('/{character}',                   [CharacterController::class, 'show']);
+    Route::patch('/{character}',                 [CharacterController::class, 'update']);
+    Route::delete('/{character}',                [CharacterController::class, 'destroy']);
+    Route::post('/ai/generate',                  [CharacterController::class, 'generate']);
+    Route::post('/ai/refine',                    [CharacterController::class, 'refine']);
+    Route::post('/{character}/image-prompt',     [CharacterController::class, 'generateImagePrompt']);
 });
 
 Route::prefix('v1/story')->middleware('throttle:30,1')->group(function () {

@@ -135,6 +135,17 @@ export const api = {
         getRun: (runId: string) => `/api/mini-orch/runs/${runId}`,
     },
 
+    characters: {
+        list:              () => '/api/v1/characters',
+        create:            () => '/api/v1/characters',
+        show:              (id: number) => `/api/v1/characters/${id}`,
+        update:            (id: number) => `/api/v1/characters/${id}`,
+        destroy:           (id: number) => `/api/v1/characters/${id}`,
+        aiGenerate:        () => '/api/v1/characters/ai/generate',
+        aiRefine:          () => '/api/v1/characters/ai/refine',
+        imagePrompt:       (id: number) => `/api/v1/characters/${id}/image-prompt`,
+    },
+
     story: {
         setupGenerate: () => '/api/v1/story/setup/generate',
         setupRefine:   () => '/api/v1/story/setup/refine',

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->text('world_state')->default('');                                         // 可變世界狀態摘要（≤1500字），由 StoryStateJob 每輪更新
             $table->unsignedBigInteger('current_character_id')->nullable();                   // 目前輪到的角色，StoryStateJob 推進
             $table->unsignedSmallInteger('advance_interval_minutes')->default(120);           // 各 job 間隔（分鐘）：角色與角色、最後角色到 StateJob、StateJob 到下一輪 Orchestrate
-            $table->unsignedTinyInteger('chars_per_round')->default(1);                       // 每輪連續跑幾個角色，StoryOrchestrateJob 讀取後建角色佇列
+            $table->unsignedTinyInteger('rounds_per_advance')->default(1);                     // 每次推進跑幾輪（每輪含全部 narrator 角色），StoryOrchestrateJob 讀取後建 job chain
             $table->unsignedSmallInteger('rounds_without_progress')->default(0);             // 連續無實質推進輪數，達 3 時 StoryStateJob 設 needs_event=true
             $table->enum('status', ['active', 'paused', 'completed'])->default('paused');    // active：StoryClock 持續推進；paused/completed：跳過
             $table->enum('content_rating', ['general', 'mature'])->default('general');       // general：NSFW 輸出 [此處省略]；mature：暫留空待實作

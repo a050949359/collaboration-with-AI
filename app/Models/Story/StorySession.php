@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string           $world_state
  * @property int|null         $current_character_id
  * @property int              $advance_interval_minutes
- * @property int              $chars_per_round
+ * @property int              $rounds_per_advance
  * @property int              $rounds_without_progress
  * @property string           $status
  * @property string           $content_rating
@@ -32,7 +32,7 @@ class StorySession extends Model
         'world_state',
         'current_character_id',
         'advance_interval_minutes',
-        'chars_per_round',
+        'rounds_per_advance',
         'rounds_without_progress',
         'status',
         'content_rating',
