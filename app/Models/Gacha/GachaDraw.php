@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class GachaDraw extends Model
 {
-    protected $fillable = ['room_id', 'player_id', 'card_id'];
+    protected $fillable = ['room_id', 'player_id', 'card_id', 'result'];
+
+    protected $casts = ['result' => 'array'];
 
     public function room()
     {

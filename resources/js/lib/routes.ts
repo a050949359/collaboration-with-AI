@@ -159,6 +159,14 @@ export const api = {
         imagePrompt:       (id: number) => `/api/v1/characters/${id}/image-prompt`,
     },
 
+    gacha: {
+        rooms:  () => '/api/v1/gacha/rooms',
+        store:  () => '/api/v1/gacha/rooms',
+        destroy: (code: string) => `/api/v1/gacha/rooms/${code}`,
+        join:   (code: string) => `/api/v1/gacha/rooms/${code}/join`,
+        draw:   (code: string) => `/api/v1/gacha/rooms/${code}/draw`,
+    },
+
     story: {
         setupGenerate: () => '/api/v1/story/setup/generate',
         setupRefine:   () => '/api/v1/story/setup/refine',

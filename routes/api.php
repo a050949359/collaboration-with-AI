@@ -30,6 +30,7 @@ use App\Http\Controllers\MiniOrch\MiniOrchController;
 use App\Http\Controllers\Story\CharacterController;
 use App\Http\Controllers\Story\StorySetupController;
 use App\Http\Controllers\Story\StorySessionController;
+use App\Http\Controllers\Gacha\GachaRoomController;
 use App\Http\Middleware\EnsureAdmin;
 
 Route::post('/about/ask', [AboutController::class, 'ask'])->middleware('throttle:4,1');
@@ -215,6 +216,14 @@ Route::prefix('v1/story')->middleware('throttle:30,1')->group(function () {
     Route::get('/sessions/{session}',                    [StorySessionController::class, 'show']);
     Route::patch('/sessions/{session}/status',           [StorySessionController::class, 'updateStatus']);
     Route::post('/sessions/{session}/player-turn',       [StorySessionController::class, 'playerTurn']);
+});
+
+Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () {
+    Route::get('/',                        [GachaRoomController::class, 'index']);
+    Route::post('/',                       [GachaRoomController::class, 'store'])->middleware('auth:sanctum');
+    Route::delete('/{code}',              [GachaRoomController::class, 'destroy'])->middleware('auth:sanctum');
+    Route::post('/{code}/join',           [GachaRoomController::class, 'join']);
+    Route::post('/{code}/draw',           [GachaRoomController::class, 'draw']);
 });
 
 // Route::get('/debug-ip', fn() => response()->json([

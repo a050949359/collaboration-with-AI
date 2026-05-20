@@ -11,13 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('gacha_draws', function (Blueprint $table) {
-            $table->id();
+        Schema::create('gacha_room_cards', function (Blueprint $table) {
             $table->foreignId('room_id')->constrained('gacha_rooms')->cascadeOnDelete();
-            $table->foreignId('player_id')->constrained('gacha_players')->cascadeOnDelete();
-            $table->foreignId('card_id')->nullable()->constrained('gacha_cards')->nullOnDelete();
-            $table->json('result')->nullable()->comment('抽卡結果 {quality, code}');
-            $table->timestamps();
+            $table->foreignId('card_id')->constrained('gacha_cards')->cascadeOnDelete();
+            $table->primary(['room_id', 'card_id']);
         });
     }
 
@@ -26,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('gacha_draws');
+        Schema::dropIfExists('gacha_room_cards');
     }
 };
