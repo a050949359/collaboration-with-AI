@@ -808,7 +808,7 @@ async function drawFromApi() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ player_id: currentPlayer.value!.id }),
+            body: JSON.stringify({ player_id: currentPlayer.value!.id, is_ten_pull: isTenPull.value }),
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
