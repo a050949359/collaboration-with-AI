@@ -104,6 +104,7 @@ type Room struct {
 	roomType     RoomType
 	hostName     string
 	host         *client
+	machineState map[string]string // last machine_state from host; nil until set
 	clients      map[*client]struct{}
 	join         chan *client
 	leave        chan *client
@@ -249,6 +250,14 @@ func (r *Room) runGacha(manager *RoomManager) {
 			r.clients[c] = struct{}{}
 			r.clientCount.Add(1)
 			r.touch()
+			if r.machineState != nil {
+				if out, err := json.Marshal(r.machineState); err == nil {
+					select {
+					case c.send <- out:
+					default:
+					}
+				}
+			}
 		case c := <-r.leave:
 			delete(r.clients, c)
 			r.clientCount.Add(-1)
@@ -315,6 +324,7 @@ func (r *Room) handleGacha(msg incomingMsg) {
 		if !c.isHost {
 			return
 		}
+		r.machineState = msg.data
 		out, _ := json.Marshal(msg.data)
 		r.broadcastBytes(out)
 	}

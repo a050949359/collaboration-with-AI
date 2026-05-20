@@ -423,25 +423,25 @@
 </template>
 
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useGachaPhysics } from '@/composables/useGachaPhysics';
 import { useGachaRoom, QUALITY_TIERS } from '@/composables/useGachaRoom';
+import AppLayout from '@/layouts/AppLayout.vue';
 
 const { user } = useAuth();
-const { chamberEl, physics, runAnimation } = useGachaPhysics();
+const { chamberEl, runAnimation } = useGachaPhysics();
 const {
     mode, wsAvailable,
-    currentRoom, currentPlayer, isHost,
+    currentRoom, isHost,
     roomList, roomListLoading,
     wsStatus,
     showCreateModal, createName, openCreateModal, submitCreateModal,
     joinTarget, joinName, joinLoading, joinError, openJoinModal, submitJoinModal,
-    canDraw, isTenPull, skipAnim, drawsPerUser, drawsUsed,
+    canDraw, isTenPull, skipAnim, drawsPerUser,
     selectedQuality, tenPullQualities,
     drawHistory, broadcastLog,
-    syncing, drawLoading, extractionDots, lastResults, showModal, statusText,
-    drawsRemaining, drawsExhausted, canPressButton,
+    syncing, extractionDots, lastResults, showModal, statusText,
+    drawsRemaining, canPressButton,
     sendMachineState, leaveRoom, resetAllDraws, startSync, fetchRooms,
 } = useGachaRoom(user, runAnimation);
 
