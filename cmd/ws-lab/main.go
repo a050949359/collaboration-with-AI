@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"math/rand/v2"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -105,6 +106,7 @@ type Room struct {
 	hostName     string
 	host         *client
 	machineState map[string]string // last machine_state from host; nil until set
+	connsByIP    map[string]int    // concurrent WS connections per remote IP
 	clients      map[*client]struct{}
 	join         chan *client
 	leave        chan *client
@@ -122,6 +124,7 @@ func newRoom(id string, roomType RoomType, hostName string) *Room {
 		id:           id,
 		roomType:     roomType,
 		hostName:     hostName,
+		connsByIP:    make(map[string]int),
 		clients:      make(map[*client]struct{}),
 		join:         make(chan *client, 8),
 		leave:        make(chan *client, 8),
@@ -247,6 +250,11 @@ func (r *Room) runGacha(manager *RoomManager) {
 		case <-r.shutdown:
 			return
 		case c := <-r.join:
+			if r.connsByIP[c.remoteIP] >= 3 {
+				c.conn.Close(websocket.StatusPolicyViolation, "too many connections from your IP")
+				continue
+			}
+			r.connsByIP[c.remoteIP]++
 			r.clients[c] = struct{}{}
 			r.clientCount.Add(1)
 			r.touch()
@@ -259,8 +267,15 @@ func (r *Room) runGacha(manager *RoomManager) {
 				}
 			}
 		case c := <-r.leave:
+			if _, ok := r.clients[c]; !ok {
+				continue // was rejected on join, not tracked
+			}
 			delete(r.clients, c)
 			r.clientCount.Add(-1)
+			r.connsByIP[c.remoteIP]--
+			if r.connsByIP[c.remoteIP] <= 0 {
+				delete(r.connsByIP, c.remoteIP)
+			}
 			if r.host != nil && c == r.host {
 				out, _ := json.Marshal(map[string]string{"type": "room_closed"})
 				r.broadcastBytes(out)
@@ -432,6 +447,7 @@ type client struct {
 	userID        int
 	userName      string
 	nameAnnounced bool
+	remoteIP      string
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -449,6 +465,22 @@ func verifyToken(token string) (bool, string) {
 }
 
 // ── WebSocket handler ─────────────────────────────────────────────────────────
+
+func realIP(r *http.Request) string {
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
+		return strings.SplitN(ip, ",", 2)[0]
+	}
+	host, _, _ := net.SplitHostPort(r.RemoteAddr)
+	return host
+}
+
+const (
+	rateMsgLimit  = 20
+	rateMsgWindow = 10 * time.Second
+)
 
 func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
 	path := strings.Trim(strings.TrimPrefix(r.URL.Path, "/ws-lab"), "/")
@@ -473,8 +505,9 @@ func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := &client{
-		conn: conn,
-		send: make(chan []byte, 32),
+		conn:     conn,
+		send:     make(chan []byte, 32),
+		remoteIP: realIP(r),
 	}
 	c.lastPing.Store(time.Now().UnixNano())
 
@@ -502,10 +535,26 @@ func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
 	}()
 
 	pong, _ := json.Marshal(map[string]string{"type": "pong"})
+	var (
+		rateWindow = time.Now()
+		rateCount  = 0
+	)
 	for {
 		var msg map[string]string
 		if err := wsjson.Read(ctx, conn, &msg); err != nil {
 			break
+		}
+		if msg["type"] != "ping" {
+			now := time.Now()
+			if now.Sub(rateWindow) > rateMsgWindow {
+				rateWindow = now
+				rateCount = 0
+			}
+			rateCount++
+			if rateCount > rateMsgLimit {
+				conn.Close(websocket.StatusPolicyViolation, "rate limit exceeded")
+				break
+			}
 		}
 		switch msg["type"] {
 		case "ping":
