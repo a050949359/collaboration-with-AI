@@ -425,7 +425,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useAuth } from '@/composables/useAuth';
-import { useGachaPhysics, PHYSICS_DEFAULTS } from '@/composables/useGachaPhysics';
+import { useGachaPhysics } from '@/composables/useGachaPhysics';
 import { useGachaRoom, QUALITY_TIERS } from '@/composables/useGachaRoom';
 
 const { user } = useAuth();
