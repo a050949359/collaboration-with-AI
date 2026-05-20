@@ -3,9 +3,9 @@
         <div
             class="mx-auto max-w-7xl flex flex-col lg:flex-row gap-4 lg:gap-6 items-start justify-center px-4 pb-8 pt-24 lg:px-8"
         >
-            <!-- Left Panel: Physics Chamber -->
+            <!-- Right Panel: Physics Chamber -->
             <div
-                class="relative w-full lg:w-[310px] bg-[#151c17] rounded-2xl p-3 lg:p-5 border border-white/5 emerald-glow flex flex-col"
+                class="relative w-full lg:w-[310px] lg:order-last bg-[#151c17] rounded-2xl p-3 lg:p-5 border border-white/5 emerald-glow flex flex-col"
             >
                 <!-- Resonance Chamber -->
                 <div
@@ -211,6 +211,24 @@
                     </section>
 
                     <div v-if="isHost" class="border-t border-white/5" />
+
+                    <!-- Broadcast log -->
+                    <section>
+                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">BROADCAST</div>
+                        <div v-if="broadcastLog.length === 0" class="text-[#6bdc9f]/30 text-xs tracking-widest py-2 text-center">—</div>
+                        <div class="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                            <div
+                                v-for="(entry, i) in [...broadcastLog].reverse()"
+                                :key="i"
+                                class="flex items-baseline gap-2 text-[10px] font-mono"
+                            >
+                                <span class="text-[#6bdc9f]/25 shrink-0">{{ new Date(entry.ts).toLocaleTimeString() }}</span>
+                                <span class="text-[#6bdc9f]/70">{{ entry.text }}</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="border-t border-white/5" />
 
                     <!-- Draw history -->
                     <section>
@@ -422,6 +440,7 @@ const currentRoom     = ref<RoomListItem | null>(null);
 const currentPlayer   = ref<{ id: number; name: string } | null>(null);
 const isHost          = ref(false);
 const drawHistory     = ref<DrawEvent[]>([]);
+const broadcastLog    = ref<{ text: string; ts: number }[]>([]);
 
 // ── WebSocket ──────────────────────────────────────────────────────────────
 const wsStatus  = ref<'offline'|'connecting'|'connected'>('offline');
@@ -504,19 +523,34 @@ function connectWs(roomCode: string) {
     ws.onerror = () => ws?.close();
 }
 
+function pushLog(text: string) {
+    broadcastLog.value.push({ text, ts: Date.now() });
+    if (broadcastLog.value.length > 100) broadcastLog.value.shift();
+}
+
 function handleWsMessage(msg: Record<string, any>) {
     switch (msg.type) {
-        case 'machine_state':
+        case 'machine_state': {
             canDraw.value      = msg.can_draw === 'true';
             isTenPull.value    = msg.is_ten_pull === 'true';
             skipAnim.value     = msg.skip_anim === 'true';
             drawsPerUser.value = parseInt(msg.draws_per_user ?? '0');
+            const flags = [
+                canDraw.value ? '抽卡開放' : '抽卡鎖定',
+                isTenPull.value ? '10連抽' : '單抽',
+                skipAnim.value ? 'SKIP ANIM' : null,
+                drawsPerUser.value > 0 ? `上限 ${drawsPerUser.value} 次` : null,
+            ].filter(Boolean).join(' · ');
+            pushLog(`⚙ 機台設定更新：${flags}`);
             break;
+        }
         case 'draw_result':
             drawHistory.value.push({ player: msg.player, results: msg.results, ts: msg.ts });
             if (drawHistory.value.length > 50) drawHistory.value.shift();
+            pushLog(`🎰 ${msg.player} 抽了 ${msg.results?.length ?? 1} 張`);
             break;
         case 'room_closed':
+            pushLog('⚠ 房間已關閉');
             disconnectWs();
             currentRoom.value = currentPlayer.value = null;
             isHost.value = false;
@@ -524,6 +558,7 @@ function handleWsMessage(msg: Record<string, any>) {
             fetchRooms();
             break;
         case 'server_shutdown':
+            pushLog('⚠ 伺服器關閉');
             disconnectWs();
             currentRoom.value = currentPlayer.value = null;
             isHost.value = false;
@@ -576,6 +611,8 @@ async function createRoom() {
     isHost.value  = true;
     drawsUsed.value = 0;
     drawHistory.value = [];
+    broadcastLog.value = [];
+    pushLog(`✓ 已建立房間 ${data.room.code}`);
     mode.value = 'in-room';
     connectWs(data.room.code);
 }
@@ -620,6 +657,8 @@ async function doJoin(room: RoomListItem, name: string) {
         canDraw.value   = room.can_draw;
         isTenPull.value = room.is_ten_pull;
         drawHistory.value = [];
+        broadcastLog.value = [];
+        pushLog(`✓ 已加入房間 ${room.code}`);
         mode.value = 'in-room';
         connectWs(room.code);
     } finally {
