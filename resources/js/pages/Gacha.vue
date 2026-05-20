@@ -124,7 +124,6 @@
                                 <div class="text-[10px] tracking-widest text-[#6bdc9f]/40 mt-0.5 flex gap-3">
                                     <span>{{ room.code }}</span>
                                     <span>{{ room.players_count }}/{{ room.max_players }}</span>
-                                    <span v-if="!room.can_draw" class="text-red-400/60">LOCKED</span>
                                 </div>
                             </div>
                             <button
@@ -438,7 +437,7 @@ interface QualityTier { code: string; name: string; color: string }
 interface DrawResult { quality: QualityTier; code: string }
 interface RoomListItem {
     id: number; code: string; room_name: string; status: string;
-    players_count: number; max_players: number; can_draw: boolean; is_ten_pull: boolean;
+    players_count: number; max_players: number;
 }
 type DrawEvent = { player: string; results: DrawResult[]; ts: string };
 type PhysicsKey = 'gravity'|'count'|'bounce'|'friction'|'agitationStrength'|'resonanceMs'|'lockMs';
@@ -717,8 +716,6 @@ async function doJoin(room: RoomListItem, name: string) {
         currentPlayer.value = { id: data.player_id, name };
         isHost.value    = false;
         drawsUsed.value = 0;
-        canDraw.value   = room.can_draw;
-        isTenPull.value = room.is_ten_pull;
         drawHistory.value = [];
         broadcastLog.value = [];
         pushLog(`✓ 已加入房間 ${room.code}`);
@@ -808,7 +805,12 @@ async function drawFromApi() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ player_id: currentPlayer.value!.id, is_ten_pull: isTenPull.value }),
+            body: JSON.stringify({
+                player_id:      currentPlayer.value!.id,
+                is_ten_pull:    isTenPull.value,
+                can_draw:       canDraw.value,
+                draws_per_user: drawsPerUser.value,
+            }),
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));

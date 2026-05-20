@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emerald Terminal - Gacha Export (v3 - High-Fidelity)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Space Grotesk', sans-serif; background-color: #0f1511; color: #dee4dd; margin: 0; overflow: hidden; }
+        .emerald-glow { box-shadow: 0 0 30px rgba(107, 220, 159, 0.15); }
+        .btn-gradient { background: linear-gradient(145deg, #6bdc9f 0%, #2ca46d 100%); }
+        .tune-slider { accent-color: #6bdc9f; }
+        @keyframes bounce-in {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            70% { transform: scale(0.9); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-bounce-in { animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .glass-panel { background: rgba(28, 37, 31, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(107, 220, 159, 0.2); }
+        .gradient-text {
+            background: linear-gradient(to bottom, #d4af37 0%, #b84a2a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+        }
+        .quality-slot-select {
+            background: rgba(15, 21, 17, 0.95);
+            border: 1px solid rgba(47, 71, 57, 1);
+            color: #6bdc9f;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 lg:p-8">
+
+    <div class="mx-auto max-w-7xl h-[calc(100vh-2rem)] lg:h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch justify-center">
+
+    <div class="relative w-full lg:w-[620px] bg-[#151c17] rounded-3xl p-6 lg:p-10 border border-white/5 emerald-glow">
+        <!-- Resonance Chamber -->
+        <div id="chamber" class="relative w-full h-72 bg-[#0a100c] rounded-2xl border-2 border-[#343b36] overflow-hidden mb-10 shadow-inner"></div>
+
+        <!-- Controls -->
+        <div class="flex flex-col items-center gap-8">
+            <button id="sync-btn" class="group relative w-36 h-36 rounded-full bg-[#1c251f] border-4 border-[#343b36] flex items-center justify-center transition-all active:scale-90 hover:border-[#6bdc9f]/50">
+                <div id="knob-line" class="w-2 h-20 bg-[#6bdc9f] rounded-full transition-transform duration-700 ease-in-out"></div>
+                <div class="absolute inset-0 rounded-full bg-[#6bdc9f]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </button>
+        </div>
+
+        <!-- Extraction Slot -->
+        <div id="extraction-port" class="mt-14 mb-8 grid grid-cols-5 gap-3 min-h-[96px] p-6 bg-black/30 rounded-2xl border border-white/5">
+            <!-- Entities will eject here -->
+        </div>
+
+        <div class="text-center w-full">
+            <h2 id="status-text" class="text-[#6bdc9f] font-bold tracking-[0.3em] uppercase mb-4 text-sm">System Ready</h2>
+            <div class="flex gap-6 justify-center text-[10px] tracking-widest text-[#6bdc9f]/60 font-medium">
+                <label class="flex items-center gap-2 cursor-pointer hover:text-[#6bdc9f] transition-colors">
+                    <input type="checkbox" id="sync-mode" class="accent-[#6bdc9f] w-3 h-3"> 10-SYNC MODE
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-[#6bdc9f] transition-colors">
+                    <input type="checkbox" id="skip-anim" class="accent-[#6bdc9f] w-3 h-3"> SKIP ANIMATION
+                </label>
+            </div>
+            <button id="reopen-result-btn" class="mt-4 px-4 py-2 rounded-xl bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-[10px] tracking-[0.2em] font-bold transition-colors enabled:hover:bg-[#233328] disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                再次顯示結果
+            </button>
+        </div>
+    </div>
+
+    <aside class="w-full lg:w-[360px] bg-[#131a15] rounded-3xl border border-white/5 p-5 lg:p-6 emerald-glow overflow-auto">
+        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">共振調校面板</div>
+        <h3 class="text-xl text-white font-semibold tracking-tight mb-5">物理參數控制</h3>
+
+        <div class="space-y-4 text-sm">
+            <label class="block">
+                <div class="flex justify-between mb-1 text-[#6bdc9f]/80"><span>重力</span><span id="gravity-val">1.20</span></div>
+                <input id="gravity-slider" class="tune-slider w-full" type="range" min="0.20" max="2.00" step="0.01" value="1.20">
+            </label>
+
+            <label class="block">
+                <div class="flex justify-between mb-1 text-[#6bdc9f]/80"><span>球數</span><span id="count-val">25</span></div>
+                <input id="count-slider" class="tune-slider w-full" type="range" min="1" max="60" step="1" value="25">
+            </label>
+
+            <label class="block">
+                <div class="flex justify-between mb-1 text-[#6bdc9f]/80"><span>彈性</span><span id="bounce-val">0.90</span></div>
+                <input id="bounce-slider" class="tune-slider w-full" type="range" min="0.10" max="1.00" step="0.01" value="0.90">
+            </label>
+
+            <label class="block">
+                <div class="flex justify-between mb-1 text-[#6bdc9f]/80"><span>空氣阻尼</span><span id="friction-val">0.025</span></div>
+                <input id="friction-slider" class="tune-slider w-full" type="range" min="0.001" max="0.100" step="0.001" value="0.025">
+            </label>
+
+            <label class="block">
+                <div class="flex justify-between mb-1 text-[#6bdc9f]/80"><span>震盪強度</span><span id="agitation-val">0.0080</span></div>
+                <input id="agitation-slider" class="tune-slider w-full" type="range" min="0.0010" max="0.0500" step="0.0005" value="0.0080">
+            </label>
+
+            <label class="block">
+                <div class="flex justify-between mb-1 text-[#6bdc9f]/80"><span>共振時間 (ms)</span><span id="resonance-ms-val">3000</span></div>
+                <input id="resonance-ms-slider" class="tune-slider w-full" type="range" min="500" max="6000" step="100" value="3000">
+            </label>
+
+            <label class="block">
+                <div class="flex justify-between mb-1 text-[#6bdc9f]/80"><span>鎖定時間 (ms)</span><span id="lock-ms-val">2000</span></div>
+                <input id="lock-ms-slider" class="tune-slider w-full" type="range" min="200" max="5000" step="100" value="2000">
+            </label>
+
+            <label class="block">
+                <div class="flex justify-between mb-1 text-[#6bdc9f]/80"><span>指定結果品質</span></div>
+                <select id="result-quality" class="w-full rounded-lg bg-[#0f1511] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-wider px-3 py-2">
+                    <option value="STABLE">STABLE</option>
+                    <option value="SYNCED">SYNCED</option>
+                    <option value="OVERLOAD">OVERLOAD</option>
+                    <option value="RESONANT">RESONANT</option>
+                    <option value="SINGULARITY">SINGULARITY</option>
+                </select>
+            </label>
+
+            <div id="ten-pull-quality-panel" class="hidden">
+                <div class="flex justify-between mb-2 text-[#6bdc9f]/80 text-xs tracking-wider">
+                    <span>10 連抽各格品質</span>
+                </div>
+                <div id="ten-pull-quality-grid" class="grid grid-cols-2 gap-2"></div>
+            </div>
+        </div>
+
+        <button id="reset-physics" class="mt-6 w-full py-3 rounded-xl bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#233328] transition-colors">
+            重設為預設值
+        </button>
+
+
+    </aside>
+    </div>
+
+    <!-- Result Overlay -->
+    <div id="result-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div class="glass-panel p-8 rounded-3xl max-w-md w-full text-center shadow-2xl">
+            <div class="text-[10px] tracking-[0.4em] text-[#6bdc9f]/50 mb-2 font-bold">DECODING COMPLETE</div>
+            <h3 class="text-white text-2xl font-medium mb-6 tracking-tight">ENTITY_DATA_RECOVERED</h3>
+            <div id="modal-content" class="grid grid-cols-2 gap-3 mb-8"></div>
+            <button onclick="closeModal()" class="w-full py-4 btn-gradient text-[#0f1511] font-bold rounded-xl hover:brightness-110 transition-all uppercase tracking-widest text-xs">Acknowledge</button>
+        </div>
+    </div>
+
+    <script>
+        const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+        let engine, render, runner, agitationEvent;
+        
+        // Single source of truth for initial values and slider ranges.
+        const SETTINGS = {
+            defaults: {
+                gravity: 1.2,
+                bounce: 0.9,
+                friction: 0.025,
+                count: 25,
+                agitationStrength: 0.035,
+                resonanceMs: 3000,
+                lockMs: 2000
+            },
+            ranges: {
+                gravity: { min: 0.2, max: 2.0, step: 0.01 },
+                count: { min: 1, max: 60, step: 1 },
+                bounce: { min: 0.1, max: 1.0, step: 0.01 },
+                friction: { min: 0.001, max: 0.1, step: 0.001 },
+                agitationStrength: { min: 0.001, max: 0.05, step: 0.0005 },
+                resonanceMs: { min: 500, max: 6000, step: 100 },
+                lockMs: { min: 200, max: 5000, step: 100 }
+            }
+        };
+
+        const CONTROL_DEFS = [
+            { slider: 'gravity-slider', label: 'gravity-val', key: 'gravity', digits: 2 },
+            { slider: 'count-slider', label: 'count-val', key: 'count', digits: 0 },
+            { slider: 'bounce-slider', label: 'bounce-val', key: 'bounce', digits: 2 },
+            { slider: 'friction-slider', label: 'friction-val', key: 'friction', digits: 3 },
+            { slider: 'agitation-slider', label: 'agitation-val', key: 'agitationStrength', digits: 4 },
+            { slider: 'resonance-ms-slider', label: 'resonance-ms-val', key: 'resonanceMs', digits: 0 },
+            { slider: 'lock-ms-slider', label: 'lock-ms-val', key: 'lockMs', digits: 0 }
+        ];
+
+        const QUALITY_TIERS = [
+            { code: 'STABLE_ENTITY', name: 'STABLE', color: '#6bdc9f' },
+            { code: 'SYNCED_ENTITY', name: 'SYNCED', color: '#a5d1b4' },
+            { code: 'OVERLOAD_ENTITY', name: 'OVERLOAD', color: '#00f2ff' },
+            { code: 'RESONANT_ENTITY', name: 'RESONANT', color: '#a855f7' },
+            { code: 'SINGULARITY_ENTITY', name: 'SINGULARITY', color: '#ffb3b2' }
+        ];
+
+        let selectedQuality = 'STABLE';
+        let tenPullSelectedQualities = Array(10).fill('STABLE');
+    let lastResults = [];
+
+        const PHYSICS = { ...SETTINGS.defaults };
+        const DEFAULT_PHYSICS = { ...SETTINGS.defaults };
+
+        function initializeControlsFromSettings() {
+            CONTROL_DEFS.forEach(({ slider, label, key, digits }) => {
+                const sliderEl = document.getElementById(slider);
+                const labelEl = document.getElementById(label);
+                const range = SETTINGS.ranges[key];
+                const defaultValue = SETTINGS.defaults[key];
+
+                if (range) {
+                    sliderEl.min = range.min;
+                    sliderEl.max = range.max;
+                    sliderEl.step = range.step;
+                }
+
+                sliderEl.value = String(defaultValue);
+                labelEl.innerText = Number(defaultValue).toFixed(digits);
+            });
+        }
+
+        function createBalls(count) {
+            const container = document.getElementById('chamber');
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+
+            for (let i = 0; i < count; i++) {
+                const color = '#6bdc9f';
+                const ball = Bodies.circle(
+                    Math.random() * (cw - 40) + 20,
+                    Math.random() * (ch - 40) + 20,
+                    14,
+                    {
+                        restitution: PHYSICS.bounce,
+                        frictionAir: PHYSICS.friction,
+                        render: {
+                            fillStyle: color,
+                            strokeStyle: '#ffffff22',
+                            lineWidth: 2
+                        }
+                    }
+                );
+                Composite.add(engine.world, ball);
+            }
+        }
+
+        function rebuildBalls() {
+            const dynamicBodies = Composite.allBodies(engine.world).filter(body => !body.isStatic);
+            if (dynamicBodies.length > 0) {
+                Composite.remove(engine.world, dynamicBodies);
+            }
+            createBalls(PHYSICS.count);
+        }
+
+        function initPhysics() {
+            const container = document.getElementById('chamber');
+            engine = Engine.create();
+            engine.gravity.y = PHYSICS.gravity;
+            
+            render = Render.create({
+                element: container,
+                engine: engine,
+                options: { 
+                    width: container.clientWidth, 
+                    height: container.clientHeight, 
+                    wireframes: false, 
+                    background: 'transparent' 
+                }
+            });
+
+            const wallOptions = { isStatic: true, render: { visible: false } };
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+
+            // Extra thick walls to prevent tunneling
+            Composite.add(engine.world, [
+                Bodies.rectangle(cw/2, -1000, 4000, 2000, wallOptions), // Top
+                Bodies.rectangle(cw/2, ch + 1000, 4000, 2000, wallOptions), // Bottom
+                Bodies.rectangle(-1000, ch/2, 2000, 4000, wallOptions), // Left
+                Bodies.rectangle(cw + 1000, ch/2, 2000, 4000, wallOptions) // Right
+            ]);
+
+            createBalls(PHYSICS.count);
+
+            Render.run(render);
+            runner = Runner.create();
+            Runner.run(runner, engine);
+        }
+
+        // Optimized Agitation Logic (Continuous frame-by-frame force)
+        function applyHighFidelityAgitation() {
+            const bodies = Composite.allBodies(engine.world);
+            bodies.forEach(body => {
+                if (!body.isStatic) {
+                    // Apply randomized multidirectional pulses to match the 'jittery' but controlled feel
+                    Body.applyForce(body, body.position, {
+                        x: (Math.random() - 0.5) * PHYSICS.agitationStrength,
+                        y: (Math.random() - 0.5) * PHYSICS.agitationStrength
+                    });
+                }
+            });
+        }
+
+        async function startSync() {
+            const btn = document.getElementById('sync-btn');
+            const status = document.getElementById('status-text');
+            if (btn.disabled) return;
+            
+            btn.disabled = true;
+            document.getElementById('knob-line').style.transform = 'rotate(180deg)';
+            document.getElementById('extraction-port').innerHTML = '';
+
+            if (document.getElementById('skip-anim').checked) {
+                showResults();
+                return;
+            }
+
+            // Phase 1: High-Intensity Resonance (3s)
+            status.innerText = "Active Resonance...";
+            agitationEvent = () => applyHighFidelityAgitation();
+            Events.on(engine, 'afterUpdate', agitationEvent);
+            
+            await new Promise(r => setTimeout(r, PHYSICS.resonanceMs));
+            Events.off(engine, 'afterUpdate', agitationEvent);
+
+            // Phase 2: Suspense Lock (2s)
+            status.innerText = "Vector Locked...";
+            await new Promise(r => setTimeout(r, PHYSICS.lockMs));
+
+            // Phase 3: Ejection
+            status.innerText = "Ejecting...";
+            showResults();
+        }
+
+        function renderResultCard(result, index) {
+            if (result.quality.name !== 'SINGULARITY') {
+                return `
+                    <div class="bg-black/40 p-4 rounded-xl border border-white/5 text-left">
+                        <div class="text-[8px] tracking-widest font-bold mb-1" style="color: ${result.quality.color}aa">${result.quality.code}</div>
+                        <div class="font-bold text-sm" style="color: ${result.quality.color}">${result.code}</div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="bg-black/40 p-4 rounded-xl border border-[#d4af3755] text-left min-h-[88px]">
+                    <div class="text-[8px] tracking-widest mb-1 gradient-text">${result.quality.code}</div>
+                    <div class="text-sm gradient-text">${result.code}</div>
+                </div>
+            `;
+        }
+
+        function getQualityOptionsMarkup(selectedValue) {
+            return QUALITY_TIERS.map((tier) => `
+                <option value="${tier.name}"${tier.name === selectedValue ? ' selected' : ''}>${tier.name}</option>
+            `).join('');
+        }
+
+        function renderTenPullQualitySelectors() {
+            const grid = document.getElementById('ten-pull-quality-grid');
+            grid.innerHTML = tenPullSelectedQualities.map((quality, index) => `
+                <label class="block text-[10px] tracking-wider text-[#6bdc9f]/75">
+                    <div class="mb-1">第 ${index + 1} 格</div>
+                    <select data-slot-index="${index}" class="quality-slot-select w-full rounded-lg px-2 py-2 text-[10px]">
+                        ${getQualityOptionsMarkup(quality)}
+                    </select>
+                </label>
+            `).join('');
+
+            grid.querySelectorAll('select').forEach((selectEl) => {
+                selectEl.addEventListener('change', () => {
+                    const slotIndex = Number.parseInt(selectEl.dataset.slotIndex, 10);
+                    tenPullSelectedQualities[slotIndex] = selectEl.value;
+                });
+            });
+        }
+
+        function updateTenPullQualityPanelVisibility() {
+            const isTenPull = document.getElementById('sync-mode').checked;
+            document.getElementById('ten-pull-quality-panel').classList.toggle('hidden', !isTenPull);
+        }
+
+        function presentResults(results) {
+            document.getElementById('result-modal').classList.remove('hidden');
+            document.getElementById('result-modal').classList.add('flex');
+            document.getElementById('modal-content').innerHTML = results.map((result, index) => renderResultCard(result, index)).join('');
+            document.getElementById('reopen-result-btn').disabled = results.length === 0;
+        }
+
+        function showResults() {
+            const count = document.getElementById('sync-mode').checked ? 10 : 1;
+            const port = document.getElementById('extraction-port');
+
+            const results = Array.from({ length: count }, (_, index) => {
+                const qualityName = count === 10 ? tenPullSelectedQualities[index] : selectedQuality;
+                const tier = QUALITY_TIERS.find(q => q.name === qualityName) || QUALITY_TIERS[0];
+                return {
+                    quality: tier,
+                    code: `V-SYNC_${Math.floor(Math.random() * 9000) + 1000}`
+                };
+            });
+            lastResults = results;
+            
+            for(let i=0; i<count; i++) {
+                const result = results[i];
+                const s = document.createElement('div');
+                s.className = "w-10 h-10 rounded-full emerald-glow animate-bounce-in mx-auto border-2 border-white/10";
+                s.style.backgroundColor = result.quality.color;
+                port.appendChild(s);
+            }
+
+            setTimeout(() => {
+                presentResults(results);
+                document.getElementById('sync-btn').disabled = false;
+                document.getElementById('knob-line').style.transform = 'rotate(0deg)';
+                document.getElementById('status-text').innerText = "System Ready";
+            }, 600);
+        }
+
+        function closeModal() { 
+            document.getElementById('result-modal').classList.add('hidden');
+            document.getElementById('result-modal').classList.remove('flex');
+        }
+
+        function updateAllBallPhysics() {
+            const bodies = Composite.allBodies(engine.world);
+            bodies.forEach(body => {
+                if (!body.isStatic) {
+                    body.restitution = PHYSICS.bounce;
+                    body.frictionAir = PHYSICS.friction;
+                }
+            });
+        }
+
+        function bindPhysicsPanel() {
+            initializeControlsFromSettings();
+
+            CONTROL_DEFS.forEach(({ slider, label, key, digits }) => {
+                const sliderEl = document.getElementById(slider);
+                const labelEl = document.getElementById(label);
+
+                const applyValue = () => {
+                    const value = key === 'count' ? Number.parseInt(sliderEl.value, 10) : Number(sliderEl.value);
+                    PHYSICS[key] = value;
+                    labelEl.innerText = value.toFixed(digits);
+
+                    if (!engine) return;
+                    if (key === 'gravity') {
+                        engine.gravity.y = PHYSICS.gravity;
+                    }
+                    if (key === 'bounce' || key === 'friction') {
+                        updateAllBallPhysics();
+                    }
+                    if (key === 'count') {
+                        rebuildBalls();
+                    }
+                };
+
+                sliderEl.addEventListener('input', applyValue);
+                applyValue();
+            });
+
+            document.getElementById('reset-physics').addEventListener('click', () => {
+                CONTROL_DEFS.forEach(({ slider, key }) => {
+                    const sliderEl = document.getElementById(slider);
+                    sliderEl.value = DEFAULT_PHYSICS[key];
+                    sliderEl.dispatchEvent(new Event('input'));
+                });
+            });
+
+            const resultQualitySelect = document.getElementById('result-quality');
+            selectedQuality = resultQualitySelect.value;
+            resultQualitySelect.addEventListener('change', () => {
+                selectedQuality = resultQualitySelect.value;
+            });
+
+            renderTenPullQualitySelectors();
+            updateTenPullQualityPanelVisibility();
+            document.getElementById('sync-mode').addEventListener('change', updateTenPullQualityPanelVisibility);
+            document.getElementById('reopen-result-btn').addEventListener('click', () => {
+                if (lastResults.length === 0) return;
+                presentResults(lastResults);
+            });
+        }
+
+        document.getElementById('sync-btn').addEventListener('click', startSync);
+        window.addEventListener('load', () => {
+            initPhysics();
+            bindPhysicsPanel();
+        });
+    </script>
+</body>
+</html>

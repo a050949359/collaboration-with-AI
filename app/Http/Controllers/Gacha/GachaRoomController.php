@@ -20,7 +20,7 @@ class GachaRoomController extends Controller
     {
         $rooms = GachaRoom::where('status', '!=', 'finished')
             ->withCount('players')
-            ->get(['id', 'code', 'room_name', 'status', 'max_players', 'can_draw', 'is_ten_pull']);
+            ->get(['id', 'code', 'room_name', 'status', 'max_players']);
 
         try {
             $res = Http::timeout(2)->get("http://{$this->mgmtAddr}/rooms");
@@ -120,25 +120,30 @@ class GachaRoomController extends Controller
     // POST /api/v1/gacha/rooms/{code}/draw
     public function draw(Request $request, string $code): JsonResponse
     {
-        $request->validate(['player_id' => 'required|integer', 'is_ten_pull' => 'boolean']);
+        $request->validate([
+            'player_id'      => 'required|integer',
+            'is_ten_pull'    => 'boolean',
+            'can_draw'       => 'boolean',
+            'draws_per_user' => 'integer|min:0',
+        ]);
+
+        if (!$request->boolean('can_draw', true)) {
+            return response()->json(['message' => 'draws not open'], 403);
+        }
 
         $room = GachaRoom::where('code', $code)
             ->where('status', '!=', 'finished')
             ->firstOrFail();
 
-        if (!$room->can_draw) {
-            return response()->json(['message' => 'draws not open'], 403);
-        }
-
         $player = GachaPlayer::where('id', $request->player_id)
             ->where('room_id', $room->id)
             ->firstOrFail();
 
-        if (!$player->hasDrawsRemaining()) {
+        if (!$player->hasDrawsRemaining($request->integer('draws_per_user', 0))) {
             return response()->json(['message' => 'draws exhausted'], 403);
         }
 
-        $count   = $request->boolean('is_ten_pull', $room->is_ten_pull) ? 10 : 1;
+        $count   = $request->boolean('is_ten_pull') ? 10 : 1;
         $results = $this->generateResults($count);
 
         foreach ($results as $result) {

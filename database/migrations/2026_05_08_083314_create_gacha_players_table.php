@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('room_id')->constrained('gacha_rooms')->cascadeOnDelete();
             $table->string('name')->comment('暱稱');
-            $table->string('avatar')->nullable()->comment('頭像識別碼');
             $table->boolean('is_host')->default(false);
             $table->unsignedTinyInteger('level')->default(1)->comment('玩家等級');
             $table->unsignedSmallInteger('draws_used')->default(0)->comment('已抽次數');

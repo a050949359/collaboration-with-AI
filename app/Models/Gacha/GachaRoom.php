@@ -8,13 +8,7 @@ class GachaRoom extends Model
 {
     protected $fillable = [
         'code', 'room_name', 'status', 'max_players', 'min_level',
-        'type', 'owner_id', 'draws_per_user', 'can_draw', 'skip_anim', 'is_ten_pull',
-    ];
-
-    protected $casts = [
-        'can_draw'     => 'boolean',
-        'skip_anim'    => 'boolean',
-        'is_ten_pull'  => 'boolean',
+        'type', 'owner_id',
     ];
 
     public function players()
