@@ -32,3 +32,5 @@ check_results.txt
 /storage/app/ws-lab
 /storage/app/ws-lab.pid
 /cmd/ws-lab/go.sum
+/cmd/ws-lab/ws-lab
+/tmp/
