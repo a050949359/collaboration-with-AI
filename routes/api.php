@@ -224,6 +224,7 @@ Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () 
     Route::delete('/{code}',              [GachaRoomController::class, 'destroy'])->middleware('auth:sanctum');
     Route::post('/{code}/join',           [GachaRoomController::class, 'join']);
     Route::post('/{code}/draw',           [GachaRoomController::class, 'draw']);
+    Route::post('/{code}/reset-draws',   [GachaRoomController::class, 'resetDraws'])->middleware('auth:sanctum');
 });
 
 // Route::get('/debug-ip', fn() => response()->json([

@@ -161,6 +161,26 @@ class GachaRoomController extends Controller
         return response()->json(['results' => $results]);
     }
 
+    // POST /api/v1/gacha/rooms/{code}/reset-draws
+    public function resetDraws(string $code): JsonResponse
+    {
+        $room = GachaRoom::where('code', $code)->firstOrFail();
+
+        if ($room->owner_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $room->players()->update(['draws_used' => 0]);
+
+        try {
+            Http::timeout(3)->post("http://{$this->mgmtAddr}/rooms/{$code}/broadcast", [
+                'type' => 'draws_reset',
+            ]);
+        } catch (\Throwable) {}
+
+        return response()->json(['ok' => true]);
+    }
+
     private function generateResults(int $count): array
     {
         $tiers = [

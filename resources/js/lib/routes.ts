@@ -160,11 +160,12 @@ export const api = {
     },
 
     gacha: {
-        rooms:  () => '/api/v1/gacha/rooms',
-        store:  () => '/api/v1/gacha/rooms',
-        destroy: (code: string) => `/api/v1/gacha/rooms/${code}`,
-        join:   (code: string) => `/api/v1/gacha/rooms/${code}/join`,
-        draw:   (code: string) => `/api/v1/gacha/rooms/${code}/draw`,
+        rooms:       () => '/api/v1/gacha/rooms',
+        store:       () => '/api/v1/gacha/rooms',
+        destroy:     (code: string) => `/api/v1/gacha/rooms/${code}`,
+        join:        (code: string) => `/api/v1/gacha/rooms/${code}/join`,
+        draw:        (code: string) => `/api/v1/gacha/rooms/${code}/draw`,
+        resetDraws:  (code: string) => `/api/v1/gacha/rooms/${code}/reset-draws`,
     },
 
     story: {

@@ -202,9 +202,9 @@
                         </div>
 
                         <button
-                            v-show="canDraw"
-                            class="mt-4 w-full py-2.5 rounded-xl bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#233328] transition-colors"
-                            @click="drawsUsed = 0"
+                            v-show="drawsPerUser > 0"
+                            class="mt-4 w-full py-2.5 rounded-xl bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#233328] transition-colors disabled:opacity-40"
+                            @click="resetAllDraws"
                         >
                             重置所有人抽卡次數
                         </button>
@@ -553,10 +553,23 @@ function handleWsMessage(msg: Record<string, any>) {
         case 'player_left':
             pushLog(`← ${msg.name} 離開房間`);
             break;
-        case 'draw_result':
-            drawHistory.value.push({ player: msg.player, results: msg.results, ts: msg.ts });
+        case 'draw_result': {
+            const results: DrawResult[] = msg.results ?? [];
+            drawHistory.value.push({ player: msg.player, results, ts: msg.ts });
             if (drawHistory.value.length > 50) drawHistory.value.shift();
-            pushLog(`🎰 ${msg.player} 抽了 ${msg.results?.length ?? 1} 張`);
+            pushLog(`🎰 ${msg.player} 抽了 ${results.length} 張`);
+            if (drawResultWaiter) {
+                drawsUsed.value += isTenPull.value ? 10 : 1;
+                drawResultWaiter(results);
+                drawResultWaiter = null;
+            } else {
+                triggerRemoteAnimation(results);
+            }
+            break;
+        }
+        case 'draws_reset':
+            drawsUsed.value = 0;
+            pushLog('↺ 抽卡次數已重置');
             break;
         case 'room_closed':
             pushLog('⚠ 房間已關閉');
@@ -686,28 +699,52 @@ async function leaveRoom() {
     fetchRooms();
 }
 
+async function resetAllDraws() {
+    if (!currentRoom.value) return;
+    const res = await fetch(api.gacha.resetDraws(currentRoom.value.code), {
+        method: 'POST', credentials: 'include',
+    });
+    if (!res.ok) pushLog('⚠ 重置失敗');
+}
+
 // ── Draw ───────────────────────────────────────────────────────────────────
+let drawResultWaiter: ((r: DrawResult[]) => void) | null = null;
+
+async function runAnimation() {
+    statusText.value = 'Active Resonance...';
+    agitationHandler = applyAgitation;
+    Events.on(engine, 'afterUpdate', agitationHandler);
+    await delay(physics.resonanceMs);
+    Events.off(engine, 'afterUpdate', agitationHandler);
+    agitationHandler = null;
+    statusText.value = 'Vector Locked...';
+    await delay(physics.lockMs);
+    statusText.value = 'Ejecting...';
+}
+
+async function triggerRemoteAnimation(results: DrawResult[]) {
+    if (syncing.value) return;
+    syncing.value = true;
+    extractionDots.value = [];
+    if (!skipAnim.value) await runAnimation();
+    showResults(results);
+}
+
 async function startSync() {
     if (!canPressButton.value) return;
     syncing.value = true;
     extractionDots.value = [];
 
-    if (!skipAnim.value) {
-        statusText.value = 'Active Resonance...';
-        agitationHandler = applyAgitation;
-        Events.on(engine, 'afterUpdate', agitationHandler);
-        await delay(physics.resonanceMs);
-        Events.off(engine, 'afterUpdate', agitationHandler);
-        agitationHandler = null;
-        statusText.value = 'Vector Locked...';
-        await delay(physics.lockMs);
-    }
-
-    statusText.value = 'Ejecting...';
-
     if (mode.value === 'in-room' && currentRoom.value && currentPlayer.value) {
-        await drawFromApi();
+        const resultPromise = new Promise<DrawResult[]>(resolve => { drawResultWaiter = resolve; });
+        drawFromApi();
+        if (!skipAnim.value) await runAnimation();
+        else statusText.value = 'Ejecting...';
+        const results = await resultPromise;
+        showResults(results);
     } else {
+        if (!skipAnim.value) await runAnimation();
+        else statusText.value = 'Ejecting...';
         resolveStandalone();
     }
 }
@@ -724,14 +761,13 @@ async function drawFromApi() {
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             statusText.value = (err as any).message ?? 'Error';
+            drawResultWaiter = null;
             syncing.value = false;
-            return;
         }
-        const data = await res.json();
-        drawsUsed.value += isTenPull.value ? 10 : 1;
-        showResults(data.results);
+        // result comes via WS draw_result broadcast
     } catch {
         statusText.value = 'Network error';
+        drawResultWaiter = null;
         syncing.value = false;
     } finally {
         drawLoading.value = false;
