@@ -26,9 +26,8 @@ var (
 	wsAddr      = flag.String("ws-addr", "127.0.0.1:9001", "WebSocket listen address")
 	mgmtAddr    = flag.String("mgmt-addr", "127.0.0.1:9002", "Management HTTP listen address")
 	pidFile     = flag.String("pid-file", "", "Path to write PID file")
-	redisAddr   = flag.String("redis-addr", "127.0.0.1:6379", "Redis address")
-	redisPass   = flag.String("redis-password", "", "Redis password")
-	redisPrefix = flag.String("redis-prefix", "laravel-database-", "Redis key prefix")
+	redisAddr = flag.String("redis-addr", "127.0.0.1:6379", "Redis address")
+	redisPass = flag.String("redis-password", "", "Redis password")
 )
 
 var rdb *redis.Client
@@ -165,7 +164,7 @@ func verifyToken(token string) (bool, string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	key := *redisPrefix + "ws_lab_auth:" + token
+	key := "ws-lab-auth:" + token
 	name, err := rdb.GetDel(ctx, key).Result()
 	if err != nil {
 		return false, ""

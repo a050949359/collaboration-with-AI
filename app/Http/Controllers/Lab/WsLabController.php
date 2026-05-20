@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 
 class WsLabController extends Controller
@@ -27,7 +26,13 @@ class WsLabController extends Controller
     public function authToken(): JsonResponse
     {
         $token = Str::random(40);
-        Redis::setex("ws_lab_auth:{$token}", 60, auth()->user()->name);
+        $r = new \Redis();
+        $r->connect(
+            config('database.redis.default.host', '127.0.0.1'),
+            (int) config('database.redis.default.port', 6379),
+        );
+        $r->setex('ws-lab-auth:' . $token, 60, auth()->user()->name);
+        $r->close();
         return response()->json(['token' => $token]);
     }
 
