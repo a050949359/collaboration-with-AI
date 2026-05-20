@@ -741,6 +741,12 @@ async function leaveRoom() {
     currentRoom.value = currentPlayer.value = null;
     isHost.value = false;
     drawHistory.value = [];
+    broadcastLog.value = [];
+    canDraw.value = true;
+    isTenPull.value = false;
+    skipAnim.value = false;
+    drawsPerUser.value = 0;
+    drawsUsed.value = 0;
     mode.value = 'lobby';
     fetchRooms();
 }
