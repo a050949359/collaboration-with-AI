@@ -680,6 +680,7 @@ async function createRoom(name: string) {
     broadcastLog.value = [];
     pushLog(`✓ 已建立房間 ${data.room.code}`);
     mode.value = 'in-room';
+    await fetchAuthToken();
     connectWs(data.room.code);
 }
 
@@ -722,6 +723,7 @@ async function doJoin(room: RoomListItem, name: string) {
         broadcastLog.value = [];
         pushLog(`✓ 已加入房間 ${room.code}`);
         mode.value = 'in-room';
+        await fetchAuthToken();
         connectWs(room.code);
     } finally {
         joinLoading.value = false;
@@ -902,21 +904,20 @@ async function checkStatus() {
     } catch { /* ignore */ }
 }
 
+async function fetchAuthToken() {
+    if (!user.value) return;
+    try {
+        const res = await fetch(api.wsLab.authToken(), { method: 'POST', credentials: 'include' });
+        if (res.ok) {
+            const d = await res.json();
+            authToken.value = d.token;
+        }
+    } catch { /* ignore */ }
+}
+
 onMounted(async () => {
     initPhysics();
-
-    const [, tokenRes] = await Promise.all([
-        checkStatus(),
-        user.value
-            ? fetch(api.wsLab.authToken(), { method: 'POST', credentials: 'include' })
-            : Promise.resolve(null),
-    ]);
-
-    if (tokenRes?.ok) {
-        const d = await tokenRes.json();
-        authToken.value = d.token;
-    }
-
+    await checkStatus();
     statusTimer = setInterval(checkStatus, 10_000);
 });
 
