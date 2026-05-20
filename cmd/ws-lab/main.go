@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -65,6 +66,135 @@ func clamp(v, min, max float64) float64 {
 	return v
 }
 
+// ── Room & RoomManager ────────────────────────────────────────────────────────
+
+type RoomType string
+
+const (
+	RoomTypeGlobal RoomType = "global"
+	RoomTypeGacha  RoomType = "gacha"
+)
+
+type incomingMsg struct {
+	c    *client
+	data map[string]string
+}
+
+type RoomInfo struct {
+	ID      string   `json:"id"`
+	Type    RoomType `json:"type"`
+	Clients int      `json:"clients"`
+}
+
+type Room struct {
+	id          string
+	roomType    RoomType
+	clients     map[*client]struct{}
+	join        chan *client
+	leave       chan *client
+	incoming    chan incomingMsg
+	shutdown    chan struct{}
+	clientCount atomic.Int64
+}
+
+func newRoom(id string, roomType RoomType) *Room {
+	return &Room{
+		id:       id,
+		roomType: roomType,
+		clients:  make(map[*client]struct{}),
+		join:     make(chan *client, 8),
+		leave:    make(chan *client, 8),
+		incoming: make(chan incomingMsg, 64),
+		shutdown: make(chan struct{}),
+	}
+}
+
+type findReq struct {
+	id   string
+	resp chan *Room
+}
+
+type listReq struct {
+	resp chan []RoomInfo
+}
+
+type RoomManager struct {
+	rooms  map[string]*Room
+	find   chan findReq
+	add    chan *Room
+	remove chan string
+	list   chan listReq
+}
+
+func newRoomManager() *RoomManager {
+	return &RoomManager{
+		rooms:  make(map[string]*Room),
+		find:   make(chan findReq),
+		add:    make(chan *Room),
+		remove: make(chan string),
+		list:   make(chan listReq),
+	}
+}
+
+func (m *RoomManager) run() {
+	for {
+		select {
+		case req := <-m.find:
+			req.resp <- m.rooms[req.id]
+		case r := <-m.add:
+			m.rooms[r.id] = r
+			go r.run()
+		case id := <-m.remove:
+			if r, ok := m.rooms[id]; ok {
+				close(r.shutdown)
+				delete(m.rooms, id)
+			}
+		case req := <-m.list:
+			result := make([]RoomInfo, 0, len(m.rooms))
+			for _, r := range m.rooms {
+				result = append(result, RoomInfo{
+					ID:      r.id,
+					Type:    r.roomType,
+					Clients: int(r.clientCount.Load()),
+				})
+			}
+			req.resp <- result
+		}
+	}
+}
+
+func (r *Room) run() {
+	for {
+		select {
+		case <-r.shutdown:
+			return
+		case c := <-r.join:
+			r.clients[c] = struct{}{}
+			r.clientCount.Add(1)
+		case c := <-r.leave:
+			delete(r.clients, c)
+			r.clientCount.Add(-1)
+		case <-r.incoming:
+			// Step 2 填入
+		}
+	}
+}
+
+func (m *RoomManager) Get(id string) *Room {
+	resp := make(chan *Room, 1)
+	m.find <- findReq{id: id, resp: resp}
+	return <-resp
+}
+
+func (m *RoomManager) Add(r *Room) { m.add <- r }
+func (m *RoomManager) Remove(id string) { m.remove <- id }
+
+func (m *RoomManager) List() []RoomInfo {
+	resp := make(chan []RoomInfo, 1)
+	m.list <- listReq{resp: resp}
+	return <-resp
+}
+
 // ── Hub ───────────────────────────────────────────────────────────────────────
 
 type client struct {
@@ -72,6 +202,7 @@ type client struct {
 	lastPing time.Time
 	send     chan []byte
 	isAuthed bool
+	userID   int
 	userName string
 }
 
