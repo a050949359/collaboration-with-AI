@@ -147,6 +147,12 @@ func (r *Room) evictStale() {
 	}
 }
 
+type broadcastReq struct {
+	id   string
+	msg  []byte
+	resp chan bool
+}
+
 type findReq struct {
 	id   string
 	resp chan *Room
@@ -157,20 +163,22 @@ type listReq struct {
 }
 
 type RoomManager struct {
-	rooms  map[string]*Room
-	find   chan findReq
-	add    chan *Room
-	remove chan string
-	list   chan listReq
+	rooms     map[string]*Room
+	find      chan findReq
+	add       chan *Room
+	remove    chan string
+	list      chan listReq
+	broadcast chan broadcastReq
 }
 
 func newRoomManager() *RoomManager {
 	return &RoomManager{
-		rooms:  make(map[string]*Room),
-		find:   make(chan findReq),
-		add:    make(chan *Room),
-		remove: make(chan string),
-		list:   make(chan listReq),
+		rooms:     make(map[string]*Room),
+		find:      make(chan findReq),
+		add:       make(chan *Room),
+		remove:    make(chan string),
+		list:      make(chan listReq),
+		broadcast: make(chan broadcastReq),
 	}
 }
 
@@ -197,6 +205,13 @@ func (m *RoomManager) run() {
 				})
 			}
 			req.resp <- result
+		case req := <-m.broadcast:
+			if r, ok := m.rooms[req.id]; ok {
+				r.broadcastBytes(req.msg)
+				req.resp <- true
+			} else {
+				req.resp <- false
+			}
 		}
 	}
 }
@@ -206,7 +221,44 @@ func (r *Room) run() {
 	case RoomTypeGlobal:
 		r.runGlobal()
 	case RoomTypeGacha:
-		// Step 6
+		r.runGacha()
+	}
+}
+
+func (r *Room) runGacha() {
+	hbCheck := time.NewTicker(10 * time.Second)
+	defer hbCheck.Stop()
+
+	for {
+		select {
+		case <-r.shutdown:
+			return
+		case c := <-r.join:
+			r.clients[c] = struct{}{}
+			r.clientCount.Add(1)
+			r.touch()
+		case c := <-r.leave:
+			delete(r.clients, c)
+			r.clientCount.Add(-1)
+		case msg := <-r.incoming:
+			r.handleGacha(msg)
+		case <-hbCheck.C:
+			r.evictStale()
+		}
+	}
+}
+
+func (r *Room) handleGacha(msg incomingMsg) {
+	c := msg.c
+	r.touch()
+	switch msg.data["type"] {
+	case "ping":
+		c.lastPing = time.Now()
+		pong, _ := json.Marshal(map[string]string{"type": "pong"})
+		select {
+		case c.send <- pong:
+		default:
+		}
 	}
 }
 
@@ -261,12 +313,12 @@ func (r *Room) handleGlobal(msg incomingMsg) {
 		}
 	case "auth":
 		if ok, name := verifyToken(msg.data["token"]); ok {
-			c.isAuthed = true
+			c.isAuthed.Store(true)
 			c.userName = name
 			log.Printf("client authed: %s", name)
 		}
 	case "command":
-		if !c.isAuthed {
+		if !c.isAuthed.Load() {
 			return
 		}
 		if text := msg.data["text"]; text != "" {
@@ -296,13 +348,19 @@ func (m *RoomManager) List() []RoomInfo {
 	return <-resp
 }
 
+func (m *RoomManager) Broadcast(id string, msg []byte) bool {
+	resp := make(chan bool, 1)
+	m.broadcast <- broadcastReq{id: id, msg: msg, resp: resp}
+	return <-resp
+}
+
 // ── Client ────────────────────────────────────────────────────────────────────
 
 type client struct {
 	conn     *websocket.Conn
 	lastPing time.Time
 	send     chan []byte
-	isAuthed bool
+	isAuthed atomic.Bool
 	userID   int
 	userName string
 }
@@ -324,7 +382,14 @@ func verifyToken(token string) (bool, string) {
 // ── WebSocket handler ─────────────────────────────────────────────────────────
 
 func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
-	room := manager.Get("global") // Step 4: parse room from URL
+	path := strings.Trim(strings.TrimPrefix(r.URL.Path, "/ws-lab"), "/")
+	roomID := "global"
+	if path != "" {
+		parts := strings.Split(path, "/")
+		roomID = parts[len(parts)-1]
+	}
+
+	room := manager.Get(roomID)
 	if room == nil {
 		http.Error(w, "room not found", http.StatusNotFound)
 		return
@@ -376,7 +441,7 @@ func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
 		case "ping", "auth":
 			room.incoming <- incomingMsg{c: c, data: msg}
 		default:
-			if c.isAuthed {
+			if c.isAuthed.Load() {
 				room.incoming <- incomingMsg{c: c, data: msg}
 			}
 		}
@@ -469,17 +534,40 @@ func main() {
 		}
 	})
 	http.DefaultServeMux.HandleFunc("/rooms/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		path := strings.TrimPrefix(r.URL.Path, "/rooms/")
+
+		// POST /rooms/{id}/broadcast
+		if strings.HasSuffix(path, "/broadcast") {
+			if r.Method != http.MethodPost {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			id := strings.TrimSuffix(path, "/broadcast")
+			var body json.RawMessage
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+				return
+			}
+			if ok := manager.Broadcast(id, body); !ok {
+				http.Error(w, `{"error":"room not found"}`, http.StatusNotFound)
+				return
+			}
+			w.Write([]byte(`{"ok":true}`))
+			return
+		}
+
+		// DELETE /rooms/{id}
 		if r.Method != http.MethodDelete {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		id := strings.TrimPrefix(r.URL.Path, "/rooms/")
+		id := path
 		if id == "" || id == "global" {
 			http.Error(w, `{"error":"cannot delete this room"}`, http.StatusBadRequest)
 			return
 		}
 		manager.Remove(id)
-		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"ok":true}`))
 	})
 
