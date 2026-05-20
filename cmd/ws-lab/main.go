@@ -33,6 +33,8 @@ var (
 
 var rdb *redis.Client
 
+var globalDoShutdown func()
+
 const heartbeatTimeout = 30 * time.Second
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -87,18 +89,20 @@ type RoomInfo struct {
 }
 
 type Room struct {
-	id          string
-	roomType    RoomType
-	clients     map[*client]struct{}
-	join        chan *client
-	leave       chan *client
-	incoming    chan incomingMsg
-	shutdown    chan struct{}
-	clientCount atomic.Int64
+	id           string
+	roomType     RoomType
+	clients      map[*client]struct{}
+	join         chan *client
+	leave        chan *client
+	incoming     chan incomingMsg
+	shutdown     chan struct{}
+	clientCount  atomic.Int64
+	streaming    atomic.Bool
+	lastActivity atomic.Int64 // Unix nano
 }
 
 func newRoom(id string, roomType RoomType) *Room {
-	return &Room{
+	r := &Room{
 		id:       id,
 		roomType: roomType,
 		clients:  make(map[*client]struct{}),
@@ -106,6 +110,39 @@ func newRoom(id string, roomType RoomType) *Room {
 		leave:    make(chan *client, 8),
 		incoming: make(chan incomingMsg, 64),
 		shutdown: make(chan struct{}),
+	}
+	r.lastActivity.Store(time.Now().UnixNano())
+	return r
+}
+
+func (r *Room) touch() { r.lastActivity.Store(time.Now().UnixNano()) }
+
+func (r *Room) shouldShutdown() bool {
+	if r.streaming.Load() {
+		return false
+	}
+	last := time.Unix(0, r.lastActivity.Load())
+	return time.Since(last) > heartbeatTimeout
+}
+
+func (r *Room) broadcastBytes(msg []byte) {
+	for c := range r.clients {
+		select {
+		case c.send <- msg:
+		default:
+		}
+	}
+}
+
+func (r *Room) evictStale() {
+	now := time.Now()
+	for c := range r.clients {
+		if now.Sub(c.lastPing) > heartbeatTimeout {
+			log.Printf("evicting stale client (no ping for %s)", heartbeatTimeout)
+			c.conn.Close(websocket.StatusPolicyViolation, "heartbeat timeout")
+			delete(r.clients, c)
+			r.clientCount.Add(-1)
+		}
 	}
 }
 
@@ -164,6 +201,21 @@ func (m *RoomManager) run() {
 }
 
 func (r *Room) run() {
+	switch r.roomType {
+	case RoomTypeGlobal:
+		r.runGlobal()
+	case RoomTypeGacha:
+		// Step 6
+	}
+}
+
+func (r *Room) runGlobal() {
+	s := &series{value: 50}
+	ticker := time.NewTicker(500 * time.Millisecond)
+	hbCheck := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	defer hbCheck.Stop()
+
 	for {
 		select {
 		case <-r.shutdown:
@@ -171,11 +223,59 @@ func (r *Room) run() {
 		case c := <-r.join:
 			r.clients[c] = struct{}{}
 			r.clientCount.Add(1)
+			r.touch()
 		case c := <-r.leave:
 			delete(r.clients, c)
 			r.clientCount.Add(-1)
-		case <-r.incoming:
-			// Step 2 填入
+		case msg := <-r.incoming:
+			r.handleGlobal(msg)
+		case <-ticker.C:
+			if r.shouldShutdown() {
+				log.Println("global room idle, shutting down")
+				if globalDoShutdown != nil {
+					globalDoShutdown()
+				}
+				return
+			}
+			if r.streaming.Load() && r.clientCount.Load() > 0 {
+				out, _ := json.Marshal(s.next())
+				r.broadcastBytes(out)
+			}
+		case <-hbCheck.C:
+			r.evictStale()
+		}
+	}
+}
+
+func (r *Room) handleGlobal(msg incomingMsg) {
+	c := msg.c
+	r.touch()
+	switch msg.data["type"] {
+	case "ping":
+		c.lastPing = time.Now()
+		pong, _ := json.Marshal(map[string]string{"type": "pong"})
+		select {
+		case c.send <- pong:
+		default:
+		}
+	case "auth":
+		if ok, name := verifyToken(msg.data["token"]); ok {
+			c.isAuthed = true
+			c.userName = name
+			log.Printf("client authed: %s", name)
+		}
+	case "command":
+		if !c.isAuthed {
+			return
+		}
+		if text := msg.data["text"]; text != "" {
+			out, _ := json.Marshal(map[string]string{
+				"type": "command",
+				"text": text,
+				"user": c.userName,
+				"ts":   strconv.FormatInt(time.Now().UnixMilli(), 10),
+			})
+			r.broadcastBytes(out)
 		}
 	}
 }
@@ -195,7 +295,7 @@ func (m *RoomManager) List() []RoomInfo {
 	return <-resp
 }
 
-// ── Hub ───────────────────────────────────────────────────────────────────────
+// ── Client ────────────────────────────────────────────────────────────────────
 
 type client struct {
 	conn     *websocket.Conn
@@ -204,89 +304,6 @@ type client struct {
 	isAuthed bool
 	userID   int
 	userName string
-}
-
-type hub struct {
-	mu           sync.Mutex
-	clients      map[*client]struct{}
-	lastActivity time.Time
-	streaming    bool
-}
-
-func newHub() *hub {
-	return &hub{clients: make(map[*client]struct{}), lastActivity: time.Now()}
-}
-
-func (h *hub) touch() {
-	h.mu.Lock()
-	h.lastActivity = time.Now()
-	h.mu.Unlock()
-}
-
-func (h *hub) setStreaming(v bool) {
-	h.mu.Lock()
-	h.streaming = v
-	h.lastActivity = time.Now()
-	h.mu.Unlock()
-}
-
-func (h *hub) isStreaming() bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	return h.streaming
-}
-
-// shouldShutdown returns true only when not streaming and idle timeout exceeded.
-func (h *hub) shouldShutdown() bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if h.streaming {
-		return false
-	}
-	return time.Since(h.lastActivity) > heartbeatTimeout
-}
-
-func (h *hub) add(c *client) {
-	h.mu.Lock()
-	h.clients[c] = struct{}{}
-	h.lastActivity = time.Now()
-	h.mu.Unlock()
-}
-
-func (h *hub) remove(c *client) {
-	h.mu.Lock()
-	delete(h.clients, c)
-	h.mu.Unlock()
-}
-
-func (h *hub) count() int {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	return len(h.clients)
-}
-
-func (h *hub) broadcast(msg []byte) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	for c := range h.clients {
-		select {
-		case c.send <- msg:
-		default:
-		}
-	}
-}
-
-func (h *hub) evictStale() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	now := time.Now()
-	for c := range h.clients {
-		if now.Sub(c.lastPing) > heartbeatTimeout {
-			log.Printf("evicting stale client (no ping for %s)", heartbeatTimeout)
-			c.conn.Close(websocket.StatusPolicyViolation, "heartbeat timeout")
-			delete(h.clients, c)
-		}
-	}
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -305,9 +322,15 @@ func verifyToken(token string) (bool, string) {
 
 // ── WebSocket handler ─────────────────────────────────────────────────────────
 
-func (h *hub) serveWS(w http.ResponseWriter, r *http.Request) {
+func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
+	room := manager.Get("global") // Step 4: parse room from URL
+	if room == nil {
+		http.Error(w, "room not found", http.StatusNotFound)
+		return
+	}
+
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		InsecureSkipVerify: true, // origin check handled by nginx
+		InsecureSkipVerify: true,
 	})
 	if err != nil {
 		log.Printf("accept: %v", err)
@@ -319,8 +342,9 @@ func (h *hub) serveWS(w http.ResponseWriter, r *http.Request) {
 		lastPing: time.Now(),
 		send:     make(chan []byte, 32),
 	}
-	h.add(c)
-	defer h.remove(c)
+
+	room.join <- c
+	defer func() { room.leave <- c }()
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
@@ -348,40 +372,11 @@ func (h *hub) serveWS(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		switch msg["type"] {
-		case "ping":
-			h.mu.Lock()
-			c.lastPing = time.Now()
-			h.mu.Unlock()
-			h.touch()
-			pong, _ := json.Marshal(map[string]string{"type": "pong"})
-			select {
-			case c.send <- pong:
-			default:
-			}
-		case "auth":
-			if ok, name := verifyToken(msg["token"]); ok {
-				h.mu.Lock()
-				c.isAuthed = true
-				c.userName = name
-				h.mu.Unlock()
-				log.Printf("client authed: %s", name)
-			}
-		case "command":
-			h.mu.Lock()
-			authed := c.isAuthed
-			name := c.userName
-			h.mu.Unlock()
-			if !authed {
-				break
-			}
-			if text := msg["text"]; text != "" {
-				out, _ := json.Marshal(map[string]string{
-					"type": "command",
-					"text": text,
-					"user": name,
-					"ts":   strconv.FormatInt(time.Now().UnixMilli(), 10),
-				})
-				h.broadcast(out)
+		case "ping", "auth":
+			room.incoming <- incomingMsg{c: c, data: msg}
+		default:
+			if c.isAuthed {
+				room.incoming <- incomingMsg{c: c, data: msg}
 			}
 		}
 	}
@@ -404,12 +399,10 @@ func main() {
 		defer os.Remove(*pidFile)
 	}
 
-	h := newHub()
-	s := &series{value: 50}
-
 	shutdown := make(chan struct{}, 1)
 	closeOnce := sync.Once{}
 	doShutdown := func() { closeOnce.Do(func() { close(shutdown) }) }
+	globalDoShutdown = doShutdown
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
@@ -418,6 +411,12 @@ func main() {
 		log.Println("signal received, shutting down")
 		doShutdown()
 	}()
+
+	manager := newRoomManager()
+	go manager.run()
+
+	globalRoom := newRoom("global", RoomTypeGlobal)
+	manager.Add(globalRoom)
 
 	// management server
 	mgmt := &http.Server{Addr: *mgmtAddr}
@@ -434,7 +433,8 @@ func main() {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		h.setStreaming(true)
+		globalRoom.streaming.Store(true)
+		globalRoom.touch()
 		w.Write([]byte(`{"ok":true}`))
 	})
 	http.DefaultServeMux.HandleFunc("/stream/stop", func(w http.ResponseWriter, r *http.Request) {
@@ -442,7 +442,7 @@ func main() {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		h.setStreaming(false)
+		globalRoom.streaming.Store(false)
 		w.Write([]byte(`{"ok":true}`))
 	})
 	go func() {
@@ -452,7 +452,9 @@ func main() {
 
 	// WebSocket server
 	wsMux := http.NewServeMux()
-	wsMux.HandleFunc("/", h.serveWS)
+	wsMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		serveWS(manager, w, r)
+	})
 	ws := &http.Server{Addr: *wsAddr, Handler: wsMux}
 	go func() {
 		log.Printf("ws listening on %s", *wsAddr)
@@ -461,34 +463,8 @@ func main() {
 		}
 	}()
 
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-
-	hbCheck := time.NewTicker(10 * time.Second)
-	defer hbCheck.Stop()
-
-	for {
-		select {
-		case <-shutdown:
-			log.Println("shutdown requested")
-			ws.Close()
-			mgmt.Close()
-			return
-
-		case <-ticker.C:
-			if h.shouldShutdown() {
-				log.Println("idle for 30s, shutting down")
-				ws.Close()
-				mgmt.Close()
-				return
-			}
-			if h.isStreaming() && h.count() > 0 {
-				msg, _ := json.Marshal(s.next())
-				h.broadcast(msg)
-			}
-
-		case <-hbCheck.C:
-			h.evictStale()
-		}
-	}
+	<-shutdown
+	log.Println("shutdown requested")
+	ws.Close()
+	mgmt.Close()
 }
