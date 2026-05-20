@@ -92,6 +92,8 @@ type RoomInfo struct {
 type Room struct {
 	id           string
 	roomType     RoomType
+	hostName     string
+	host         *client
 	clients      map[*client]struct{}
 	join         chan *client
 	leave        chan *client
@@ -102,10 +104,11 @@ type Room struct {
 	lastActivity atomic.Int64 // Unix nano
 }
 
-func newRoom(id string, roomType RoomType) *Room {
+func newRoom(id string, roomType RoomType, hostName string) *Room {
 	r := &Room{
 		id:       id,
 		roomType: roomType,
+		hostName: hostName,
 		clients:  make(map[*client]struct{}),
 		join:     make(chan *client, 8),
 		leave:    make(chan *client, 8),
@@ -189,7 +192,7 @@ func (m *RoomManager) run() {
 			req.resp <- m.rooms[req.id]
 		case r := <-m.add:
 			m.rooms[r.id] = r
-			go r.run()
+			go r.run(m)
 		case id := <-m.remove:
 			if r, ok := m.rooms[id]; ok {
 				close(r.shutdown)
@@ -216,16 +219,16 @@ func (m *RoomManager) run() {
 	}
 }
 
-func (r *Room) run() {
+func (r *Room) run(manager *RoomManager) {
 	switch r.roomType {
 	case RoomTypeGlobal:
 		r.runGlobal()
 	case RoomTypeGacha:
-		r.runGacha()
+		r.runGacha(manager)
 	}
 }
 
-func (r *Room) runGacha() {
+func (r *Room) runGacha(manager *RoomManager) {
 	hbCheck := time.NewTicker(10 * time.Second)
 	defer hbCheck.Stop()
 
@@ -240,6 +243,15 @@ func (r *Room) runGacha() {
 		case c := <-r.leave:
 			delete(r.clients, c)
 			r.clientCount.Add(-1)
+			if r.host != nil && c == r.host {
+				out, _ := json.Marshal(map[string]string{"type": "room_closed"})
+				r.broadcastBytes(out)
+				for remaining := range r.clients {
+					close(remaining.send)
+				}
+				manager.Remove(r.id)
+				return
+			}
 		case msg := <-r.incoming:
 			r.handleGacha(msg)
 		case <-hbCheck.C:
@@ -259,6 +271,22 @@ func (r *Room) handleGacha(msg incomingMsg) {
 		case c.send <- pong:
 		default:
 		}
+	case "auth":
+		if ok, name := verifyToken(msg.data["token"]); ok {
+			c.isAuthed.Store(true)
+			c.userName = name
+			if r.hostName != "" && name == r.hostName && r.host == nil {
+				c.isHost = true
+				r.host = c
+				log.Printf("gacha room %s: host connected (%s)", r.id, name)
+			}
+		}
+	case "machine_state":
+		if !c.isHost {
+			return
+		}
+		out, _ := json.Marshal(msg.data)
+		r.broadcastBytes(out)
 	}
 }
 
@@ -361,6 +389,7 @@ type client struct {
 	lastPing time.Time
 	send     chan []byte
 	isAuthed atomic.Bool
+	isHost   bool
 	userID   int
 	userName string
 }
@@ -481,7 +510,7 @@ func main() {
 	manager := newRoomManager()
 	go manager.run()
 
-	globalRoom := newRoom("global", RoomTypeGlobal)
+	globalRoom := newRoom("global", RoomTypeGlobal, "")
 	manager.Add(globalRoom)
 
 	// management server
@@ -520,14 +549,15 @@ func main() {
 			json.NewEncoder(w).Encode(manager.List())
 		case http.MethodPost:
 			var body struct {
-				ID   string   `json:"id"`
-				Type RoomType `json:"type"`
+				ID       string   `json:"id"`
+				Type     RoomType `json:"type"`
+				HostName string   `json:"host_name"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ID == "" {
 				http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
 				return
 			}
-			manager.Add(newRoom(body.ID, body.Type))
+			manager.Add(newRoom(body.ID, body.Type, body.HostName))
 			w.Write([]byte(`{"ok":true}`))
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
