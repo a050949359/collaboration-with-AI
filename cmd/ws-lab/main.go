@@ -36,6 +36,9 @@ var rdb *redis.Client
 
 var globalDoShutdown func()
 
+// serverActivityCh lets any room signal activity to keep the server alive.
+var serverActivityCh = make(chan struct{}, 64)
+
 const heartbeatTimeout = 30 * time.Second
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -98,6 +101,7 @@ type Room struct {
 	join         chan *client
 	leave        chan *client
 	incoming     chan incomingMsg
+	broadcastExt chan []byte
 	shutdown     chan struct{}
 	clientCount  atomic.Int64
 	streaming    atomic.Bool
@@ -106,14 +110,15 @@ type Room struct {
 
 func newRoom(id string, roomType RoomType, hostName string) *Room {
 	r := &Room{
-		id:       id,
-		roomType: roomType,
-		hostName: hostName,
-		clients:  make(map[*client]struct{}),
-		join:     make(chan *client, 8),
-		leave:    make(chan *client, 8),
-		incoming: make(chan incomingMsg, 64),
-		shutdown: make(chan struct{}),
+		id:           id,
+		roomType:     roomType,
+		hostName:     hostName,
+		clients:      make(map[*client]struct{}),
+		join:         make(chan *client, 8),
+		leave:        make(chan *client, 8),
+		incoming:     make(chan incomingMsg, 64),
+		broadcastExt: make(chan []byte, 8),
+		shutdown:     make(chan struct{}),
 	}
 	r.lastActivity.Store(time.Now().UnixNano())
 	return r
@@ -141,19 +146,14 @@ func (r *Room) broadcastBytes(msg []byte) {
 func (r *Room) evictStale() {
 	now := time.Now()
 	for c := range r.clients {
-		if now.Sub(c.lastPing) > heartbeatTimeout {
+		last := time.Unix(0, c.lastPing.Load())
+		if now.Sub(last) > heartbeatTimeout {
 			log.Printf("evicting stale client (no ping for %s)", heartbeatTimeout)
 			c.conn.Close(websocket.StatusPolicyViolation, "heartbeat timeout")
 			delete(r.clients, c)
 			r.clientCount.Add(-1)
 		}
 	}
-}
-
-type broadcastReq struct {
-	id   string
-	msg  []byte
-	resp chan bool
 }
 
 type findReq struct {
@@ -166,22 +166,20 @@ type listReq struct {
 }
 
 type RoomManager struct {
-	rooms     map[string]*Room
-	find      chan findReq
-	add       chan *Room
-	remove    chan string
-	list      chan listReq
-	broadcast chan broadcastReq
+	rooms  map[string]*Room
+	find   chan findReq
+	add    chan *Room
+	remove chan string
+	list   chan listReq
 }
 
 func newRoomManager() *RoomManager {
 	return &RoomManager{
-		rooms:     make(map[string]*Room),
-		find:      make(chan findReq),
-		add:       make(chan *Room),
-		remove:    make(chan string),
-		list:      make(chan listReq),
-		broadcast: make(chan broadcastReq),
+		rooms:  make(map[string]*Room),
+		find:   make(chan findReq),
+		add:    make(chan *Room),
+		remove: make(chan string),
+		list:   make(chan listReq),
 	}
 }
 
@@ -208,13 +206,6 @@ func (m *RoomManager) run() {
 				})
 			}
 			req.resp <- result
-		case req := <-m.broadcast:
-			if r, ok := m.rooms[req.id]; ok {
-				r.broadcastBytes(req.msg)
-				req.resp <- true
-			} else {
-				req.resp <- false
-			}
 		}
 	}
 }
@@ -254,6 +245,8 @@ func (r *Room) runGacha(manager *RoomManager) {
 			}
 		case msg := <-r.incoming:
 			r.handleGacha(msg)
+		case msg := <-r.broadcastExt:
+			r.broadcastBytes(msg)
 		case <-hbCheck.C:
 			r.evictStale()
 		}
@@ -264,13 +257,6 @@ func (r *Room) handleGacha(msg incomingMsg) {
 	c := msg.c
 	r.touch()
 	switch msg.data["type"] {
-	case "ping":
-		c.lastPing = time.Now()
-		pong, _ := json.Marshal(map[string]string{"type": "pong"})
-		select {
-		case c.send <- pong:
-		default:
-		}
 	case "auth":
 		if ok, name := verifyToken(msg.data["token"]); ok {
 			c.isAuthed.Store(true)
@@ -322,6 +308,10 @@ func (r *Room) runGlobal() {
 				out, _ := json.Marshal(s.next())
 				r.broadcastBytes(out)
 			}
+		case msg := <-r.broadcastExt:
+			r.broadcastBytes(msg)
+		case <-serverActivityCh:
+			r.touch()
 		case <-hbCheck.C:
 			r.evictStale()
 		}
@@ -332,13 +322,6 @@ func (r *Room) handleGlobal(msg incomingMsg) {
 	c := msg.c
 	r.touch()
 	switch msg.data["type"] {
-	case "ping":
-		c.lastPing = time.Now()
-		pong, _ := json.Marshal(map[string]string{"type": "pong"})
-		select {
-		case c.send <- pong:
-		default:
-		}
 	case "auth":
 		if ok, name := verifyToken(msg.data["token"]); ok {
 			c.isAuthed.Store(true)
@@ -376,17 +359,12 @@ func (m *RoomManager) List() []RoomInfo {
 	return <-resp
 }
 
-func (m *RoomManager) Broadcast(id string, msg []byte) bool {
-	resp := make(chan bool, 1)
-	m.broadcast <- broadcastReq{id: id, msg: msg, resp: resp}
-	return <-resp
-}
 
 // ── Client ────────────────────────────────────────────────────────────────────
 
 type client struct {
 	conn     *websocket.Conn
-	lastPing time.Time
+	lastPing atomic.Int64 // unix nano
 	send     chan []byte
 	isAuthed atomic.Bool
 	isHost   bool
@@ -433,10 +411,10 @@ func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := &client{
-		conn:     conn,
-		lastPing: time.Now(),
-		send:     make(chan []byte, 32),
+		conn: conn,
+		send: make(chan []byte, 32),
 	}
+	c.lastPing.Store(time.Now().UnixNano())
 
 	room.join <- c
 	defer func() { room.leave <- c }()
@@ -461,13 +439,24 @@ func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	pong, _ := json.Marshal(map[string]string{"type": "pong"})
 	for {
 		var msg map[string]string
 		if err := wsjson.Read(ctx, conn, &msg); err != nil {
 			break
 		}
 		switch msg["type"] {
-		case "ping", "auth":
+		case "ping":
+			c.lastPing.Store(time.Now().UnixNano())
+			select {
+			case c.send <- pong:
+			default:
+			}
+			select {
+			case serverActivityCh <- struct{}{}:
+			default:
+			}
+		case "auth":
 			room.incoming <- incomingMsg{c: c, data: msg}
 		default:
 			if c.isAuthed.Load() {
@@ -574,16 +563,22 @@ func main() {
 				return
 			}
 			id := strings.TrimSuffix(path, "/broadcast")
+			room := manager.Get(id)
+			if room == nil {
+				http.Error(w, `{"error":"room not found"}`, http.StatusNotFound)
+				return
+			}
 			var body json.RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
 				return
 			}
-			if ok := manager.Broadcast(id, body); !ok {
-				http.Error(w, `{"error":"room not found"}`, http.StatusNotFound)
-				return
+			select {
+			case room.broadcastExt <- []byte(body):
+				w.Write([]byte(`{"ok":true}`))
+			default:
+				http.Error(w, `{"error":"broadcast buffer full"}`, http.StatusServiceUnavailable)
 			}
-			w.Write([]byte(`{"ok":true}`))
 			return
 		}
 
