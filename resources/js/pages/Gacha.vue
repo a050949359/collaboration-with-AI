@@ -105,7 +105,7 @@
                         <button
                             v-if="user"
                             class="px-4 py-2 rounded-xl bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#233328] transition-colors"
-                            @click="createRoom"
+                            @click="openCreateModal"
                         >
                             + 建立房間
                         </button>
@@ -364,6 +364,34 @@
             </div>
         </Teleport>
 
+        <!-- Create Room Modal -->
+        <Teleport to="body">
+            <div
+                v-if="showCreateModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                @click.self="showCreateModal = false"
+            >
+                <div class="glass-panel p-8 rounded-3xl max-w-sm w-full shadow-2xl">
+                    <div class="text-[10px] tracking-[0.4em] text-[#6bdc9f]/50 mb-2 font-bold">CREATE ROOM</div>
+                    <h3 class="text-white text-lg font-medium mb-1 tracking-tight">建立抽卡機台</h3>
+                    <p class="text-[#6bdc9f]/40 text-xs tracking-widest mb-6">輸入你的暱稱</p>
+                    <input
+                        v-model="createName"
+                        type="text"
+                        maxlength="30"
+                        placeholder="暱稱…"
+                        class="w-full bg-transparent border-b border-[#2f4739] focus:border-[#6bdc9f] outline-none text-[#6bdc9f] text-sm pb-1 mb-6 placeholder:text-[#6bdc9f]/30 transition-colors"
+                        @keyup.enter="submitCreateModal"
+                    />
+                    <button
+                        :disabled="!createName.trim()"
+                        class="w-full py-3 btn-gradient text-[#0f1511] font-bold rounded-xl hover:brightness-110 transition-all uppercase tracking-widest text-xs disabled:opacity-40"
+                        @click="submitCreateModal"
+                    >建立</button>
+                </div>
+            </div>
+        </Teleport>
+
         <!-- Join Name Modal (unauthenticated) -->
         <Teleport to="body">
             <div
@@ -448,6 +476,10 @@ const authToken = ref('');
 let ws: WebSocket | null = null;
 let hbTimer: ReturnType<typeof setInterval> | null = null;
 let statusTimer: ReturnType<typeof setInterval> | null = null;
+
+// ── Create modal ───────────────────────────────────────────────────────────
+const showCreateModal = ref(false);
+const createName      = ref('');
 
 // ── Join modal ─────────────────────────────────────────────────────────────
 const joinTarget  = ref<RoomListItem | null>(null);
@@ -619,17 +651,29 @@ async function fetchRooms() {
     }
 }
 
-async function createRoom() {
+function openCreateModal() {
+    createName.value = user.value?.name ?? '';
+    showCreateModal.value = true;
+}
+
+async function submitCreateModal() {
+    if (!createName.value.trim()) return;
+    await createRoom(createName.value.trim());
+}
+
+async function createRoom(name: string) {
     if (!user.value) return;
+    showCreateModal.value = false;
     const res = await fetch(api.gacha.store(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify({ player_name: name }),
     }).catch(() => null);
     if (!res?.ok) return;
     const data = await res.json();
     currentRoom.value   = { ...data.room, players_count: 1 } as RoomListItem;
-    currentPlayer.value = { id: data.room.id, name: user.value.name };
+    currentPlayer.value = { id: data.player_id, name };
     isHost.value  = true;
     drawsUsed.value = 0;
     drawHistory.value = [];

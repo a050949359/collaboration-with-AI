@@ -268,16 +268,21 @@ func (r *Room) runGacha(manager *RoomManager) {
 		case msg := <-r.incoming:
 			r.handleGacha(msg)
 		case res := <-r.authDone:
+			if res.name != "" && res.c.userName == "" {
+				res.c.userName = res.name
+			}
+			if !res.c.nameAnnounced && res.c.userName != "" {
+				res.c.nameAnnounced = true
+				out, _ := json.Marshal(map[string]string{"type": "player_joined", "name": res.c.userName})
+				r.broadcastBytes(out)
+			}
 			if res.ok {
 				res.c.isAuthed.Store(true)
-				res.c.userName = res.name
 				if r.hostName != "" && res.name == r.hostName && r.host == nil {
 					res.c.isHost = true
 					r.host = res.c
-					log.Printf("gacha room %s: host connected (%s)", r.id, res.name)
+					log.Printf("gacha room %s: host connected (%s)", r.id, res.c.userName)
 				}
-				out, _ := json.Marshal(map[string]string{"type": "player_joined", "name": res.name})
-				r.broadcastBytes(out)
 			}
 		case msg := <-r.broadcastExt:
 			r.broadcastBytes(msg)
@@ -303,8 +308,8 @@ func (r *Room) handleGacha(msg incomingMsg) {
 			r.authDone <- authResult{c: c, ok: ok, name: name}
 		}()
 	case "name":
-		if c.userName == "" {
-			c.userName = msg.data["name"]
+		if name := msg.data["name"]; name != "" {
+			r.authDone <- authResult{c: c, ok: false, name: name}
 		}
 	case "machine_state":
 		if !c.isHost {
@@ -409,13 +414,14 @@ func (m *RoomManager) List() []RoomInfo {
 // ── Client ────────────────────────────────────────────────────────────────────
 
 type client struct {
-	conn     *websocket.Conn
-	lastPing atomic.Int64 // unix nano
-	send     chan []byte
-	isAuthed atomic.Bool
-	isHost   bool
-	userID   int
-	userName string
+	conn          *websocket.Conn
+	lastPing      atomic.Int64 // unix nano
+	send          chan []byte
+	isAuthed      atomic.Bool
+	isHost        bool
+	userID        int
+	userName      string
+	nameAnnounced bool
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────

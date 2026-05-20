@@ -38,20 +38,24 @@ class GachaRoomController extends Controller
     // POST /api/v1/gacha/rooms
     public function store(Request $request): JsonResponse
     {
-        $request->validate(['room_name' => 'nullable|string|max:50']);
+        $request->validate([
+            'room_name'   => 'nullable|string|max:50',
+            'player_name' => 'nullable|string|max:30',
+        ]);
 
-        $code = strtoupper(Str::random(6));
+        $code       = strtoupper(Str::random(6));
+        $playerName = $request->player_name ?? auth()->user()->name;
 
         $room = GachaRoom::create([
             'code'      => $code,
-            'room_name' => $request->room_name ?? (auth()->user()->name . "'s Room"),
+            'room_name' => $request->room_name ?? ($playerName . "'s Room"),
             'owner_id'  => auth()->id(),
             'type'      => 'user',
         ]);
 
-        GachaPlayer::create([
+        $player = GachaPlayer::create([
             'room_id' => $room->id,
-            'name'    => auth()->user()->name,
+            'name'    => $playerName,
             'is_host' => true,
         ]);
 
@@ -65,7 +69,7 @@ class GachaRoomController extends Controller
             // ws server not running, room still created in DB
         }
 
-        return response()->json(['room' => $room], 201);
+        return response()->json(['room' => $room, 'player_id' => $player->id], 201);
     }
 
     // DELETE /api/v1/gacha/rooms/{code}
