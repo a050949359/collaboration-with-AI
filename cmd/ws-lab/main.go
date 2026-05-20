@@ -25,11 +25,12 @@ import (
 // ── Config ────────────────────────────────────────────────────────────────────
 
 var (
-	wsAddr      = flag.String("ws-addr", "127.0.0.1:9001", "WebSocket listen address")
-	mgmtAddr    = flag.String("mgmt-addr", "127.0.0.1:9002", "Management HTTP listen address")
-	pidFile     = flag.String("pid-file", "", "Path to write PID file")
-	redisAddr = flag.String("redis-addr", "127.0.0.1:6379", "Redis address")
-	redisPass = flag.String("redis-password", "", "Redis password")
+	wsAddr        = flag.String("ws-addr", "127.0.0.1:9001", "WebSocket listen address")
+	mgmtAddr      = flag.String("mgmt-addr", "127.0.0.1:9002", "Management HTTP listen address")
+	pidFile       = flag.String("pid-file", "", "Path to write PID file")
+	redisAddr     = flag.String("redis-addr", "127.0.0.1:6379", "Redis address")
+	redisPass     = flag.String("redis-password", "", "Redis password")
+	allowedOrigins = flag.String("allowed-origins", "localhost:*", "Comma-separated WebSocket origin patterns")
 )
 
 var rdb *redis.Client
@@ -86,6 +87,12 @@ type incomingMsg struct {
 	data map[string]string
 }
 
+type authResult struct {
+	c    *client
+	ok   bool
+	name string
+}
+
 type RoomInfo struct {
 	ID      string   `json:"id"`
 	Type    RoomType `json:"type"`
@@ -102,6 +109,7 @@ type Room struct {
 	leave        chan *client
 	incoming     chan incomingMsg
 	broadcastExt chan []byte
+	authDone     chan authResult
 	shutdown     chan struct{}
 	clientCount  atomic.Int64
 	streaming    atomic.Bool
@@ -118,6 +126,7 @@ func newRoom(id string, roomType RoomType, hostName string) *Room {
 		leave:        make(chan *client, 8),
 		incoming:     make(chan incomingMsg, 64),
 		broadcastExt: make(chan []byte, 8),
+		authDone:     make(chan authResult, 16),
 		shutdown:     make(chan struct{}),
 	}
 	r.lastActivity.Store(time.Now().UnixNano())
@@ -166,20 +175,22 @@ type listReq struct {
 }
 
 type RoomManager struct {
-	rooms  map[string]*Room
-	find   chan findReq
-	add    chan *Room
-	remove chan string
-	list   chan listReq
+	rooms        map[string]*Room
+	find         chan findReq
+	add          chan *Room
+	remove       chan string
+	list         chan listReq
+	broadcastAll chan []byte
 }
 
 func newRoomManager() *RoomManager {
 	return &RoomManager{
-		rooms:  make(map[string]*Room),
-		find:   make(chan findReq),
-		add:    make(chan *Room),
-		remove: make(chan string),
-		list:   make(chan listReq),
+		rooms:        make(map[string]*Room),
+		find:         make(chan findReq),
+		add:          make(chan *Room),
+		remove:       make(chan string),
+		list:         make(chan listReq),
+		broadcastAll: make(chan []byte),
 	}
 }
 
@@ -206,6 +217,13 @@ func (m *RoomManager) run() {
 				})
 			}
 			req.resp <- result
+		case msg := <-m.broadcastAll:
+			for _, r := range m.rooms {
+				select {
+				case r.broadcastExt <- msg:
+				default:
+				}
+			}
 		}
 	}
 }
@@ -245,6 +263,16 @@ func (r *Room) runGacha(manager *RoomManager) {
 			}
 		case msg := <-r.incoming:
 			r.handleGacha(msg)
+		case res := <-r.authDone:
+			if res.ok {
+				res.c.isAuthed.Store(true)
+				res.c.userName = res.name
+				if r.hostName != "" && res.name == r.hostName && r.host == nil {
+					res.c.isHost = true
+					r.host = res.c
+					log.Printf("gacha room %s: host connected (%s)", r.id, res.name)
+				}
+			}
 		case msg := <-r.broadcastExt:
 			r.broadcastBytes(msg)
 		case <-hbCheck.C:
@@ -258,15 +286,11 @@ func (r *Room) handleGacha(msg incomingMsg) {
 	r.touch()
 	switch msg.data["type"] {
 	case "auth":
-		if ok, name := verifyToken(msg.data["token"]); ok {
-			c.isAuthed.Store(true)
-			c.userName = name
-			if r.hostName != "" && name == r.hostName && r.host == nil {
-				c.isHost = true
-				r.host = c
-				log.Printf("gacha room %s: host connected (%s)", r.id, name)
-			}
-		}
+		token := msg.data["token"]
+		go func() {
+			ok, name := verifyToken(token)
+			r.authDone <- authResult{c: c, ok: ok, name: name}
+		}()
 	case "machine_state":
 		if !c.isHost {
 			return
@@ -296,6 +320,12 @@ func (r *Room) runGlobal() {
 			r.clientCount.Add(-1)
 		case msg := <-r.incoming:
 			r.handleGlobal(msg)
+		case res := <-r.authDone:
+			if res.ok {
+				res.c.isAuthed.Store(true)
+				res.c.userName = res.name
+				log.Printf("client authed: %s", res.name)
+			}
 		case <-ticker.C:
 			if r.shouldShutdown() {
 				log.Println("global room idle, shutting down")
@@ -323,11 +353,11 @@ func (r *Room) handleGlobal(msg incomingMsg) {
 	r.touch()
 	switch msg.data["type"] {
 	case "auth":
-		if ok, name := verifyToken(msg.data["token"]); ok {
-			c.isAuthed.Store(true)
-			c.userName = name
-			log.Printf("client authed: %s", name)
-		}
+		token := msg.data["token"]
+		go func() {
+			ok, name := verifyToken(token)
+			r.authDone <- authResult{c: c, ok: ok, name: name}
+		}()
 	case "command":
 		if !c.isAuthed.Load() {
 			return
@@ -352,6 +382,7 @@ func (m *RoomManager) Get(id string) *Room {
 
 func (m *RoomManager) Add(r *Room) { m.add <- r }
 func (m *RoomManager) Remove(id string) { m.remove <- id }
+func (m *RoomManager) BroadcastAll(msg []byte) { m.broadcastAll <- msg }
 
 func (m *RoomManager) List() []RoomInfo {
 	resp := make(chan []RoomInfo, 1)
@@ -403,7 +434,7 @@ func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
 	}
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		InsecureSkipVerify: true,
+		OriginPatterns: strings.Split(*allowedOrigins, ","),
 	})
 	if err != nil {
 		log.Printf("accept: %v", err)
@@ -616,6 +647,10 @@ func main() {
 
 	<-shutdown
 	log.Println("shutdown requested")
-	ws.Close()
+	out, _ := json.Marshal(map[string]string{"type": "server_shutdown"})
+	manager.BroadcastAll(out)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer shutdownCancel()
+	ws.Shutdown(shutdownCtx)
 	mgmt.Close()
 }

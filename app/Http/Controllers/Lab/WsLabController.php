@@ -14,13 +14,15 @@ class WsLabController extends Controller
     private string $pidFile;
     private string $wsAddr;
     private string $mgmtAddr;
+    private string $allowedOrigins;
 
     public function __construct()
     {
-        $this->binaryPath = storage_path('app/ws-lab');
-        $this->pidFile    = storage_path('app/ws-lab.pid');
-        $this->wsAddr     = '127.0.0.1:9001';
-        $this->mgmtAddr   = '127.0.0.1:9002';
+        $this->binaryPath     = storage_path('app/ws-lab');
+        $this->pidFile        = storage_path('app/ws-lab.pid');
+        $this->wsAddr         = '127.0.0.1:9001';
+        $this->mgmtAddr       = '127.0.0.1:9002';
+        $this->allowedOrigins = env('WS_ALLOWED_ORIGINS', 'localhost:*');
     }
 
     public function authToken(): JsonResponse
@@ -68,11 +70,12 @@ class WsLabController extends Controller
         }
 
         $cmd = sprintf(
-            '%s --ws-addr=%s --mgmt-addr=%s --pid-file=%s > /dev/null 2>&1 &',
+            '%s --ws-addr=%s --mgmt-addr=%s --pid-file=%s --allowed-origins=%s > /dev/null 2>&1 &',
             escapeshellarg($this->binaryPath),
             escapeshellarg($this->wsAddr),
             escapeshellarg($this->mgmtAddr),
             escapeshellarg($this->pidFile),
+            escapeshellarg($this->allowedOrigins),
         );
 
         exec($cmd);
@@ -109,18 +112,7 @@ class WsLabController extends Controller
     public function streamStart(): JsonResponse
     {
         if (!$this->isRunning()) {
-            if (!file_exists($this->binaryPath)) {
-                return response()->json(['message' => 'ws-lab binary not found'], 503);
-            }
-            $cmd = sprintf(
-                '%s --ws-addr=%s --mgmt-addr=%s --pid-file=%s > /dev/null 2>&1 &',
-                escapeshellarg($this->binaryPath),
-                escapeshellarg($this->wsAddr),
-                escapeshellarg($this->mgmtAddr),
-                escapeshellarg($this->pidFile),
-            );
-            exec($cmd);
-            usleep(300_000);
+            return response()->json(['message' => 'ws-lab not running'], 503);
         }
 
         try {
