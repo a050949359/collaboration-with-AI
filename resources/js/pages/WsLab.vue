@@ -14,8 +14,10 @@ const CHART_W = 600;
 const CHART_H = 200;
 
 const wsStatus = ref<'offline' | 'connecting' | 'connected'>('offline');
+const serverRunning = ref(false);
 const streaming = ref(false);
-const actionLoading = ref(false);
+const serverLoading = ref(false);
+const streamLoading = ref(false);
 const history = ref<DataPoint[]>([]);
 
 let ws: WebSocket | null = null;
@@ -60,27 +62,53 @@ function disconnectWs() {
     wsStatus.value = 'offline';
 }
 
+// ── Server control (auth only) ────────────────────────────────────────────────
+
+async function startServer() {
+    serverLoading.value = true;
+    try {
+        const res = await fetch(api.wsLab.start(), { method: 'POST', credentials: 'include' });
+        if (!res.ok) return;
+        serverRunning.value = true;
+        setTimeout(connectWs, 400);
+    } finally {
+        serverLoading.value = false;
+    }
+}
+
+async function stopServer() {
+    serverLoading.value = true;
+    try {
+        streaming.value = false;
+        disconnectWs();
+        await fetch(api.wsLab.stop(), { method: 'POST', credentials: 'include' });
+        serverRunning.value = false;
+    } finally {
+        serverLoading.value = false;
+    }
+}
+
 // ── Stream control (auth only) ────────────────────────────────────────────────
 
 async function startStream() {
-    actionLoading.value = true;
+    streamLoading.value = true;
     try {
         const res = await fetch(api.wsLab.streamStart(), { method: 'POST', credentials: 'include' });
         if (!res.ok) return;
         streaming.value = true;
         if (wsStatus.value === 'offline') setTimeout(connectWs, 400);
     } finally {
-        actionLoading.value = false;
+        streamLoading.value = false;
     }
 }
 
 async function stopStream() {
-    actionLoading.value = true;
+    streamLoading.value = true;
     try {
         await fetch(api.wsLab.streamStop(), { method: 'POST', credentials: 'include' });
         streaming.value = false;
     } finally {
-        actionLoading.value = false;
+        streamLoading.value = false;
     }
 }
 
@@ -117,7 +145,16 @@ const linePath = computed(() => buildLinePath());
 const fillPath = computed(() => buildFillPath());
 const latestValue = computed(() => history.value.at(-1)?.value.toFixed(1) ?? null);
 
-onMounted(() => connectWs());
+onMounted(async () => {
+    try {
+        const res = await fetch(api.wsLab.status(), { credentials: 'include' });
+        if (res.ok) {
+            const data = await res.json();
+            serverRunning.value = data.running;
+            if (data.running) connectWs();
+        }
+    } catch { /* server offline, stay disconnected */ }
+});
 onUnmounted(() => disconnectWs());
 </script>
 
@@ -135,15 +172,26 @@ onUnmounted(() => disconnectWs());
                     'border-[--binary-outline-variant] text-[--binary-text-muted]': wsStatus === 'offline',
                 }">{{ wsStatus }}</span>
 
-                <div v-if="user" class="ml-auto">
+                <div v-if="user" class="ml-auto flex items-center gap-2">
+                    <!-- Server start / stop -->
+                    <button
+                        class="px-4 py-1.5 text-xs font-mono rounded border transition-colors disabled:opacity-40"
+                        :class="serverRunning
+                            ? 'border-[--binary-tertiary] text-[--binary-tertiary] hover:bg-[--binary-tertiary]/10'
+                            : 'border-[--binary-outline-variant] text-[--binary-text-muted] hover:border-[--binary-primary] hover:text-[--binary-primary]'"
+                        :disabled="serverLoading"
+                        @click="serverRunning ? stopServer() : startServer()"
+                    >{{ serverLoading ? '…' : serverRunning ? '■ server' : '▶ server' }}</button>
+
+                    <!-- Stream start / stop -->
                     <button
                         class="px-4 py-1.5 text-xs font-mono rounded border transition-colors disabled:opacity-40"
                         :class="streaming
                             ? 'border-[--binary-tertiary] text-[--binary-tertiary] hover:bg-[--binary-tertiary]/10'
                             : 'border-[--binary-primary] text-[--binary-primary] hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container]'"
-                        :disabled="actionLoading"
+                        :disabled="streamLoading || !serverRunning"
                         @click="streaming ? stopStream() : startStream()"
-                    >{{ actionLoading ? '…' : streaming ? '■ stop' : '▶ stream' }}</button>
+                    >{{ streamLoading ? '…' : streaming ? '■ stream' : '▶ stream' }}</button>
                 </div>
             </div>
 
