@@ -17,15 +17,21 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+	"github.com/redis/go-redis/v9"
 )
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
 var (
-	wsAddr   = flag.String("ws-addr", "127.0.0.1:9001", "WebSocket listen address")
-	mgmtAddr = flag.String("mgmt-addr", "127.0.0.1:9002", "Management HTTP listen address")
-	pidFile  = flag.String("pid-file", "", "Path to write PID file")
+	wsAddr      = flag.String("ws-addr", "127.0.0.1:9001", "WebSocket listen address")
+	mgmtAddr    = flag.String("mgmt-addr", "127.0.0.1:9002", "Management HTTP listen address")
+	pidFile     = flag.String("pid-file", "", "Path to write PID file")
+	redisAddr   = flag.String("redis-addr", "127.0.0.1:6379", "Redis address")
+	redisPass   = flag.String("redis-password", "", "Redis password")
+	redisPrefix = flag.String("redis-prefix", "laravel-database-", "Redis key prefix")
 )
+
+var rdb *redis.Client
 
 const heartbeatTimeout = 30 * time.Second
 
@@ -155,19 +161,16 @@ func (h *hub) evictStale() {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-var laravelBase = flag.String("laravel-url", "http://127.0.0.1", "Laravel base URL for token verification")
-
 func verifyToken(token string) (bool, string) {
-	resp, err := http.Get(*laravelBase + "/api/ws-lab/verify-token?token=" + token)
-	if err != nil || resp.StatusCode != http.StatusOK {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	key := *redisPrefix + "ws_lab_auth:" + token
+	name, err := rdb.GetDel(ctx, key).Result()
+	if err != nil {
 		return false, ""
 	}
-	defer resp.Body.Close()
-	var body struct {
-		User string `json:"user"`
-	}
-	json.NewDecoder(resp.Body).Decode(&body)
-	return true, body.User
+	return true, name
 }
 
 // ── WebSocket handler ─────────────────────────────────────────────────────────
@@ -258,6 +261,11 @@ func (h *hub) serveWS(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
+
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     *redisAddr,
+		Password: *redisPass,
+	})
 
 	if *pidFile != "" {
 		if err := os.WriteFile(*pidFile, []byte(strconv.Itoa(os.Getpid())), 0644); err != nil {
