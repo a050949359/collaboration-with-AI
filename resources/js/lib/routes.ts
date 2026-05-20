@@ -140,6 +140,7 @@ export const api = {
 
     wsLab: {
         status:      () => '/api/ws-lab/status',
+        authToken:   () => '/api/ws-lab/auth-token',
         start:       () => '/api/ws-lab/start',
         stop:        () => '/api/ws-lab/stop',
         streamStart: () => '/api/ws-lab/stream/start',

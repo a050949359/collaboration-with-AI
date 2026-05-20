@@ -66,6 +66,8 @@ type client struct {
 	conn     *websocket.Conn
 	lastPing time.Time
 	send     chan []byte
+	isAuthed bool
+	userName string
 }
 
 type hub struct {
@@ -151,6 +153,23 @@ func (h *hub) evictStale() {
 	}
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+var laravelBase = flag.String("laravel-url", "http://127.0.0.1", "Laravel base URL for token verification")
+
+func verifyToken(token string) (bool, string) {
+	resp, err := http.Get(*laravelBase + "/api/ws-lab/verify-token?token=" + token)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return false, ""
+	}
+	defer resp.Body.Close()
+	var body struct {
+		User string `json:"user"`
+	}
+	json.NewDecoder(resp.Body).Decode(&body)
+	return true, body.User
+}
+
 // ── WebSocket handler ─────────────────────────────────────────────────────────
 
 func (h *hub) serveWS(w http.ResponseWriter, r *http.Request) {
@@ -195,7 +214,8 @@ func (h *hub) serveWS(w http.ResponseWriter, r *http.Request) {
 		if err := wsjson.Read(ctx, conn, &msg); err != nil {
 			break
 		}
-		if msg["type"] == "ping" {
+		switch msg["type"] {
+		case "ping":
 			h.mu.Lock()
 			c.lastPing = time.Now()
 			h.mu.Unlock()
@@ -204,6 +224,31 @@ func (h *hub) serveWS(w http.ResponseWriter, r *http.Request) {
 			select {
 			case c.send <- pong:
 			default:
+			}
+		case "auth":
+			if ok, name := verifyToken(msg["token"]); ok {
+				h.mu.Lock()
+				c.isAuthed = true
+				c.userName = name
+				h.mu.Unlock()
+				log.Printf("client authed: %s", name)
+			}
+		case "command":
+			h.mu.Lock()
+			authed := c.isAuthed
+			name := c.userName
+			h.mu.Unlock()
+			if !authed {
+				break
+			}
+			if text := msg["text"]; text != "" {
+				out, _ := json.Marshal(map[string]string{
+					"type": "command",
+					"text": text,
+					"user": name,
+					"ts":   strconv.FormatInt(time.Now().UnixMilli(), 10),
+				})
+				h.broadcast(out)
 			}
 		}
 	}

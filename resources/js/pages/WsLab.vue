@@ -6,6 +6,7 @@ import { api } from '@/lib/routes';
 import { useAuth } from '@/composables/useAuth';
 
 type DataPoint = { ts: number; value: number };
+type CommandEntry = { user: string; text: string; ts: number };
 
 const { user } = useAuth();
 
@@ -19,6 +20,11 @@ const streaming = ref(false);
 const serverLoading = ref(false);
 const streamLoading = ref(false);
 const history = ref<DataPoint[]>([]);
+const commands = ref<CommandEntry[]>([]);
+const cmdInput = ref('');
+const authToken = ref('');
+
+const MAX_COMMANDS = 50;
 
 let ws: WebSocket | null = null;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -34,6 +40,10 @@ function connectWs() {
     ws.onopen = () => {
         wsStatus.value = 'connected';
         heartbeatTimer = setInterval(() => ws?.send(JSON.stringify({ type: 'ping' })), 10_000);
+        if (authToken.value) {
+            ws?.send(JSON.stringify({ type: 'auth', token: authToken.value }));
+            authToken.value = '';
+        }
     };
 
     ws.onmessage = (e) => {
@@ -42,6 +52,9 @@ function connectWs() {
             if (msg.type === 'data') {
                 history.value.push({ ts: msg.ts, value: msg.value });
                 if (history.value.length > MAX_POINTS) history.value.shift();
+            } else if (msg.type === 'command') {
+                commands.value.push({ user: msg.user, text: msg.text, ts: Number(msg.ts) });
+                if (commands.value.length > MAX_COMMANDS) commands.value.shift();
             }
         } catch { /* ignore */ }
     };
@@ -112,6 +125,15 @@ async function stopStream() {
     }
 }
 
+// ── Command ───────────────────────────────────────────────────────────────────
+
+function sendCommand() {
+    const text = cmdInput.value.trim();
+    if (!text || !ws || wsStatus.value !== 'connected') return;
+    ws.send(JSON.stringify({ type: 'command', text, user: user.value?.name ?? 'unknown' }));
+    cmdInput.value = '';
+}
+
 // ── Chart ────────────────────────────────────────────────────────────────────
 
 function buildLinePath(): string {
@@ -147,12 +169,22 @@ const latestValue = computed(() => history.value.at(-1)?.value.toFixed(1) ?? nul
 
 onMounted(async () => {
     try {
-        const res = await fetch(api.wsLab.status(), { credentials: 'include' });
-        if (res.ok) {
-            const data = await res.json();
+        const [statusRes, tokenRes] = await Promise.all([
+            fetch(api.wsLab.status(), { credentials: 'include' }),
+            user.value ? fetch(api.wsLab.authToken(), { method: 'POST', credentials: 'include' }) : Promise.resolve(null),
+        ]);
+
+        if (statusRes.ok) {
+            const data = await statusRes.json();
             serverRunning.value = data.running;
-            if (data.running) connectWs();
         }
+
+        if (tokenRes?.ok) {
+            const data = await tokenRes.json();
+            authToken.value = data.token;
+        }
+
+        if (serverRunning.value) connectWs();
     } catch { /* server offline, stay disconnected */ }
 });
 onUnmounted(() => disconnectWs());
@@ -235,6 +267,41 @@ onUnmounted(() => disconnectWs());
                         {{ wsStatus === 'offline' ? 'offline — server not running' : 'waiting for stream…' }}
                     </text>
                 </svg>
+            </div>
+
+            <!-- Command panel -->
+            <div class="rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5 flex flex-col gap-3">
+                <span class="font-mono text-xs text-[--binary-text-muted] tracking-widest uppercase">command log</span>
+
+                <!-- Log -->
+                <div class="font-mono text-xs flex flex-col gap-1 min-h-[80px] max-h-48 overflow-y-auto">
+                    <span v-if="commands.length === 0" class="text-[--binary-text-muted] opacity-40">no commands yet</span>
+                    <div v-for="(cmd, i) in commands" :key="i" class="flex gap-2">
+                        <span class="text-[--binary-tertiary] shrink-0">{{ cmd.user }}</span>
+                        <span class="text-[--binary-text-muted]">&gt;</span>
+                        <span class="text-[--binary-primary] break-all">{{ cmd.text }}</span>
+                        <span class="text-[--binary-text-muted] ml-auto shrink-0 tabular-nums">
+                            {{ new Date(cmd.ts).toLocaleTimeString() }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Input (auth only) -->
+                <form v-if="user" class="flex gap-2" @submit.prevent="sendCommand">
+                    <span class="font-mono text-xs text-[--binary-tertiary] self-center">&gt;</span>
+                    <input
+                        v-model="cmdInput"
+                        type="text"
+                        placeholder="type a command…"
+                        :disabled="wsStatus !== 'connected'"
+                        class="flex-1 bg-transparent border-b border-[--binary-outline-variant] focus:border-[--binary-primary] outline-none font-mono text-xs text-[--binary-primary] placeholder:text-[--binary-text-muted] pb-0.5 disabled:opacity-40 transition-colors"
+                    />
+                    <button
+                        type="submit"
+                        :disabled="wsStatus !== 'connected' || !cmdInput.trim()"
+                        class="font-mono text-xs px-3 py-1 rounded border border-[--binary-primary] text-[--binary-primary] hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container] disabled:opacity-40 transition-colors"
+                    >send</button>
+                </form>
             </div>
 
         </div>

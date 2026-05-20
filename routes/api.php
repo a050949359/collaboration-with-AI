@@ -174,9 +174,11 @@ Route::prefix('v1/tour')->group(function () {
 
 
 Route::prefix('ws-lab')->group(function () {
-    Route::get('/status', [WsLabController::class, 'status']);
+    Route::get('/status',       [WsLabController::class, 'status']);
+    Route::get('/verify-token', [WsLabController::class, 'verifyToken']);
 
     Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+        Route::post('/auth-token',   [WsLabController::class, 'authToken']);
         Route::post('/start',        [WsLabController::class, 'start']);
         Route::post('/stop',         [WsLabController::class, 'stop']);
         Route::post('/stream/start', [WsLabController::class, 'streamStart']);
