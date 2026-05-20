@@ -36,6 +36,19 @@ class WsLabController extends Controller
         return response()->json(['token' => $token]);
     }
 
+    public function rooms(): JsonResponse
+    {
+        if (!$this->isRunning()) {
+            return response()->json([]);
+        }
+        try {
+            $res = Http::timeout(2)->get("http://{$this->mgmtAddr}/rooms");
+            return response()->json($res->json() ?? []);
+        } catch (\Throwable) {
+            return response()->json([]);
+        }
+    }
+
     public function status(): JsonResponse
     {
         return response()->json([

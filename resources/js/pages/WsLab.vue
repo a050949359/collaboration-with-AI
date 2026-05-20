@@ -7,6 +7,7 @@ import { useAuth } from '@/composables/useAuth';
 
 type DataPoint = { ts: number; value: number };
 type CommandEntry = { user: string; text: string; ts: number };
+type RoomInfo = { id: string; type: string; clients: number };
 
 const { user } = useAuth();
 
@@ -23,6 +24,8 @@ const history = ref<DataPoint[]>([]);
 const commands = ref<CommandEntry[]>([]);
 const cmdInput = ref('');
 const authToken = ref('');
+const rooms = ref<RoomInfo[]>([]);
+const roomsLoading = ref(false);
 
 const MAX_COMMANDS = 50;
 
@@ -125,6 +128,17 @@ async function stopStream() {
     }
 }
 
+// ── Rooms ─────────────────────────────────────────────────────────────────────
+
+async function fetchRooms() {
+    roomsLoading.value = true;
+    try {
+        const res = await fetch(api.wsLab.rooms(), { credentials: 'include' });
+        if (res.ok) rooms.value = await res.json();
+    } catch { rooms.value = []; }
+    finally { roomsLoading.value = false; }
+}
+
 // ── Command ───────────────────────────────────────────────────────────────────
 
 function sendCommand() {
@@ -184,7 +198,10 @@ onMounted(async () => {
             authToken.value = data.token;
         }
 
-        if (serverRunning.value) connectWs();
+        if (serverRunning.value) {
+            connectWs();
+            fetchRooms();
+        }
     } catch { /* server offline, stay disconnected */ }
 });
 onUnmounted(() => disconnectWs());
@@ -267,6 +284,33 @@ onUnmounted(() => disconnectWs());
                         {{ wsStatus === 'offline' ? 'offline — server not running' : 'waiting for stream…' }}
                     </text>
                 </svg>
+            </div>
+
+            <!-- Rooms panel -->
+            <div class="rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5 flex flex-col gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-xs text-[--binary-text-muted] tracking-widest uppercase">rooms</span>
+                    <button
+                        class="ml-auto font-mono text-[10px] px-2 py-0.5 rounded border border-[--binary-outline-variant] text-[--binary-text-muted] hover:border-[--binary-primary] hover:text-[--binary-primary] disabled:opacity-40 transition-colors"
+                        :disabled="roomsLoading || !serverRunning"
+                        @click="fetchRooms"
+                    >{{ roomsLoading ? '…' : 'refresh' }}</button>
+                </div>
+
+                <div v-if="!serverRunning" class="font-mono text-xs text-[--binary-text-muted] opacity-40">server not running</div>
+                <div v-else-if="rooms.length === 0" class="font-mono text-xs text-[--binary-text-muted] opacity-40">no rooms</div>
+                <div v-else class="flex flex-col gap-1.5">
+                    <div v-for="room in rooms" :key="room.id"
+                        class="flex items-center gap-3 font-mono text-xs px-3 py-1.5 rounded border border-[--binary-outline-variant] bg-[--binary-surface]">
+                        <span class="text-[--binary-primary]">{{ room.id }}</span>
+                        <span class="px-1.5 py-px rounded text-[10px] border"
+                            :class="room.type === 'gacha'
+                                ? 'border-[--binary-tertiary] text-[--binary-tertiary]'
+                                : 'border-[--binary-outline-variant] text-[--binary-text-muted]'"
+                        >{{ room.type }}</span>
+                        <span class="ml-auto text-[--binary-text-muted] tabular-nums">{{ room.clients }} client{{ room.clients !== 1 ? 's' : '' }}</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Command panel -->

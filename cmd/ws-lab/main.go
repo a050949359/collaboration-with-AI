@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -445,6 +446,43 @@ func main() {
 		globalRoom.streaming.Store(false)
 		w.Write([]byte(`{"ok":true}`))
 	})
+
+	// Room management
+	http.DefaultServeMux.HandleFunc("/rooms", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.Method {
+		case http.MethodGet:
+			json.NewEncoder(w).Encode(manager.List())
+		case http.MethodPost:
+			var body struct {
+				ID   string   `json:"id"`
+				Type RoomType `json:"type"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ID == "" {
+				http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+				return
+			}
+			manager.Add(newRoom(body.ID, body.Type))
+			w.Write([]byte(`{"ok":true}`))
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	http.DefaultServeMux.HandleFunc("/rooms/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		id := strings.TrimPrefix(r.URL.Path, "/rooms/")
+		if id == "" || id == "global" {
+			http.Error(w, `{"error":"cannot delete this room"}`, http.StatusBadRequest)
+			return
+		}
+		manager.Remove(id)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"ok":true}`))
+	})
+
 	go func() {
 		log.Printf("mgmt listening on %s", *mgmtAddr)
 		mgmt.ListenAndServe()
