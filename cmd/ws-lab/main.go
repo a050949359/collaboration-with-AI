@@ -577,7 +577,9 @@ func main() {
 				http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
 				return
 			}
-			manager.Add(newRoom(body.ID, body.Type, body.HostName))
+			if manager.Get(body.ID) == nil {
+				manager.Add(newRoom(body.ID, body.Type, body.HostName))
+			}
 			w.Write([]byte(`{"ok":true}`))
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

@@ -90,6 +90,16 @@ class GachaRoomController extends Controller
             ['is_host' => false],
         );
 
+        try {
+            Http::timeout(3)->post("http://{$this->mgmtAddr}/rooms", [
+                'id'        => $code,
+                'type'      => 'gacha',
+                'host_name' => $room->players()->where('is_host', true)->value('name') ?? '',
+            ]);
+        } catch (\Throwable) {
+            // ws server not running
+        }
+
         return response()->json(['player_id' => $player->id, 'room' => $room]);
     }
 

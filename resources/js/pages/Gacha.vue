@@ -427,6 +427,7 @@ const wsStatus  = ref<'offline'|'connecting'|'connected'>('offline');
 const authToken = ref('');
 let ws: WebSocket | null = null;
 let hbTimer: ReturnType<typeof setInterval> | null = null;
+let statusTimer: ReturnType<typeof setInterval> | null = null;
 
 // ── Join modal ─────────────────────────────────────────────────────────────
 const joinTarget  = ref<RoomListItem | null>(null);
@@ -741,33 +742,43 @@ function initPhysics() {
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────
+async function checkStatus() {
+    try {
+        const res = await fetch(api.wsLab.status(), { credentials: 'include' });
+        if (!res.ok) return;
+        const d = await res.json();
+        const wasAvailable = wsAvailable.value;
+        wsAvailable.value = d.running;
+
+        if (!wasAvailable && d.running && mode.value === 'standalone') {
+            mode.value = 'lobby';
+            fetchRooms();
+        } else if (!d.running && mode.value === 'lobby') {
+            mode.value = 'standalone';
+        }
+    } catch { /* ignore */ }
+}
+
 onMounted(async () => {
     initPhysics();
 
-    const [statusRes, tokenRes] = await Promise.all([
-        fetch(api.wsLab.status(), { credentials: 'include' }),
+    const [, tokenRes] = await Promise.all([
+        checkStatus(),
         user.value
             ? fetch(api.wsLab.authToken(), { method: 'POST', credentials: 'include' })
             : Promise.resolve(null),
     ]);
-
-    if (statusRes.ok) {
-        const d = await statusRes.json();
-        wsAvailable.value = d.running;
-    }
 
     if (tokenRes?.ok) {
         const d = await tokenRes.json();
         authToken.value = d.token;
     }
 
-    if (wsAvailable.value) {
-        mode.value = 'lobby';
-        fetchRooms();
-    }
+    statusTimer = setInterval(checkStatus, 10_000);
 });
 
 onUnmounted(() => {
+    if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
     disconnectWs();
     if (agitationHandler) Events.off(engine, 'afterUpdate', agitationHandler);
     if (runner) Runner.stop(runner);
