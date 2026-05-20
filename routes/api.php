@@ -173,12 +173,15 @@ Route::prefix('v1/tour')->group(function () {
 });
 
 
-Route::prefix('ws-lab')->middleware(['auth:sanctum', 'verified'])->group(function () {
-    Route::get('/status',        [WsLabController::class, 'status']);
-    Route::post('/start',        [WsLabController::class, 'start']);
-    Route::post('/stop',         [WsLabController::class, 'stop']);
-    Route::post('/stream/start', [WsLabController::class, 'streamStart']);
-    Route::post('/stream/stop',  [WsLabController::class, 'streamStop']);
+Route::prefix('ws-lab')->group(function () {
+    Route::get('/status', [WsLabController::class, 'status']);
+
+    Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+        Route::post('/start',        [WsLabController::class, 'start']);
+        Route::post('/stop',         [WsLabController::class, 'stop']);
+        Route::post('/stream/start', [WsLabController::class, 'streamStart']);
+        Route::post('/stream/stop',  [WsLabController::class, 'streamStop']);
+    });
 });
 
 Route::prefix('mini-orch')->group(function () {
