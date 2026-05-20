@@ -22,6 +22,16 @@ class GachaRoomController extends Controller
             ->withCount('players')
             ->get(['id', 'code', 'room_name', 'status', 'max_players', 'can_draw', 'is_ten_pull']);
 
+        try {
+            $res = Http::timeout(2)->get("http://{$this->mgmtAddr}/rooms");
+            if ($res->ok()) {
+                $goRoomIds = collect($res->json())->pluck('id')->flip();
+                $rooms = $rooms->filter(fn($r) => isset($goRoomIds[$r->code]))->values();
+            }
+        } catch (\Throwable) {
+            // Go server unreachable, return DB rooms as-is
+        }
+
         return response()->json($rooms);
     }
 

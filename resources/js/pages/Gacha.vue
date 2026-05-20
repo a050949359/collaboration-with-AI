@@ -365,6 +365,7 @@
                         class="w-full bg-transparent border-b border-[#2f4739] focus:border-[#6bdc9f] outline-none text-[#6bdc9f] text-sm pb-1 mb-6 placeholder:text-[#6bdc9f]/30 transition-colors"
                         @keyup.enter="submitJoinModal"
                     />
+                    <p v-if="joinError" class="text-red-400 text-xs mb-4 tracking-wide">{{ joinError }}</p>
                     <button
                         :disabled="!joinName.trim() || joinLoading"
                         class="w-full py-3 btn-gradient text-[#0f1511] font-bold rounded-xl hover:brightness-110 transition-all uppercase tracking-widest text-xs disabled:opacity-40"
@@ -433,6 +434,7 @@ let statusTimer: ReturnType<typeof setInterval> | null = null;
 const joinTarget  = ref<RoomListItem | null>(null);
 const joinName    = ref('');
 const joinLoading = ref(false);
+const joinError   = ref('');
 
 // ── Machine state ──────────────────────────────────────────────────────────
 const canDraw        = ref(true);
@@ -521,6 +523,13 @@ function handleWsMessage(msg: Record<string, any>) {
             mode.value = 'lobby';
             fetchRooms();
             break;
+        case 'server_shutdown':
+            disconnectWs();
+            currentRoom.value = currentPlayer.value = null;
+            isHost.value = false;
+            wsAvailable.value = false;
+            mode.value = 'standalone';
+            break;
     }
 }
 
@@ -577,13 +586,13 @@ function openJoinModal(room: RoomListItem) {
     } else {
         joinTarget.value = room;
         joinName.value = '';
+        joinError.value = '';
     }
 }
 
 async function submitJoinModal() {
     if (!joinTarget.value || !joinName.value.trim()) return;
     await doJoin(joinTarget.value, joinName.value.trim());
-    joinTarget.value = null;
 }
 
 async function doJoin(room: RoomListItem, name: string) {
@@ -595,7 +604,14 @@ async function doJoin(room: RoomListItem, name: string) {
             credentials: 'include',
             body: JSON.stringify({ name }),
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+            const msg = res.status === 404 ? '房間不存在' : res.status === 422 ? '房間已滿' : '加入失敗';
+            joinError.value = msg;
+            fetchRooms();
+            return;
+        }
+        joinTarget.value = null;
+        joinError.value = '';
         const data = await res.json();
         currentRoom.value   = room;
         currentPlayer.value = { id: data.player_id, name };
@@ -753,7 +769,10 @@ async function checkStatus() {
         if (!wasAvailable && d.running && mode.value === 'standalone') {
             mode.value = 'lobby';
             fetchRooms();
-        } else if (!d.running && mode.value === 'lobby') {
+        } else if (!d.running && mode.value !== 'standalone') {
+            disconnectWs();
+            currentRoom.value = currentPlayer.value = null;
+            isHost.value = false;
             mode.value = 'standalone';
         }
     } catch { /* ignore */ }

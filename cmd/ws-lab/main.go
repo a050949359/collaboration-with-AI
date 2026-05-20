@@ -277,6 +277,11 @@ func (r *Room) runGacha(manager *RoomManager) {
 			r.broadcastBytes(msg)
 		case <-hbCheck.C:
 			r.evictStale()
+			if r.clientCount.Load() == 0 && r.shouldShutdown() {
+				log.Printf("gacha room %s empty, removing", r.id)
+				manager.Remove(r.id)
+				return
+			}
 		}
 	}
 }
