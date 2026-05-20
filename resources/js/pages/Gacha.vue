@@ -5,7 +5,7 @@
         >
             <!-- Right Panel: Physics Chamber -->
             <div
-                class="relative w-full lg:w-[310px] lg:order-last bg-[#151c17] rounded-2xl p-3 lg:p-5 border border-white/5 emerald-glow flex flex-col"
+                class="relative w-full lg:flex-[4] lg:order-last bg-[#151c17] rounded-2xl p-3 lg:p-5 border border-white/5 emerald-glow flex flex-col"
             >
                 <!-- Resonance Chamber -->
                 <div
@@ -93,7 +93,7 @@
             </div>
 
             <!-- Right Panel -->
-            <aside class="w-full lg:flex-1 min-w-0 bg-[#131a15] rounded-3xl border border-white/5 p-5 lg:p-6 emerald-glow overflow-auto flex flex-col gap-6">
+            <aside class="w-full lg:flex-[6] min-w-0 bg-[#131a15] rounded-3xl border border-white/5 p-5 lg:p-6 emerald-glow overflow-auto flex flex-col gap-6">
 
                 <!-- LOBBY -->
                 <template v-if="mode === 'lobby'">
@@ -507,6 +507,9 @@ function connectWs(roomCode: string) {
     ws.onopen = () => {
         wsStatus.value = 'connected';
         hbTimer = setInterval(() => ws?.send(JSON.stringify({ type: 'ping' })), 10_000);
+        if (currentPlayer.value?.name) {
+            ws?.send(JSON.stringify({ type: 'name', name: currentPlayer.value.name }));
+        }
         if (authToken.value) {
             ws?.send(JSON.stringify({ type: 'auth', token: authToken.value }));
             authToken.value = '';
@@ -544,6 +547,12 @@ function handleWsMessage(msg: Record<string, any>) {
             pushLog(`⚙ 機台設定更新：${flags}`);
             break;
         }
+        case 'player_joined':
+            pushLog(`→ ${msg.name} 加入房間`);
+            break;
+        case 'player_left':
+            pushLog(`← ${msg.name} 離開房間`);
+            break;
         case 'draw_result':
             drawHistory.value.push({ player: msg.player, results: msg.results, ts: msg.ts });
             if (drawHistory.value.length > 50) drawHistory.value.shift();
@@ -618,13 +627,9 @@ async function createRoom() {
 }
 
 function openJoinModal(room: RoomListItem) {
-    if (user.value) {
-        doJoin(room, user.value.name);
-    } else {
-        joinTarget.value = room;
-        joinName.value = '';
-        joinError.value = '';
-    }
+    joinTarget.value = room;
+    joinName.value = user.value?.name ?? '';
+    joinError.value = '';
 }
 
 async function submitJoinModal() {

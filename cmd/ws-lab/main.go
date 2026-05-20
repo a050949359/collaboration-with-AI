@@ -261,6 +261,10 @@ func (r *Room) runGacha(manager *RoomManager) {
 				manager.Remove(r.id)
 				return
 			}
+			if c.userName != "" {
+				out, _ := json.Marshal(map[string]string{"type": "player_left", "name": c.userName})
+				r.broadcastBytes(out)
+			}
 		case msg := <-r.incoming:
 			r.handleGacha(msg)
 		case res := <-r.authDone:
@@ -272,6 +276,8 @@ func (r *Room) runGacha(manager *RoomManager) {
 					r.host = res.c
 					log.Printf("gacha room %s: host connected (%s)", r.id, res.name)
 				}
+				out, _ := json.Marshal(map[string]string{"type": "player_joined", "name": res.name})
+				r.broadcastBytes(out)
 			}
 		case msg := <-r.broadcastExt:
 			r.broadcastBytes(msg)
@@ -296,6 +302,10 @@ func (r *Room) handleGacha(msg incomingMsg) {
 			ok, name := verifyToken(token)
 			r.authDone <- authResult{c: c, ok: ok, name: name}
 		}()
+	case "name":
+		if c.userName == "" {
+			c.userName = msg.data["name"]
+		}
 	case "machine_state":
 		if !c.isHost {
 			return
@@ -492,7 +502,7 @@ func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
 			case serverActivityCh <- struct{}{}:
 			default:
 			}
-		case "auth":
+		case "auth", "name":
 			room.incoming <- incomingMsg{c: c, data: msg}
 		default:
 			if c.isAuthed.Load() {
