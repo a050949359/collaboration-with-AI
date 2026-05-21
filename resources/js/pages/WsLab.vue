@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { api } from '@/lib/routes';
 import { useAuth } from '@/composables/useAuth';
@@ -10,6 +11,7 @@ type CommandEntry = { user: string; text: string; ts: number };
 type RoomInfo = { id: string; type: string; clients: number };
 
 const { user } = useAuth();
+const { t } = useI18n();
 
 const MAX_POINTS = 80;
 const CHART_W = 600;
@@ -208,7 +210,7 @@ onUnmounted(() => disconnectWs());
 </script>
 
 <template>
-    <Head title="ws-lab" />
+    <Head :title="t('ws_lab.head_title')" />
     <AppLayout>
         <div class="flex flex-col gap-6 px-4 pb-8 pt-20 max-w-3xl mx-auto">
 
@@ -230,7 +232,7 @@ onUnmounted(() => disconnectWs());
                             : 'border-[--binary-outline-variant] text-[--binary-text-muted] hover:border-[--binary-primary] hover:text-[--binary-primary]'"
                         :disabled="serverLoading"
                         @click="serverRunning ? stopServer() : startServer()"
-                    >{{ serverLoading ? '…' : serverRunning ? '■ server' : '▶ server' }}</button>
+                    >{{ serverLoading ? '…' : serverRunning ? t('ws_lab.server_stop') : t('ws_lab.server_start') }}</button>
 
                     <!-- Stream start / stop -->
                     <button
@@ -240,7 +242,7 @@ onUnmounted(() => disconnectWs());
                             : 'border-[--binary-primary] text-[--binary-primary] hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container]'"
                         :disabled="streamLoading || !serverRunning"
                         @click="streaming ? stopStream() : startStream()"
-                    >{{ streamLoading ? '…' : streaming ? '■ stream' : '▶ stream' }}</button>
+                    >{{ streamLoading ? '…' : streaming ? t('ws_lab.stream_stop') : t('ws_lab.stream_start') }}</button>
                 </div>
             </div>
 
@@ -281,7 +283,7 @@ onUnmounted(() => disconnectWs());
                         text-anchor="middle"
                         font-family="monospace" font-size="12"
                         fill="rgba(165,209,180,0.2)">
-                        {{ wsStatus === 'offline' ? 'offline — server not running' : 'waiting for stream…' }}
+                        {{ wsStatus === 'offline' ? t('ws_lab.chart_offline') : t('ws_lab.chart_waiting') }}
                     </text>
                 </svg>
             </div>
@@ -289,16 +291,16 @@ onUnmounted(() => disconnectWs());
             <!-- Rooms panel -->
             <div class="rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5 flex flex-col gap-3">
                 <div class="flex items-center gap-2">
-                    <span class="font-mono text-xs text-[--binary-text-muted] tracking-widest uppercase">rooms</span>
+                    <span class="font-mono text-xs text-[--binary-text-muted] tracking-widest uppercase">{{ t('ws_lab.rooms_label') }}</span>
                     <button
                         class="ml-auto font-mono text-[10px] px-2 py-0.5 rounded border border-[--binary-outline-variant] text-[--binary-text-muted] hover:border-[--binary-primary] hover:text-[--binary-primary] disabled:opacity-40 transition-colors"
                         :disabled="roomsLoading || !serverRunning"
                         @click="fetchRooms"
-                    >{{ roomsLoading ? '…' : 'refresh' }}</button>
+                    >{{ roomsLoading ? '…' : t('ws_lab.rooms_refresh') }}</button>
                 </div>
 
-                <div v-if="!serverRunning" class="font-mono text-xs text-[--binary-text-muted] opacity-40">server not running</div>
-                <div v-else-if="rooms.length === 0" class="font-mono text-xs text-[--binary-text-muted] opacity-40">no rooms</div>
+                <div v-if="!serverRunning" class="font-mono text-xs text-[--binary-text-muted] opacity-40">{{ t('ws_lab.rooms_server_offline') }}</div>
+                <div v-else-if="rooms.length === 0" class="font-mono text-xs text-[--binary-text-muted] opacity-40">{{ t('ws_lab.rooms_empty') }}</div>
                 <div v-else class="flex flex-col gap-1.5">
                     <div v-for="room in rooms" :key="room.id"
                         class="flex items-center gap-3 font-mono text-xs px-3 py-1.5 rounded border border-[--binary-outline-variant] bg-[--binary-surface]">
@@ -315,11 +317,11 @@ onUnmounted(() => disconnectWs());
 
             <!-- Command panel -->
             <div class="rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5 flex flex-col gap-3">
-                <span class="font-mono text-xs text-[--binary-text-muted] tracking-widest uppercase">command log</span>
+                <span class="font-mono text-xs text-[--binary-text-muted] tracking-widest uppercase">{{ t('ws_lab.cmd_label') }}</span>
 
                 <!-- Log -->
                 <div class="font-mono text-xs flex flex-col gap-1 min-h-[80px] max-h-48 overflow-y-auto">
-                    <span v-if="commands.length === 0" class="text-[--binary-text-muted] opacity-40">no commands yet</span>
+                    <span v-if="commands.length === 0" class="text-[--binary-text-muted] opacity-40">{{ t('ws_lab.cmd_empty') }}</span>
                     <div v-for="(cmd, i) in commands" :key="i" class="flex gap-2">
                         <span class="text-[--binary-tertiary] shrink-0">{{ cmd.user }}</span>
                         <span class="text-[--binary-text-muted]">&gt;</span>
@@ -336,7 +338,7 @@ onUnmounted(() => disconnectWs());
                     <input
                         v-model="cmdInput"
                         type="text"
-                        placeholder="type a command…"
+                        :placeholder="t('ws_lab.cmd_placeholder')"
                         :disabled="wsStatus !== 'connected'"
                         class="flex-1 bg-transparent border-b border-[--binary-outline-variant] focus:border-[--binary-primary] outline-none font-mono text-xs text-[--binary-primary] placeholder:text-[--binary-text-muted] pb-0.5 disabled:opacity-40 transition-colors"
                     />
@@ -344,7 +346,7 @@ onUnmounted(() => disconnectWs());
                         type="submit"
                         :disabled="wsStatus !== 'connected' || !cmdInput.trim()"
                         class="font-mono text-xs px-3 py-1 rounded border border-[--binary-primary] text-[--binary-primary] hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container] disabled:opacity-40 transition-colors"
-                    >send</button>
+                    >{{ t('ws_lab.cmd_send') }}</button>
                 </form>
             </div>
 

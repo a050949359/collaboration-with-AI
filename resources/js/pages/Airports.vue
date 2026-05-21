@@ -95,12 +95,12 @@ async function fetchAirports(page = 1) {
         });
         const json = await res.json();
 
-        if (!res.ok) throw new Error(json.message || '查詢失敗');
+        if (!res.ok) throw new Error(json.message || t('airports.query_failed'));
 
         airports.value = json.data;
         meta.value = json.meta;
     } catch (e: unknown) {
-        listError.value = e instanceof Error ? e.message : '連線失敗';
+        listError.value = e instanceof Error ? e.message : t('common.error_connection');
     } finally {
         isLoadingList.value = false;
     }
@@ -123,12 +123,12 @@ return;
         const json = await res.json();
 
         if (!res.ok) {
-throw new Error(json.message || '統計載入失敗');
+throw new Error(json.message || t('airports.stats.load_failed'));
 }
 
         stats.value = json.data;
     } catch (e: unknown) {
-        statsError.value = e instanceof Error ? e.message : '連線失敗';
+        statsError.value = e instanceof Error ? e.message : t('common.error_connection');
     } finally {
         isLoadingStats.value = false;
     }
@@ -160,7 +160,7 @@ onMounted(() => fetchAirports());
 </script>
 
 <template>
-    <Head title="Airports" />
+    <Head :title="t('airports.title')" />
 
     <AppLayout>
         <main class="pt-24 pb-24">

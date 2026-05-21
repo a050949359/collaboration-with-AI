@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -17,6 +18,9 @@ use Illuminate\Support\Facades\Http;
  */
 class LoginController extends Controller
 {
+    private const MAX_ATTEMPTS     = 5;
+    private const LOCKOUT_MINUTES  = 15;
+
     public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->only('email', 'password');
@@ -31,12 +35,34 @@ class LoginController extends Controller
             }
         }
 
+        $user = User::where('email', $credentials['email'])->first();
+
+        if ($user && $user->locked_until && $user->locked_until->isFuture()) {
+            $remaining = (int) now()->diffInMinutes($user->locked_until, false);
+            $remaining = max(1, $remaining);
+            return response()->json(['message' => "帳號已暫時鎖定，請於 {$remaining} 分鐘後再試"], 429);
+        }
+
         if (!Auth::attempt($credentials, $remember)) {
+            if ($user) {
+                $user->failed_login_attempts += 1;
+                if ($user->failed_login_attempts >= self::MAX_ATTEMPTS) {
+                    $user->locked_until = now()->addMinutes(self::LOCKOUT_MINUTES);
+                    $user->save();
+                    return response()->json(['message' => "登入失敗次數過多，帳號已鎖定 " . self::LOCKOUT_MINUTES . " 分鐘"], 429);
+                }
+                $user->save();
+                $remaining = self::MAX_ATTEMPTS - $user->failed_login_attempts;
+                return response()->json(['message' => "登入失敗，還剩 {$remaining} 次機會"], 401);
+            }
             return response()->json(['message' => '登入失敗'], 401);
         }
 
         // 2. 取得 User 實例
         $user = Auth::user();
+        $user->failed_login_attempts = 0;
+        $user->locked_until = null;
+        $user->save();
 
         // 3. 刪除舊的 Token (選配：確保同一時間只有一個裝置登入)
         $user->tokens()->delete();

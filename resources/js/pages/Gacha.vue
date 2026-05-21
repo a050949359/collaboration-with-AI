@@ -52,13 +52,13 @@
                         class="mb-1.5 text-[9px] tracking-widest font-bold"
                         :class="drawsRemaining > 0 ? 'text-[#6bdc9f]/70' : 'text-red-400/70'"
                     >
-                        DRAWS：{{ drawsRemaining }} / {{ drawsPerUser }}
+                        {{ t('gacha.draws_label') }}：{{ drawsRemaining }} / {{ drawsPerUser }}
                     </div>
 
                     <div class="flex gap-3 justify-center text-[9px] tracking-widest text-[#6bdc9f]/40 font-medium mb-2">
-                        <span v-if="isTenPull">10-SYNC</span>
-                        <span v-if="skipAnim">SKIP ANIM</span>
-                        <span v-if="mode === 'in-room' && !canDraw && !isHost" class="text-red-400/60">LOCKED</span>
+                        <span v-if="isTenPull">{{ t('gacha.ten_sync_badge') }}</span>
+                        <span v-if="skipAnim">{{ t('gacha.skip_anim_badge') }}</span>
+                        <span v-if="mode === 'in-room' && !canDraw && !isHost" class="text-red-400/60">{{ t('gacha.locked_badge') }}</span>
                     </div>
 
                     <button
@@ -66,7 +66,7 @@
                         class="px-3 py-1.5 rounded-lg bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-[9px] tracking-[0.2em] font-bold transition-colors hover:bg-[#233328] disabled:opacity-40 disabled:cursor-not-allowed"
                         @click="showModal = true"
                     >
-                        再次顯示結果
+                        {{ t('gacha.show_results') }}
                     </button>
                 </div>
 
@@ -87,7 +87,7 @@
                         class="mt-2 w-full py-1.5 rounded-lg border border-red-900/50 text-red-400/70 text-[9px] tracking-widest font-bold hover:border-red-400/50 hover:text-red-400 transition-colors"
                         @click="leaveRoom"
                     >
-                        {{ isHost ? '關閉房間' : '離開房間' }}
+                        {{ isHost ? t('gacha.close_room') : t('gacha.leave_room') }}
                     </button>
                 </div>
             </div>
@@ -99,20 +99,20 @@
                 <template v-if="mode === 'lobby'">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-1 font-bold">GACHA ROOMS</div>
-                            <h3 class="text-xl text-white font-semibold tracking-tight">抽卡機台列表</h3>
+                            <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-1 font-bold">{{ t('gacha.gacha_rooms_label') }}</div>
+                            <h3 class="text-xl text-white font-semibold tracking-tight">{{ t('gacha.room_list_title') }}</h3>
                         </div>
                         <button
                             v-if="user"
                             class="px-4 py-2 rounded-xl bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#233328] transition-colors"
                             @click="openCreateModal"
                         >
-                            + 建立房間
+                            {{ t('gacha.create_room') }}
                         </button>
                     </div>
 
-                    <div v-if="roomListLoading" class="text-[#6bdc9f]/30 text-xs tracking-widest text-center py-8">載入中…</div>
-                    <div v-else-if="roomList.length === 0" class="text-[#6bdc9f]/30 text-xs tracking-widest text-center py-8">目前沒有開放的房間</div>
+                    <div v-if="roomListLoading" class="text-[#6bdc9f]/30 text-xs tracking-widest text-center py-8">{{ t('gacha.loading') }}</div>
+                    <div v-else-if="roomList.length === 0" class="text-[#6bdc9f]/30 text-xs tracking-widest text-center py-8">{{ t('gacha.no_rooms') }}</div>
                     <div v-else class="flex flex-col gap-3">
                         <div
                             v-for="room in roomList"
@@ -130,7 +130,7 @@
                                 class="px-4 py-1.5 rounded-xl border border-[#6bdc9f]/30 text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#6bdc9f]/10 transition-colors shrink-0"
                                 @click="openJoinModal(room)"
                             >
-                                加入
+                                {{ t('gacha.join') }}
                             </button>
                         </div>
                     </div>
@@ -140,7 +140,7 @@
                         :disabled="roomListLoading"
                         @click="fetchRooms"
                     >
-                        重新整理
+                        {{ t('gacha.refresh') }}
                     </button>
                 </template>
 
@@ -148,12 +148,12 @@
                 <template v-else-if="mode === 'in-room'">
                     <!-- Machine controls (host only) -->
                     <section v-if="isHost">
-                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">HOST CONTROL</div>
-                        <h3 class="text-xl text-white font-semibold tracking-tight mb-4">機台控制</h3>
+                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">{{ t('gacha.host_control') }}</div>
+                        <h3 class="text-xl text-white font-semibold tracking-tight mb-4">{{ t('gacha.machine_control') }}</h3>
 
                         <div class="space-y-3 text-sm">
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">開放加入者抽卡</span>
+                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.allow_draw') }}</span>
                                 <button
                                     class="w-12 h-6 rounded-full transition-colors relative"
                                     :class="canDraw ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
@@ -164,7 +164,7 @@
                             </div>
 
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">10-SYNC MODE</span>
+                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.ten_sync_mode') }}</span>
                                 <button
                                     class="w-12 h-6 rounded-full transition-colors relative"
                                     :class="isTenPull ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
@@ -175,7 +175,7 @@
                             </div>
 
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">SKIP ANIMATION</span>
+                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.skip_animation') }}</span>
                                 <button
                                     class="w-12 h-6 rounded-full transition-colors relative"
                                     :class="skipAnim ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
@@ -187,8 +187,8 @@
 
                             <div v-show="canDraw">
                                 <div class="flex justify-between mb-1 text-[#6bdc9f]/80 text-xs tracking-wider">
-                                    <span>每人上限次數</span>
-                                    <span>{{ drawsPerUser === 0 ? '無限' : drawsPerUser }}</span>
+                                    <span>{{ t('gacha.draws_limit') }}</span>
+                                    <span>{{ drawsPerUser === 0 ? t('gacha.unlimited') : drawsPerUser }}</span>
                                 </div>
                                 <input
                                     type="range"
@@ -205,7 +205,7 @@
                             class="mt-4 w-full py-2.5 rounded-xl bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#233328] transition-colors disabled:opacity-40"
                             @click="resetAllDraws"
                         >
-                            重置所有人抽卡次數
+                            {{ t('gacha.reset_draws') }}
                         </button>
                     </section>
 
@@ -213,7 +213,7 @@
 
                     <!-- Broadcast log -->
                     <section>
-                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">BROADCAST</div>
+                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">{{ t('gacha.broadcast_label') }}</div>
                         <div v-if="broadcastLog.length === 0" class="text-[#6bdc9f]/30 text-xs tracking-widest py-2 text-center">—</div>
                         <div class="flex flex-col gap-1 max-h-32 overflow-y-auto">
                             <div
@@ -231,8 +231,8 @@
 
                     <!-- Draw history -->
                     <section>
-                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">DRAW LOG</div>
-                        <div v-if="drawHistory.length === 0" class="text-[#6bdc9f]/30 text-xs tracking-widest py-4 text-center">等待抽卡…</div>
+                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">{{ t('gacha.draw_log_label') }}</div>
+                        <div v-if="drawHistory.length === 0" class="text-[#6bdc9f]/30 text-xs tracking-widest py-4 text-center">{{ t('gacha.waiting_draw') }}</div>
                         <div class="flex flex-col gap-2 max-h-64 overflow-y-auto">
                             <div
                                 v-for="(event, i) in [...drawHistory].reverse()"
@@ -259,12 +259,12 @@
                 <!-- STANDALONE -->
                 <template v-else>
                     <section>
-                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">HOST CONTROL</div>
-                        <h3 class="text-xl text-white font-semibold tracking-tight mb-4">機台控制</h3>
+                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">{{ t('gacha.host_control') }}</div>
+                        <h3 class="text-xl text-white font-semibold tracking-tight mb-4">{{ t('gacha.machine_control') }}</h3>
 
                         <div class="space-y-3 text-sm">
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">10-SYNC MODE</span>
+                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.ten_sync_mode') }}</span>
                                 <button
                                     class="w-12 h-6 rounded-full transition-colors relative"
                                     :class="isTenPull ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
@@ -275,7 +275,7 @@
                             </div>
 
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">SKIP ANIMATION</span>
+                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.skip_animation') }}</span>
                                 <button
                                     class="w-12 h-6 rounded-full transition-colors relative"
                                     :class="skipAnim ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
@@ -285,28 +285,17 @@
                                 </button>
                             </div>
 
-                            <div>
-                                <div class="mb-1 text-[#6bdc9f]/80 text-xs tracking-wider">指定結果品質</div>
-                                <select
-                                    v-model="selectedQuality"
-                                    class="w-full rounded-lg bg-[#0f1511] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-wider px-3 py-2"
-                                >
-                                    <option v-for="tier in QUALITY_TIERS" :key="tier.name" :value="tier.name">{{ tier.name }}</option>
-                                </select>
+                            <div v-if="!isTenPull">
+                                <div class="mb-1 text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.force_quality') }}</div>
+                                <QualitySelect v-model="selectedQuality" />
                             </div>
 
                             <div v-if="isTenPull">
-                                <div class="mb-2 text-[#6bdc9f]/80 text-xs tracking-wider">10 連抽各格品質</div>
+                                <div class="mb-2 text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.ten_pull_qualities') }}</div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <label v-for="(_, i) in tenPullQualities" :key="i" class="block text-[10px] tracking-wider text-[#6bdc9f]/75">
-                                        <div class="mb-1">第 {{ i + 1 }} 格</div>
-                                        <select
-                                            :value="tenPullQualities[i]"
-                                            class="w-full rounded-lg px-2 py-2 text-[10px] bg-[#0f1511] border border-[#2f4739] text-[#6bdc9f]"
-                                            @change="tenPullQualities[i] = ($event.target as HTMLSelectElement).value"
-                                        >
-                                            <option v-for="tier in QUALITY_TIERS" :key="tier.name" :value="tier.name">{{ tier.name }}</option>
-                                        </select>
+                                        <div class="mb-1">{{ t('gacha.slot_label', { n: i + 1 }) }}</div>
+                                        <QualitySelect :model-value="tenPullQualities[i]" @update:model-value="tenPullQualities[i] = $event" />
                                     </label>
                                 </div>
                             </div>
@@ -314,12 +303,12 @@
                     </section>
 
                     <div v-if="wsAvailable" class="mt-auto pt-4 border-t border-white/5">
-                        <p class="text-[10px] text-[#6bdc9f]/30 tracking-widest text-center mb-3">WebSocket 伺服器已開啟</p>
+                        <p class="text-[10px] text-[#6bdc9f]/30 tracking-widest text-center mb-3">{{ t('gacha.ws_available') }}</p>
                         <button
                             class="w-full py-2 rounded-xl border border-[#6bdc9f]/30 text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#6bdc9f]/10 transition-colors"
                             @click="mode = 'lobby'; fetchRooms()"
                         >
-                            進入大廳
+                            {{ t('gacha.enter_lobby') }}
                         </button>
                     </div>
                 </template>
@@ -372,13 +361,13 @@
             >
                 <div class="glass-panel p-8 rounded-3xl max-w-sm w-full shadow-2xl">
                     <div class="text-[10px] tracking-[0.4em] text-[#6bdc9f]/50 mb-2 font-bold">CREATE ROOM</div>
-                    <h3 class="text-white text-lg font-medium mb-1 tracking-tight">建立抽卡機台</h3>
-                    <p class="text-[#6bdc9f]/40 text-xs tracking-widest mb-6">輸入你的暱稱</p>
+                    <h3 class="text-white text-lg font-medium mb-1 tracking-tight">{{ t('gacha.create_modal_title') }}</h3>
+                    <p class="text-[#6bdc9f]/40 text-xs tracking-widest mb-6">{{ t('gacha.name_hint') }}</p>
                     <input
                         v-model="createName"
                         type="text"
                         maxlength="30"
-                        placeholder="暱稱…"
+                        :placeholder="t('gacha.name_placeholder')"
                         class="w-full bg-transparent border-b border-[#2f4739] focus:border-[#6bdc9f] outline-none text-[#6bdc9f] text-sm pb-1 mb-6 placeholder:text-[#6bdc9f]/30 transition-colors"
                         @keyup.enter="submitCreateModal"
                     />
@@ -386,7 +375,7 @@
                         :disabled="!createName.trim()"
                         class="w-full py-3 btn-gradient text-[#0f1511] font-bold rounded-xl hover:brightness-110 transition-all uppercase tracking-widest text-xs disabled:opacity-40"
                         @click="submitCreateModal"
-                    >建立</button>
+                    >{{ t('gacha.create_submit') }}</button>
                 </div>
             </div>
         </Teleport>
@@ -401,12 +390,12 @@
                 <div class="glass-panel p-8 rounded-3xl max-w-sm w-full shadow-2xl">
                     <div class="text-[10px] tracking-[0.4em] text-[#6bdc9f]/50 mb-2 font-bold">JOIN ROOM</div>
                     <h3 class="text-white text-lg font-medium mb-1 tracking-tight">{{ joinTarget.room_name }}</h3>
-                    <p class="text-[#6bdc9f]/40 text-xs tracking-widest mb-6">輸入你的暱稱</p>
+                    <p class="text-[#6bdc9f]/40 text-xs tracking-widest mb-6">{{ t('gacha.name_hint') }}</p>
                     <input
                         v-model="joinName"
                         type="text"
                         maxlength="30"
-                        placeholder="暱稱…"
+                        :placeholder="t('gacha.name_placeholder')"
                         class="w-full bg-transparent border-b border-[#2f4739] focus:border-[#6bdc9f] outline-none text-[#6bdc9f] text-sm pb-1 mb-6 placeholder:text-[#6bdc9f]/30 transition-colors"
                         @keyup.enter="submitJoinModal"
                     />
@@ -415,7 +404,7 @@
                         :disabled="!joinName.trim() || joinLoading"
                         class="w-full py-3 btn-gradient text-[#0f1511] font-bold rounded-xl hover:brightness-110 transition-all uppercase tracking-widest text-xs disabled:opacity-40"
                         @click="submitJoinModal"
-                    >{{ joinLoading ? '加入中…' : '加入' }}</button>
+                    >{{ joinLoading ? t('gacha.joining') : t('gacha.join') }}</button>
                 </div>
             </div>
         </Teleport>
@@ -423,10 +412,14 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { useAuth } from '@/composables/useAuth';
 import { useGachaPhysics } from '@/composables/useGachaPhysics';
 import { useGachaRoom, QUALITY_TIERS } from '@/composables/useGachaRoom';
 import AppLayout from '@/layouts/AppLayout.vue';
+import QualitySelect from '@/components/gacha/QualitySelect.vue';
+
+const { t } = useI18n();
 
 const { user } = useAuth();
 const { chamberEl, runAnimation } = useGachaPhysics();

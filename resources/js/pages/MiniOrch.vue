@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { api } from '@/lib/routes';
+
+const { t } = useI18n();
 
 type RunEntry = {
     run_id: string;
@@ -53,7 +56,7 @@ async function submitRun() {
         });
         const contentType = res.headers.get('content-type') ?? '';
         if (!contentType.includes('application/json')) {
-            submitError.value = '請先登入才能觸發壓測';
+            submitError.value = t('mini_orch.auth_required');
             return;
         }
         const data = await res.json();
@@ -110,7 +113,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="mini-orch" />
+    <Head :title="t('mini_orch.head_title')" />
     <AppLayout>
         <div class="mx-auto flex w-full max-w-screen-2xl flex-col px-6 pb-4 gap-3 overflow-hidden md:px-8" style="height: calc(100vh - 5rem); margin-top: 5rem;">
 
@@ -122,15 +125,15 @@ onUnmounted(() => {
                         <button
                             class="px-3 py-1.5 text-xs font-mono rounded border border-[--binary-outline] text-[--binary-text-muted] hover:text-[--binary-text] hover:border-[--binary-primary] transition-colors"
                             @click="refreshDashboard"
-                            title="Refresh dashboard"
-                        >↺ refresh</button>
+                            :title="t('mini_orch.refresh_title')"
+                        >{{ t('mini_orch.refresh') }}</button>
                         <button
                             class="px-3 py-1.5 text-xs font-mono rounded border transition-colors"
                             :class="showRunForm
                                 ? 'border-[--binary-primary] text-[--binary-primary]'
                                 : 'border-[--binary-outline] text-[--binary-text-muted] hover:text-[--binary-text] hover:border-[--binary-primary]'"
                             @click="showRunForm = !showRunForm; submitError = ''"
-                        >{{ showRunForm ? '✕ cancel' : '+ new run' }}</button>
+                        >{{ showRunForm ? t('mini_orch.cancel') : t('mini_orch.new_run') }}</button>
                     </div>
                 </div>
 
@@ -139,7 +142,7 @@ onUnmounted(() => {
                         v-if="showRunForm"
                         class="rounded-lg border border-[--binary-outline] bg-[--binary-surface-low] p-4 space-y-3"
                     >
-                        <p class="text-xs font-mono text-[--binary-text-muted]">Request body (JSON)</p>
+                        <p class="text-xs font-mono text-[--binary-text-muted]">{{ t('mini_orch.body_label') }}</p>
                         <textarea
                             v-model="runBody"
                             rows="6"
@@ -154,13 +157,13 @@ onUnmounted(() => {
                                 class="px-4 py-1.5 text-xs font-mono rounded border border-[--binary-primary] text-[--binary-primary] hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container] transition-colors disabled:opacity-40"
                                 :disabled="submitting"
                                 @click="submitRun"
-                            >{{ submitting ? 'sending…' : '▶ trigger run' }}</button>
+                            >{{ submitting ? t('mini_orch.sending') : t('mini_orch.trigger') }}</button>
                         </div>
                     </div>
                 </Transition>
 
                 <div v-if="runs.length" class="flex items-center gap-2 flex-wrap">
-                    <span class="text-xs font-mono text-[--binary-text-muted]">runs:</span>
+                    <span class="text-xs font-mono text-[--binary-text-muted]">{{ t('mini_orch.runs_label') }}</span>
                     <div
                         v-for="run in runs"
                         :key="run.run_id"

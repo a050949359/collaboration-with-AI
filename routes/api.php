@@ -7,6 +7,9 @@ use App\Http\Controllers\Article\ArticleBrowseController;
 use App\Http\Controllers\Article\ArticleCommentController;
 use App\Http\Controllers\Article\ArticleEditController;
 use App\Http\Controllers\Article\ArticleGenerationController;
+use App\Http\Controllers\Auth\ChangePasswordController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PublicKeyController;
 use App\Http\Controllers\Auth\RegistController;
@@ -44,12 +47,16 @@ Route::group(['prefix' => 'auth'], function () {
     Route::get('/key', PublicKeyController::class);
     Route::post('/register', [RegistController::class, 'register'])->middleware(DecryptPasswordFields::class);
     Route::post('/login', [LoginController::class, 'login'])->middleware(DecryptPasswordFields::class);
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendLink'])->middleware('throttle:5,1');
+    Route::post('/reset-password', [ForgotPasswordController::class, 'reset'])->middleware(DecryptPasswordFields::class);
     Route::get('/{provider}/redirect', [SocialAccountController::class, 'redirect'])->where(['provider' => 'google']);
     Route::get('/{provider}/callback', [SocialAccountController::class, 'callback'])->where(['provider' => 'google']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [LoginController::class, 'logout']);
         Route::get('/me', [LoginController::class, 'me']);
+        Route::post('/change-password', [ChangePasswordController::class, 'change'])->middleware(DecryptPasswordFields::class);
+        Route::patch('/name', [ProfileController::class, 'updateName']);
 
         // 點擊信件連結後觸發
         Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)

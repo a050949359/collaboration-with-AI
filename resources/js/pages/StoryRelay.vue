@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import { useAuth } from '@/composables/useAuth';
 import { api } from '@/lib/routes';
@@ -88,6 +89,7 @@ type CharDraft = {
 // ── Auth ──────────────────────────────────────────────────
 
 const { isAdmin } = useAuth();
+const { t } = useI18n();
 
 // ── Main tab ──────────────────────────────────────────────
 
@@ -168,7 +170,7 @@ function updateCountdown() {
     const ts = selected.value?.next_advance_at;
     if (!ts || selected.value?.status !== 'active') { countdown.value = ''; return; }
     const diff = new Date(ts).getTime() - Date.now();
-    if (diff <= 0) { countdown.value = '即將推進…'; return; }
+    if (diff <= 0) { countdown.value = t('story_relay.countdown_imminent'); return; }
     const m = Math.floor(diff / 60000);
     const s = Math.floor((diff % 60000) / 1000);
     countdown.value = `${m}:${s.toString().padStart(2, '0')}`;
@@ -214,7 +216,7 @@ async function loadSessions() {
     try {
         sessions.value = await fetchJson<SessionListItem[]>(api.story.sessions());
     } catch (e: unknown) {
-        error.value = e instanceof Error ? e.message : '載入失敗';
+        error.value = e instanceof Error ? e.message : t('story_relay.err_load');
     } finally {
         isLoadingList.value = false;
     }
@@ -273,7 +275,7 @@ async function generateDraft() {
         setupTitle.value = `${genre.value} — ${keywords.value.slice(0, 20)}`;
         setupStep.value = 1;
     } catch (e: unknown) {
-        setupError.value = e instanceof Error ? e.message : '產生失敗';
+        setupError.value = e instanceof Error ? e.message : t('story_relay.err_generate');
     } finally {
         setupLoading.value = false;
     }
@@ -291,7 +293,7 @@ async function refineDraft() {
         });
         setupDraft.value = res.setup;
     } catch (e: unknown) {
-        setupError.value = e instanceof Error ? e.message : '優化失敗';
+        setupError.value = e instanceof Error ? e.message : t('story_relay.err_ai_refine');
     } finally {
         setupLoading.value = false;
     }
@@ -328,7 +330,7 @@ async function createSession() {
         selected.value = session;
         setupDraft.value = null;
     } catch (e: unknown) {
-        setupError.value = e instanceof Error ? e.message : '建立失敗';
+        setupError.value = e instanceof Error ? e.message : t('story_relay.err_create');
     } finally {
         setupLoading.value = false;
     }
@@ -350,7 +352,7 @@ async function updateStatus(status: 'active' | 'paused' | 'completed') {
         if (status === 'active') { startPolling(); startCountdown(); }
         else { stopPolling(); stopCountdown(); }
     } catch (e: unknown) {
-        error.value = e instanceof Error ? e.message : '更新失敗';
+        error.value = e instanceof Error ? e.message : t('story_relay.err_update');
     } finally {
         isUpdatingStatus.value = false;
     }
@@ -368,7 +370,7 @@ async function submitPlayerTurn() {
         playerTurnContent.value = '';
         await loadSession(selected.value.id);
     } catch (e: unknown) {
-        error.value = e instanceof Error ? e.message : '送出失敗';
+        error.value = e instanceof Error ? e.message : t('story_relay.err_submit');
     } finally {
         isSubmittingTurn.value = false;
     }
@@ -400,7 +402,7 @@ async function loadCharacters() {
     try {
         characters.value = await fetchJson<Character[]>(api.characters.list());
     } catch (e: unknown) {
-        charError.value = e instanceof Error ? e.message : '載入失敗';
+        charError.value = e instanceof Error ? e.message : t('story_relay.err_load');
     } finally {
         charLoading.value = false;
     }
@@ -439,7 +441,7 @@ async function aiGenerateChar() {
         characters.value.unshift(saved);
         selectChar(saved);
     } catch (e: unknown) {
-        charError.value = e instanceof Error ? e.message : 'AI 生成失敗';
+        charError.value = e instanceof Error ? e.message : t('story_relay.err_ai_generate');
     } finally {
         charLoading.value = false;
     }
@@ -460,7 +462,7 @@ async function saveChar() {
         selectedChar.value = updated;
         charDraft.value = charToDraft(updated);
     } catch (e: unknown) {
-        charError.value = e instanceof Error ? e.message : '儲存失敗';
+        charError.value = e instanceof Error ? e.message : t('story_relay.err_save');
     } finally {
         charSaving.value = false;
     }
@@ -495,7 +497,7 @@ async function aiRefineChar() {
         };
         charRefineNotes.value = '';
     } catch (e: unknown) {
-        charError.value = e instanceof Error ? e.message : 'AI 優化失敗';
+        charError.value = e instanceof Error ? e.message : t('story_relay.err_ai_refine');
     } finally {
         charLoading.value = false;
     }
@@ -516,7 +518,7 @@ async function generateImagePrompt() {
         const idx = characters.value.findIndex(c => c.id === selectedChar.value!.id);
         if (idx !== -1) characters.value[idx] = selectedChar.value;
     } catch (e: unknown) {
-        charError.value = e instanceof Error ? e.message : '生成失敗';
+        charError.value = e instanceof Error ? e.message : t('story_relay.err_generate');
     } finally {
         charImgLoading.value = false;
     }
@@ -524,7 +526,7 @@ async function generateImagePrompt() {
 
 async function deleteChar() {
     if (!selectedChar.value) return;
-    if (!confirm(`確定刪除角色「${selectedChar.value.name}」？`)) return;
+    if (!confirm(t('story_relay.confirm_delete', { name: selectedChar.value.name }))) return;
     charLoading.value = true;
     try {
         await fetchJson(api.characters.destroy(selectedChar.value.id), { method: 'DELETE' });
@@ -533,7 +535,7 @@ async function deleteChar() {
         charDraft.value = null;
         charView.value = 'idle';
     } catch (e: unknown) {
-        charError.value = e instanceof Error ? e.message : '刪除失敗';
+        charError.value = e instanceof Error ? e.message : t('story_relay.err_delete');
     } finally {
         charLoading.value = false;
     }
@@ -541,19 +543,23 @@ async function deleteChar() {
 
 // ── Helpers ───────────────────────────────────────────────
 
-const statusLabel: Record<string, string> = { active: '進行中', paused: '已暫停', completed: '已完結' };
+const statusLabel = computed<Record<string, string>>(() => ({
+    active:    t('story_relay.status_active'),
+    paused:    t('story_relay.status_paused'),
+    completed: t('story_relay.status_completed'),
+}));
 const statusColor: Record<string, string> = {
     active:    'text-emerald-400',
     paused:    'text-yellow-400',
     completed: 'text-[var(--binary-text-muted)]',
 };
 
-const genreOptions = [
-    { value: 'fantasy', label: '奇幻' },
-    { value: 'mystery', label: '懸疑' },
-    { value: 'scifi',   label: '科幻' },
-    { value: 'modern',  label: '現代' },
-];
+const genreOptions = computed(() => [
+    { value: 'fantasy', label: t('story_relay.genre_fantasy') },
+    { value: 'mystery', label: t('story_relay.genre_mystery') },
+    { value: 'scifi',   label: t('story_relay.genre_scifi') },
+    { value: 'modern',  label: t('story_relay.genre_modern') },
+]);
 
 function isPlayerTurn(): boolean {
     return (
@@ -568,14 +574,14 @@ onMounted(() => { loadSessions(); loadCharacters(); });
 
 <template>
     <AppLayout>
-    <Head title="Story Relay" />
+    <Head :title="t('story_relay.head_title')" />
 
     <div class="mx-auto mt-24 flex h-[calc(100vh-6rem)] w-full max-w-screen-2xl flex-col overflow-hidden px-6 font-mono md:px-8">
 
         <!-- ── Tab bar ───────────────────────────────────── -->
         <div class="flex shrink-0 border-b border-[var(--binary-outline)]/20">
             <button
-                v-for="tab in [{ key: 'story', label: '故事接龍' }, { key: 'characters', label: '角色設計' }]"
+                v-for="tab in [{ key: 'story', label: t('story_relay.tab_story') }, { key: 'characters', label: t('story_relay.tab_characters') }]"
                 :key="tab.key"
                 type="button"
                 class="px-5 py-2.5 text-xs uppercase tracking-widest transition"
@@ -599,13 +605,13 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                         type="button"
                         @click="openSetup"
                     >
-                        + 新故事
+                        {{ t('story_relay.new_story') }}
                     </button>
                 </div>
 
                 <div class="flex-1 overflow-y-auto p-2">
-                    <p v-if="isLoadingList" class="p-4 text-center text-xs text-[var(--binary-text-muted)]">載入中…</p>
-                    <p v-else-if="!sessions.length" class="p-4 text-center text-xs text-[var(--binary-text-muted)]">尚無故事</p>
+                    <p v-if="isLoadingList" class="p-4 text-center text-xs text-[var(--binary-text-muted)]">{{ t('story_relay.loading') }}</p>
+                    <p v-else-if="!sessions.length" class="p-4 text-center text-xs text-[var(--binary-text-muted)]">{{ t('story_relay.no_stories') }}</p>
                     <button
                         v-for="s in sessions"
                         :key="s.id"
@@ -629,12 +635,12 @@ onMounted(() => { loadSessions(); loadCharacters(); });
 
                 <!-- Empty state -->
                 <div v-if="panel === 'none'" class="flex flex-1 items-center justify-center">
-                    <p class="binary-label text-xs uppercase text-[var(--binary-text-muted)]">選擇故事或建立新故事</p>
+                    <p class="binary-label text-xs uppercase text-[var(--binary-text-muted)]">{{ t('story_relay.empty_select') }}</p>
                 </div>
 
                 <!-- Setup area -->
                 <div v-else-if="panel === 'setup'" class="flex flex-1 flex-col overflow-y-auto p-6">
-                    <h2 class="binary-label mb-6 text-xs uppercase tracking-widest text-[var(--binary-outline)]">新故事設定</h2>
+                    <h2 class="binary-label mb-6 text-xs uppercase tracking-widest text-[var(--binary-outline)]">{{ t('story_relay.setup_title') }}</h2>
 
                     <p v-if="setupError" class="mb-4 rounded-lg border border-red-400/20 bg-red-950/20 px-4 py-2 text-xs text-red-300">{{ setupError }}</p>
 
@@ -658,7 +664,7 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                             v-model="keywords"
                             class="binary-input mb-4 w-full resize-none"
                             rows="3"
-                            placeholder="輸入關鍵字，例如：魔法學院、記憶失竊、雙生兄弟…"
+                            :placeholder="t('story_relay.setup_keywords_placeholder')"
                             maxlength="200"
                         />
                         <div class="flex justify-end">
@@ -668,7 +674,7 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                                 :disabled="setupLoading || !keywords.trim()"
                                 @click="generateDraft"
                             >
-                                {{ setupLoading ? '生成中…' : '產生草稿' }}
+                                {{ setupLoading ? t('story_relay.setup_generating') : t('story_relay.setup_generate') }}
                             </button>
                         </div>
                     </template>
@@ -677,18 +683,18 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                     <template v-else-if="setupStep === 1 && setupDraft">
                         <div class="mb-4 space-y-4">
                             <div>
-                                <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">世界觀</p>
+                                <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.setup_world') }}</p>
                                 <textarea v-model="setupDraft.world" class="binary-input w-full resize-none" rows="3" maxlength="500" />
                             </div>
                             <div>
-                                <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">開場</p>
+                                <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.setup_opening') }}</p>
                                 <textarea v-model="setupDraft.opening" class="binary-input w-full resize-none" rows="2" maxlength="300" />
                             </div>
                             <div>
-                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">角色</p>
+                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.setup_characters_label') }}</p>
                                 <div v-for="(c, i) in setupDraft.characters" :key="i" class="binary-card-raised mb-2 rounded-lg p-3">
                                     <div class="mb-2 flex items-center justify-between gap-2">
-                                        <input v-model="c.name" class="binary-input flex-1 text-xs" placeholder="角色名稱" maxlength="50" />
+                                        <input v-model="c.name" class="binary-input flex-1 text-xs" :placeholder="t('story_relay.setup_char_name')" maxlength="50" />
                                         <button
                                             type="button"
                                             class="shrink-0 rounded px-2 py-1 text-[10px] uppercase tracking-widest transition"
@@ -697,26 +703,26 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                                                 : 'text-[var(--binary-text-muted)] hover:text-[var(--binary-text)]'"
                                             @click="c.is_narrator = c.is_narrator === false ? true : false"
                                         >
-                                            {{ c.is_narrator !== false ? '✦ 視角' : '· 旁觀' }}
+                                            {{ c.is_narrator !== false ? t('story_relay.btn_narrator') : t('story_relay.btn_observer') }}
                                         </button>
                                     </div>
-                                    <textarea v-model="c.persona" class="binary-input mb-1 w-full resize-none text-xs" rows="2" placeholder="個性與動機" maxlength="300" />
-                                    <input v-model="c.secret" class="binary-input w-full text-xs" placeholder="秘密（可空）" maxlength="200" />
+                                    <textarea v-model="c.persona" class="binary-input mb-1 w-full resize-none text-xs" rows="2" :placeholder="t('story_relay.setup_char_persona')" maxlength="300" />
+                                    <input v-model="c.secret" class="binary-input w-full text-xs" :placeholder="t('story_relay.setup_char_secret')" maxlength="200" />
                                 </div>
                             </div>
                             <div v-if="setupDraft.items?.length">
-                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">道具</p>
+                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.setup_items_label') }}</p>
                                 <div v-for="(item, i) in setupDraft.items" :key="i" class="binary-card-raised mb-2 rounded-lg p-3">
-                                    <input v-model="item.name" class="binary-input mb-1 w-full text-xs" placeholder="道具名稱" maxlength="100" />
-                                    <input v-model="item.description" class="binary-input w-full text-xs" placeholder="描述" maxlength="300" />
+                                    <input v-model="item.name" class="binary-input mb-1 w-full text-xs" :placeholder="t('story_relay.setup_item_name')" maxlength="100" />
+                                    <input v-model="item.description" class="binary-input w-full text-xs" :placeholder="t('story_relay.setup_item_desc')" maxlength="300" />
                                 </div>
                             </div>
                         </div>
                         <div class="flex gap-3">
                             <button class="binary-ghost-button px-4 py-2 text-xs disabled:opacity-40" type="button" :disabled="setupLoading" @click="refineDraft">
-                                {{ setupLoading ? '優化中…' : '再優化' }}
+                                {{ setupLoading ? t('story_relay.btn_refining') : t('story_relay.btn_refine') }}
                             </button>
-                            <button class="binary-ghost-button px-4 py-2 text-xs" type="button" @click="setupStep = 2">確認設定 →</button>
+                            <button class="binary-ghost-button px-4 py-2 text-xs" type="button" @click="setupStep = 2">{{ t('story_relay.btn_confirm_setup') }}</button>
                         </div>
                     </template>
 
@@ -724,40 +730,40 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                     <template v-else-if="setupStep === 2">
                         <div class="mb-4 space-y-4">
                             <div>
-                                <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">故事標題</p>
-                                <input v-model="setupTitle" class="binary-input w-full" maxlength="100" placeholder="故事標題" />
+                                <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.setup_story_title') }}</p>
+                                <input v-model="setupTitle" class="binary-input w-full" maxlength="100" :placeholder="t('story_relay.setup_title_placeholder')" />
                             </div>
                             <div class="flex gap-6">
                                 <div>
-                                    <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">推進間隔（分鐘）</p>
+                                    <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.setup_interval') }}</p>
                                     <input v-model.number="setupInterval" type="number" min="10" max="1440" class="binary-input w-28" />
                                 </div>
                                 <div>
-                                    <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">執行輪數</p>
+                                    <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.setup_rounds') }}</p>
                                     <input v-model.number="setupRoundsPerAdvance" type="number" min="1" max="10" class="binary-input w-20" />
                                 </div>
                             </div>
                             <div>
-                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">內容分級</p>
+                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.setup_rating') }}</p>
                                 <div class="flex gap-3">
                                     <label class="flex cursor-pointer items-center gap-2 text-xs text-[var(--binary-text)]">
-                                        <input v-model="setupRating" type="radio" value="general" class="accent-[var(--binary-primary)]" /> 普通
+                                        <input v-model="setupRating" type="radio" value="general" class="accent-[var(--binary-primary)]" /> {{ t('story_relay.rating_general') }}
                                     </label>
                                     <label class="flex cursor-pointer items-center gap-2 text-xs text-[var(--binary-text-muted)]">
-                                        <input v-model="setupRating" type="radio" value="mature" class="accent-[var(--binary-primary)]" /> 成人
+                                        <input v-model="setupRating" type="radio" value="mature" class="accent-[var(--binary-primary)]" /> {{ t('story_relay.rating_mature') }}
                                     </label>
                                 </div>
                             </div>
                         </div>
                         <div class="flex gap-3">
-                            <button class="binary-ghost-button px-4 py-2 text-xs opacity-60" type="button" @click="setupStep = 1">← 返回</button>
+                            <button class="binary-ghost-button px-4 py-2 text-xs opacity-60" type="button" @click="setupStep = 1">{{ t('story_relay.btn_back') }}</button>
                             <button
                                 class="binary-ghost-button px-6 py-2 text-xs disabled:opacity-40"
                                 type="button"
                                 :disabled="setupLoading || !setupTitle.trim()"
                                 @click="createSession"
                             >
-                                {{ setupLoading ? '建立中…' : '建立故事' }}
+                                {{ setupLoading ? t('story_relay.btn_creating') : t('story_relay.btn_create') }}
                             </button>
                         </div>
                     </template>
@@ -772,19 +778,19 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                             {{ statusLabel[selected.status] }}
                         </span>
                         <div class="ml-auto flex gap-2">
-                            <button v-if="selected.status === 'paused'" class="binary-ghost-button px-3 py-1 text-[10px] uppercase disabled:opacity-40" :disabled="isUpdatingStatus" type="button" @click="updateStatus('active')">▶ 開始</button>
-                            <button v-if="selected.status === 'active'" class="binary-ghost-button px-3 py-1 text-[10px] uppercase disabled:opacity-40" :disabled="isUpdatingStatus" type="button" @click="updateStatus('paused')">⏸ 暫停</button>
-                            <button v-if="selected.status !== 'completed'" class="binary-ghost-button px-3 py-1 text-[10px] uppercase text-red-400/60 hover:text-red-300 disabled:opacity-40" :disabled="isUpdatingStatus" type="button" @click="updateStatus('completed')">■ 完結</button>
+                            <button v-if="selected.status === 'paused'" class="binary-ghost-button px-3 py-1 text-[10px] uppercase disabled:opacity-40" :disabled="isUpdatingStatus" type="button" @click="updateStatus('active')">{{ t('story_relay.btn_start') }}</button>
+                            <button v-if="selected.status === 'active'" class="binary-ghost-button px-3 py-1 text-[10px] uppercase disabled:opacity-40" :disabled="isUpdatingStatus" type="button" @click="updateStatus('paused')">{{ t('story_relay.btn_pause') }}</button>
+                            <button v-if="selected.status !== 'completed'" class="binary-ghost-button px-3 py-1 text-[10px] uppercase text-red-400/60 hover:text-red-300 disabled:opacity-40" :disabled="isUpdatingStatus" type="button" @click="updateStatus('completed')">{{ t('story_relay.btn_end') }}</button>
                         </div>
                     </div>
 
                     <!-- Player turn input -->
                     <div v-if="isPlayerTurn()" class="border-b border-[var(--binary-outline)]/20 bg-[var(--binary-surface-container)] px-5 py-3">
-                        <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-primary)]">輪到你了 — {{ selected.current_character?.name }}</p>
-                        <textarea v-model="playerTurnContent" class="binary-input mb-2 w-full resize-none" rows="3" placeholder="寫下你的行動或對話…" maxlength="1000" />
+                        <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-primary)]">{{ t('story_relay.player_turn', { name: selected.current_character?.name }) }}</p>
+                        <textarea v-model="playerTurnContent" class="binary-input mb-2 w-full resize-none" rows="3" :placeholder="t('story_relay.turn_placeholder')" maxlength="1000" />
                         <div class="flex justify-end">
                             <button class="binary-ghost-button px-4 py-1.5 text-xs disabled:opacity-40" type="button" :disabled="isSubmittingTurn || !playerTurnContent.trim()" @click="submitPlayerTurn">
-                                {{ isSubmittingTurn ? '送出中…' : '送出' }}
+                                {{ isSubmittingTurn ? t('story_relay.btn_submitting') : t('story_relay.btn_submit') }}
                             </button>
                         </div>
                     </div>
@@ -794,7 +800,7 @@ onMounted(() => { loadSessions(); loadCharacters(); });
 
                         <!-- Segments -->
                         <div class="flex-1 overflow-y-auto p-5 space-y-4">
-                            <p v-if="isLoadingSession" class="text-center text-xs text-[var(--binary-text-muted)]">載入中…</p>
+                            <p v-if="isLoadingSession" class="text-center text-xs text-[var(--binary-text-muted)]">{{ t('story_relay.loading') }}</p>
                             <div
                                 v-for="seg in selected.segments"
                                 :key="seg.id"
@@ -803,26 +809,26 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                             >
                                 <div class="mb-2 flex items-center gap-2">
                                     <span class="binary-label text-[10px] uppercase" :class="seg.is_event ? 'text-amber-400' : 'text-[var(--binary-outline)]'">
-                                        {{ seg.is_event ? '⚡ 外部事件' : (seg.character?.name ?? '旁白') }}
+                                        {{ seg.is_event ? t('story_relay.event_label') : (seg.character?.name ?? t('story_relay.narrator_label')) }}
                                     </span>
                                     <span class="text-[10px] text-[var(--binary-text-muted)]">#{{ seg.turn_number }}</span>
-                                    <span v-if="seg.is_player_written" class="text-[10px] text-[var(--binary-primary)]">✎ 玩家</span>
+                                    <span v-if="seg.is_player_written" class="text-[10px] text-[var(--binary-primary)]">{{ t('story_relay.player_badge') }}</span>
                                 </div>
                                 <p class="whitespace-pre-wrap text-sm leading-relaxed text-[var(--binary-text)]">{{ seg.content }}</p>
                             </div>
-                            <p v-if="!isLoadingSession && !selected.segments.length" class="text-center text-xs text-[var(--binary-text-muted)]">故事尚未開始</p>
+                            <p v-if="!isLoadingSession && !selected.segments.length" class="text-center text-xs text-[var(--binary-text-muted)]">{{ t('story_relay.no_segments') }}</p>
                         </div>
 
                         <!-- Info sidebar -->
                         <aside class="flex w-56 shrink-0 flex-col gap-5 overflow-y-auto border-l border-[var(--binary-outline)]/20 bg-[var(--binary-surface)] p-4">
                             <div>
-                                <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">下次推進</p>
+                                <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_next_advance') }}</p>
                                 <p class="text-xs" :class="countdown ? 'text-[var(--binary-primary)]' : 'text-[var(--binary-text-muted)]'">
-                                    {{ countdown || (selected.status === 'active' ? '計算中…' : '— 已暫停') }}
+                                    {{ countdown || (selected.status === 'active' ? t('story_relay.countdown_calculating') : t('story_relay.countdown_paused')) }}
                                 </p>
                             </div>
                             <div>
-                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">角色</p>
+                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_characters_sidebar') }}</p>
                                 <div class="space-y-1.5">
                                     <div
                                         v-for="c in selected.characters"
@@ -841,19 +847,19 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                                 </div>
                             </div>
                             <div v-if="selected.items.length">
-                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">道具</p>
+                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_items_sidebar') }}</p>
                                 <div class="space-y-1.5">
                                     <div v-for="item in selected.items" :key="item.id" class="text-xs text-[var(--binary-text-muted)]">
                                         <p class="font-semibold text-[var(--binary-text)]">{{ item.name }}</p>
-                                        <p class="text-[10px]">{{ item.holder?.name ?? '無人持有' }}</p>
+                                        <p class="text-[10px]">{{ item.holder?.name ?? t('story_relay.no_holder') }}</p>
                                     </div>
                                 </div>
                             </div>
                             <div v-if="selected.world_state">
-                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">世界狀態</p>
+                                <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_world_state') }}</p>
                                 <p class="whitespace-pre-wrap text-[10px] leading-relaxed text-[var(--binary-text-muted)]">{{ worldStateSummary }}</p>
                                 <button v-if="selected.world_state.length > 200" class="mt-1 text-[10px] text-[var(--binary-outline)] hover:text-[var(--binary-text)]" type="button" @click="worldStateExpanded = !worldStateExpanded">
-                                    {{ worldStateExpanded ? '收起' : '展開全文' }}
+                                    {{ worldStateExpanded ? t('story_relay.btn_collapse') : t('story_relay.btn_expand') }}
                                 </button>
                             </div>
                         </aside>
@@ -870,12 +876,12 @@ onMounted(() => { loadSessions(); loadCharacters(); });
             <aside class="flex w-72 shrink-0 flex-col border-r border-[var(--binary-outline)]/20 bg-[var(--binary-surface)]">
                 <div class="border-b border-[var(--binary-outline)]/20 p-4">
                     <button class="binary-ghost-button w-full py-2 text-xs uppercase tracking-widest" type="button" @click="openGenerate">
-                        + 新角色
+                        {{ t('story_relay.new_char') }}
                     </button>
                 </div>
                 <div class="flex-1 overflow-y-auto p-2">
-                    <p v-if="charLoading && !characters.length" class="p-4 text-center text-xs text-[var(--binary-text-muted)]">載入中…</p>
-                    <p v-else-if="!characters.length" class="p-4 text-center text-xs text-[var(--binary-text-muted)]">尚無角色</p>
+                    <p v-if="charLoading && !characters.length" class="p-4 text-center text-xs text-[var(--binary-text-muted)]">{{ t('story_relay.loading') }}</p>
+                    <p v-else-if="!characters.length" class="p-4 text-center text-xs text-[var(--binary-text-muted)]">{{ t('story_relay.no_chars') }}</p>
                     <button
                         v-for="c in characters"
                         :key="c.id"
@@ -897,12 +903,12 @@ onMounted(() => { loadSessions(); loadCharacters(); });
 
                 <!-- Idle -->
                 <div v-if="charView === 'idle'" class="flex flex-1 items-center justify-center p-6">
-                    <p class="binary-label text-xs uppercase text-[var(--binary-text-muted)]">選擇角色或建立新角色</p>
+                    <p class="binary-label text-xs uppercase text-[var(--binary-text-muted)]">{{ t('story_relay.empty_char_select') }}</p>
                 </div>
 
                 <!-- Generate -->
                 <div v-else-if="charView === 'generate'" class="p-6">
-                    <h2 class="binary-label mb-6 text-xs uppercase tracking-widest text-[var(--binary-outline)]">AI 角色生成</h2>
+                    <h2 class="binary-label mb-6 text-xs uppercase tracking-widest text-[var(--binary-outline)]">{{ t('story_relay.char_generate_title') }}</h2>
                     <p v-if="charError" class="mb-4 rounded-lg border border-red-400/20 bg-red-950/20 px-4 py-2 text-xs text-red-300">{{ charError }}</p>
                     <div class="mb-4 grid grid-cols-4 gap-2">
                         <button
@@ -920,12 +926,12 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                         v-model="charGenDesc"
                         class="binary-input mb-4 w-full resize-none"
                         rows="4"
-                        placeholder="角色描述（可空讓 AI 自由創作）"
+                        :placeholder="t('story_relay.char_desc_placeholder')"
                         maxlength="500"
                     />
                     <div class="flex justify-end">
                         <button class="binary-ghost-button px-6 py-2 text-xs disabled:opacity-40" type="button" :disabled="charLoading" @click="aiGenerateChar">
-                            {{ charLoading ? '生成中…' : 'AI 生成角色' }}
+                            {{ charLoading ? t('story_relay.setup_generating') : t('story_relay.btn_ai_generate') }}
                         </button>
                     </div>
                 </div>
@@ -933,60 +939,60 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                 <!-- Edit -->
                 <div v-else-if="charView === 'edit' && charDraft" class="p-6">
                     <div class="mb-5 flex items-center justify-between">
-                        <h2 class="binary-label text-xs uppercase tracking-widest text-[var(--binary-outline)]">編輯角色</h2>
-                        <button class="text-[10px] text-red-400/60 transition hover:text-red-300 disabled:opacity-40" type="button" :disabled="charLoading" @click="deleteChar">刪除</button>
+                        <h2 class="binary-label text-xs uppercase tracking-widest text-[var(--binary-outline)]">{{ t('story_relay.char_edit_title') }}</h2>
+                        <button class="text-[10px] text-red-400/60 transition hover:text-red-300 disabled:opacity-40" type="button" :disabled="charLoading" @click="deleteChar">{{ t('story_relay.btn_delete') }}</button>
                     </div>
 
                     <p v-if="charError" class="mb-4 rounded-lg border border-red-400/20 bg-red-950/20 px-4 py-2 text-xs text-red-300">{{ charError }}</p>
 
                     <div class="space-y-4">
                         <div>
-                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">名稱</p>
+                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_name') }}</p>
                             <input v-model="charDraft.name" class="binary-input w-full" maxlength="100" />
                         </div>
                         <div>
-                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">個性與動機</p>
+                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_persona') }}</p>
                             <textarea v-model="charDraft.persona" class="binary-input w-full resize-none" rows="3" maxlength="500" />
                         </div>
                         <div>
-                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">背景故事</p>
+                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_background') }}</p>
                             <textarea v-model="charDraft.background" class="binary-input w-full resize-none" rows="2" maxlength="500" />
                         </div>
                         <div>
-                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">秘密</p>
+                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_secret') }}</p>
                             <textarea v-model="charDraft.secret" class="binary-input w-full resize-none" rows="2" maxlength="500" />
                         </div>
                         <div>
-                            <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">外貌</p>
+                            <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_appearance') }}</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">年齡</p>
+                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">{{ t('story_relay.appearance_age') }}</p>
                                     <input v-model="charDraft.appearance.age" class="binary-input w-full text-xs" maxlength="50" />
                                 </div>
                                 <div>
-                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">髮型</p>
+                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">{{ t('story_relay.appearance_hair') }}</p>
                                     <input v-model="charDraft.appearance.hair" class="binary-input w-full text-xs" maxlength="100" />
                                 </div>
                                 <div>
-                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">眼睛</p>
+                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">{{ t('story_relay.appearance_eyes') }}</p>
                                     <input v-model="charDraft.appearance.eyes" class="binary-input w-full text-xs" maxlength="100" />
                                 </div>
                                 <div>
-                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">體型</p>
+                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">{{ t('story_relay.appearance_build') }}</p>
                                     <input v-model="charDraft.appearance.build" class="binary-input w-full text-xs" maxlength="100" />
                                 </div>
                                 <div class="col-span-2">
-                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">特徵</p>
+                                    <p class="mb-1 text-[10px] text-[var(--binary-text-muted)]">{{ t('story_relay.appearance_features') }}</p>
                                     <input v-model="charDraft.appearance.features" class="binary-input w-full text-xs" maxlength="200" />
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">服裝</p>
+                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_outfit') }}</p>
                             <input v-model="charDraft.outfit" class="binary-input w-full" maxlength="300" />
                         </div>
                         <div>
-                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">圖片提示詞</p>
+                            <p class="binary-label mb-1 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_image_prompt') }}</p>
                             <textarea v-model="charDraft.image_prompt" class="binary-input w-full resize-none text-[10px] text-[var(--binary-text-muted)]" rows="3" />
                             <button
                                 class="binary-ghost-button mt-2 px-4 py-1.5 text-xs disabled:opacity-40"
@@ -994,23 +1000,23 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                                 :disabled="charImgLoading"
                                 @click="generateImagePrompt"
                             >
-                                {{ charImgLoading ? '生成中…' : '✦ AI 生成圖片提示詞' }}
+                                {{ charImgLoading ? t('story_relay.btn_img_generating') : t('story_relay.btn_ai_image_prompt') }}
                             </button>
                         </div>
 
                         <!-- AI refine -->
                         <div class="rounded-lg border border-[var(--binary-outline)]/20 p-3">
-                            <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">AI 優化</p>
-                            <input v-model="charRefineNotes" class="binary-input mb-2 w-full text-xs" placeholder="優化備註（可空）" maxlength="300" />
+                            <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.label_ai_refine') }}</p>
+                            <input v-model="charRefineNotes" class="binary-input mb-2 w-full text-xs" :placeholder="t('story_relay.refine_placeholder')" maxlength="300" />
                             <button class="binary-ghost-button px-4 py-1.5 text-[10px] disabled:opacity-40" type="button" :disabled="charLoading" @click="aiRefineChar">
-                                {{ charLoading ? '優化中…' : 'AI 優化角色' }}
+                                {{ charLoading ? t('story_relay.btn_refining') : t('story_relay.btn_ai_refine_char') }}
                             </button>
                         </div>
                     </div>
 
                     <div class="mt-6 flex justify-end">
                         <button class="binary-ghost-button px-6 py-2 text-xs disabled:opacity-40" type="button" :disabled="charSaving" @click="saveChar">
-                            {{ charSaving ? '儲存中…' : '儲存' }}
+                            {{ charSaving ? t('story_relay.btn_saving') : t('story_relay.btn_save') }}
                         </button>
                     </div>
                 </div>

@@ -67,7 +67,7 @@ onMounted(() => fetchAirlines(1));
 
 <template>
     <AppLayout>
-        <Head title="Airlines" />
+        <Head :title="t('airlines.title')" />
 
         <div class="mx-auto max-w-screen-xl px-6 pb-24 pt-32 md:px-8">
             <!-- Header -->
@@ -126,9 +126,9 @@ onMounted(() => fetchAirlines(1));
                             <tr>
                                 <th class="px-4 py-3 text-left">IATA</th>
                                 <th class="px-4 py-3 text-left">ICAO</th>
-                                <th class="px-4 py-3 text-left">英文名稱</th>
-                                <th class="px-4 py-3 text-left">中文名稱</th>
-                                <th class="px-4 py-3 text-left">國籍</th>
+                                <th class="px-4 py-3 text-left">{{ t('airlines.col_name_en') }}</th>
+                                <th class="px-4 py-3 text-left">{{ t('airlines.col_name_zh') }}</th>
+                                <th class="px-4 py-3 text-left">{{ t('airlines.col_nationality') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-[var(--binary-outline-variant)]">

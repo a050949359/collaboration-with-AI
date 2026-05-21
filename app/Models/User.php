@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
 use Illuminate\Support\Facades\URL;
 use App\Support\AvatarGenerator;
@@ -43,6 +44,8 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'locked_until' => 'datetime',
+            'password_changed_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -50,6 +53,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function socialAccounts(): HasMany
     {
         return $this->hasMany(SocialAccount::class);
+    }
+
+    public function passwordHistories(): HasMany
+    {
+        return $this->hasMany(PasswordHistory::class)->latest('created_at');
     }
 
     protected function avatar(): Attribute
@@ -68,6 +76,11 @@ class User extends Authenticatable implements MustVerifyEmail
                 return AvatarGenerator::defaultFor($this->name, $this->email, $this->getKey());
             },
         );
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     public function sendEmailVerificationNotification(): void

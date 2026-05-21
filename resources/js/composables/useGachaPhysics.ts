@@ -1,5 +1,6 @@
 import Matter from 'matter-js'
 import { onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 export type PhysicsKey = 'gravity' | 'count' | 'bounce' | 'friction' | 'agitationStrength' | 'resonanceMs' | 'lockMs'
 
@@ -14,6 +15,7 @@ export const PHYSICS_DEFAULTS: Record<PhysicsKey, number> = {
 }
 
 export function useGachaPhysics() {
+  const { t } = useI18n()
   const chamberEl = ref<HTMLDivElement>()
   const physics = reactive<Record<PhysicsKey, number>>({ ...PHYSICS_DEFAULTS })
 
@@ -66,7 +68,7 @@ export function useGachaPhysics() {
   }
 
   async function runAnimation(setStatus: (s: string) => void): Promise<void> {
-    setStatus('Active Resonance...')
+    setStatus(t('gacha.active_resonance'))
 
     agitationHandler = applyAgitation
     Matter.Events.on(engine, 'afterUpdate', agitationHandler)
@@ -76,11 +78,11 @@ export function useGachaPhysics() {
     Matter.Events.off(engine, 'afterUpdate', agitationHandler)
     agitationHandler = undefined
 
-    setStatus('Vector Locked...')
+    setStatus(t('gacha.vector_locked'))
 
     await new Promise<void>((resolve) => setTimeout(resolve, physics.lockMs))
 
-    setStatus('Ejecting...')
+    setStatus(t('gacha.ejecting'))
   }
 
   function cleanup() {

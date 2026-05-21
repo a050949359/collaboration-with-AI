@@ -1,5 +1,6 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import type { Ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { api } from '@/lib/routes';
 
 export interface QualityTier { code: string; name: string; color: string }
@@ -22,6 +23,8 @@ export function useGachaRoom(
     user: Ref<{ name: string } | null>,
     runAnimation: (setStatus: (s: string) => void) => Promise<void>,
 ) {
+    const { t } = useI18n();
+
     // ── Mode ───────────────────────────────────────────────────────────────
     const wsAvailable = ref(false);
     const mode        = ref<Mode>('standalone');
@@ -68,7 +71,9 @@ export function useGachaRoom(
     const extractionDots = ref<Array<{ color: string }>>([]);
     const lastResults    = ref<DrawResult[]>([]);
     const showModal      = ref(false);
-    const statusText     = ref('System Ready');
+    const statusKey      = ref('gacha.system_ready');
+    const statusOverride = ref('');
+    const statusText     = computed(() => statusOverride.value || t(statusKey.value));
 
     // ── Computed ───────────────────────────────────────────────────────────
     const drawsRemaining = computed(() =>
@@ -298,7 +303,7 @@ export function useGachaRoom(
                 body: JSON.stringify({ name }),
             });
             if (!res.ok) {
-                joinError.value = res.status === 404 ? '房間不存在' : res.status === 422 ? '房間已滿' : '加入失敗';
+                joinError.value = res.status === 404 ? t('gacha.join_not_found') : res.status === 422 ? t('gacha.join_full') : t('gacha.join_failed');
                 fetchRooms();
                 return;
             }
@@ -354,7 +359,8 @@ export function useGachaRoom(
         setTimeout(() => {
             showModal.value  = true;
             syncing.value    = false;
-            statusText.value = 'System Ready';
+            statusKey.value      = 'gacha.system_ready';
+            statusOverride.value = '';
         }, 600);
     }
 
@@ -362,7 +368,7 @@ export function useGachaRoom(
         if (syncing.value) return;
         syncing.value        = true;
         extractionDots.value = [];
-        if (!skipAnim.value) await runAnimation(s => { statusText.value = s; });
+        if (!skipAnim.value) await runAnimation(s => { statusOverride.value = s; statusKey.value = ''; });
         showResults(results);
     }
 
@@ -382,12 +388,15 @@ export function useGachaRoom(
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
-                statusText.value  = (err as any).message ?? 'Error';
+                const msg = (err as any).message;
+                if (msg) { statusOverride.value = msg; statusKey.value = ''; }
+                else     { statusKey.value = 'gacha.network_error'; statusOverride.value = ''; }
                 drawResultWaiter  = null;
                 syncing.value     = false;
             }
         } catch {
-            statusText.value = 'Network error';
+            statusKey.value      = 'gacha.network_error';
+            statusOverride.value = '';
             drawResultWaiter = null;
             syncing.value    = false;
         } finally {
@@ -413,13 +422,13 @@ export function useGachaRoom(
         if (mode.value === 'in-room' && currentRoom.value && currentPlayer.value) {
             const resultPromise = new Promise<DrawResult[]>(resolve => { drawResultWaiter = resolve; });
             drawFromApi();
-            if (!skipAnim.value) await runAnimation(s => { statusText.value = s; });
-            else statusText.value = 'Ejecting...';
+            if (!skipAnim.value) await runAnimation(s => { statusOverride.value = s; statusKey.value = ''; });
+            else { statusKey.value = 'gacha.ejecting'; statusOverride.value = ''; }
             const results = await resultPromise;
             showResults(results);
         } else {
-            if (!skipAnim.value) await runAnimation(s => { statusText.value = s; });
-            else statusText.value = 'Ejecting...';
+            if (!skipAnim.value) await runAnimation(s => { statusOverride.value = s; statusKey.value = ''; });
+            else { statusKey.value = 'gacha.ejecting'; statusOverride.value = ''; }
             resolveStandalone();
         }
     }

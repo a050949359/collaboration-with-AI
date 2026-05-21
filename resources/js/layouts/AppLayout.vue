@@ -1,4 +1,3 @@
-defineExpose({ showToast });
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, ref } from 'vue';
@@ -279,6 +278,12 @@ return;
                                     class="mt-1 block w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-surface-container)]"
                                 >
                                     {{ t('layout.admin_settings') }}
+                                </a>
+                                <a
+                                    :href="routes.profile()"
+                                    class="mt-1 block w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-text)] transition hover:bg-[var(--binary-surface-container)]"
+                                >
+                                    {{ t('layout.account_settings') }}
                                 </a>
                                 <button
                                     type="button"

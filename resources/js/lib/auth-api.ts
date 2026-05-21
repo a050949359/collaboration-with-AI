@@ -1,7 +1,10 @@
 import type {
     AuthApiResponse,
+    ChangePasswordPayload,
+    ForgotPasswordPayload,
     LoginPayload,
     RegisterPayload,
+    ResetPasswordPayload,
     ValidationErrors,
 } from '@/types';
 import { api } from './routes';
@@ -95,4 +98,16 @@ export async function registerWithApi(payload: RegisterPayload) {
 
 export async function logoutWithApi() {
     await request<{ message?: string }>(api.auth.logout(), {});
+}
+
+export async function forgotPasswordWithApi(payload: ForgotPasswordPayload) {
+    return request<{ message?: string }>(api.auth.forgotPassword(), payload);
+}
+
+export async function resetPasswordWithApi(payload: ResetPasswordPayload) {
+    return request<{ message?: string }>(api.auth.resetPassword(), payload);
+}
+
+export async function changePasswordWithApi(payload: ChangePasswordPayload) {
+    return request<{ message?: string }>(api.auth.changePassword(), payload);
 }

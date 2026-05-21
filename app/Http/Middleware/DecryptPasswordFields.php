@@ -22,7 +22,7 @@ class DecryptPasswordFields
             return response()->json(['message' => '伺服器金鑰設定錯誤。'], 500);
         }
 
-        foreach (['password', 'password_confirmation'] as $field) {
+        foreach (['password', 'password_confirmation', 'current_password'] as $field) {
             if (!$request->filled($field)) continue;
 
             $encrypted = base64_decode($request->input($field), strict: true);
