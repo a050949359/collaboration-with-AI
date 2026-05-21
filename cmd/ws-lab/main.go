@@ -469,6 +469,9 @@ func verifyToken(token string) (bool, string) {
 // ── WebSocket handler ─────────────────────────────────────────────────────────
 
 func realIP(r *http.Request) string {
+	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
+		return ip
+	}
 	if ip := r.Header.Get("X-Real-IP"); ip != "" {
 		return ip
 	}
