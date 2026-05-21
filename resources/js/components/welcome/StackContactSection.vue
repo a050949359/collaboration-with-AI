@@ -2,27 +2,27 @@
 const categories = [
     {
         label: 'Backend',
-        items: ['Laravel', 'PHP 8.4', 'Go'],
+        items: ['Laravel 13', 'PHP 8.4', 'Go', 'Python'],
     },
     {
         label: 'Frontend',
-        items: ['Vue 3', 'TypeScript', 'Inertia.js', 'Tailwind CSS', 'Vite'],
+        items: ['Vue 3', 'TypeScript', 'Inertia.js', 'Tailwind CSS', 'Vite', 'Matter.js'],
     },
     {
         label: 'Database',
-        items: ['MySQL', 'SQLite', 'Redis'],
+        items: ['SQLite', 'Redis'],
     },
     {
         label: 'AI / LLM',
-        items: ['Gemini', 'Vertex AI', 'Matter.js'],
+        items: ['Gemini', 'Vertex AI'],
     },
     {
         label: 'Infrastructure',
-        items: ['Nginx', 'Cloudflare', 'Ansible', "Let's Encrypt"],
+        items: ['Nginx', 'Cloudflare', 'Ansible', "Let's Encrypt", 'SNMP', 'GCP', 'Oracle Cloud', 'LightNode'],
     },
     {
         label: 'Tooling',
-        items: ['k6', 'Queue', 'Wikidata', 'D3'],
+        items: ['WebSocket', 'Flask', 'k6', 'Queue', 'Wikidata', 'D3'],
     },
 ];
 

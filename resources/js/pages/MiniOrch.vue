@@ -107,7 +107,7 @@ onUnmounted(() => {
 <template>
     <Head title="mini-orch" />
     <AppLayout>
-        <div class="flex flex-col min-h-screen gap-3 px-4 pb-4 pt-20">
+        <div class="flex flex-col h-screen gap-3 px-4 pb-4 pt-20 overflow-hidden">
 
             <!-- Header bar -->
             <div class="flex items-center gap-3 flex-wrap">
