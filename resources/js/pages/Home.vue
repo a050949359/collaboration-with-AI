@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n';
 import ArticlesSection from '../components/welcome/ArticlesSection.vue';
 import HeroSection from '../components/welcome/HeroSection.vue';
 import ProjectsSection from '../components/welcome/ProjectsSection.vue';
-import AirportSection from '../components/welcome/AirportSection.vue';
+import StackContactSection from '../components/welcome/StackContactSection.vue';
 import AppLayout from '../layouts/AppLayout.vue';
 
 interface ArticlePreview {
@@ -70,7 +70,7 @@ const stackInfo = computed<[string, string][]>(() => [
             <HeroSection :stack-info="stackInfo" />
             <ProjectsSection :featured-projects="featuredProjects" />
             <ArticlesSection :articles="latestArticles" />
-            <AirportSection />
+            <StackContactSection />
         </main>
     </AppLayout>
 </template>
