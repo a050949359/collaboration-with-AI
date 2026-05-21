@@ -51,6 +51,13 @@ async function submitRun() {
             body: runBody.value,
             credentials: 'include',
         });
+        const contentType = res.headers.get('content-type') ?? '';
+        if (!contentType.includes('application/json')) {
+            submitError.value = res.status === 401 || res.status === 403
+                ? '請先登入才能觸發壓測'
+                : `Error ${res.status}`;
+            return;
+        }
         const data = await res.json();
         if (!res.ok) {
             submitError.value = data?.message ?? `Error ${res.status}`;
