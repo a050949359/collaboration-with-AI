@@ -41,6 +41,7 @@ export function useGachaRoom(
     let ws: WebSocket | null = null;
     let hbTimer: ReturnType<typeof setInterval> | null = null;
     let statusTimer: ReturnType<typeof setInterval> | null = null;
+    let welcomeTimer: ReturnType<typeof setTimeout> | null = null;
 
     // ── Create modal ───────────────────────────────────────────────────────
     const showCreateModal = ref(false);
@@ -108,6 +109,16 @@ export function useGachaRoom(
         const proto = location.protocol === 'https:' ? 'wss' : 'ws';
         ws = new WebSocket(`${proto}://${location.host}/ws-lab/gacha/${roomCode}`);
 
+        welcomeTimer = setTimeout(() => {
+            welcomeTimer = null;
+            if (mode.value !== 'in-room') return;
+            currentRoom.value = currentPlayer.value = null;
+            isHost.value = false;
+            mode.value = 'lobby';
+            ws?.close();
+            fetchRooms();
+        }, 3000);
+
         ws.onopen = () => {
             wsStatus.value = 'connected';
             hbTimer = setInterval(() => ws?.send(JSON.stringify({ type: 'ping' })), 10_000);
@@ -119,7 +130,14 @@ export function useGachaRoom(
             }
         };
         ws.onmessage = (e) => {
-            try { handleWsMessage(JSON.parse(e.data)); } catch { /* ignore */ }
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'welcome') {
+                    if (welcomeTimer) { clearTimeout(welcomeTimer); welcomeTimer = null; }
+                    return;
+                }
+                handleWsMessage(msg);
+            } catch { /* ignore */ }
         };
         ws.onclose = () => {
             wsStatus.value = 'offline';
@@ -130,6 +148,7 @@ export function useGachaRoom(
     }
 
     function disconnectWs() {
+        if (welcomeTimer) { clearTimeout(welcomeTimer); welcomeTimer = null; }
         if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
         ws?.close();
         ws = null;

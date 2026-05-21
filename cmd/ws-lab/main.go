@@ -260,6 +260,11 @@ func (r *Room) runGacha(manager *RoomManager) {
 			r.clients[c] = struct{}{}
 			r.clientCount.Add(1)
 			r.touch()
+			welcome, _ := json.Marshal(map[string]string{"type": "welcome"})
+			select {
+			case c.send <- welcome:
+			default:
+			}
 			if r.machineState != nil {
 				if out, err := json.Marshal(r.machineState); err == nil {
 					select {
