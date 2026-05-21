@@ -12,6 +12,7 @@ class WsLabController extends Controller
 {
     private string $binaryPath;
     private string $pidFile;
+    private string $logFilePath;
     private string $wsAddr;
     private string $mgmtAddr;
     private string $allowedOrigins;
@@ -20,6 +21,7 @@ class WsLabController extends Controller
     {
         $this->binaryPath     = storage_path('app/ws-lab');
         $this->pidFile        = storage_path('app/ws-lab.pid');
+        $this->logFilePath    = storage_path('app/ws-lab.log');
         $this->wsAddr         = '127.0.0.1:9001';
         $this->mgmtAddr       = '127.0.0.1:9002';
         $this->allowedOrigins = env('WS_ALLOWED_ORIGINS', 'localhost:*');
@@ -70,11 +72,12 @@ class WsLabController extends Controller
         }
 
         $cmd = sprintf(
-            '%s --ws-addr=%s --mgmt-addr=%s --pid-file=%s --allowed-origins=%s > /dev/null 2>&1 &',
+            '%s --ws-addr=%s --mgmt-addr=%s --pid-file=%s --log-file=%s --allowed-origins=%s > /dev/null 2>&1 &',
             escapeshellarg($this->binaryPath),
             escapeshellarg($this->wsAddr),
             escapeshellarg($this->mgmtAddr),
             escapeshellarg($this->pidFile),
+            escapeshellarg($this->logFilePath),
             escapeshellarg($this->allowedOrigins),
         );
 

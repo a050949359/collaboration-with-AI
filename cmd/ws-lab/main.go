@@ -26,11 +26,12 @@ import (
 // ── Config ────────────────────────────────────────────────────────────────────
 
 var (
-	wsAddr        = flag.String("ws-addr", "127.0.0.1:9001", "WebSocket listen address")
-	mgmtAddr      = flag.String("mgmt-addr", "127.0.0.1:9002", "Management HTTP listen address")
-	pidFile       = flag.String("pid-file", "", "Path to write PID file")
-	redisAddr     = flag.String("redis-addr", "127.0.0.1:6379", "Redis address")
-	redisPass     = flag.String("redis-password", "", "Redis password")
+	wsAddr         = flag.String("ws-addr", "127.0.0.1:9001", "WebSocket listen address")
+	mgmtAddr       = flag.String("mgmt-addr", "127.0.0.1:9002", "Management HTTP listen address")
+	pidFile        = flag.String("pid-file", "", "Path to write PID file")
+	logFile        = flag.String("log-file", "", "Path to log file (appended); empty = stderr")
+	redisAddr      = flag.String("redis-addr", "127.0.0.1:6379", "Redis address")
+	redisPass      = flag.String("redis-password", "", "Redis password")
 	allowedOrigins = flag.String("allowed-origins", "localhost:*", "Comma-separated WebSocket origin patterns")
 )
 
@@ -250,6 +251,7 @@ func (r *Room) runGacha(manager *RoomManager) {
 		case <-r.shutdown:
 			return
 		case c := <-r.join:
+			log.Printf("gacha join: remoteIP=%q connsByIP=%v", c.remoteIP, r.connsByIP)
 			if r.connsByIP[c.remoteIP] >= 3 {
 				c.conn.Close(websocket.StatusPolicyViolation, "too many connections from your IP")
 				continue
@@ -581,6 +583,15 @@ func serveWS(manager *RoomManager, w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
+
+	if *logFile != "" {
+		f, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("cannot open log file: %v", err)
+		}
+		defer f.Close()
+		log.SetOutput(f)
+	}
 
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     *redisAddr,
