@@ -14,6 +14,7 @@ interface Project {
     title: string;
     description: string | string[];
     tags: string[];
+    status?: string;
     image?: string;
     commits?: Commit[];
 }
@@ -42,13 +43,14 @@ const lineAutomationProject: Project = {
     description:
         '整合 LINE Bot 與 Laravel 內部 API，支援好友綁定、快速產文、完成通知 webhook，並加上 API key 與 HMAC 驗證，確保跨主機傳輸安全與流程可追蹤。',
     tags: ['LINE Messaging API', 'Webhook', 'HMAC', 'Queue'],
+    status: 'paused',
     image: '/images/projects/project04.webp',
 };
 
 const miniOrchProject: Project = {
     id: '05',
-    category: 'HOME_LAB_INFRA',
-    title: 'Mini Orchestrator & Home Lab',
+    category: 'MINI_ORCHESTRATOR',
+    title: 'Mini Orchestrator',
     description: [
         '雙節點實體網路環境，以 Ansible 自動化部署服務，涵蓋 Let\'s Encrypt 自簽憑證自動更新與 SNMP 監控。',
         '以 Go 實作 Worker 服務，搭配 Redis 作為任務佇列；API 全程走 HTTPS，透過 k6 持續壓測驗證穩定性。',
@@ -58,7 +60,57 @@ const miniOrchProject: Project = {
     image: '/images/projects/project05.webp',
 };
 
-const projects = computed(() => [...props.featuredProjects, airportProject, lineAutomationProject, miniOrchProject]);
+const tourPlaygroundProject: Project = {
+    id: '06',
+    category: 'TRAVEL_MANAGEMENT',
+    title: 'Tour Playground',
+    description: [
+        '預載 100k 旅客、1k 行程假資料，支援依角色（付款人／同行人）隨機抽取，模擬真實購票場景。',
+        '訂單採悲觀鎖防超賣，狀態機涵蓋 Reserved → Confirmed，逾時 15 分鐘自動釋放。',
+        'Queue Job 非同步產出 CSV，前端每 2 秒 polling 追蹤匯出狀態，完成後即可下載。',
+    ],
+    tags: ['Laravel', 'SQLite', 'Pessimistic Lock', 'Queue', 'CSV Export', 'Inertia'],
+    status: 'online',
+    image: '/images/projects/project06.webp',
+};
+
+const storyRelayProject: Project = {
+    id: '07',
+    category: 'AI_STORY_RELAY',
+    title: '故事接龍 & 角色創造',
+    description: [
+        '多個 LLM 角色輪流接龍，每位角色擁有獨立人設、記憶與行動傾向，共同推進同一個世界狀態。',
+        '道具系統與事件觸發機制讓劇情產生分岔；每 2 小時自動排程推進，確保故事持續演化。',
+        '同時僅允許一個 active session，玩家可建立角色加入世界，與 AI 共同創作。',
+    ],
+    tags: ['Multi-LLM', 'Gemini', 'Laravel Queue', 'Character', 'World State', 'Cron'],
+    status: 'in_dev',
+    image: '/images/projects/project07.webp',
+};
+
+const wsLabGachaProject: Project = {
+    id: '08',
+    category: 'WEBSOCKET_LAB',
+    title: 'WebSocket Lab & 抽獎機台',
+    description: [
+        '以 Go 實作多房間 WebSocket server，每個房間獨立 goroutine event loop，透過 Redis 驗證身份。',
+        'Host 機制讓房主控制機台狀態並即時廣播；Matter.js 物理引擎驅動彈珠抽卡動畫。',
+        '每 IP 連線數限制與訊息速率控制，防止單一來源佔用房間資源。',
+    ],
+    tags: ['Go', 'WebSocket', 'Goroutine', 'Redis', 'Matter.js', 'Vue 3', 'Cloudflare'],
+    status: 'online',
+    image: '/images/projects/project08.webp',
+};
+
+const projects = computed(() => [
+    ...props.featuredProjects,
+    airportProject,
+    lineAutomationProject,
+    miniOrchProject,
+    tourPlaygroundProject,
+    storyRelayProject,
+    wsLabGachaProject,
+]);
 </script>
 
 <template>
@@ -73,8 +125,11 @@ const projects = computed(() => [...props.featuredProjects, airportProject, line
                 <article
                     v-for="(project, index) in projects"
                     :key="project.id"
-                    class="flex w-full flex-col gap-12 rounded-[2rem] binary-card md:items-center"
-                    :class="(index + 1) % 2 === 1 ? 'md:flex-row' : 'md:flex-row-reverse'"
+                    class="flex w-full flex-col gap-12 rounded-[2rem] binary-card md:items-center transition-opacity"
+                    :class="[
+                        (index + 1) % 2 === 1 ? 'md:flex-row' : 'md:flex-row-reverse',
+                        project.status === 'paused' ? 'opacity-40 grayscale' : '',
+                    ]"
                 >
                     <div class="w-full md:w-1/2">
                         <span class="binary-label mb-4 block text-xs font-bold text-[var(--binary-primary)]">{{ project.id }} / {{ project.category }}</span>
@@ -156,7 +211,7 @@ const projects = computed(() => [...props.featuredProjects, airportProject, line
                         </div>
                         <div class="mt-2 flex gap-4">
                             <span class="text-[var(--binary-outline)]">{{ String(project.tags.length + 3).padStart(2, '0') }}</span>
-                            <span class="text-[var(--binary-primary)]">status: online</span>
+                            <span class="text-[var(--binary-primary)]">status: {{ project.status ?? 'online' }}</span>
                         </div>
                     </div>
                 </article>
