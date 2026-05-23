@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { tourFetch, type Passenger } from '@/lib/tour-api';
 
-const props = defineProps<{ active: boolean }>();
+defineProps<{ active: boolean }>();
 
 const { t } = useI18n();
 

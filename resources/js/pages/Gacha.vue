@@ -415,7 +415,7 @@
 import { useI18n } from 'vue-i18n';
 import { useAuth } from '@/composables/useAuth';
 import { useGachaPhysics } from '@/composables/useGachaPhysics';
-import { useGachaRoom, QUALITY_TIERS } from '@/composables/useGachaRoom';
+import { useGachaRoom } from '@/composables/useGachaRoom';
 import AppLayout from '@/layouts/AppLayout.vue';
 import QualitySelect from '@/components/gacha/QualitySelect.vue';
 
