@@ -61,6 +61,9 @@ export const routes = {
     // Gacha
     gacha: () => `${WEB_PREFIX}/gacha`,
 
+    // Computer Vision Lab
+    computerVision: () => `${WEB_PREFIX}/computer-vision`,
+
     // Story Relay
     storyRelay: () => `${WEB_PREFIX}/story-relay`,
 

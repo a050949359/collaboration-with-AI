@@ -134,6 +134,21 @@ defineProps<{ name: string; size?: number }>();
             <line class="stroke-default anim-story-3" x1="18" y1="19.5" x2="24" y2="20"   stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
         </template>
 
+        <!-- cv (computer vision — eye + detection brackets) -->
+        <template v-else-if="name === 'cv'">
+            <!-- corner detection brackets -->
+            <path class="stroke-default anim-cv-bracket" d="M5 11 L5 8 L8 8"   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+            <path class="stroke-default anim-cv-bracket" d="M24 8 L27 8 L27 11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+            <path class="stroke-default anim-cv-bracket" d="M5 21 L5 24 L8 24"  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+            <path class="stroke-default anim-cv-bracket" d="M24 24 L27 24 L27 21" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+            <!-- eye outline -->
+            <path class="stroke-default" d="M4 16 Q10 8 16 8 Q22 8 28 16 Q22 24 16 24 Q10 24 4 16 Z" stroke-width="1.5" stroke-linejoin="round"/>
+            <!-- iris -->
+            <circle class="stroke-default anim-cv-iris" cx="16" cy="16" r="4.5" stroke-width="1.5"/>
+            <!-- pupil -->
+            <circle class="fill-default" cx="16" cy="16" r="1.8"/>
+        </template>
+
         <!-- gacha -->
         <template v-else-if="name === 'gacha'">
             <circle class="stroke-default" cx="16" cy="16" r="11" stroke-width="1.5"/>
@@ -307,6 +322,22 @@ defineProps<{ name: string; size?: number }>();
 @keyframes storyLine {
     from { opacity: 0.25; }
     to   { opacity: 1; }
+}
+
+/* CV — brackets focus in, iris pulse */
+.nav-icon:hover .anim-cv-bracket {
+    animation: cvBracket 0.3s ease-out forwards;
+}
+@keyframes cvBracket {
+    to { opacity: 1; }
+}
+.nav-icon:hover .anim-cv-iris {
+    transform-origin: 16px 16px;
+    animation: cvIris 1s ease-in-out infinite;
+}
+@keyframes cvIris {
+    0%,100% { transform: scale(1);   opacity: 1; }
+    50%     { transform: scale(1.12); opacity: 0.6; }
 }
 
 /* Home / folder open */
