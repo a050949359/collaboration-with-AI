@@ -4,10 +4,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 // ── WASM / script state ──────────────────────────────────
-const wasmReady  = ref(false);
-const cameras    = ref<MediaDeviceInfo[]>([]);
+const wasmReady   = ref(false);
+const cameras     = ref<MediaDeviceInfo[]>([]);
 const selectedCam = ref('');
-const started    = ref(false);
+const started     = ref(false);
+const camError    = ref('');
 
 // ── Processing params ────────────────────────────────────
 const algorithm   = ref(0);   // 0=Canny 1=Laplacian 2=Sobel 3=Scharr
@@ -40,8 +41,17 @@ async function enumerateCams() {
         const devices = await navigator.mediaDevices.enumerateDevices();
         cameras.value = devices.filter(d => d.kind === 'videoinput');
         if (cameras.value.length) selectedCam.value = cameras.value[0].deviceId;
-    } catch {
+        else camError.value = '找不到相機裝置';
+    } catch (e: any) {
         cameras.value = [];
+        if (e?.name === 'NotFoundError' || e?.name === 'DevicesNotFoundError')
+            camError.value = '找不到相機裝置';
+        else if (e?.name === 'NotAllowedError' || e?.name === 'PermissionDeniedError')
+            camError.value = '請允許存取相機';
+        else if (e?.name === 'NotReadableError')
+            camError.value = '相機裝置已被其他程式佔用';
+        else
+            camError.value = '無法存取相機';
     }
 }
 
@@ -131,21 +141,26 @@ onUnmounted(() => {
             </div>
 
             <!-- Camera select (before start) -->
-            <div v-if="wasmReady && !started" class="flex items-center gap-4 max-w-sm">
-                <select v-model="selectedCam"
-                        class="flex-1 px-4 py-3 rounded-md text-sm"
-                        style="background:#1a2820; color:#dee4dd; outline:none;">
-                    <option v-if="!cameras.length" value="">無法取得鏡頭</option>
-                    <option v-for="cam in cameras" :key="cam.deviceId" :value="cam.deviceId">
-                        {{ cam.label || 'Camera' }}
-                    </option>
-                </select>
-                <button :disabled="!cameras.length"
-                        class="px-6 py-3 rounded-md text-sm font-bold tracking-wide transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                        style="background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;"
-                        @click="startCamera">
-                    開始
-                </button>
+            <div v-if="wasmReady && !started" class="flex flex-col gap-3 max-w-sm w-full">
+                <div class="flex items-center gap-4">
+                    <select v-model="selectedCam"
+                            class="flex-1 px-4 py-3 rounded-md text-sm"
+                            style="background:#1a2820; color:#dee4dd; outline:none;">
+                        <option v-if="!cameras.length" value="">— 無相機 —</option>
+                        <option v-for="cam in cameras" :key="cam.deviceId" :value="cam.deviceId">
+                            {{ cam.label || 'Camera' }}
+                        </option>
+                    </select>
+                    <button :disabled="!cameras.length"
+                            class="px-6 py-3 rounded-md text-sm font-bold tracking-wide transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                            style="background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;"
+                            @click="startCamera">
+                        開始
+                    </button>
+                </div>
+                <p v-if="camError"
+                   class="text-xs font-bold tracking-wide"
+                   style="color:#ffb3b2;">{{ camError }}</p>
             </div>
 
             <!-- Left / Right split (always in DOM, shown after start) -->
