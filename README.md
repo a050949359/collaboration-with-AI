@@ -198,3 +198,38 @@ POST /api/gacha/rooms/{room}/draw
 - Broadcast Event：`CardDrawn`（推播抽卡結果與動畫）
 - 隨機邏輯在 server 執行，防止客戶端作弊
 
+---
+
+## MCP 設定（Claude Desktop）
+
+在帳號設定頁面產生 API Key 後，將以下設定加入 Claude Desktop 的 `claude_desktop_config.json`：
+
+```json
+{
+  "mcpServers": {
+    "collaboration-with-ai": {
+      "type": "http",
+      "url": "https://your-domain.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+本地開發時將 `url` 換成 `http://localhost:8000/api/mcp`。
+
+### 可用工具
+
+| 工具 | 說明 |
+|------|------|
+| `list_tasks` | 列出所有任務（可用 `status` 篩選：`todo` / `in_progress` / `done`） |
+| `get_task` | 取得單一任務詳情（含子項目） |
+| `create_task` | 新增任務（需 `title`，可選 `description`、`status`、`sort`） |
+| `update_task` | 更新任務標題、描述或狀態 |
+| `delete_task` | 刪除任務（含所有子項目） |
+| `add_task_item` | 新增子項目到指定任務 |
+| `update_task_item` | 更新子項目內容或完成狀態 |
+| `delete_task_item` | 刪除子項目 |
+
