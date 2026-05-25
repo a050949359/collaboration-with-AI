@@ -46,7 +46,7 @@ async function fetchApiKeys() {
     try {
         const res = await fetch(api.userApiKeys.index(), { credentials: 'include' });
         apiKeys.value = await res.json();
-    } catch (e) {
+    } catch {
         apiKeyError.value = t('profile.apikey_fetch_failed');
     } finally {
         apiKeyLoading.value = false;

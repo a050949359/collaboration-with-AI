@@ -39,9 +39,6 @@ const expandedIds = ref<Set<number>>(new Set());
 const editingId = ref<number | null>(null);
 const editForm = ref({ title: '', description: '', status: 'todo' as TaskStatus });
 
-// 新增 item
-const addingItemTaskId = ref<number | null>(null);
-const newItemContent = ref('');
 
 const statusLabels = computed<Record<TaskStatus, string>>(() => ({
     todo: t('mcp.status_todo'),
@@ -97,22 +94,6 @@ async function saveEdit(task: Task) {
 }
 
 
-async function addItem(task: Task) {
-    if (!newItemContent.value.trim()) return;
-    const res = await fetch(api.tasks.itemStore(task.id), {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newItemContent.value }),
-    });
-    if (res.ok) {
-        const item: TaskItem = await res.json();
-        task.items.push(item);
-        newItemContent.value = '';
-        addingItemTaskId.value = null;
-    }
-}
-
 async function toggleItem(task: Task, item: TaskItem) {
     const res = await fetch(api.tasks.itemUpdate(task.id, item.id), {
         method: 'PATCH',
@@ -121,11 +102,6 @@ async function toggleItem(task: Task, item: TaskItem) {
         body: JSON.stringify({ is_done: !item.is_done }),
     });
     if (res.ok) item.is_done = !item.is_done;
-}
-
-async function deleteItem(task: Task, item: TaskItem) {
-    const res = await fetch(api.tasks.itemDestroy(task.id, item.id), { method: 'DELETE', credentials: 'include' });
-    if (res.ok) task.items = task.items.filter(i => i.id !== item.id);
 }
 
 onMounted(fetchTasks);
@@ -162,7 +138,7 @@ onMounted(fetchTasks);
                         <span class="text-[var(--binary-outline)] text-xs transition-transform" :class="expandedIds.has(task.id) ? 'rotate-90' : ''">▶</span>
 
                         <!-- 編輯模式 -->
-                        <template v-if="editingId === task.id" @click.stop>
+                        <template v-if="editingId === task.id">
                             <div class="flex flex-1 items-center gap-2" @click.stop>
                                 <input v-model="editForm.title" class="binary-input flex-1 text-sm" @keydown.enter="saveEdit(task)" @keydown.esc="editingId = null" />
                                 <select v-model="editForm.status" class="binary-input w-32 text-xs shrink-0">
