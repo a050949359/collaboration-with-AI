@@ -276,10 +276,10 @@ return;
                                 </button>
                                 <a
                                     v-if="isAdmin"
-                                    :href="routes.admin.settings()"
+                                    :href="routes.admin.system()"
                                     class="mt-1 block w-full rounded-lg px-3 py-2 text-left binary-label text-xs uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-surface-container)]"
                                 >
-                                    {{ t('layout.admin_settings') }}
+                                    {{ t('layout.admin_system') }}
                                 </a>
                                 <a
                                     :href="routes.profile()"

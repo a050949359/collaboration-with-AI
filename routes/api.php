@@ -29,6 +29,7 @@ use App\Http\Controllers\Aviation\CountryController;
 use App\Http\Controllers\Aviation\CityController;
 use App\Http\Controllers\Aviation\CityPreviewController;
 use App\Http\Controllers\Aviation\CitySearchController;
+use App\Http\Controllers\Line\LineAboutTokenController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
 use App\Http\Controllers\Lab\WsLabController;
@@ -38,13 +39,22 @@ use App\Http\Controllers\Story\StorySetupController;
 use App\Http\Controllers\Story\StorySessionController;
 use App\Http\Controllers\Gacha\GachaRoomController;
 use App\Http\Controllers\ApiKey\UserApiKeyController;
+use App\Http\Controllers\Admin\ShareTokenController;
 use App\Http\Middleware\EnsureAdmin;
 
 Route::post('/about/ask', [AboutController::class, 'ask'])->middleware('throttle:4,1');
 
+Route::post('/share-tokens/check', [ShareTokenController::class, 'check'])->middleware('throttle:3,1');
+
 Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
     Route::get('/about/context', [ResumeContextController::class, 'show']);
     Route::put('/about/context', [ResumeContextController::class, 'update']);
+
+    Route::prefix('admin/share-tokens')->group(function () {
+        Route::get('/',        [ShareTokenController::class, 'index']);
+        Route::post('/',       [ShareTokenController::class, 'store']);
+        Route::delete('/{id}', [ShareTokenController::class, 'destroy']);
+    });
 });
 
 Route::group(['prefix' => 'auth'], function () {
@@ -139,6 +149,8 @@ Route::prefix('line/friends')->group(function () {
 Route::prefix('line/articles')->group(function () {
     Route::post('/quick-generate', [LineArticleController::class, 'quickGenerate'])->middleware('throttle:20,1');
 });
+
+Route::post('/line/about-token', [LineAboutTokenController::class, 'issue'])->middleware('throttle:10,1');
 
 use App\Http\Controllers\Travel\PassengerController;
 use App\Http\Controllers\Travel\TourController;

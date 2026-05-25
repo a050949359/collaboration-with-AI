@@ -155,7 +155,7 @@ export default {
     layout: {
         bind_google: '綁定 Google',
         account_settings: '帳號設定',
-        admin_settings: '系統設定',
+        admin_system: '系統管理',
         logging_out: '登出中...',
         logout: '登出',
         login: '登入',
@@ -498,12 +498,11 @@ export default {
         confirm_delete: '確定刪除角色「{name}」？',
     },
     about: {
-        auth_required_title: '請先登入',
-        auth_required_body: '您尚未登入，請先登入帳號才能瀏覽本頁面。登入後可體驗完整互動功能。',
-        auth_required_action: '前往登入',
-        verify_required_title: '請完成信箱驗證',
-        verify_required_body: '您的帳號尚未完成 email 驗證，請至信箱點擊驗證連結。如未收到信件，請檢查垃圾郵件或重新寄送。',
-        verify_required_action: '回首頁',
+        token_required_title: '需要分享連結',
+        token_required_body: '此頁面僅限受邀訪客使用，請貼上管理員提供的分享連結或 token 以繼續。',
+        token_placeholder: '貼上分享連結或 token...',
+        token_submit: '進入',
+        token_exhausted: '此分享連結的使用次數已用盡，請向管理員申請新連結。',
     },
     tour_playground: {
         subtitle: 'Queue / Worker 練習環境｜資料與主系統隔離',

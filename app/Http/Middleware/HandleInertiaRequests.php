@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\ShareTokenScope;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -50,9 +51,26 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user('sanctum'),
+                'user'     => $request->user('sanctum'),
                 'is_admin' => $request->user('sanctum')?->isAdmin() ?? false,
             ],
+            ...$this->pageProps($request),
         ];
+    }
+
+    /**
+     * 依路由注入頁面專屬 props（靜態 enum / config）。
+     * key 需與前端 usePage().props 一致。
+     *
+     * @return array<string, mixed>
+     */
+    private function pageProps(Request $request): array
+    {
+        return match (true) {
+            $request->routeIs('admin') => [
+                'shareTokenScopes' => array_column(ShareTokenScope::cases(), 'value'),
+            ],
+            default => [],
+        };
     }
 }

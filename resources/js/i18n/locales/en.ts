@@ -155,7 +155,7 @@ export default {
     layout: {
         bind_google: 'Bind Google',
         account_settings: 'Account Settings',
-        admin_settings: 'System Settings',
+        admin_system: 'System',
         logging_out: 'Logging out...',
         logout: 'Logout',
         login: 'Login',
@@ -498,12 +498,11 @@ export default {
         confirm_delete: 'Are you sure you want to delete "{name}"?',
     },
     about: {
-        auth_required_title: 'Sign in required',
-        auth_required_body: 'You are not signed in. Please sign in to view this page and access all interactive features.',
-        auth_required_action: 'Go to Login',
-        verify_required_title: 'Email verification required',
-        verify_required_body: 'Your account email has not been verified. Please click the link in the verification email. Check your spam folder if you did not receive it.',
-        verify_required_action: 'Back to Home',
+        token_required_title: 'Access required',
+        token_required_body: 'This page is for invited guests only. Paste the share link or token provided by the admin to continue.',
+        token_placeholder: 'Paste share link or token...',
+        token_submit: 'Enter',
+        token_exhausted: 'This share link has been used up. Please request a new one from the admin.',
     },
     tour_playground: {
         subtitle: 'Queue / Worker sandbox · data isolated from main system',

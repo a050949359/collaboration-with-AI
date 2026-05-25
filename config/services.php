@@ -92,6 +92,9 @@ return [
         'outbound_hmac_secret' => env('LINE_BOT_OUTBOUND_HMAC_SECRET'),
         'hmac_required' => env('LINE_BOT_HMAC_REQUIRED', false),
         'hmac_max_skew_seconds' => env('LINE_BOT_HMAC_MAX_SKEW_SECONDS', 300),
+        'about_token_daily_limit' => env('LINE_BOT_ABOUT_TOKEN_DAILY_LIMIT', 2),
+        'about_token_max_uses' => env('LINE_BOT_ABOUT_TOKEN_MAX_USES', 5),
+        'about_token_expires_days' => env('LINE_BOT_ABOUT_TOKEN_EXPIRES_DAYS', 7),
     ],
 
 ];

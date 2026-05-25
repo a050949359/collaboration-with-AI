@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Controllers\Article\ArticlePageController;
 use App\Http\Controllers\MiniOrch\MiniOrchController;
@@ -51,8 +50,7 @@ Route::prefix('app')->group(function () {
     // 信箱驗證結果頁
     Route::inertia('/verify-result', 'Auth/VerifyResult')->name('verify.result');
 
-    // Admin Inertia shell — auth guard is handled client-side via Bearer token
-    Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+    Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
+        Route::inertia('/admin', 'Admin/System')->name('admin');
     });
 });

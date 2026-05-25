@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { nextTick, ref } from 'vue';
+import { nextTick, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { api, routes } from '@/lib/routes';
+import { api } from '@/lib/routes';
 import { useAuth } from '@/composables/useAuth';
 
 const { t } = useI18n();
@@ -13,7 +13,53 @@ interface Turn {
     text: string;
 }
 
-const { user, isLoggedIn, isAdmin } = useAuth();
+const { isAdmin } = useAuth();
+
+// Share token：先從 URL ?t= 同步讀取，避免閃爍
+const urlToken = new URLSearchParams(window.location.search).get('t');
+const shareToken = ref<string | null>(urlToken);
+
+// Token 輸入欄（非 admin 且尚無 token 時顯示）
+const tokenInput = ref('');
+const tokenError = ref('');
+const isCheckingToken = ref(false);
+
+const canChat = computed(() => isAdmin.value || !!shareToken.value);
+
+async function submitToken() {
+    const raw = tokenInput.value.trim();
+    if (!raw || isCheckingToken.value) return;
+
+    // 支援貼整個 URL 或純 token
+    let candidate: string;
+    try {
+        const t = new URL(raw).searchParams.get('t');
+        candidate = t ?? raw;
+    } catch {
+        candidate = raw;
+    }
+
+    isCheckingToken.value = true;
+    tokenError.value = '';
+    try {
+        const res = await fetch(api.shareTokens.check(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ token: candidate, scope: 'about' }),
+        });
+        if (!res.ok) {
+            const data = await res.json();
+            tokenError.value = data.message ?? '連結無效';
+            return;
+        }
+        shareToken.value = candidate;
+        tokenInput.value = '';
+    } catch {
+        tokenError.value = '驗證失敗，請稍後再試';
+    } finally {
+        isCheckingToken.value = false;
+    }
+}
 
 // ── Chat state ───────────────────────────────────────────
 const history = ref<Turn[]>([]);
@@ -40,16 +86,28 @@ async function send(text?: string) {
     await scrollToBottom();
 
     try {
+        const headers: Record<string, string> = {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        };
+        if (shareToken.value) {
+            headers['Authorization'] = `Bearer ${shareToken.value}`;
+        }
         const res = await fetch(api.about.ask(), {
             method: 'POST',
             credentials: 'include',
-            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ message, history: history.value.slice(0, -1) }),
         });
         const data = await res.json();
 
         if (!res.ok) {
-            errorMessage.value = data.message ?? '發生錯誤，請稍後再試';
+            if (res.status === 403) {
+                shareToken.value = null;
+                tokenError.value = t('about.token_exhausted');
+            } else {
+                errorMessage.value = data.message ?? '發生錯誤，請稍後再試';
+            }
             history.value.pop();
             return;
         }
@@ -121,36 +179,30 @@ function toggleContextPanel() {
     <Head title="About" />
 
     <AppLayout>
-            <template v-if="!isLoggedIn">
+            <!-- Token 輸入擋板（非 admin 且無 token） -->
+            <template v-if="!canChat">
                 <div class="flex flex-col items-center justify-center min-h-[60vh] bg-[var(--binary-surface)]">
                     <div
                         class="w-full max-w-xl px-10 py-12"
                         style="background:rgba(15,21,17,0.92);backdrop-filter:blur(20px);border-radius:2rem;box-shadow:0 8px 32px 0 rgba(107,220,159,0.10);"
                     >
-                        <h2 class="text-[2rem] font-bold mb-4 text-[var(--binary-primary)] tracking-tight text-left" style="letter-spacing:-1px;">{{ t('about.auth_required_title') }}</h2>
-                        <p class="text-[var(--binary-text)] text-lg mb-8 text-left leading-relaxed">{{ t('about.auth_required_body') }}</p>
+                        <h2 class="text-[2rem] font-bold mb-3 text-[var(--binary-primary)] tracking-tight" style="letter-spacing:-1px;">{{ t('about.token_required_title') }}</h2>
+                        <p class="text-[var(--binary-text)] text-sm mb-6 leading-relaxed opacity-70">{{ t('about.token_required_body') }}</p>
+                        <input
+                            v-model="tokenInput"
+                            type="text"
+                            class="binary-input w-full mb-3"
+                            :placeholder="t('about.token_placeholder')"
+                            @keydown.enter.prevent="submitToken"
+                        />
+                        <p v-if="tokenError" class="mb-3 text-xs text-red-400">{{ tokenError }}</p>
                         <div class="flex justify-end">
-                            <a :href="routes.login()"
-                                class="px-8 py-3 rounded-md text-base font-semibold"
-                                style="background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container));color:var(--binary-on-primary-container);box-shadow:0 2px 8px 0 rgba(107,220,159,0.10);"
-                            >{{ t('about.auth_required_action') }}</a>
-                        </div>
-                    </div>
-                </div>
-            </template>
-            <template v-else-if="user && !user.email_verified_at">
-                <div class="flex flex-col items-center justify-center min-h-[60vh] bg-[var(--binary-surface)]">
-                    <div
-                        class="w-full max-w-xl px-10 py-12"
-                        style="background:rgba(15,21,17,0.92);backdrop-filter:blur(20px);border-radius:2rem;box-shadow:0 8px 32px 0 rgba(255,179,178,0.10);"
-                    >
-                        <h2 class="text-[2rem] font-bold mb-4 text-[var(--binary-tertiary)] tracking-tight text-left" style="letter-spacing:-1px;">{{ t('about.verify_required_title') }}</h2>
-                        <p class="text-[var(--binary-text)] text-lg mb-8 text-left leading-relaxed">{{ t('about.verify_required_body') }}</p>
-                        <div class="flex justify-end">
-                            <a :href="routes.home()"
-                                class="px-8 py-3 rounded-md text-base font-semibold"
-                                style="background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container));color:var(--binary-on-primary-container);box-shadow:0 2px 8px 0 rgba(107,220,159,0.10);"
-                            >{{ t('about.verify_required_action') }}</a>
+                            <button
+                                class="px-8 py-3 rounded-md text-base font-semibold disabled:opacity-50"
+                                style="background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container));color:var(--binary-on-primary-container);"
+                                :disabled="isCheckingToken"
+                                @click="submitToken"
+                            >{{ isCheckingToken ? '驗證中...' : t('about.token_submit') }}</button>
                         </div>
                     </div>
                 </div>

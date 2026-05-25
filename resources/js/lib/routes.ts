@@ -72,7 +72,7 @@ export const routes = {
 
     // Admin
     admin: {
-        settings: () => `${WEB_PREFIX}/admin/settings`,
+        system: () => `${WEB_PREFIX}/admin`,
     },
 } as const;
 
@@ -112,8 +112,18 @@ export const api = {
         destroy: (id: number) => `/api/v1/user-api-keys/${id}`,
     },
 
+    shareTokens: {
+        check: () => '/api/share-tokens/check',
+    },
+
+    line: {
+        aboutToken: () => '/api/line/about-token',
+    },
+
     admin: {
-        settings: () => '/api/admin/settings',
+        settings:          () => '/api/admin/settings',
+        shareTokens:       () => '/api/admin/share-tokens',
+        shareTokenDestroy: (id: number) => `/api/admin/share-tokens/${id}`,
     },
 
     articles: {
