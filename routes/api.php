@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Mcp\McpController;
+use App\Http\Controllers\Task\TaskController;
+use App\Http\Controllers\Task\TaskItemController;
 use App\Http\Controllers\About\AboutController;
 use App\Http\Controllers\About\ResumeContextController;
 use App\Http\Controllers\Article\ArticleBrowseController;
@@ -46,8 +49,8 @@ Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
 
 Route::group(['prefix' => 'auth'], function () {
     Route::get('/key', PublicKeyController::class);
-    Route::post('/register', [RegistController::class, 'register'])->middleware(DecryptPasswordFields::class);
-    Route::post('/login', [LoginController::class, 'login'])->middleware(DecryptPasswordFields::class);
+    Route::post('/register', [RegistController::class, 'register'])->middleware([DecryptPasswordFields::class, 'turnstile']);
+    Route::post('/login', [LoginController::class, 'login'])->middleware([DecryptPasswordFields::class, 'turnstile']);
     Route::post('/forgot-password', [ForgotPasswordController::class, 'sendLink'])->middleware('throttle:5,1');
     Route::post('/reset-password', [ForgotPasswordController::class, 'reset'])->middleware(DecryptPasswordFields::class);
     Route::get('/{provider}/redirect', [SocialAccountController::class, 'redirect'])->where(['provider' => 'google']);
@@ -235,11 +238,28 @@ Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () 
     Route::post('/{code}/reset-draws',   [GachaRoomController::class, 'resetDraws'])->middleware('auth:sanctum');
 });
 
+// MCP JSON-RPC endpoint
+Route::post('/mcp', [McpController::class, 'handle'])->middleware('auth.apikey');
+
+// Tasks
+Route::prefix('v1/tasks')->group(function () {
+    Route::get('/', [TaskController::class, 'index']);
+    Route::get('/{task}', [TaskController::class, 'show']);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/', [TaskController::class, 'store']);
+        Route::patch('/{task}', [TaskController::class, 'update']);
+        Route::delete('/{task}', [TaskController::class, 'destroy']);
+        Route::post('/{task}/items', [TaskItemController::class, 'store']);
+        Route::patch('/{task}/items/{item}', [TaskItemController::class, 'update']);
+        Route::delete('/{task}/items/{item}', [TaskItemController::class, 'destroy']);
+    });
+});
+
 // API 金鑰管理
 Route::middleware('auth:sanctum')->prefix('v1/user-api-keys')->group(function () {
     Route::get('/', [UserApiKeyController::class, 'index']);
     Route::post('/', [UserApiKeyController::class, 'store']);
-    Route::post('/{id}/revoke', [UserApiKeyController::class, 'revoke']);
+    Route::patch('/{id}', [UserApiKeyController::class, 'update']);
     Route::delete('/{id}', [UserApiKeyController::class, 'destroy']);
 });
 

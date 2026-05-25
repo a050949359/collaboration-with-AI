@@ -18,42 +18,58 @@ const activeTab = ref<'password' | 'name' | 'apikey'>('password');
 
 // ── API-KEY 管理 ───────────────────────────────
 import { onMounted } from 'vue';
-const apiKeys = ref<any[]>([]);
+
+interface ApiKey {
+    id: number;
+    name: string;
+    type: string;
+    revoked_at: string | null;
+    created_at: string;
+}
+
+const apiKeys = ref<ApiKey[]>([]);
 const apiKeyLoading = ref(false);
 const apiKeyError = ref('');
 const newApiKey = ref('');
 const newApiKeyId = ref<number|null>(null);
 const newApiKeyLoading = ref(false);
+const newKeyType = ref('mcp');
+const newKeyName = ref('api-key');
+const copied = ref(false);
+
+const KEY_TYPES = ['mcp'];
 
 // 取得 API 金鑰清單
 async function fetchApiKeys() {
     apiKeyLoading.value = true;
     apiKeyError.value = '';
     try {
-        const res = await fetch('/api/v1/user-api-keys', { credentials: 'include' });
+        const res = await fetch(api.userApiKeys.index(), { credentials: 'include' });
         apiKeys.value = await res.json();
     } catch (e) {
-        apiKeyError.value = '取得 API 金鑰失敗';
+        apiKeyError.value = t('profile.apikey_fetch_failed');
     } finally {
         apiKeyLoading.value = false;
     }
 }
 
-// 前端產生 RSA 金鑰對
-async function generateKeyPair() {
+function bufferToPem(buffer: ArrayBuffer, label: string): string {
+    const bytes = new Uint8Array(buffer)
+    let str = ''
+    for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i])
+    const b64 = btoa(str).replace(/(.{64})/g, '$1\n')
+    return `-----BEGIN ${label}-----\n${b64}\n-----END ${label}-----`
+}
+
+// 前端產生 RSA 金鑰對，私鑰只存在記憶體（不持久化）
+async function generateKeyPair(): Promise<{ publicKeyPem: string; privateKey: CryptoKey }> {
     const keyPair = await window.crypto.subtle.generateKey(
         { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-1' },
-        true,
+        false,
         ['encrypt', 'decrypt']
-    );
-    // 匯出公鑰 PEM
-    const spki = await window.crypto.subtle.exportKey('spki', keyPair.publicKey);
-    const pem = '-----BEGIN PUBLIC KEY-----\n' + btoa(String.fromCharCode(...new Uint8Array(spki))).replace(/(.{64})/g, '$1\n') + '\n-----END PUBLIC KEY-----';
-    // 匯出私鑰 pkcs8，存 localStorage
-    const pkcs8 = await window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
-    const privPem = '-----BEGIN PRIVATE KEY-----\n' + btoa(String.fromCharCode(...new Uint8Array(pkcs8))).replace(/(.{64})/g, '$1\n') + '\n-----END PRIVATE KEY-----';
-    localStorage.setItem('api_key_private', privPem);
-    return pem;
+    )
+    const spki = await window.crypto.subtle.exportKey('spki', keyPair.publicKey)
+    return { publicKeyPem: bufferToPem(spki, 'PUBLIC KEY'), privateKey: keyPair.privateKey }
 }
 
 // 新增 API 金鑰
@@ -63,31 +79,56 @@ async function createApiKey() {
     newApiKeyId.value = null;
     apiKeyError.value = '';
     try {
-        const publicKey = await generateKeyPair();
-        const res = await fetch('/api/v1/user-api-keys', {
+        const { publicKeyPem, privateKey } = await generateKeyPair();
+        const res = await fetch(api.userApiKeys.store(), {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publicKey }),
+            body: JSON.stringify({ publicKey: publicKeyPem, type: newKeyType.value, name: newKeyName.value || 'api-key' }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || '建立失敗');
-        // 解密回傳的 api_key
+        if (!res.ok) throw new Error(data.message || t('profile.apikey_create_failed'));
+        // 解密回傳的 api_key（私鑰只存在此 function 的 scope）
         const encrypted = Uint8Array.from(atob(data.api_key), c => c.charCodeAt(0));
-        const privPem = localStorage.getItem('api_key_private');
-        if (!privPem) throw new Error('找不到私鑰');
-        // 解析 PEM
-        const pkcs8 = Uint8Array.from(atob(privPem.replace(/-----[^-]+-----|\n/g, '')), c => c.charCodeAt(0));
-        const privateKey = await window.crypto.subtle.importKey('pkcs8', pkcs8, { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt']);
         const decrypted = await window.crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, encrypted);
         newApiKey.value = new TextDecoder().decode(decrypted);
         newApiKeyId.value = data.id;
-        fetchApiKeys();
-    } catch (e: any) {
-        apiKeyError.value = e.message || '建立 API 金鑰失敗';
+        apiKeys.value.unshift({
+            id: data.id,
+            name: newKeyName.value || 'api-key',
+            type: newKeyType.value,
+            revoked_at: null,
+            created_at: new Date().toISOString(),
+        });
+    } catch (e) {
+        apiKeyError.value = (e instanceof Error ? e.message : null) || t('profile.apikey_create_failed');
     } finally {
         newApiKeyLoading.value = false;
     }
+}
+
+async function copyKey(key: string) {
+    await navigator.clipboard.writeText(key);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 1000);
+}
+
+async function setRevoked(id: number, revoked: boolean) {
+    const res = await fetch(api.userApiKeys.update(id), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ revoked }),
+    });
+    if (res.ok) {
+        const key = apiKeys.value.find(k => k.id === id);
+        if (key) key.revoked_at = revoked ? new Date().toISOString() : null;
+    }
+}
+
+async function deleteApiKey(id: number) {
+    const res = await fetch(api.userApiKeys.destroy(id), { method: 'DELETE', credentials: 'include' });
+    if (res.ok) apiKeys.value = apiKeys.value.filter(k => k.id !== id);
 }
 
 onMounted(() => {
@@ -114,9 +155,9 @@ async function submitName() {
         });
         const data = await res.json();
         if (!res.ok) {
-            nameError.value = data?.errors?.name?.[0] ?? data?.message ?? '更新失敗';
+            nameError.value = data?.errors?.name?.[0] ?? data?.message ?? t('profile.name_update_failed');
         } else {
-            nameSuccess.value = data.message ?? '名稱已更新';
+            nameSuccess.value = data.message ?? t('profile.name_updated');
             router.reload({ only: ['auth'] });
         }
     } catch {
@@ -151,7 +192,7 @@ async function submit() {
             password: await encryptPassword(form.password),
             password_confirmation: await encryptPassword(form.password_confirmation),
         });
-        successMessage.value = res?.message ?? '密碼已成功更新';
+        successMessage.value = res?.message ?? t('profile.password_updated');
         form.current_password = '';
         form.password = '';
         form.password_confirmation = '';
@@ -342,27 +383,70 @@ async function submit() {
 
                     <!-- API-KEY tab -->
                     <div v-if="activeTab === 'apikey'">
-                    
-                        <div class="text-lg font-bold mb-4">API-KEY 管理</div>
-                        <div class="mb-4">
-                            <button class="binary-button" :disabled="newApiKeyLoading" @click="createApiKey">
-                                {{ newApiKeyLoading ? '產生中...' : '產生新 API-KEY' }}
+                        <div class="text-lg font-bold mb-4">{{ t('profile.apikey_title') }}</div>
+
+                        <!-- 產生新 key -->
+                        <div class="flex items-center gap-2 mb-4">
+                            <input
+                                v-model="newKeyName"
+                                class="binary-input flex-1 text-xs"
+                                type="text"
+                                placeholder="api-key"
+                                maxlength="64"
+                            />
+                            <select v-model="newKeyType" class="binary-input w-28 text-xs shrink-0">
+                                <option v-for="tp in KEY_TYPES" :key="tp" :value="tp">{{ tp }}</option>
+                            </select>
+                            <button class="binary-button w-28 shrink-0" :disabled="newApiKeyLoading" @click="createApiKey">
+                                {{ newApiKeyLoading ? t('profile.apikey_generating') : t('profile.apikey_generate') }}
                             </button>
                         </div>
-                        <div v-if="newApiKey">
-                            <div class="mb-2 text-sm text-green-300">新 API-KEY（只顯示一次，請複製保存）：</div>
-                            <div class="mb-4 p-2 bg-gray-900 rounded font-mono break-all select-all">{{ newApiKey }}</div>
+
+                        <!-- 新產生的 key（一次性顯示）-->
+                        <div v-if="newApiKey" class="mb-5 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
+                            <div class="mb-2 text-xs text-green-400 font-bold tracking-wider">{{ t('profile.apikey_once_hint') }}</div>
+                            <div class="flex items-center gap-2">
+                                <code class="flex-1 text-xs font-mono break-all text-green-300 select-all">{{ newApiKey }}</code>
+                                <button
+                                    class="shrink-0 px-3 py-1 rounded border text-xs transition-colors"
+                                    :class="copied ? 'border-green-500 text-green-400' : 'border-[var(--binary-outline)] text-[var(--binary-text)] hover:border-[var(--binary-primary)]'"
+                                    @click="copyKey(newApiKey)"
+                                >{{ copied ? t('profile.apikey_copied') : t('profile.apikey_copy') }}</button>
+                            </div>
                         </div>
-                        <div v-if="apiKeyError" class="text-red-400 mb-2">{{ apiKeyError }}</div>
-                        <div v-if="apiKeyLoading">載入中...</div>
-                        <div v-else>
-                            <div class="mb-2 font-bold">已建立的 API-KEY：</div>
-                            <ul>
-                                <li v-for="key in apiKeys" :key="key.id" class="mb-1 flex items-center gap-2">
-                                    <span class="font-mono text-xs">{{ key.type }} #{{ key.id }}</span>
-                                    <span v-if="key.revoked_at" class="text-red-400 text-xs">（已撤銷）</span>
-                                </li>
-                            </ul>
+
+                        <div v-if="apiKeyError" class="text-red-400 text-xs mb-3">{{ apiKeyError }}</div>
+
+                        <!-- 金鑰清單 -->
+                        <div v-if="apiKeyLoading" class="text-xs opacity-50">{{ t('common.loading') }}</div>
+                        <div v-else class="space-y-2">
+                            <div
+                                v-for="key in apiKeys"
+                                :key="key.id"
+                                class="flex items-center gap-3 px-3 py-2 rounded-lg border"
+                                :class="key.revoked_at ? 'border-red-500/20' : 'border-[var(--binary-outline-variant)]'"
+                            >
+                                <span class="font-mono text-xs px-2 py-0.5 rounded bg-[var(--binary-surface-container)] text-[var(--binary-primary)] shrink-0 transition-opacity" :class="key.revoked_at ? 'opacity-40' : ''">{{ key.type }}</span>
+                                <span class="text-sm font-medium text-[var(--binary-text)] flex-1 truncate transition-opacity" :class="key.revoked_at ? 'opacity-40' : ''">{{ key.name }}</span>
+                                <span class="text-xs text-[var(--binary-outline)] shrink-0 transition-opacity" :class="key.revoked_at ? 'opacity-40' : ''">
+                                    {{ t('profile.apikey_created_label') }} {{ new Date(key.created_at).toLocaleDateString() }}
+                                    <template v-if="key.revoked_at"> · {{ t('profile.apikey_revoked_label') }} {{ new Date(key.revoked_at).toLocaleDateString() }}</template>
+                                </span>
+                                <button
+                                    v-if="key.revoked_at"
+                                    class="text-xs px-2 py-0.5 rounded border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-colors"
+                                    @click="setRevoked(key.id, false)"
+                                >{{ t('profile.apikey_restore') }}</button>
+                                <button
+                                    v-else
+                                    class="text-xs px-2 py-0.5 rounded border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 transition-colors"
+                                    @click="setRevoked(key.id, true)"
+                                >{{ t('profile.apikey_revoke') }}</button>
+                                <button
+                                    class="text-xs px-2 py-0.5 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                                    @click="deleteApiKey(key.id)"
+                                >{{ t('profile.apikey_delete') }}</button>
+                            </div>
                         </div>
                     </div>
                     </div><!-- /tab content -->

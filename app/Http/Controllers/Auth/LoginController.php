@@ -7,9 +7,6 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
-
-
 /**
  * 基礎登入功能
  * 1. token 二次登入確認: 是否過期
@@ -25,15 +22,6 @@ class LoginController extends Controller
     {
         $credentials = $request->only('email', 'password');
         $remember = $request->boolean('remember');
-        if (!app()->isLocal()) {
-            $cfResponse = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
-                'secret'   => env('TURNSTILE_SECRET_KEY'),
-                'response' => $request->input('cf_turnstile_response'),
-            ]);
-            if (!$cfResponse->json('success')) {
-                return response()->json(['message' => '機器人驗證失敗，請重新整理頁面後再試一次。'], 401);
-            }
-        }
 
         $user = User::where('email', $credentials['email'])->first();
 

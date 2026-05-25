@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\AuthenticateWithApiKey;
+use App\Http\Middleware\VerifyTurnstile;
 use App\Http\Middleware\AuthTokenFromCookie;
 use App\Http\Middleware\TrustProxies;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -31,6 +33,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // web group 也需要讀 auth_token cookie，讓 HandleInertiaRequests 可以拿到登入使用者
         $middleware->prependToGroup('web', AuthTokenFromCookie::class);
         $middleware->prependToGroup('api', AuthTokenFromCookie::class);
+
+        $middleware->alias([
+            'auth.apikey' => AuthenticateWithApiKey::class,
+            'turnstile'   => VerifyTurnstile::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $e, Request $request): ?JsonResponse {
