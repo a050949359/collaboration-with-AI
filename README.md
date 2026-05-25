@@ -11,15 +11,29 @@
 ---
 
 ## 主要功能
-- 文章管理（產生、編輯、瀏覽、Webhook 推送）
-- 資料查詢
-   - 全球機場
-   - 航空公司
-   - 國家城市
-- 使用者註冊、登入、社群帳號綁定
-- 管理員設定（顯示、更新）
-- AI 內容產生（文章、圖片，Gemini/Vertex 整合）
-- Tou假資料生成、使用者功能、管理者功能
+
+### 使用者與帳號
+- 註冊、登入（RSA-OAEP 加密傳輸）、Google OAuth 綁定
+- 信箱驗證、忘記密碼 / 重設密碼
+- 帳號設定：改名、修改密碼
+- **API Key 管理**：前端產生 RSA 金鑰對，Server 以公鑰加密回傳明文 key（私鑰僅存記憶體，不持久化）
+
+### 文章
+- AI 產生（Gemini / Vertex Imagen）、編輯、瀏覽、分類、標籤
+- LINE Webhook 推送文章就緒通知
+
+### 航空資料查詢
+- 全球 84,000+ 機場（含地球儀視覺化）、850+ 航空公司
+- 200+ 國家 / 城市（Wikidata 整合，使用者 UI 搜尋新增）
+
+### Lab
+- **MCP（Model Context Protocol）**：JSON-RPC 2.0 endpoint，供 AI assistant（Claude Desktop 等）以 API Key 呼叫；以任務管理（Task CRUD + 子項目）為操作目標，共 8 個工具
+- **ws-lab**：Go WebSocket server 管理介面，多房間架構，含即時串流
+- **Computer Vision**：WASM 邊緣偵測（OpenCV）
+- **mini-orch**：輕量壓測 / 任務排程觀測介面
+- **故事接龍**：多角色 LLM 輪流推進，含世界狀態、道具系統、定時排程
+- **Gacha 抽卡**：多人房間同步，WebSocket 廣播動畫（Laravel Reverb）
+- **旅遊 Playground**：旅客、行程、訂單、PDF 匯出（Queue Worker 示範）
 
 ---
 
