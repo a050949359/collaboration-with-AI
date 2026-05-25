@@ -15,13 +15,15 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
  */
-#[Fillable(['user_id', 'type', 'api_key_hash', 'revoked_at'])]
+#[Fillable(['user_id', 'name', 'type', 'api_key_hash', 'revoked_at'])]
 class UserApiKey extends Model
 {
     /** @use HasFactory<UserApiKey> */
     use HasFactory;
 
     protected $table = 'user_api_keys';
+
+    protected $hidden = ['api_key_hash'];
 
 
     protected function casts(): array
@@ -43,6 +45,6 @@ class UserApiKey extends Model
 
     public function isRevoked(): bool
     {
-        return !is_null($this->revoked_at);
+        return $this->revoked_at !== null;
     }
 }

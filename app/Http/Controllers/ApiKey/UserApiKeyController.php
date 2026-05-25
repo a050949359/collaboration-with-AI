@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ApiKey;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ApiKey\CreateUserApiKeyRequest;
 use App\Models\ApiKey\UserApiKey;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -15,24 +16,25 @@ class UserApiKeyController extends Controller
     public function index(): JsonResponse
     {
         $user = Auth::user();
-        $keys = UserApiKey::where('user_id', $user->id)->get();
+        $keys = UserApiKey::where('user_id', $user->id)
+            ->get(['id', 'name', 'type', 'revoked_at', 'created_at']);
         return response()->json($keys);
     }
 
     // 建立新金鑰（回傳明文）
-    public function store(Request $request): JsonResponse
+    public function store(CreateUserApiKeyRequest $request): JsonResponse
     {
-        $user = Auth::user();
-        $type = $request->input('type', 'default');
-        $publicKey = $request->input('publicKey');
-        if (!$publicKey) {
-            return response()->json(['message' => '缺少 publicKey，無法加密 API 金鑰'], 400);
-        }
+        $user      = Auth::user();
+        $validated = $request->validated();
+        $name      = $validated['name'] ?? 'api-key';
+        $type      = $validated['type'];
+        $publicKey = $validated['publicKey'];
         $raw = Str::random(48);
         $hash = hash('sha256', $raw);
         $apiKey = UserApiKey::create([
-            'user_id' => $user->id,
-            'type' => $type,
+            'user_id'      => $user->id,
+            'name'         => $name,
+            'type'         => $type,
             'api_key_hash' => $hash,
         ]);
         $encrypted = null;
@@ -53,14 +55,14 @@ class UserApiKeyController extends Controller
         ]);
     }
 
-    // 撤銷金鑰
-    public function revoke($id): JsonResponse
+    // 切換撤銷狀態
+    public function update(Request $request, $id): JsonResponse
     {
         $user = Auth::user();
         $apiKey = UserApiKey::where('user_id', $user->id)->findOrFail($id);
-        $apiKey->revoked_at = now();
+        $apiKey->revoked_at = $request->boolean('revoked') ? now() : null;
         $apiKey->save();
-        return response()->json(['message' => 'API 金鑰已撤銷']);
+        return response()->json(['message' => $apiKey->revoked_at ? 'API 金鑰已撤銷' : 'API 金鑰已復原']);
     }
 
     // 刪除金鑰
