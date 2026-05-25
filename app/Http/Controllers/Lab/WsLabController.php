@@ -22,9 +22,9 @@ class WsLabController extends Controller
         $this->binaryPath     = storage_path('app/ws-lab');
         $this->pidFile        = storage_path('app/ws-lab.pid');
         $this->logFilePath    = storage_path('app/ws-lab.log');
-        $this->wsAddr         = '127.0.0.1:9001';
-        $this->mgmtAddr       = '127.0.0.1:9002';
-        $this->allowedOrigins = env('WS_ALLOWED_ORIGINS', 'localhost:*');
+        $this->wsAddr         = config('services.ws.ws_addr',   '127.0.0.1:9001');
+        $this->mgmtAddr       = config('services.ws.mgmt_addr', '127.0.0.1:9002');
+        $this->allowedOrigins = config('services.ws.allowed_origins', 'localhost:*');
     }
 
     public function authToken(): JsonResponse

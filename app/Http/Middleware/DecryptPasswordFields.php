@@ -10,7 +10,7 @@ class DecryptPasswordFields
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $path = env('RSA_PRIVATE_KEY_PATH');
+        $path = config('rsa.private_key_path');
 
         if (!$path || !file_exists(base_path($path))) {
             return response()->json(['message' => '伺服器加密設定錯誤，請聯絡管理員。'], 500);

@@ -66,6 +66,20 @@ return [
         'story_state_model' => env('GEMINI_STORY_STATE_MODEL', 'gemma-4-26b-a4b-it'),
     ],
 
+    'turnstile' => [
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
+    'ws' => [
+        'allowed_origins' => env('WS_ALLOWED_ORIGINS', 'localhost:*'),
+        'ws_addr'         => env('WS_ADDR',      '127.0.0.1:9001'),
+        'mgmt_addr'       => env('WS_MGMT_ADDR', '127.0.0.1:9002'),
+    ],
+
+    'mcp' => [
+        'version' => env('MCP_SERVER_VERSION', '1.0.0'),
+    ],
+
     'mini_orch' => [
         'host' => env('MINI_ORCH_HOST', ''),
     ],
