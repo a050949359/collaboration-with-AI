@@ -13,7 +13,86 @@ const { t } = useI18n();
 
 const { user } = useAuth();
 
-const activeTab = ref<'password' | 'name'>('password');
+
+const activeTab = ref<'password' | 'name' | 'apikey'>('password');
+
+// ── API-KEY 管理 ───────────────────────────────
+import { onMounted } from 'vue';
+const apiKeys = ref<any[]>([]);
+const apiKeyLoading = ref(false);
+const apiKeyError = ref('');
+const newApiKey = ref('');
+const newApiKeyId = ref<number|null>(null);
+const newApiKeyLoading = ref(false);
+
+// 取得 API 金鑰清單
+async function fetchApiKeys() {
+    apiKeyLoading.value = true;
+    apiKeyError.value = '';
+    try {
+        const res = await fetch('/api/v1/user-api-keys', { credentials: 'include' });
+        apiKeys.value = await res.json();
+    } catch (e) {
+        apiKeyError.value = '取得 API 金鑰失敗';
+    } finally {
+        apiKeyLoading.value = false;
+    }
+}
+
+// 前端產生 RSA 金鑰對
+async function generateKeyPair() {
+    const keyPair = await window.crypto.subtle.generateKey(
+        { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-1' },
+        true,
+        ['encrypt', 'decrypt']
+    );
+    // 匯出公鑰 PEM
+    const spki = await window.crypto.subtle.exportKey('spki', keyPair.publicKey);
+    const pem = '-----BEGIN PUBLIC KEY-----\n' + btoa(String.fromCharCode(...new Uint8Array(spki))).replace(/(.{64})/g, '$1\n') + '\n-----END PUBLIC KEY-----';
+    // 匯出私鑰 pkcs8，存 localStorage
+    const pkcs8 = await window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+    const privPem = '-----BEGIN PRIVATE KEY-----\n' + btoa(String.fromCharCode(...new Uint8Array(pkcs8))).replace(/(.{64})/g, '$1\n') + '\n-----END PRIVATE KEY-----';
+    localStorage.setItem('api_key_private', privPem);
+    return pem;
+}
+
+// 新增 API 金鑰
+async function createApiKey() {
+    newApiKeyLoading.value = true;
+    newApiKey.value = '';
+    newApiKeyId.value = null;
+    apiKeyError.value = '';
+    try {
+        const publicKey = await generateKeyPair();
+        const res = await fetch('/api/v1/user-api-keys', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ publicKey }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || '建立失敗');
+        // 解密回傳的 api_key
+        const encrypted = Uint8Array.from(atob(data.api_key), c => c.charCodeAt(0));
+        const privPem = localStorage.getItem('api_key_private');
+        if (!privPem) throw new Error('找不到私鑰');
+        // 解析 PEM
+        const pkcs8 = Uint8Array.from(atob(privPem.replace(/-----[^-]+-----|\n/g, '')), c => c.charCodeAt(0));
+        const privateKey = await window.crypto.subtle.importKey('pkcs8', pkcs8, { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt']);
+        const decrypted = await window.crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, encrypted);
+        newApiKey.value = new TextDecoder().decode(decrypted);
+        newApiKeyId.value = data.id;
+        fetchApiKeys();
+    } catch (e: any) {
+        apiKeyError.value = e.message || '建立 API 金鑰失敗';
+    } finally {
+        newApiKeyLoading.value = false;
+    }
+}
+
+onMounted(() => {
+    fetchApiKeys();
+});
 
 // ── 改名 ────────────────────────────────────────────────
 const nameForm = reactive({ name: '' });
@@ -143,6 +222,14 @@ async function submit() {
                                 : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
                             @click="activeTab = 'password'"
                         >{{ t('profile.tab_password') }}</button>
+                        <button
+                            type="button"
+                            class="binary-label px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-colors"
+                            :class="activeTab === 'apikey'
+                                ? 'border-b-2 border-[var(--binary-primary)] text-[var(--binary-primary)] -mb-px'
+                                : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
+                            @click="activeTab = 'apikey'"
+                        >API-KEY</button>
                     </div>
 
                     <div class="px-10 py-6">
@@ -252,6 +339,32 @@ async function submit() {
                             <span aria-hidden="true">-></span>
                         </button>
                     </form>
+
+                    <!-- API-KEY tab -->
+                    <div v-if="activeTab === 'apikey'">
+                    
+                        <div class="text-lg font-bold mb-4">API-KEY 管理</div>
+                        <div class="mb-4">
+                            <button class="binary-button" :disabled="newApiKeyLoading" @click="createApiKey">
+                                {{ newApiKeyLoading ? '產生中...' : '產生新 API-KEY' }}
+                            </button>
+                        </div>
+                        <div v-if="newApiKey">
+                            <div class="mb-2 text-sm text-green-300">新 API-KEY（只顯示一次，請複製保存）：</div>
+                            <div class="mb-4 p-2 bg-gray-900 rounded font-mono break-all select-all">{{ newApiKey }}</div>
+                        </div>
+                        <div v-if="apiKeyError" class="text-red-400 mb-2">{{ apiKeyError }}</div>
+                        <div v-if="apiKeyLoading">載入中...</div>
+                        <div v-else>
+                            <div class="mb-2 font-bold">已建立的 API-KEY：</div>
+                            <ul>
+                                <li v-for="key in apiKeys" :key="key.id" class="mb-1 flex items-center gap-2">
+                                    <span class="font-mono text-xs">{{ key.type }} #{{ key.id }}</span>
+                                    <span v-if="key.revoked_at" class="text-red-400 text-xs">（已撤銷）</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                     </div><!-- /tab content -->
                 </div>
 

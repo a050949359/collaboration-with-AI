@@ -34,6 +34,7 @@ use App\Http\Controllers\Story\CharacterController;
 use App\Http\Controllers\Story\StorySetupController;
 use App\Http\Controllers\Story\StorySessionController;
 use App\Http\Controllers\Gacha\GachaRoomController;
+use App\Http\Controllers\ApiKey\UserApiKeyController;
 use App\Http\Middleware\EnsureAdmin;
 
 Route::post('/about/ask', [AboutController::class, 'ask'])->middleware('throttle:4,1');
@@ -232,6 +233,14 @@ Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () 
     Route::post('/{code}/join',           [GachaRoomController::class, 'join']);
     Route::post('/{code}/draw',           [GachaRoomController::class, 'draw']);
     Route::post('/{code}/reset-draws',   [GachaRoomController::class, 'resetDraws'])->middleware('auth:sanctum');
+});
+
+// API 金鑰管理
+Route::middleware('auth:sanctum')->prefix('v1/user-api-keys')->group(function () {
+    Route::get('/', [UserApiKeyController::class, 'index']);
+    Route::post('/', [UserApiKeyController::class, 'store']);
+    Route::post('/{id}/revoke', [UserApiKeyController::class, 'revoke']);
+    Route::delete('/{id}', [UserApiKeyController::class, 'destroy']);
 });
 
 // Route::get('/debug-ip', fn() => response()->json([

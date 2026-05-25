@@ -149,6 +149,15 @@ defineProps<{ name: string; size?: number }>();
             <circle class="fill-default" cx="16" cy="16" r="1.8"/>
         </template>
 
+        <!-- mcp (checklist) -->
+        <template v-else-if="name === 'mcp'">
+            <rect class="stroke-default" x="7" y="5" width="18" height="22" rx="2" stroke-width="1.5"/>
+            <line class="stroke-default" x1="11" y1="11" x2="21" y2="11" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+            <line class="stroke-default" x1="11" y1="16" x2="21" y2="16" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+            <line class="stroke-default" x1="11" y1="21" x2="17" y2="21" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+            <polyline class="stroke-default" points="8,11 9.5,12.5 11,10" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0"/>
+        </template>
+
         <!-- gacha -->
         <template v-else-if="name === 'gacha'">
             <circle class="stroke-default" cx="16" cy="16" r="11" stroke-width="1.5"/>
@@ -161,191 +170,6 @@ defineProps<{ name: string; size?: number }>();
 </template>
 
 <style scoped>
-/* Theming */
 .stroke-default { stroke: currentColor; }
 .fill-default   { fill: currentColor; }
-
-/* Hover-triggered animations on the parent .nav-icon */
-
-/* Propeller spin (aviation) */
-.nav-icon:hover .anim-prop {
-    transform-origin: 16px 16px;
-    animation: propSpin 0.6s linear infinite;
-}
-@keyframes propSpin {
-    to { transform: rotate(360deg); }
-}
-
-/* Radar arm sweep (airports) */
-.nav-icon:hover .anim-radar-arm {
-    transform-origin: 16px 16px;
-    animation: radarSweep 1.2s linear infinite;
-}
-.nav-icon:hover .anim-radar-blip {
-    animation: blipFade 1.2s ease-out infinite;
-}
-@keyframes radarSweep {
-    to { transform: rotate(360deg); }
-}
-@keyframes blipFade {
-    0%,100% { opacity: 0; }
-    40%      { opacity: 1; }
-    80%      { opacity: 0; }
-}
-
-/* Globe rotation (countries) */
-.nav-icon:hover .anim-globe-rot {
-    transform-origin: 16px 16px;
-    animation: globeRot 2s linear infinite;
-}
-.nav-icon:hover .anim-orbit {
-    transform-origin: 16px 16px;
-    animation: orbitRot 3s linear infinite;
-}
-.nav-icon:hover .anim-orbit-dot {
-    animation: orbitDot 3s linear infinite;
-    offset-path: ellipse(13px 4.4px at 16px 16px);
-    offset-rotate: 0deg;
-}
-@keyframes globeRot {
-    to { transform: rotate(360deg); }
-}
-@keyframes orbitRot {
-    to { transform: rotate(360deg); }
-}
-@keyframes orbitDot {
-    from { transform: rotate(0deg) translateX(13px) rotate(0deg); transform-origin: 16px 16px; }
-    to   { transform: rotate(360deg) translateX(13px) rotate(-360deg); transform-origin: 16px 16px; }
-}
-
-/* Plane fly (airlines) */
-.nav-icon:hover .anim-plane {
-    animation: planeFly 0.8s ease-in-out infinite alternate;
-}
-.nav-icon:hover .anim-trail {
-    animation: trailFade 0.8s ease-in-out infinite alternate;
-}
-@keyframes planeFly {
-    from { transform: translate(0, 0); }
-    to   { transform: translate(-2px, 2px); }
-}
-@keyframes trailFade {
-    from { opacity: 0.5; }
-    to   { opacity: 0.15; }
-}
-
-/* Articles lines shimmer */
-.nav-icon:hover .anim-art-1 { animation: lineSlide 0.8s ease forwards; }
-.nav-icon:hover .anim-art-2 { animation: lineSlide 0.8s ease 0.1s forwards; }
-.nav-icon:hover .anim-art-3 { animation: lineSlide 0.8s ease 0.2s forwards; }
-@keyframes lineSlide {
-    from { opacity: 0.3; }
-    to   { opacity: 1; }
-}
-
-/* Info ring pulse (about) */
-.nav-icon:hover .anim-info-ring {
-    animation: ringPulse 1s ease-in-out infinite;
-}
-.nav-icon:hover .anim-info-dot {
-    animation: dotBounce 0.6s ease-in-out infinite alternate;
-}
-@keyframes ringPulse {
-    0%,100% { opacity: 1; }
-    50%     { opacity: 0.4; }
-}
-@keyframes dotBounce {
-    from { transform: translateY(0); }
-    to   { transform: translateY(-1.5px); }
-}
-
-/* Linebot eyes blink + antenna bounce */
-.nav-icon:hover .anim-eye-l,
-.nav-icon:hover .anim-eye-r {
-    animation: eyeBlink 1s ease-in-out infinite;
-}
-.nav-icon:hover .anim-antenna {
-    animation: antennaBounce 0.5s ease-in-out infinite alternate;
-}
-@keyframes eyeBlink {
-    0%,90%,100% { opacity: 1; transform: scaleY(1); }
-    95%         { opacity: 0.1; transform: scaleY(0.1); }
-}
-@keyframes antennaBounce {
-    from { transform: translateY(0); }
-    to   { transform: translateY(-2px); }
-}
-
-/* Tour pin bounce */
-.nav-icon:hover .anim-pin {
-    transform-origin: 16px 26px;
-    animation: pinBounce 0.5s ease-in-out infinite alternate;
-}
-.nav-icon:hover .anim-pin-ring {
-    animation: ringScale 0.5s ease-in-out infinite alternate;
-    transform-origin: 16px 26px;
-}
-@keyframes pinBounce {
-    from { transform: translateY(0); }
-    to   { transform: translateY(-3px); }
-}
-@keyframes ringScale {
-    from { transform: scaleX(1);   opacity: 1; }
-    to   { transform: scaleX(1.3); opacity: 0.4; }
-}
-
-/* Orch server LEDs blink in sequence */
-/* WS Lab — signal pulse */
-.nav-icon:hover .anim-ws-line { animation: wsPulse 0.6s ease-in-out infinite alternate; }
-@keyframes wsPulse {
-    from { opacity: 0.5; stroke-width: 1.2px; }
-    to   { opacity: 1;   stroke-width: 1.8px; }
-}
-
-.nav-icon:hover .anim-led-1 { animation: ledBlink 1s ease-in-out 0s    infinite; }
-.nav-icon:hover .anim-led-2 { animation: ledBlink 1s ease-in-out 0.3s  infinite; }
-.nav-icon:hover .anim-led-3 { animation: ledBlink 1s ease-in-out 0.6s  infinite; }
-@keyframes ledBlink {
-    0%,100% { opacity: 1; }
-    50%     { opacity: 0.15; }
-}
-
-/* Open book — pages spread + lines shimmer */
-.nav-icon:hover .anim-book-left  { animation: bookSpreadLeft  0.35s ease-out forwards; }
-.nav-icon:hover .anim-book-right { animation: bookSpreadRight 0.35s ease-out forwards; }
-@keyframes bookSpreadLeft  { to { transform: translateX(-1.5px); } }
-@keyframes bookSpreadRight { to { transform: translateX( 1.5px); } }
-
-.nav-icon:hover .anim-story-1 { animation: storyLine 0.5s ease 0s    forwards; }
-.nav-icon:hover .anim-story-2 { animation: storyLine 0.5s ease 0.1s  forwards; }
-.nav-icon:hover .anim-story-3 { animation: storyLine 0.5s ease 0.2s  forwards; }
-@keyframes storyLine {
-    from { opacity: 0.25; }
-    to   { opacity: 1; }
-}
-
-/* CV — brackets focus in, iris pulse */
-.nav-icon:hover .anim-cv-bracket {
-    animation: cvBracket 0.3s ease-out forwards;
-}
-@keyframes cvBracket {
-    to { opacity: 1; }
-}
-.nav-icon:hover .anim-cv-iris {
-    transform-origin: 16px 16px;
-    animation: cvIris 1s ease-in-out infinite;
-}
-@keyframes cvIris {
-    0%,100% { transform: scale(1);   opacity: 1; }
-    50%     { transform: scale(1.12); opacity: 0.6; }
-}
-
-/* Home / folder open */
-.nav-icon:hover .anim-folder {
-    animation: folderSlide 0.4s ease-out forwards;
-}
-@keyframes folderSlide {
-    from { opacity: 0; transform: translateY(2px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
 </style>

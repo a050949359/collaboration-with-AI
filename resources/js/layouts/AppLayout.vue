@@ -49,13 +49,14 @@ const defaultNavLinks = computed((): NavLink[] => {
         {
             label: 'Lab',
             icon: 'lab',
-            active: path.startsWith(routes.tourPlayground()) || path.startsWith(routes.miniOrch()) || path.startsWith(routes.wsLab()) || path.startsWith(routes.gacha()) || path.startsWith(routes.computerVision()) || (isAdmin.value && path.startsWith(routes.storyRelay())),
+            active: path.startsWith(routes.tourPlayground()) || path.startsWith(routes.miniOrch()) || path.startsWith(routes.wsLab()) || path.startsWith(routes.gacha()) || path.startsWith(routes.computerVision()) || path.startsWith(routes.mcp()) || (isAdmin.value && path.startsWith(routes.storyRelay())),
             children: [
                 { label: 'Tour',            href: routes.tourPlayground(),  icon: 'tour',   active: path.startsWith(routes.tourPlayground()) },
                 { label: 'mini-orch',       href: routes.miniOrch(),        icon: 'orch',   active: path.startsWith(routes.miniOrch()) },
                 { label: 'ws-lab',          href: routes.wsLab(),           icon: 'wslab',  active: path.startsWith(routes.wsLab()) },
                 { label: 'Gacha',           href: routes.gacha(),           icon: 'gacha',  active: path.startsWith(routes.gacha()) },
                 { label: 'CV',              href: routes.computerVision(),  icon: 'cv',     active: path.startsWith(routes.computerVision()) },
+                { label: 'MCP',             href: routes.mcp(),             icon: 'mcp',    active: path.startsWith(routes.mcp()) },
                 ...(isAdmin.value ? [{ label: 'Story', href: routes.storyRelay(), icon: 'story', active: path.startsWith(routes.storyRelay()) }] : []),
             ],
         },

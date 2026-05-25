@@ -61,6 +61,9 @@ export const routes = {
     // Gacha
     gacha: () => `${WEB_PREFIX}/gacha`,
 
+    // MCP Tasks
+    mcp: () => `${WEB_PREFIX}/mcp`,
+
     // Computer Vision Lab
     computerVision: () => `${WEB_PREFIX}/computer-vision`,
 
@@ -87,6 +90,26 @@ export const api = {
         resetPassword: () => '/api/auth/reset-password',
         changePassword: () => '/api/auth/change-password',
         updateName: () => '/api/auth/name',
+    },
+
+    mcp: () => '/api/mcp',
+
+    tasks: {
+        index:       () => '/api/v1/tasks',
+        show:        (id: number) => `/api/v1/tasks/${id}`,
+        store:       () => '/api/v1/tasks',
+        update:      (id: number) => `/api/v1/tasks/${id}`,
+        destroy:     (id: number) => `/api/v1/tasks/${id}`,
+        itemStore:   (taskId: number) => `/api/v1/tasks/${taskId}/items`,
+        itemUpdate:  (taskId: number, itemId: number) => `/api/v1/tasks/${taskId}/items/${itemId}`,
+        itemDestroy: (taskId: number, itemId: number) => `/api/v1/tasks/${taskId}/items/${itemId}`,
+    },
+
+    userApiKeys: {
+        index:   () => '/api/v1/user-api-keys',
+        store:   () => '/api/v1/user-api-keys',
+        update:  (id: number) => `/api/v1/user-api-keys/${id}`,
+        destroy: (id: number) => `/api/v1/user-api-keys/${id}`,
     },
 
     admin: {
