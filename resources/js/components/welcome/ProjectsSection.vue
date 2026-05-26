@@ -17,6 +17,7 @@ interface Project {
     status?: string;
     image?: string;
     commits?: Commit[];
+    link?: string;
 }
 
 const props = defineProps<{
@@ -102,6 +103,36 @@ const wsLabGachaProject: Project = {
     image: '/images/projects/project08.webp',
 };
 
+const computerVisionProject: Project = {
+    id: '09',
+    category: 'WASM_COMPUTER_VISION',
+    title: 'WebAssembly + OpenCV',
+    description: [
+        '將 OpenCV 編譯為 WebAssembly，在瀏覽器內即時對攝影機影像執行邊緣偵測，無需後端運算。',
+        '支援四種演算法切換：Canny（雙閾值）、Laplacian、Sobel、Scharr，並可疊加高斯模糊、反相與原圖疊加。',
+        '純前端架構，WASM 模組載入後直接在 canvas 上逐幀處理，不佔用 UI 執行緒。',
+    ],
+    tags: ['WebAssembly', 'OpenCV', 'Canny', 'Laplacian', 'Sobel', 'Camera API', 'Vue 3'],
+    status: 'online',
+    image: '/images/projects/project09.webp',
+    link: '/app/computer-vision',
+};
+
+const mcpTodoProject: Project = {
+    id: '10',
+    category: 'MCP_TASK_MANAGEMENT',
+    title: 'MCP Server & Todo',
+    description: [
+        '以 Laravel 實作 MCP Server，提供 Claude Code 可直接呼叫的 tool API，達成 AI ↔ 後端雙向互動。',
+        'Todo 系統支援任務狀態（todo / in_progress / done）、子項目 checklist、排序與展開收合，AI 可直接建立與更新任務。',
+        '計畫擴充知識圖譜（Entity / Relation / Observation），讓 AI 跨專案查詢脈絡。',
+    ],
+    tags: ['MCP', 'Laravel', 'Claude Code', 'Knowledge Graph', 'Task Management', 'Vue 3'],
+    status: 'in_dev',
+    image: '/images/projects/project10.webp',
+    link: '/app/mcp',
+};
+
 const projects = computed(() => [
     ...props.featuredProjects,
     airportProject,
@@ -110,6 +141,8 @@ const projects = computed(() => [
     tourPlaygroundProject,
     storyRelayProject,
     wsLabGachaProject,
+    computerVisionProject,
+    mcpTodoProject,
 ]);
 </script>
 
@@ -213,6 +246,11 @@ const projects = computed(() => [
                             <span class="text-[var(--binary-outline)]">{{ String(project.tags.length + 3).padStart(2, '0') }}</span>
                             <span class="text-[var(--binary-primary)]">status: {{ project.status ?? 'online' }}</span>
                         </div>
+                        <a
+                            v-if="project.link"
+                            :href="project.link"
+                            class="mt-5 inline-flex items-center gap-2 rounded-lg border border-[var(--binary-primary)]/40 px-4 py-2 text-[11px] uppercase text-[var(--binary-primary)] transition hover:bg-[var(--binary-primary)]/10"
+                        >&gt; visit_project</a>
                     </div>
                 </article>
             </div>

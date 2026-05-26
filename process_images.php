@@ -1,5 +1,5 @@
 <?php
-$files = ['tmp/project05.png'];
+$files = ['tmp/project09.png', 'tmp/project10.png'];
 $targetW = 1600;
 $targetH = 900;
 
