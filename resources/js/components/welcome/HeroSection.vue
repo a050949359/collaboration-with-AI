@@ -7,16 +7,13 @@ defineProps<{
 <template>
     <section id="about" class="mx-auto grid h-screen max-w-screen-2xl grid-cols-1 items-center gap-8 px-6 pt-24 pb-60 md:grid-cols-12 md:px-8">
         <div class="md:col-start-2 md:col-span-6">
-            <div class="mb-6 inline-block rounded-full bg-[var(--binary-surface-container)] px-4 py-2">
-                <span class="binary-label text-xs font-bold uppercase text-[var(--binary-primary)]">&gt; architect_mode</span>
-            </div>
             <h1 class="binary-display text-5xl font-black leading-[0.9] tracking-tight md:text-8xl">
-                ENGINEERING
+                SYSTEM
                 <br>
-                <span class="text-[var(--binary-primary)]">STUDIO</span>
+                <span class="text-[var(--binary-primary)]">ARCHITECT</span>
             </h1>
             <p class="mt-8 max-w-2xl text-xl leading-relaxed text-[var(--binary-text-muted)] md:text-2xl">
-                將技術挑戰轉化為精確的系統邏輯。我們在 Laravel 與 AI 整合的交匯點上，尋求效能與擴展性的最佳平衡。這是針對真實生產環境所進行的系統設計與架構紀錄。
+                一個軟體工程師的開發日誌。與 AI 協同、拿 Laravel 打底，思考把已具備的技術變成跑在 server 上展示的東西。不讓 AI 全包，而是知道哪裡該放手、哪裡要自己來。
                 <span class="ml-1 binary-label text-xs text-[var(--binary-outline)]">by LLM</span>
             </p>
         </div>
