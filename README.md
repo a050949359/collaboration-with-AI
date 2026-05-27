@@ -1,5 +1,7 @@
 # collaboration-with-AI
 
+🌐 **https://ohya.vip/app**
+
 ## Tech Stack
 
 - Laravel 13.5 / PHP 8.4
