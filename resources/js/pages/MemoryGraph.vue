@@ -140,108 +140,150 @@ function drawTopology(data: GraphData) {
     const W = topoSvgRef.value!.clientWidth || 800;
     const H = topoSvgRef.value!.clientHeight || 560;
 
+    const PAD = 14;
+    const PROJ_H = 28;
+    const PROJ_W = 150;
+    const BOX_W = PROJ_W + PAD * 2;
+    const ROW_GAP = 80;
+    const HOST_COLOR = '#a78bfa';
+    const PROJ_COLOR = 'var(--binary-primary)';
+
     const hosts = data.entities.filter(e => e.type === 'host');
     const projects = data.entities.filter(e => e.type === 'project');
+    const hostNames = new Set(hosts.map(h => h.name));
     const deployedOn = data.relations.filter(r => r.relation_type === 'deployed_on');
-    const otherRels = data.relations.filter(r => r.relation_type !== 'deployed_on');
+    const hostHostRels = data.relations.filter(r => hostNames.has(r.from) && hostNames.has(r.to));
+    const projRels = data.relations.filter(r => !hostNames.has(r.from) && !hostNames.has(r.to) && r.relation_type !== 'deployed_on');
 
-    // Group projects by host
+    // BFS layering of hosts
+    const inDegree: Record<string, number> = {};
+    const children: Record<string, string[]> = {};
+    hosts.forEach(h => { inDegree[h.name] = 0; children[h.name] = []; });
+    hostHostRels.forEach(r => { inDegree[r.to] = (inDegree[r.to] || 0) + 1; children[r.from].push(r.to); });
+
+    const layerOf: Record<string, number> = {};
+    let queue = hosts.map(h => h.name).filter(n => !inDegree[n]);
+    queue.forEach(n => { layerOf[n] = 0; });
+    while (queue.length) {
+        const next: string[] = [];
+        queue.forEach(n => children[n].forEach(c => {
+            layerOf[c] = Math.max(layerOf[c] ?? 0, (layerOf[n] ?? 0) + 1);
+            if (!next.includes(c)) next.push(c);
+        }));
+        queue = next;
+    }
+    hosts.forEach(h => { if (layerOf[h.name] === undefined) layerOf[h.name] = 0; });
+
+    // Group projects per host
     const hostProjects: Record<string, string[]> = {};
     hosts.forEach(h => { hostProjects[h.name] = []; });
     const unhosted: string[] = [];
     projects.forEach(p => {
-        const rel = deployedOn.find(r => r.from === p.name);
-        if (rel && hostProjects[rel.to] !== undefined) {
-            hostProjects[rel.to].push(p.name);
-        } else {
-            unhosted.push(p.name);
-        }
+        const rels = deployedOn.filter(r => r.from === p.name);
+        if (rels.length) rels.forEach(r => { if (hostProjects[r.to]) hostProjects[r.to].push(p.name); });
+        else unhosted.push(p.name);
     });
 
-    const PAD = 16;
-    const PROJ_H = 32;
-    const PROJ_W = 160;
-    const BOX_W = PROJ_W + PAD * 2;
+    // Rows: group hosts by layer
+    const maxLayer = Math.max(...Object.values(layerOf), 0);
+    const rows: string[][] = Array.from({ length: maxLayer + 1 }, () => []);
+    hosts.forEach(h => rows[layerOf[h.name]].push(h.name));
+    if (unhosted.length) rows.push(['__unhosted__']);
 
-    // Build columns: hosts + unhosted group
-    interface Column { label: string; isHost: boolean; items: string[] }
-    const cols: Column[] = [
-        ...hosts.map(h => ({ label: h.name, isHost: true, items: hostProjects[h.name] })),
-        ...(unhosted.length ? [{ label: '未部署', isHost: false, items: unhosted }] : []),
-    ];
+    // Compute box heights
+    const boxH = (hostName: string) => {
+        const items = hostName === '__unhosted__' ? unhosted : (hostProjects[hostName] ?? []);
+        return PAD * 2 + Math.max(1, items.length) * (PROJ_H + PAD);
+    };
 
-    const colSpacing = Math.max(BOX_W + 80, W / (cols.length + 1));
-    const startX = (W - colSpacing * (cols.length - 1) - BOX_W) / 2;
+    // Assign positions
+    const rowH = (row: string[]) => Math.max(...row.map(boxH));
+    let totalH = rows.reduce((s, r) => s + rowH(r) + ROW_GAP, 0) - ROW_GAP;
+    let startY = (H - totalH) / 2;
 
-    // Project centre positions for drawing arrows
+    const hostBox: Record<string, { x: number; y: number; w: number; h: number }> = {};
     const projPos: Record<string, { x: number; y: number }> = {};
 
     const g = svg.append('g');
-
-    // Zoom
-    const zoomBehavior = zoom<SVGSVGElement, unknown>().scaleExtent([0.3, 2]).on('zoom', e => g.attr('transform', e.transform));
+    const zoomBehavior = zoom<SVGSVGElement, unknown>().scaleExtent([0.2, 2]).on('zoom', e => g.attr('transform', e.transform));
     svg.call(zoomBehavior).on('dblclick.zoom', null);
 
-    // Draw columns
-    cols.forEach((col, ci) => {
-        const boxH = PAD * 2 + col.items.length * (PROJ_H + PAD);
-        const bx = startX + ci * colSpacing;
-        const by = (H - boxH) / 2;
+    svg.append('defs').append('marker')
+        .attr('id', 'ta').attr('viewBox', '0 -4 8 8').attr('refX', 8).attr('refY', 0)
+        .attr('markerWidth', 5).attr('markerHeight', 5).attr('orient', 'auto')
+        .append('path').attr('d', 'M0,-4L8,0L0,4').attr('fill', HOST_COLOR);
+    svg.append('defs').append('marker')
+        .attr('id', 'pa').attr('viewBox', '0 -4 8 8').attr('refX', 8).attr('refY', 0)
+        .attr('markerWidth', 5).attr('markerHeight', 5).attr('orient', 'auto')
+        .append('path').attr('d', 'M0,-4L8,0L0,4').attr('fill', PROJ_COLOR);
 
-        // Host container
-        g.append('rect')
-            .attr('x', bx).attr('y', by).attr('width', BOX_W).attr('height', boxH)
-            .attr('rx', 10)
-            .attr('fill', col.isHost ? '#a78bfa11' : 'var(--binary-surface-container)')
-            .attr('stroke', col.isHost ? '#a78bfa' : 'var(--binary-outline-variant)')
-            .attr('stroke-width', 1.5);
+    rows.forEach(row => {
+        const rh = rowH(row);
+        const totalW = row.length * BOX_W + (row.length - 1) * 40;
+        let bx = (W - totalW) / 2;
 
-        // Host label
-        g.append('text')
-            .text(col.label)
-            .attr('x', bx + BOX_W / 2).attr('y', by - 8)
-            .attr('text-anchor', 'middle').attr('font-size', 11)
-            .attr('fill', col.isHost ? '#a78bfa' : 'var(--binary-outline)');
+        row.forEach(hostName => {
+            const isUnhosted = hostName === '__unhosted__';
+            const items = isUnhosted ? unhosted : (hostProjects[hostName] ?? []);
+            const bh = boxH(hostName);
+            const by = startY + (rh - bh) / 2;
 
-        // Project boxes
-        col.items.forEach((name, pi) => {
-            const px = bx + PAD;
-            const py = by + PAD + pi * (PROJ_H + PAD);
-            const cx = px + PROJ_W / 2;
-            const cy = py + PROJ_H / 2;
-            projPos[name] = { x: cx, y: cy };
+            hostBox[hostName] = { x: bx, y: by, w: BOX_W, h: bh };
 
-            g.append('rect')
-                .attr('x', px).attr('y', py).attr('width', PROJ_W).attr('height', PROJ_H)
-                .attr('rx', 6)
-                .attr('fill', 'var(--binary-primary)' + '18')
-                .attr('stroke', 'var(--binary-primary)').attr('stroke-width', 1);
+            g.append('rect').attr('x', bx).attr('y', by).attr('width', BOX_W).attr('height', bh)
+                .attr('rx', 10)
+                .attr('fill', isUnhosted ? 'transparent' : HOST_COLOR + '11')
+                .attr('stroke', isUnhosted ? 'var(--binary-outline-variant)' : HOST_COLOR)
+                .attr('stroke-width', 1.5).attr('stroke-dasharray', isUnhosted ? '4,3' : 'none');
 
-            g.append('text').text(name)
-                .attr('x', cx).attr('y', cy)
-                .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-                .attr('font-size', 10).attr('fill', 'var(--binary-text)');
+            g.append('text').text(isUnhosted ? '未部署' : hostName)
+                .attr('x', bx + BOX_W / 2).attr('y', by - 6)
+                .attr('text-anchor', 'middle').attr('font-size', 10)
+                .attr('fill', isUnhosted ? 'var(--binary-outline)' : HOST_COLOR);
+
+            items.forEach((name, pi) => {
+                const px = bx + PAD;
+                const py = by + PAD + pi * (PROJ_H + PAD);
+                const cx = px + PROJ_W / 2, cy = py + PROJ_H / 2;
+                projPos[name] = { x: cx, y: cy };
+                g.append('rect').attr('x', px).attr('y', py).attr('width', PROJ_W).attr('height', PROJ_H)
+                    .attr('rx', 5).attr('fill', PROJ_COLOR + '18').attr('stroke', PROJ_COLOR).attr('stroke-width', 1);
+                g.append('text').text(name).attr('x', cx).attr('y', cy)
+                    .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                    .attr('font-size', 9).attr('fill', 'var(--binary-text)');
+            });
+
+            bx += BOX_W + 40;
         });
+
+        startY += rh + ROW_GAP;
     });
 
-    // Arrow marker
-    svg.append('defs').append('marker')
-        .attr('id', 'topo-arrow').attr('viewBox', '0 -4 8 8')
-        .attr('refX', 8).attr('refY', 0).attr('markerWidth', 5).attr('markerHeight', 5).attr('orient', 'auto')
-        .append('path').attr('d', 'M0,-4L8,0L0,4').attr('fill', 'var(--binary-primary)');
+    // Host→Host arrows
+    hostHostRels.forEach(r => {
+        const s = hostBox[r.from], t = hostBox[r.to];
+        if (!s || !t) return;
+        const sx = s.x + s.w / 2, sy = s.y + s.h;
+        const tx = t.x + t.w / 2, ty = t.y;
+        g.append('line').attr('x1', sx).attr('y1', sy).attr('x2', tx).attr('y2', ty - 6)
+            .attr('stroke', HOST_COLOR).attr('stroke-width', 1.2).attr('opacity', 0.6)
+            .attr('marker-end', 'url(#ta)');
+        g.append('text').text(r.relation_type)
+            .attr('x', (sx + tx) / 2 + 4).attr('y', (sy + ty) / 2)
+            .attr('font-size', 8).attr('fill', HOST_COLOR).attr('opacity', 0.7);
+    });
 
-    // Draw cross-project relations
-    otherRels.forEach(r => {
+    // Project→Project arrows
+    projRels.forEach(r => {
         const s = projPos[r.from], t = projPos[r.to];
         if (!s || !t) return;
-        const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
-        g.append('path')
-            .attr('d', `M${s.x},${s.y} Q${mx},${my - 40} ${t.x},${t.y}`)
-            .attr('fill', 'none').attr('stroke', 'var(--binary-primary)').attr('stroke-width', 1)
-            .attr('opacity', 0.5).attr('marker-end', 'url(#topo-arrow)');
+        const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2 - 30;
+        g.append('path').attr('d', `M${s.x},${s.y} Q${mx},${my} ${t.x},${t.y}`)
+            .attr('fill', 'none').attr('stroke', PROJ_COLOR).attr('stroke-width', 1)
+            .attr('opacity', 0.5).attr('marker-end', 'url(#pa)');
         g.append('text').text(r.relation_type)
-            .attr('x', mx).attr('y', my - 44)
-            .attr('text-anchor', 'middle').attr('font-size', 8).attr('fill', 'var(--binary-outline)');
+            .attr('x', mx).attr('y', my - 3)
+            .attr('text-anchor', 'middle').attr('font-size', 7).attr('fill', 'var(--binary-outline)');
     });
 }
 
