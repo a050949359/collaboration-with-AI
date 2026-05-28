@@ -155,25 +155,6 @@ function drawTopology(data: GraphData) {
     const hostHostRels = data.relations.filter(r => hostNames.has(r.from) && hostNames.has(r.to));
     const projRels = data.relations.filter(r => !hostNames.has(r.from) && !hostNames.has(r.to) && r.relation_type !== 'deployed_on');
 
-    // BFS layering of hosts
-    const inDegree: Record<string, number> = {};
-    const children: Record<string, string[]> = {};
-    hosts.forEach(h => { inDegree[h.name] = 0; children[h.name] = []; });
-    hostHostRels.forEach(r => { inDegree[r.to] = (inDegree[r.to] || 0) + 1; children[r.from].push(r.to); });
-
-    const layerOf: Record<string, number> = {};
-    let queue = hosts.map(h => h.name).filter(n => !inDegree[n]);
-    queue.forEach(n => { layerOf[n] = 0; });
-    while (queue.length) {
-        const next: string[] = [];
-        queue.forEach(n => children[n].forEach(c => {
-            layerOf[c] = Math.max(layerOf[c] ?? 0, (layerOf[n] ?? 0) + 1);
-            if (!next.includes(c)) next.push(c);
-        }));
-        queue = next;
-    }
-    hosts.forEach(h => { if (layerOf[h.name] === undefined) layerOf[h.name] = 0; });
-
     // Group projects per host
     const hostProjects: Record<string, string[]> = {};
     hosts.forEach(h => { hostProjects[h.name] = []; });
@@ -184,22 +165,65 @@ function drawTopology(data: GraphData) {
         else unhosted.push(p.name);
     });
 
-    // Rows: group hosts by layer
-    const maxLayer = Math.max(...Object.values(layerOf), 0);
-    const rows: string[][] = Array.from({ length: maxLayer + 1 }, () => []);
-    hosts.forEach(h => rows[layerOf[h.name]].push(h.name));
-    if (unhosted.length) rows.push(['__unhosted__']);
+    // Connected components (undirected) → groups
+    const adj: Record<string, Set<string>> = {};
+    hosts.forEach(h => { adj[h.name] = new Set(); });
+    hostHostRels.forEach(r => { adj[r.from]?.add(r.to); adj[r.to]?.add(r.from); });
+    const visited = new Set<string>();
+    const components: string[][] = [];
+    hosts.forEach(h => {
+        if (visited.has(h.name)) return;
+        const comp: string[] = [];
+        const q = [h.name];
+        while (q.length) {
+            const n = q.shift()!;
+            if (visited.has(n)) continue;
+            visited.add(n); comp.push(n);
+            adj[n]?.forEach(nb => { if (!visited.has(nb)) q.push(nb); });
+        }
+        components.push(comp);
+    });
+    if (unhosted.length) components.push(['__unhosted__']);
 
-    // Compute box heights
+    // BFS layering within each component
+    const layerOf: Record<string, number> = {};
+    components.forEach(comp => {
+        const compSet = new Set(comp);
+        const inDeg: Record<string, number> = {};
+        const children: Record<string, string[]> = {};
+        comp.forEach(n => { inDeg[n] = 0; children[n] = []; });
+        hostHostRels.filter(r => compSet.has(r.from) && compSet.has(r.to)).forEach(r => {
+            inDeg[r.to]++; children[r.from].push(r.to);
+        });
+        let q = comp.filter(n => !inDeg[n]);
+        q.forEach(n => { layerOf[n] = 0; });
+        while (q.length) {
+            const next: string[] = [];
+            q.forEach(n => children[n].forEach(c => {
+                layerOf[c] = Math.max(layerOf[c] ?? 0, (layerOf[n] ?? 0) + 1);
+                if (!next.includes(c)) next.push(c);
+            }));
+            q = next;
+        }
+        comp.forEach(n => { if (layerOf[n] === undefined) layerOf[n] = 0; });
+    });
+
+    // Build rows per component: rows[compIdx][layer] = host[]
+    const compRows: string[][][] = components.map(comp => {
+        if (comp[0] === '__unhosted__') return [['__unhosted__']];
+        const maxL = Math.max(...comp.map(n => layerOf[n] ?? 0), 0);
+        const rows: string[][] = Array.from({ length: maxL + 1 }, () => []);
+        comp.forEach(n => rows[layerOf[n] ?? 0].push(n));
+        return rows;
+    });
+
     const boxH = (hostName: string) => {
         const items = hostName === '__unhosted__' ? unhosted : (hostProjects[hostName] ?? []);
         return PAD * 2 + Math.max(1, items.length) * (PROJ_H + PAD);
     };
-
-    // Assign positions
     const rowH = (row: string[]) => Math.max(...row.map(boxH));
-    let totalH = rows.reduce((s, r) => s + rowH(r) + ROW_GAP, 0) - ROW_GAP;
-    let startY = (H - totalH) / 2;
+    const compW = (rows: string[][]) => Math.max(...rows.map(r => r.length)) * (BOX_W + 40) - 40;
+    const compH = (rows: string[][]) => rows.reduce((s, r) => s + rowH(r) + ROW_GAP, 0) - ROW_GAP;
 
     const hostBox: Record<string, { x: number; y: number; w: number; h: number }> = {};
     const projPos: Record<string, { x: number; y: number }> = {};
@@ -212,51 +236,58 @@ function drawTopology(data: GraphData) {
         .attr('id', 'ta').attr('viewBox', '0 -4 8 8').attr('refX', 8).attr('refY', 0)
         .attr('markerWidth', 5).attr('markerHeight', 5).attr('orient', 'auto')
         .append('path').attr('d', 'M0,-4L8,0L0,4').attr('fill', HOST_COLOR);
-    svg.append('defs').append('marker')
-        .attr('id', 'pa').attr('viewBox', '0 -4 8 8').attr('refX', 8).attr('refY', 0)
-        .attr('markerWidth', 5).attr('markerHeight', 5).attr('orient', 'auto')
-        .append('path').attr('d', 'M0,-4L8,0L0,4').attr('fill', PROJ_COLOR);
 
-    rows.forEach(row => {
-        const rh = rowH(row);
-        const totalW = row.length * BOX_W + (row.length - 1) * 40;
-        let bx = (W - totalW) / 2;
+    const COMP_GAP = 60;
+    const totalCompW = compRows.reduce((s, rows) => s + compW(rows) + COMP_GAP, 0) - COMP_GAP;
+    let compX = (W - totalCompW) / 2;
 
-        row.forEach(hostName => {
-            const isUnhosted = hostName === '__unhosted__';
-            const items = isUnhosted ? unhosted : (hostProjects[hostName] ?? []);
-            const bh = boxH(hostName);
-            const by = startY + (rh - bh) / 2;
+    compRows.forEach((rows, ci) => {
+        const cw = compW(rows);
+        const ch = compH(rows);
+        let startY = (H - ch) / 2;
 
-            hostBox[hostName] = { x: bx, y: by, w: BOX_W, h: bh };
+        rows.forEach(row => {
+            const rh = rowH(row);
+            const rowTotalW = row.length * BOX_W + (row.length - 1) * 40;
+            let bx = compX + (cw - rowTotalW) / 2;
 
-            g.append('rect').attr('x', bx).attr('y', by).attr('width', BOX_W).attr('height', bh)
-                .attr('rx', 10)
-                .attr('fill', isUnhosted ? 'transparent' : HOST_COLOR + '11')
-                .attr('stroke', isUnhosted ? 'var(--binary-outline-variant)' : HOST_COLOR)
-                .attr('stroke-width', 1.5).attr('stroke-dasharray', isUnhosted ? '4,3' : 'none');
+            row.forEach(hostName => {
+                const isUnhosted = hostName === '__unhosted__';
+                const items = isUnhosted ? unhosted : (hostProjects[hostName] ?? []);
+                const bh = boxH(hostName);
+                const by = startY + (rh - bh) / 2;
 
-            g.append('text').text(isUnhosted ? '未部署' : hostName)
-                .attr('x', bx + BOX_W / 2).attr('y', by - 6)
-                .attr('text-anchor', 'middle').attr('font-size', 10)
-                .attr('fill', isUnhosted ? 'var(--binary-outline)' : HOST_COLOR);
+                hostBox[hostName] = { x: bx, y: by, w: BOX_W, h: bh };
 
-            items.forEach((name, pi) => {
-                const px = bx + PAD;
-                const py = by + PAD + pi * (PROJ_H + PAD);
-                const cx = px + PROJ_W / 2, cy = py + PROJ_H / 2;
-                projPos[name] = { x: cx, y: cy };
-                g.append('rect').attr('x', px).attr('y', py).attr('width', PROJ_W).attr('height', PROJ_H)
-                    .attr('rx', 5).attr('fill', PROJ_COLOR + '18').attr('stroke', PROJ_COLOR).attr('stroke-width', 1);
-                g.append('text').text(name).attr('x', cx).attr('y', cy)
-                    .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-                    .attr('font-size', 9).attr('fill', 'var(--binary-text)');
+                g.append('rect').attr('x', bx).attr('y', by).attr('width', BOX_W).attr('height', bh)
+                    .attr('rx', 10)
+                    .attr('fill', isUnhosted ? 'transparent' : HOST_COLOR + '11')
+                    .attr('stroke', isUnhosted ? 'var(--binary-outline-variant)' : HOST_COLOR)
+                    .attr('stroke-width', 1.5).attr('stroke-dasharray', isUnhosted ? '4,3' : 'none');
+
+                g.append('text').text(isUnhosted ? '未部署' : hostName)
+                    .attr('x', bx + BOX_W / 2).attr('y', by - 6)
+                    .attr('text-anchor', 'middle').attr('font-size', 10)
+                    .attr('fill', isUnhosted ? 'var(--binary-outline)' : HOST_COLOR);
+
+                items.forEach((name, pi) => {
+                    const px = bx + PAD, py = by + PAD + pi * (PROJ_H + PAD);
+                    const cx = px + PROJ_W / 2, cy = py + PROJ_H / 2;
+                    projPos[name] = { x: cx, y: cy };
+                    g.append('rect').attr('x', px).attr('y', py).attr('width', PROJ_W).attr('height', PROJ_H)
+                        .attr('rx', 5).attr('fill', PROJ_COLOR + '18').attr('stroke', PROJ_COLOR).attr('stroke-width', 1);
+                    g.append('text').text(name).attr('x', cx).attr('y', cy)
+                        .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                        .attr('font-size', 9).attr('fill', 'var(--binary-text)');
+                });
+
+                bx += BOX_W + 40;
             });
 
-            bx += BOX_W + 40;
+            startY += rh + ROW_GAP;
         });
 
-        startY += rh + ROW_GAP;
+        compX += cw + COMP_GAP;
     });
 
     // Host→Host arrows
