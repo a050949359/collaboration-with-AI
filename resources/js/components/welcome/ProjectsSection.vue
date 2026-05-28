@@ -121,16 +121,31 @@ const computerVisionProject: Project = {
 const mcpTodoProject: Project = {
     id: '10',
     category: 'MCP_TASK_MANAGEMENT',
-    title: 'MCP Server & Todo',
+    title: 'MCP Server & Task Management',
     description: [
         '以 Laravel 實作 MCP Server，提供 Claude Code 可直接呼叫的 tool API，達成 AI ↔ 後端雙向互動。',
-        'Todo 系統支援任務狀態（todo / in_progress / done）、子項目 checklist、排序與展開收合，AI 可直接建立與更新任務。',
-        '計畫擴充知識圖譜（Entity / Relation / Observation），讓 AI 跨專案查詢脈絡。',
+        'Task Server 支援任務狀態（todo / in_progress / done）、子項目 checklist、跨專案 project 標籤，AI 可直接建立與追蹤任務。',
+        'API Key Scope 系統讓不同工具取得不同授權，task:mcp 與 memory:mcp 各自獨立管控。',
     ],
-    tags: ['MCP', 'Laravel', 'Claude Code', 'Knowledge Graph', 'Task Management', 'Vue 3'],
+    tags: ['MCP', 'Laravel', 'Claude Code', 'Task Management', 'API Key', 'Vue 3'],
     status: 'in_dev',
     image: '/images/projects/project10.webp',
     link: '/app/mcp',
+};
+
+const knowledgeGraphProject: Project = {
+    id: '11',
+    category: 'KNOWLEDGE_GRAPH',
+    title: 'AI Knowledge Graph',
+    description: [
+        '實作知識圖譜 MCP Server（Entity / Relation / Observation），讓 AI 跨專案、跨機器共享結構化背景知識。',
+        '以 D3 Force Graph 視覺化節點關係，節點大小代表知識密度；Topology 視圖以分層容器呈現部署拓樸。',
+        '知識圖譜與 Task 系統分工：圖譜記錄「知道什麼」，Task 追蹤「要做什麼」，由 AI 在對話中判斷連結。',
+    ],
+    tags: ['MCP', 'Knowledge Graph', 'D3.js', 'Laravel', 'Claude Code', 'Vue 3'],
+    status: 'in_dev',
+    image: '/images/projects/project11.webp',
+    link: '/app/memory',
 };
 
 const projects = computed(() => [
@@ -143,6 +158,7 @@ const projects = computed(() => [
     wsLabGachaProject,
     computerVisionProject,
     mcpTodoProject,
+    knowledgeGraphProject,
 ]);
 </script>
 
