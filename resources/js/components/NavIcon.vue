@@ -166,6 +166,16 @@ defineProps<{ name: string; size?: number }>();
             <circle class="fill-default" cx="16" cy="16" r="1.6"/>
             <path class="stroke-default anim-radar-arm" d="M16 16 L16 5" stroke-width="1.5" stroke-linecap="round" opacity="0"/>
         </template>
+        <!-- memory (knowledge graph nodes) -->
+        <template v-else-if="name === 'memory'">
+            <circle class="fill-default" cx="16" cy="9"  r="2.5"/>
+            <circle class="fill-default" cx="9"  cy="21" r="2.5"/>
+            <circle class="fill-default" cx="23" cy="21" r="2.5"/>
+            <circle class="stroke-default" cx="16" cy="15" r="3" stroke-width="1.5" fill="none"/>
+            <line class="stroke-default" x1="16" y1="11.5" x2="16" y2="12"   stroke-width="1.2"/>
+            <line class="stroke-default" x1="13.4" y1="17" x2="11" y2="19"   stroke-width="1.2"/>
+            <line class="stroke-default" x1="18.6" y1="17" x2="21" y2="19"   stroke-width="1.2"/>
+        </template>
     </svg>
 </template>
 

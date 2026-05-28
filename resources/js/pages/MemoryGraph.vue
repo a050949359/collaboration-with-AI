@@ -13,7 +13,6 @@ interface GraphLink { source: GraphNode; target: GraphNode; relation_type: strin
 
 const svgRef = ref<SVGSVGElement | null>(null);
 const loading = ref(true);
-const selected = ref<GraphNode | null>(null);
 
 const TYPE_COLOR: Record<string, string> = {
     project: 'var(--binary-primary)',
@@ -82,8 +81,7 @@ async function fetchAndDraw() {
 
     // Nodes
     const nodeG = g.append('g').selectAll('g').data(nodes).join('g')
-        .style('cursor', 'pointer')
-        .on('click', (_, d) => { selected.value = d; });
+        .style('cursor', 'grab');
 
     const nodeRadius = (d: GraphNode) => 12 + d.observations.length * 3;
 
@@ -109,8 +107,8 @@ async function fetchAndDraw() {
 
     // Simulation
     simulation = forceSimulation(nodes)
-        .force('link', forceLink(links).distance((d: GraphLink) => nodeRadius(d.source as GraphNode) + nodeRadius(d.target as GraphNode) + 60).strength(0.8))
-        .force('charge', forceManyBody().strength(-400))
+        .force('link', forceLink(links).distance((d: GraphLink) => nodeRadius(d.source as GraphNode) + nodeRadius(d.target as GraphNode) + 120).strength(0.4))
+        .force('charge', forceManyBody().strength(-1200))
         .force('center', forceCenter(W / 2, H / 2))
         .on('tick', () => {
             linkLine.each(function(d) {
@@ -141,7 +139,7 @@ onUnmounted(() => simulation?.stop());
 <template>
     <Head title="Knowledge Graph" />
     <AppLayout>
-        <div class="flex flex-col h-[calc(100vh-4rem)]">
+        <div class="flex flex-col h-screen pt-[72px]">
             <!-- Header -->
             <div class="flex items-center justify-between px-6 py-3 border-b border-[var(--binary-outline-variant)] shrink-0">
                 <h1 class="text-base font-bold text-[var(--binary-text)]">Knowledge Graph</h1>
@@ -157,34 +155,9 @@ onUnmounted(() => simulation?.stop());
                 </div>
             </div>
 
-            <div class="flex flex-1 min-h-0">
-                <!-- Graph -->
-                <div class="flex-1 relative">
-                    <div v-if="loading" class="absolute inset-0 flex items-center justify-center text-xs text-[var(--binary-outline)]">載入中…</div>
-                    <svg ref="svgRef" class="w-full h-full" />
-                </div>
-
-                <!-- Side panel -->
-                <div v-if="selected" class="w-64 border-l border-[var(--binary-outline-variant)] p-4 shrink-0 overflow-y-auto">
-                    <div class="flex items-start justify-between mb-3">
-                        <div>
-                            <div class="font-bold text-sm text-[var(--binary-text)]">{{ selected.name }}</div>
-                            <span class="text-xs font-mono px-1.5 py-0.5 rounded mt-1 inline-block"
-                                :style="`background:${typeColor(selected.type)}22;color:${typeColor(selected.type)}`">
-                                {{ selected.type }}
-                            </span>
-                        </div>
-                        <button class="text-[var(--binary-outline)] hover:text-[var(--binary-text)] text-sm" @click="selected = null">✕</button>
-                    </div>
-                    <div class="text-xs text-[var(--binary-outline)] mb-1">{{ selected.observations.length }} 條觀察</div>
-                    <ul class="space-y-1.5">
-                        <li v-for="(obs, i) in selected.observations" :key="i"
-                            class="text-xs text-[var(--binary-text-variant)] flex gap-1.5">
-                            <span class="text-[var(--binary-outline)] shrink-0">·</span>
-                            <span>{{ obs }}</span>
-                        </li>
-                    </ul>
-                </div>
+            <div class="flex-1 relative min-h-0">
+                <div v-if="loading" class="absolute inset-0 flex items-center justify-center text-xs text-[var(--binary-outline)]">載入中…</div>
+                <svg ref="svgRef" class="w-full h-full" />
             </div>
         </div>
     </AppLayout>
