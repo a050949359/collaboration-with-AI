@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\ApiKey;
 
+use App\Enums\ApiKeyScope;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreateUserApiKeyRequest extends FormRequest
 {
@@ -17,7 +19,8 @@ class CreateUserApiKeyRequest extends FormRequest
     {
         return [
             'name'      => ['sometimes', 'string', 'max:64'],
-            'type'      => ['required', 'string', 'in:mcp'],
+            'scopes'    => ['sometimes', 'nullable', 'array'],
+            'scopes.*'  => [Rule::enum(ApiKeyScope::class)],
             'publicKey' => ['required', 'string', 'starts_with:-----BEGIN'],
         ];
     }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { reactive, ref, watch } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
+import { computed, reactive, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AppLayout from '../layouts/AppLayout.vue';
@@ -11,7 +11,7 @@ import { api, routes } from '../lib/routes';
 
 const { t } = useI18n();
 
-const { user } = useAuth();
+const { user, isAdmin } = useAuth();
 
 
 const activeTab = ref<'password' | 'name' | 'apikey'>('password');
@@ -19,10 +19,14 @@ const activeTab = ref<'password' | 'name' | 'apikey'>('password');
 // ── API-KEY 管理 ───────────────────────────────
 import { onMounted } from 'vue';
 
+interface ApiKeyScopeOption { value: string; adminOnly: boolean; }
+const page = usePage();
+const apiKeyScopeOptions = computed(() => (page.props.apiKeyScopes as ApiKeyScopeOption[]) ?? []);
+
 interface ApiKey {
     id: number;
     name: string;
-    type: string;
+    scopes: string[] | null;
     revoked_at: string | null;
     created_at: string;
 }
@@ -33,11 +37,22 @@ const apiKeyError = ref('');
 const newApiKey = ref('');
 const newApiKeyId = ref<number|null>(null);
 const newApiKeyLoading = ref(false);
-const newKeyType = ref('mcp');
 const newKeyName = ref('api-key');
+const newKeyScopes = ref<string[]>([]);
+const showCreateModal = ref(false);
 const copied = ref(false);
 
-const KEY_TYPES = ['mcp'];
+function openCreateModal() {
+    newKeyName.value = 'api-key';
+    newKeyScopes.value = [];
+    newApiKey.value = '';
+    newApiKeyId.value = null;
+    apiKeyError.value = '';
+    showCreateModal.value = true;
+}
+function closeCreateModal() {
+    showCreateModal.value = false;
+}
 
 // 取得 API 金鑰清單
 async function fetchApiKeys() {
@@ -74,6 +89,10 @@ async function generateKeyPair(): Promise<{ publicKeyPem: string; privateKey: Cr
 
 // 新增 API 金鑰
 async function createApiKey() {
+    if (!newKeyScopes.value.length) {
+        apiKeyError.value = '請選擇至少一個 Scope';
+        return;
+    }
     newApiKeyLoading.value = true;
     newApiKey.value = '';
     newApiKeyId.value = null;
@@ -84,7 +103,7 @@ async function createApiKey() {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publicKey: publicKeyPem, type: newKeyType.value, name: newKeyName.value || 'api-key' }),
+            body: JSON.stringify({ publicKey: publicKeyPem, type: 'mcp', name: newKeyName.value || 'api-key', scopes: newKeyScopes.value.length ? newKeyScopes.value : null }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || t('profile.apikey_create_failed'));
@@ -96,7 +115,8 @@ async function createApiKey() {
         apiKeys.value.unshift({
             id: data.id,
             name: newKeyName.value || 'api-key',
-            type: newKeyType.value,
+            type: 'mcp',
+            scopes: newKeyScopes.value.length ? [...newKeyScopes.value] : null,
             revoked_at: null,
             created_at: new Date().toISOString(),
         });
@@ -383,39 +403,10 @@ async function submit() {
 
                     <!-- API-KEY tab -->
                     <div v-if="activeTab === 'apikey'">
-                        <div class="text-lg font-bold mb-4">{{ t('profile.apikey_title') }}</div>
-
-                        <!-- 產生新 key -->
-                        <div class="flex items-center gap-2 mb-4">
-                            <input
-                                v-model="newKeyName"
-                                class="binary-input flex-1 text-xs"
-                                type="text"
-                                placeholder="api-key"
-                                maxlength="64"
-                            />
-                            <select v-model="newKeyType" class="binary-input w-28 text-xs shrink-0">
-                                <option v-for="tp in KEY_TYPES" :key="tp" :value="tp">{{ tp }}</option>
-                            </select>
-                            <button class="binary-button w-28 shrink-0" :disabled="newApiKeyLoading" @click="createApiKey">
-                                {{ newApiKeyLoading ? t('profile.apikey_generating') : t('profile.apikey_generate') }}
-                            </button>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-lg font-bold">{{ t('profile.apikey_title') }}</span>
+                            <button class="binary-button text-xs px-4 py-1.5 w-fit" @click="openCreateModal">{{ t('profile.apikey_generate') }}</button>
                         </div>
-
-                        <!-- 新產生的 key（一次性顯示）-->
-                        <div v-if="newApiKey" class="mb-5 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
-                            <div class="mb-2 text-xs text-green-400 font-bold tracking-wider">{{ t('profile.apikey_once_hint') }}</div>
-                            <div class="flex items-center gap-2">
-                                <code class="flex-1 text-xs font-mono break-all text-green-300 select-all">{{ newApiKey }}</code>
-                                <button
-                                    class="shrink-0 px-3 py-1 rounded border text-xs transition-colors"
-                                    :class="copied ? 'border-green-500 text-green-400' : 'border-[var(--binary-outline)] text-[var(--binary-text)] hover:border-[var(--binary-primary)]'"
-                                    @click="copyKey(newApiKey)"
-                                >{{ copied ? t('profile.apikey_copied') : t('profile.apikey_copy') }}</button>
-                            </div>
-                        </div>
-
-                        <div v-if="apiKeyError" class="text-red-400 text-xs mb-3">{{ apiKeyError }}</div>
 
                         <!-- 金鑰清單 -->
                         <div v-if="apiKeyLoading" class="text-xs opacity-50">{{ t('common.loading') }}</div>
@@ -426,8 +417,10 @@ async function submit() {
                                 class="flex items-center gap-3 px-3 py-2 rounded-lg border"
                                 :class="key.revoked_at ? 'border-red-500/20' : 'border-[var(--binary-outline-variant)]'"
                             >
-                                <span class="font-mono text-xs px-2 py-0.5 rounded bg-[var(--binary-surface-container)] text-[var(--binary-primary)] shrink-0 transition-opacity" :class="key.revoked_at ? 'opacity-40' : ''">{{ key.type }}</span>
                                 <span class="text-sm font-medium text-[var(--binary-text)] flex-1 truncate transition-opacity" :class="key.revoked_at ? 'opacity-40' : ''">{{ key.name }}</span>
+                                <template v-if="key.scopes?.length">
+                                    <span v-for="scope in key.scopes" :key="scope" class="text-xs font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">{{ scope }}</span>
+                                </template>
                                 <span class="text-xs text-[var(--binary-outline)] shrink-0 transition-opacity" :class="key.revoked_at ? 'opacity-40' : ''">
                                     {{ t('profile.apikey_created_label') }} {{ new Date(key.created_at).toLocaleDateString() }}
                                     <template v-if="key.revoked_at"> · {{ t('profile.apikey_revoked_label') }} {{ new Date(key.revoked_at).toLocaleDateString() }}</template>
@@ -454,5 +447,72 @@ async function submit() {
 
             </div>
         </div>
+    <!-- 產生 API Key Modal -->
+    <Teleport to="body">
+        <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" @click.self="closeCreateModal">
+            <div class="w-full max-w-md mx-4 rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface)] p-6 shadow-2xl">
+                <div class="text-base font-bold mb-5">{{ t('profile.apikey_generate') }}</div>
+
+                <!-- 名稱 -->
+                <div class="mb-4">
+                    <label class="text-xs text-[var(--binary-outline)] mb-1.5 block">名稱</label>
+                    <input
+                        v-model="newKeyName"
+                        class="binary-input w-full text-sm"
+                        type="text"
+                        placeholder="api-key"
+                        maxlength="64"
+                    />
+                </div>
+
+                <!-- Scope 必選 -->
+                <div class="mb-5">
+                    <label class="text-xs text-[var(--binary-outline)] mb-2 block">Scope <span class="text-red-400">*</span></label>
+                    <div class="flex flex-wrap gap-2">
+                        <template v-for="s in apiKeyScopeOptions" :key="s.value">
+                            <button
+                                v-if="!s.adminOnly || isAdmin"
+                                type="button"
+                                class="text-xs font-mono px-3 py-1.5 rounded border transition-colors"
+                                :class="newKeyScopes.includes(s.value)
+                                    ? 'border-[var(--binary-primary)] text-[var(--binary-primary)] bg-[var(--binary-primary)]/10'
+                                    : 'border-[var(--binary-outline-variant)] text-[var(--binary-outline)] hover:border-[var(--binary-outline)]'"
+                                @click="newKeyScopes.includes(s.value) ? newKeyScopes.splice(newKeyScopes.indexOf(s.value), 1) : newKeyScopes.push(s.value)"
+                            >{{ s.value }}</button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 產生後顯示 key -->
+                <div v-if="newApiKey" class="mb-4 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
+                    <div class="mb-2 text-xs text-green-400 font-bold tracking-wider">{{ t('profile.apikey_once_hint') }}</div>
+                    <div class="flex items-center gap-2">
+                        <code class="flex-1 text-xs font-mono break-all text-green-300 select-all">{{ newApiKey }}</code>
+                        <button
+                            class="shrink-0 px-3 py-1 rounded border text-xs transition-colors"
+                            :class="copied ? 'border-green-500 text-green-400' : 'border-[var(--binary-outline)] text-[var(--binary-text)] hover:border-[var(--binary-primary)]'"
+                            @click="copyKey(newApiKey)"
+                        >{{ copied ? t('profile.apikey_copied') : t('profile.apikey_copy') }}</button>
+                    </div>
+                </div>
+
+                <div v-if="apiKeyError" class="text-red-400 text-xs mb-3">{{ apiKeyError }}</div>
+
+                <!-- 按鈕 -->
+                <div class="flex gap-2">
+                    <button
+                        class="flex-1 text-xs py-2 rounded border border-[var(--binary-outline-variant)] text-[var(--binary-outline)] hover:border-[var(--binary-outline)] transition-colors"
+                        @click="closeCreateModal"
+                    >{{ newApiKey ? '完成' : '取消' }}</button>
+                    <button
+                        v-if="!newApiKey"
+                        class="binary-button flex-1 text-xs py-2"
+                        :disabled="newApiKeyLoading"
+                        @click="createApiKey"
+                    >{{ newApiKeyLoading ? t('profile.apikey_generating') : t('profile.apikey_generate') }}</button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
     </AppLayout>
 </template>

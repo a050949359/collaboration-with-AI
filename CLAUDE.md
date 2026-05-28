@@ -157,3 +157,45 @@ php artisan import:countries           # 寫入 DB
 - Model `User::avatar()` Attribute 加在 `$appends`，前端 `user.avatar` 直接可用
 - Inertia shared props 在 `HandleInertiaRequests::share()`（包含 `user`、`name`）
 - `useAuth()` composable 提供 `user`、`isAdmin`（從 Inertia page props 取得）
+
+---
+
+## MCP Memory 使用規範
+
+### Endpoints
+- `POST /api/mcp/task` — Task 工具（需要 API key）
+- `POST /api/mcp/memory` — 知識圖譜工具（讀取公開；寫入需要 admin + `memory:write` scope key）
+
+### 跨專案知識圖譜
+知識圖譜用於記錄**跨機器、跨專案**的持久性知識（entity/relation/observation）。
+
+**儲存時機：當你決定儲存記憶時，詢問使用者：**
+> 「這個要同步到 MCP 知識圖譜嗎？適合記錄跨專案關係或主機環境資訊。」
+
+**適合存入圖譜的內容：**
+- 專案間的依賴或整合關係（`linebot → calls_api → collaboration-with-AI`）
+- 主機環境資訊（dev-wsl2 的設定、prod-server 的部署狀態）
+- 跨專案的整合狀態（share token 待接、wasm build pipeline 狀況）
+
+**不適合存入圖譜的內容：**
+- 本對話的暫時脈絡（存本機 file memory 即可）
+- 已在 CLAUDE.md 記載的架構資訊
+
+### Entity type 慣例（自由字串，以下僅供參考）
+- `project`、`host`、`service`、`integration`
+
+### Claude Desktop 設定範例
+```json
+{
+  "mcpServers": {
+    "collab-tasks": {
+      "url": "https://ohya.vip/api/mcp/task",
+      "headers": { "Authorization": "Bearer <task-key>" }
+    },
+    "collab-memory": {
+      "url": "https://ohya.vip/api/mcp/memory",
+      "headers": { "Authorization": "Bearer <memory-write-key>" }
+    }
+  }
+}
+```

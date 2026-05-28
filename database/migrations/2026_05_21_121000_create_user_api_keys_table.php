@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('name', 64)->default('api-key');
-            $table->string('type', 32)->default('mcp');
+            $table->json('scopes')->nullable();
             $table->string('api_key_hash', 64)->unique();
             $table->timestamp('revoked_at')->nullable();
             $table->timestamps();

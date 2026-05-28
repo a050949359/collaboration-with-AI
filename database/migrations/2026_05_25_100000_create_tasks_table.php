@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('description')->nullable();
+            $table->string('project', 64)->nullable()->index();
             $table->enum('status', ['todo', 'in_progress', 'done'])->default('todo')->index();
             $table->unsignedInteger('sort')->default(0);
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete()->index();

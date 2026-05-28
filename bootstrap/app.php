@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateWithApiKey;
+use App\Http\Middleware\CheckApiKeyScope;
 use App\Http\Middleware\VerifyTurnstile;
 use App\Http\Middleware\AuthTokenFromCookie;
 use App\Http\Middleware\TrustProxies;
@@ -35,8 +36,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToGroup('api', AuthTokenFromCookie::class);
 
         $middleware->alias([
-            'auth.apikey' => AuthenticateWithApiKey::class,
-            'turnstile'   => VerifyTurnstile::class,
+            'auth.apikey'    => AuthenticateWithApiKey::class,
+            'apikey.scope'   => CheckApiKeyScope::class,
+            'turnstile'      => VerifyTurnstile::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

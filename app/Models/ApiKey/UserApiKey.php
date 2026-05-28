@@ -9,13 +9,13 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 /**
  * @property int $id
  * @property int $user_id
- * @property string $type
+ * @property array|null $scopes
  * @property string $api_key_hash
  * @property \Illuminate\Support\Carbon|null $revoked_at
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
  */
-#[Fillable(['user_id', 'name', 'type', 'api_key_hash', 'revoked_at'])]
+#[Fillable(['user_id', 'name', 'scopes', 'api_key_hash', 'revoked_at'])]
 class UserApiKey extends Model
 {
     /** @use HasFactory<UserApiKey> */
@@ -29,10 +29,17 @@ class UserApiKey extends Model
     protected function casts(): array
     {
         return [
+            'scopes'     => 'array',
             'revoked_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    public function hasScope(string $scope): bool
+    {
+        if ($this->scopes === null) return true; // null = 無限制
+        return \in_array($scope, $this->scopes);
     }
 
     /**

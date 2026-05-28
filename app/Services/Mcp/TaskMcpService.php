@@ -1,116 +1,73 @@
 <?php
 
-namespace App\Http\Controllers\Mcp;
+namespace App\Services\Mcp;
 
-use App\Http\Controllers\Controller;
 use App\Models\TaskItem;
 use App\Services\Task\TaskService;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
-class McpController extends Controller
+class TaskMcpService implements McpToolServiceInterface
 {
+    private const TOOLS = [
+        'list_tasks', 'get_task', 'create_task', 'update_task', 'delete_task',
+        'add_task_item', 'update_task_item', 'delete_task_item',
+    ];
+
     public function __construct(private TaskService $service) {}
 
-    public function handle(Request $request): JsonResponse
+    public function canHandle(string $name): bool
     {
-        $body   = $request->json()->all();
-        $method = $body['method'] ?? '';
-        $id     = $body['id'] ?? null;
-        $params = $body['params'] ?? [];
-
-        return match ($method) {
-            'initialize'  => $this->initialize($id),
-            'tools/list'  => $this->toolsList($id),
-            'tools/call'  => $this->toolsCall($id, $params),
-            default       => $this->error($id, -32601, 'Method not found'),
-        };
+        return \in_array($name, self::TOOLS);
     }
 
-    // ── JSON-RPC helpers ─────────────────────────────────────────
-
-    private function ok(mixed $id, array $result): JsonResponse
+    public function call(string $name, array $args, mixed $id, bool $_isAdmin, ?array $scopes = null): JsonResponse
     {
-        return response()->json(['jsonrpc' => '2.0', 'id' => $id, 'result' => $result]);
-    }
-
-    private function error(mixed $id, int $code, string $message): JsonResponse
-    {
-        return response()->json(['jsonrpc' => '2.0', 'id' => $id, 'error' => ['code' => $code, 'message' => $message]]);
-    }
-
-    private function text(mixed $id, string $text, bool $isError = false): JsonResponse
-    {
-        return $this->ok($id, [
-            'content' => [['type' => 'text', 'text' => $text]],
-            'isError' => $isError,
-        ]);
-    }
-
-    // ── MCP methods ──────────────────────────────────────────────
-
-    private function initialize(mixed $id): JsonResponse
-    {
-        return $this->ok($id, [
-            'protocolVersion' => '2024-11-05',
-            'capabilities'    => ['tools' => new \stdClass()],
-            'serverInfo'      => ['name' => 'collaboration-with-ai', 'version' => config('services.mcp.version', '1.0.0')],
-        ]);
-    }
-
-    private function toolsList(mixed $id): JsonResponse
-    {
-        return $this->ok($id, ['tools' => $this->tools()]);
-    }
-
-    private function toolsCall(mixed $id, array $params): JsonResponse
-    {
-        $name = $params['name'] ?? '';
-        $args = $params['arguments'] ?? [];
-
-        // 需要認證的工具
-        $authRequired = ['list_tasks', 'get_task', 'create_task', 'update_task', 'delete_task', 'add_task_item', 'update_task_item', 'delete_task_item'];
-        if (\in_array($name, $authRequired) && ! Auth::check()) {
+        if (! Auth::check()) {
             return $this->text($id, 'Unauthorized: API key required.', true);
         }
 
+        $hasScope = $scopes === null || \in_array('task:mcp', $scopes);
+        if (! $hasScope) {
+            return $this->text($id, 'Unauthorized: task:mcp scope required.', true);
+        }
+
         return match ($name) {
-            'list_tasks'       => $this->toolListTasks($id, $args),
-            'get_task'         => $this->toolGetTask($id, $args),
-            'create_task'      => $this->toolCreateTask($id, $args),
-            'update_task'      => $this->toolUpdateTask($id, $args),
-            'delete_task'      => $this->toolDeleteTask($id, $args),
-            'add_task_item'    => $this->toolAddTaskItem($id, $args),
-            'update_task_item' => $this->toolUpdateTaskItem($id, $args),
-            'delete_task_item' => $this->toolDeleteTaskItem($id, $args),
+            'list_tasks'       => $this->listTasks($id, $args),
+            'get_task'         => $this->getTask($id, $args),
+            'create_task'      => $this->createTask($id, $args),
+            'update_task'      => $this->updateTask($id, $args),
+            'delete_task'      => $this->deleteTask($id, $args),
+            'add_task_item'    => $this->addTaskItem($id, $args),
+            'update_task_item' => $this->updateTaskItem($id, $args),
+            'delete_task_item' => $this->deleteTaskItem($id, $args),
             default            => $this->text($id, "Unknown tool: $name", true),
         };
     }
 
-    // ── Tools ────────────────────────────────────────────────────
+    // ── Tool implementations ──────────────────────────────────────
 
-    private function toolListTasks(mixed $id, array $args): JsonResponse
+    private function listTasks(mixed $id, array $args): JsonResponse
     {
-        $tasks = $this->service->listTasks($args['status'] ?? null);
+        $tasks = $this->service->listTasks($args['status'] ?? null, $args['project'] ?? null);
         return $this->text($id, json_encode($tasks, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
-    private function toolGetTask(mixed $id, array $args): JsonResponse
+    private function getTask(mixed $id, array $args): JsonResponse
     {
         $task = $this->service->getTask($args['id'] ?? 0);
         if (! $task) return $this->text($id, 'Task not found.', true);
         return $this->text($id, json_encode($task, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
-    private function toolCreateTask(mixed $id, array $args): JsonResponse
+    private function createTask(mixed $id, array $args): JsonResponse
     {
         $task = $this->service->createTask($args, Auth::id());
         return $this->text($id, json_encode($task, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
-    private function toolUpdateTask(mixed $id, array $args): JsonResponse
+    private function updateTask(mixed $id, array $args): JsonResponse
     {
         $task = $this->service->getTask($args['id'] ?? 0);
         if (! $task) return $this->text($id, 'Task not found.', true);
@@ -122,7 +79,7 @@ class McpController extends Controller
         }
     }
 
-    private function toolDeleteTask(mixed $id, array $args): JsonResponse
+    private function deleteTask(mixed $id, array $args): JsonResponse
     {
         $task = $this->service->getTask($args['id'] ?? 0);
         if (! $task) return $this->text($id, 'Task not found.', true);
@@ -134,7 +91,7 @@ class McpController extends Controller
         }
     }
 
-    private function toolAddTaskItem(mixed $id, array $args): JsonResponse
+    private function addTaskItem(mixed $id, array $args): JsonResponse
     {
         $task = $this->service->getTask($args['task_id'] ?? 0);
         if (! $task) return $this->text($id, 'Task not found.', true);
@@ -146,7 +103,7 @@ class McpController extends Controller
         }
     }
 
-    private function toolUpdateTaskItem(mixed $id, array $args): JsonResponse
+    private function updateTaskItem(mixed $id, array $args): JsonResponse
     {
         $item = TaskItem::with('task')->find($args['id'] ?? null);
         if (! $item) return $this->text($id, 'Item not found.', true);
@@ -158,7 +115,7 @@ class McpController extends Controller
         }
     }
 
-    private function toolDeleteTaskItem(mixed $id, array $args): JsonResponse
+    private function deleteTaskItem(mixed $id, array $args): JsonResponse
     {
         $item = TaskItem::with('task')->find($args['id'] ?? null);
         if (! $item) return $this->text($id, 'Item not found.', true);
@@ -170,18 +127,19 @@ class McpController extends Controller
         }
     }
 
-    // ── Tool schemas ─────────────────────────────────────────────
+    // ── Tool schemas ──────────────────────────────────────────────
 
-    private function tools(): array
+    public function toolSchemas(): array
     {
         return [
             [
                 'name'        => 'list_tasks',
-                'description' => '列出所有任務（含子項目）。可用 status 篩選。',
+                'description' => '列出任務（含子項目）。可用 status、project 篩選。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
-                        'status' => ['type' => 'string', 'enum' => ['todo', 'in_progress', 'done'], 'description' => '篩選狀態（選填）'],
+                        'status'  => ['type' => 'string', 'enum' => ['todo', 'in_progress', 'done'], 'description' => '篩選狀態（選填）'],
+                        'project' => ['type' => 'string', 'description' => '篩選專案（選填）'],
                     ],
                 ],
             ],
@@ -200,8 +158,9 @@ class McpController extends Controller
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
-                        'title'       => ['type' => 'string', 'description' => '任務標題'],
-                        'description' => ['type' => 'string', 'description' => '任務描述（選填）'],
+                        'title'       => ['type' => 'string'],
+                        'description' => ['type' => 'string'],
+                        'project'     => ['type' => 'string', 'description' => '所屬專案（選填）'],
                         'status'      => ['type' => 'string', 'enum' => ['todo', 'in_progress', 'done']],
                         'sort'        => ['type' => 'integer'],
                     ],
@@ -210,13 +169,14 @@ class McpController extends Controller
             ],
             [
                 'name'        => 'update_task',
-                'description' => '更新任務標題、描述或狀態。需要 API Key 認證。',
+                'description' => '更新任務。需要 API Key 認證。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
                         'id'          => ['type' => 'integer'],
                         'title'       => ['type' => 'string'],
                         'description' => ['type' => 'string'],
+                        'project'     => ['type' => 'string'],
                         'status'      => ['type' => 'string', 'enum' => ['todo', 'in_progress', 'done']],
                         'sort'        => ['type' => 'integer'],
                     ],
@@ -269,5 +229,19 @@ class McpController extends Controller
                 ],
             ],
         ];
+    }
+
+    // ── JSON-RPC helpers ──────────────────────────────────────────
+
+    private function text(mixed $id, string $text, bool $isError = false): JsonResponse
+    {
+        return response()->json([
+            'jsonrpc' => '2.0',
+            'id'      => $id,
+            'result'  => [
+                'content' => [['type' => 'text', 'text' => $text]],
+                'isError' => $isError,
+            ],
+        ]);
     }
 }

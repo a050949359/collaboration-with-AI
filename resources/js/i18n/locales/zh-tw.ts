@@ -182,7 +182,7 @@ export default {
         submit_password: '確認修改',
         error_update_failed: '更新失敗，請稍後再試。',
         apikey_title: 'API 金鑰管理',
-        apikey_generate: '產生',
+        apikey_generate: '產生金鑰',
         apikey_generating: '產生中...',
         apikey_once_hint: '請複製保存，此金鑰只顯示一次',
         apikey_copy: '複製',

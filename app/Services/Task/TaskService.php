@@ -9,11 +9,14 @@ use Illuminate\Database\Eloquent\Collection;
 
 class TaskService
 {
-    public function listTasks(?string $status = null): Collection
+    public function listTasks(?string $status = null, ?string $project = null): Collection
     {
         $query = Task::with('items')->orderBy('sort')->orderBy('id');
         if ($status !== null) {
             $query->where('status', $status);
+        }
+        if ($project !== null) {
+            $query->where('project', $project);
         }
         return $query->get();
     }
@@ -28,6 +31,7 @@ class TaskService
         $task = new Task([
             'title'       => $data['title'],
             'description' => $data['description'] ?? null,
+            'project'     => $data['project'] ?? null,
             'status'      => $data['status'] ?? 'todo',
             'sort'        => $data['sort'] ?? 0,
         ]);
@@ -43,6 +47,7 @@ class TaskService
         $task->update(array_filter([
             'title'       => $data['title'] ?? null,
             'description' => $data['description'] ?? null,
+            'project'     => $data['project'] ?? null,
             'status'      => $data['status'] ?? null,
             'sort'        => $data['sort'] ?? null,
         ], fn($v) => $v !== null));

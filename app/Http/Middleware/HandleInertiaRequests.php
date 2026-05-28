@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\ApiKeyScope;
 use App\Enums\ShareTokenScope;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -69,6 +70,12 @@ class HandleInertiaRequests extends Middleware
         return match (true) {
             $request->routeIs('admin') => [
                 'shareTokenScopes' => array_column(ShareTokenScope::cases(), 'value'),
+            ],
+            $request->routeIs('profile') => [
+                'apiKeyScopes' => array_map(fn($s) => [
+                    'value'     => $s->value,
+                    'adminOnly' => $s->adminOnly(),
+                ], ApiKeyScope::cases()),
             ],
             default => [],
         };

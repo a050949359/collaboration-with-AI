@@ -10,13 +10,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property string $title
  * @property string|null $description
+ * @property string|null $project
  * @property string $status
  * @property int $sort
  * @property int $created_by
  */
 class Task extends Model
 {
-    protected $fillable = ['title', 'description', 'status', 'sort'];
+    protected $fillable = ['title', 'description', 'project', 'status', 'sort'];
 
     protected function casts(): array
     {

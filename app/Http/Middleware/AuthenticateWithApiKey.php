@@ -23,6 +23,7 @@ class AuthenticateWithApiKey
             if ($apiKey?->user) {
                 Auth::setUser($apiKey->user);
                 $request->attributes->set('api_key_authed', true);
+                $request->attributes->set('api_key_scopes', $apiKey->scopes);
             }
         }
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\ApiKey;
 
+use App\Enums\ApiKeyScope;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApiKey\CreateUserApiKeyRequest;
 use App\Models\ApiKey\UserApiKey;
@@ -17,7 +18,7 @@ class UserApiKeyController extends Controller
     {
         $user = Auth::user();
         $keys = UserApiKey::where('user_id', $user->id)
-            ->get(['id', 'name', 'type', 'revoked_at', 'created_at']);
+            ->get(['id', 'name', 'scopes', 'revoked_at', 'created_at']);
         return response()->json($keys);
     }
 
@@ -27,14 +28,25 @@ class UserApiKeyController extends Controller
         $user      = Auth::user();
         $validated = $request->validated();
         $name      = $validated['name'] ?? 'api-key';
-        $type      = $validated['type'];
         $publicKey = $validated['publicKey'];
         $raw = Str::random(48);
         $hash = hash('sha256', $raw);
+        $scopes = $validated['scopes'] ?? null;
+
+        if ($scopes) {
+            $isAdmin = Auth::user()->isAdmin();
+            foreach ($scopes as $scope) {
+                $scopeEnum = ApiKeyScope::from($scope);
+                if ($scopeEnum->adminOnly() && ! $isAdmin) {
+                    return response()->json(['message' => "Scope '{$scope}' requires admin."], 403);
+                }
+            }
+        }
+
         $apiKey = UserApiKey::create([
             'user_id'      => $user->id,
             'name'         => $name,
-            'type'         => $type,
+            'scopes'       => $scopes ?: null,
             'api_key_hash' => $hash,
         ]);
         $encrypted = null;

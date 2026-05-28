@@ -1,7 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Mcp\McpController;
+use App\Http\Controllers\Mcp\TaskMcpController;
+use App\Http\Controllers\Mcp\MemoryMcpController;
 use App\Http\Controllers\Task\TaskController;
 use App\Http\Controllers\Task\TaskItemController;
 use App\Http\Controllers\About\AboutController;
@@ -251,7 +252,8 @@ Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () 
 });
 
 // MCP JSON-RPC endpoint
-Route::post('/mcp', [McpController::class, 'handle'])->middleware('auth.apikey');
+Route::post('/mcp/task', [TaskMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:task:mcp']);
+Route::post('/mcp/memory', [MemoryMcpController::class, 'handle'])->middleware('auth.apikey');
 
 // Tasks
 Route::prefix('v1/tasks')->group(function () {
