@@ -34,7 +34,7 @@ let simulation: ReturnType<typeof forceSimulation> | null = null;
 
 function drawGraph(data: GraphData) {
     simulation?.stop();
-    const nodes: GraphNode[] = data.entities.map(e => ({ ...e }));
+    const nodes: GraphNode[] = data.entities.filter(e => e.type !== 'host').map(e => ({ ...e }));
     const nodeMap = Object.fromEntries(nodes.map(n => [n.name, n]));
 
     const linkMap = new Map<string, GraphLink>();
