@@ -204,34 +204,61 @@ POST /api/gacha/rooms/{room}/draw
 
 ## MCP 設定（Claude Desktop）
 
-在帳號設定頁面產生 API Key 後，將以下設定加入 Claude Desktop 的 `claude_desktop_config.json`：
+本專案提供兩個獨立的 MCP Server，各自需要不同 scope 的 API Key。在 Profile 頁面產生對應的 Key 後，加入 Claude Desktop 的 `claude_desktop_config.json`：
 
 ```json
 {
   "mcpServers": {
-    "collaboration-with-ai": {
+    "collab-tasks": {
       "type": "http",
-      "url": "https://your-domain.com/api/mcp",
+      "url": "https://your-domain.com/api/mcp/task",
       "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_TASK_MCP_KEY"
+      }
+    },
+    "collab-memory": {
+      "type": "http",
+      "url": "https://your-domain.com/api/mcp/memory",
+      "headers": {
+        "Authorization": "Bearer YOUR_MEMORY_MCP_KEY"
       }
     }
   }
 }
 ```
 
-本地開發時將 `url` 換成 `http://localhost:8000/api/mcp`。
+本地開發時將 `your-domain.com` 換成 `localhost:8000`。
 
-### 可用工具
+### API Key Scope
+
+| Scope | 對應 Server | 誰可建立 |
+|---|---|---|
+| `task:mcp` | collab-tasks | 所有登入者 |
+| `memory:mcp` | collab-memory | Admin only |
+
+### collab-tasks 工具（`task:mcp` key）
 
 | 工具 | 說明 |
 |------|------|
-| `list_tasks` | 列出所有任務（可用 `status` 篩選：`todo` / `in_progress` / `done`） |
-| `get_task` | 取得單一任務詳情（含子項目） |
-| `create_task` | 新增任務（需 `title`，可選 `description`、`status`、`sort`） |
-| `update_task` | 更新任務標題、描述或狀態 |
-| `delete_task` | 刪除任務（含所有子項目） |
-| `add_task_item` | 新增子項目到指定任務 |
-| `update_task_item` | 更新子項目內容或完成狀態 |
-| `delete_task_item` | 刪除子項目 |
+| `list_tasks` | 列出所有任務（含子項目）。可依 `status`、`project` 篩選 |
+| `get_task` | 以 ID 取得單一任務及其所有子項目 |
+| `create_task` | 建立新任務。可指定 `project` 歸屬方便跨專案追蹤 |
+| `update_task` | 更新任務的標題、描述、project、狀態或排序 |
+| `delete_task` | 刪除指定任務及其所有子項目（不可復原） |
+| `add_task_item` | 在指定任務下新增 checklist 子項目 |
+| `update_task_item` | 更新子項目的文字內容或完成狀態 |
+| `delete_task_item` | 刪除指定子項目 |
+
+### collab-memory 工具（`memory:mcp` admin key）
+
+| 工具 | 說明 |
+|------|------|
+| `read_graph` | 讀取知識圖譜（entities + observations + relations）。可指定 `entity_name` 取子圖 |
+| `search_nodes` | 以關鍵字搜尋節點，比對名稱、type 及 observation 內容 |
+| `create_entity` | 建立節點（name 唯一，已存在則直接回傳） |
+| `delete_entity` | 刪除節點及其所有 observations 和 relations（不可復原） |
+| `add_observation` | 對節點附加一條文字觀察 |
+| `remove_observation` | 以 ID 刪除單條觀察 |
+| `create_relation` | 建立有向關係（from → relation_type → to），相同三元組不重複 |
+| `delete_relation` | 刪除指定有向關係 |
 

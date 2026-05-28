@@ -253,7 +253,10 @@ Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () 
 
 // MCP JSON-RPC endpoint
 Route::post('/mcp/task', [TaskMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:task:mcp']);
-Route::post('/mcp/memory', [MemoryMcpController::class, 'handle'])->middleware('auth.apikey');
+Route::post('/mcp/memory', [MemoryMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:memory:mcp']);
+
+// Memory graph REST（公開）
+Route::get('/memory/graph', [\App\Http\Controllers\Mcp\MemoryGraphController::class, 'index']);
 
 // Tasks
 Route::prefix('v1/tasks')->group(function () {

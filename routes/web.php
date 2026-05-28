@@ -35,6 +35,7 @@ Route::prefix('app')->group(function () {
     Route::inertia('/ws-lab', 'WsLab')->name('ws-lab');
     Route::inertia('/gacha', 'Gacha')->name('gacha');
     Route::inertia('/mcp', 'Mcp')->name('mcp');
+    Route::inertia('/memory', 'MemoryGraph')->name('memory');
     Route::inertia('/computer-vision', 'ComputerVision')->name('computer-vision');
     Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
         Route::inertia('/story-relay', 'StoryRelay')->name('story-relay');

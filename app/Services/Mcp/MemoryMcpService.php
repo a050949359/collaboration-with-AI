@@ -22,13 +22,10 @@ class MemoryMcpService implements McpToolServiceInterface
         return \in_array($name, [...self::WRITE_TOOLS, ...self::READ_TOOLS]);
     }
 
-    public function call(string $name, array $args, mixed $id, bool $isAdmin, ?array $scopes = null): JsonResponse
+    public function call(string $name, array $args, mixed $id, bool $isAdmin, ?array $_scopes = null): JsonResponse
     {
-        if (\in_array($name, self::WRITE_TOOLS)) {
-            $hasScope = $scopes === null || \in_array('memory:mcp', $scopes);
-            if (! $isAdmin || ! $hasScope) {
-                return $this->text($id, 'Unauthorized: admin key with memory:write scope required.', true);
-            }
+        if (! $isAdmin) {
+            return $this->text($id, 'Unauthorized: admin required.', true);
         }
 
         return match ($name) {
@@ -180,19 +177,19 @@ class MemoryMcpService implements McpToolServiceInterface
         return [
             [
                 'name'        => 'create_entity',
-                'description' => '建立知識圖譜節點（entity）。若已存在則直接回傳。需要 admin memory:mcp key。',
+                'description' => '建立知識圖譜節點。name 全域唯一；若同名節點已存在則直接回傳，不重複建立。type 為自由字串（慣例：project、host、service）。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
-                        'name' => ['type' => 'string', 'description' => '唯一名稱（例如 collaboration-with-AI）'],
-                        'type' => ['type' => 'string', 'description' => '自由字串（例如 project、host、service）'],
+                        'name' => ['type' => 'string', 'description' => '節點唯一名稱，例如 collaboration-with-AI'],
+                        'type' => ['type' => 'string', 'description' => '節點類型，例如 project、host、service'],
                     ],
                     'required' => ['name', 'type'],
                 ],
             ],
             [
                 'name'        => 'delete_entity',
-                'description' => '刪除節點及其所有 observations 和 relations。需要 admin memory:mcp key。',
+                'description' => '刪除指定節點，並 cascade 刪除該節點的所有 observations 和 relations，操作不可復原。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => ['name' => ['type' => 'string']],
@@ -201,41 +198,41 @@ class MemoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name'        => 'add_observation',
-                'description' => '對節點新增一條觀察紀錄。需要 admin memory:mcp key。',
+                'description' => '對節點附加一條文字觀察，用於記錄事實、狀態或備註。同一節點可有多條觀察。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
                         'entity_name' => ['type' => 'string', 'description' => '目標節點名稱'],
-                        'content'     => ['type' => 'string', 'description' => '觀察內容'],
+                        'content'     => ['type' => 'string', 'description' => '觀察內容文字'],
                     ],
                     'required' => ['entity_name', 'content'],
                 ],
             ],
             [
                 'name'        => 'remove_observation',
-                'description' => '刪除指定觀察紀錄。需要 admin memory:mcp key。',
+                'description' => '以 ID 刪除單條觀察。observation ID 可從 read_graph 或 search_nodes 回傳結果中取得。',
                 'inputSchema' => [
                     'type'       => 'object',
-                    'properties' => ['id' => ['type' => 'integer', 'description' => 'observation ID']],
+                    'properties' => ['id' => ['type' => 'integer', 'description' => 'observation ID（來自 read_graph / search_nodes）']],
                     'required'   => ['id'],
                 ],
             ],
             [
                 'name'        => 'create_relation',
-                'description' => '在兩個節點之間建立有向關係。需要 admin memory:mcp key。',
+                'description' => '在兩個已存在的節點之間建立有向關係（from → relation_type → to）。relation_type 為自由字串（慣例：calls_api、depends_on、deployed_on、uses）。相同的三元組不會重複建立。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
                         'from'          => ['type' => 'string', 'description' => '來源節點名稱'],
                         'to'            => ['type' => 'string', 'description' => '目標節點名稱'],
-                        'relation_type' => ['type' => 'string', 'description' => '關係類型（例如 calls_api、depends_on、deployed_on）'],
+                        'relation_type' => ['type' => 'string', 'description' => '關係類型，例如 calls_api、depends_on、deployed_on'],
                     ],
                     'required' => ['from', 'to', 'relation_type'],
                 ],
             ],
             [
                 'name'        => 'delete_relation',
-                'description' => '刪除指定的有向關係。需要 admin memory:mcp key。',
+                'description' => '刪除指定的有向關係。需同時提供 from、to、relation_type 三個欄位才能精確定位。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -248,21 +245,21 @@ class MemoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name'        => 'read_graph',
-                'description' => '讀取知識圖譜。可指定 entity_name 只看該節點及其關係；不指定則回傳完整圖。',
+                'description' => '讀取知識圖譜，回傳 entities（含 observations）與 relations。指定 entity_name 時只回傳該節點及與其相連的 relations；不指定則回傳完整圖。對話開始時可用此工具取得跨專案背景知識。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
-                        'entity_name' => ['type' => 'string', 'description' => '篩選特定節點（選填）'],
+                        'entity_name' => ['type' => 'string', 'description' => '只看特定節點的子圖（選填）'],
                     ],
                 ],
             ],
             [
                 'name'        => 'search_nodes',
-                'description' => '依名稱、type 或 observation 內容搜尋節點。',
+                'description' => '以關鍵字搜尋節點，比對範圍包含節點名稱、type 及所有 observation 內容。適合在不確定節點名稱時先查詢再操作。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
-                        'query' => ['type' => 'string', 'description' => '搜尋關鍵字'],
+                        'query' => ['type' => 'string', 'description' => '搜尋關鍵字，部分比對'],
                     ],
                     'required' => ['query'],
                 ],

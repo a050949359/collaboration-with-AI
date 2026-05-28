@@ -134,7 +134,7 @@ class TaskMcpService implements McpToolServiceInterface
         return [
             [
                 'name'        => 'list_tasks',
-                'description' => '列出任務（含子項目）。可用 status、project 篩選。',
+                'description' => '列出所有任務（含子項目）。可依 status 或 project 篩選；不帶參數回傳全部。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -145,7 +145,7 @@ class TaskMcpService implements McpToolServiceInterface
             ],
             [
                 'name'        => 'get_task',
-                'description' => '取得單一任務詳情（含子項目）。',
+                'description' => '以 ID 取得單一任務及其所有子項目。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => ['id' => ['type' => 'integer', 'description' => '任務 ID']],
@@ -154,7 +154,7 @@ class TaskMcpService implements McpToolServiceInterface
             ],
             [
                 'name'        => 'create_task',
-                'description' => '新增任務。需要 API Key 認證。',
+                'description' => '建立新任務。可同時指定 project 歸屬，方便跨專案追蹤。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -169,7 +169,7 @@ class TaskMcpService implements McpToolServiceInterface
             ],
             [
                 'name'        => 'update_task',
-                'description' => '更新任務。需要 API Key 認證。',
+                'description' => '更新任務的標題、描述、project、狀態或排序。只傳要修改的欄位。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -185,7 +185,7 @@ class TaskMcpService implements McpToolServiceInterface
             ],
             [
                 'name'        => 'delete_task',
-                'description' => '刪除任務（含所有子項目）。需要 API Key 認證。',
+                'description' => '刪除指定任務及其所有子項目，操作不可復原。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => ['id' => ['type' => 'integer']],
@@ -194,7 +194,7 @@ class TaskMcpService implements McpToolServiceInterface
             ],
             [
                 'name'        => 'add_task_item',
-                'description' => '新增子項目到指定任務。需要 API Key 認證。',
+                'description' => '在指定任務下新增一個 checklist 子項目。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -207,7 +207,7 @@ class TaskMcpService implements McpToolServiceInterface
             ],
             [
                 'name'        => 'update_task_item',
-                'description' => '更新子項目內容或完成狀態。需要 API Key 認證。',
+                'description' => '更新子項目的文字內容或完成狀態（is_done）。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -221,7 +221,7 @@ class TaskMcpService implements McpToolServiceInterface
             ],
             [
                 'name'        => 'delete_task_item',
-                'description' => '刪除子項目。需要 API Key 認證。',
+                'description' => '刪除指定子項目。',
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => ['id' => ['type' => 'integer']],

@@ -64,6 +64,9 @@ export const routes = {
     // MCP Tasks
     mcp: () => `${WEB_PREFIX}/mcp`,
 
+    // Memory Graph
+    memory: () => `${WEB_PREFIX}/memory`,
+
     // Computer Vision Lab
     computerVision: () => `${WEB_PREFIX}/computer-vision`,
 
@@ -93,6 +96,7 @@ export const api = {
     },
 
     mcp: () => '/api/mcp',
+    memoryGraph: () => '/api/memory/graph',
 
     tasks: {
         index:       () => '/api/v1/tasks',
