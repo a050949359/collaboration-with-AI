@@ -153,7 +153,6 @@ function drawTopology(data: GraphData) {
     const hostNames = new Set(hosts.map(h => h.name));
     const deployedOn = data.relations.filter(r => r.relation_type === 'deployed_on');
     const hostHostRels = data.relations.filter(r => hostNames.has(r.from) && hostNames.has(r.to));
-    const projRels = data.relations.filter(r => !hostNames.has(r.from) && !hostNames.has(r.to) && r.relation_type !== 'deployed_on');
 
     // Group projects per host
     const hostProjects: Record<string, string[]> = {};
@@ -241,7 +240,7 @@ function drawTopology(data: GraphData) {
     const totalCompW = compRows.reduce((s, rows) => s + compW(rows) + COMP_GAP, 0) - COMP_GAP;
     let compX = (W - totalCompW) / 2;
 
-    compRows.forEach((rows, ci) => {
+    compRows.forEach((rows) => {
         const cw = compW(rows);
         const ch = compH(rows);
         let startY = (H - ch) / 2;
