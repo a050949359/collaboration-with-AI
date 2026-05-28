@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import { drag, forceCenter, forceLink, forceManyBody, forceSimulation, select, zoom, zoomIdentity } from 'd3';
+import { drag, forceCenter, forceLink, forceManyBody, forceSimulation, forceX, forceY, select, zoom, zoomIdentity } from 'd3';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
 
@@ -21,7 +21,7 @@ let graphData: GraphData = { entities: [], relations: [] };
 const TYPE_COLOR: Record<string, string> = {
     project: 'var(--binary-primary)',
     host:    '#a78bfa',
-    service: '#34d399',
+    service: '#22d3ee',
 };
 
 function typeColor(type: string) {
@@ -107,8 +107,10 @@ function drawGraph(data: GraphData) {
 
     simulation = forceSimulation(nodes)
         .force('link', forceLink(links).distance((d: GraphLink) => nodeRadius(d.source as GraphNode) + nodeRadius(d.target as GraphNode) + 80 + d.relation_types.length * 40).strength(0.4))
-        .force('charge', forceManyBody().strength(-1200))
+        .force('charge', forceManyBody().strength(-600))
         .force('center', forceCenter(W / 2, H / 2))
+        .force('x', forceX(W / 2).strength(0.05))
+        .force('y', forceY(H / 2).strength(0.05))
         .on('tick', () => {
             linkLine.each(function(d) {
                 const s = d.source as GraphNode, t = d.target as GraphNode;
