@@ -189,11 +189,11 @@ php artisan import:countries           # 寫入 DB
 {
   "mcpServers": {
     "collab-tasks": {
-      "url": "https://ohya.vip/api/mcp/task",
+      "url": "https://your-domain.com/api/mcp/task",
       "headers": { "Authorization": "Bearer <task-key>" }
     },
     "collab-memory": {
-      "url": "https://ohya.vip/api/mcp/memory",
+      "url": "https://your-domain.com/api/mcp/memory",
       "headers": { "Authorization": "Bearer <memory-write-key>" }
     }
   }
