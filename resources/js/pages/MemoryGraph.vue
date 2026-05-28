@@ -273,18 +273,6 @@ function drawTopology(data: GraphData) {
             .attr('font-size', 8).attr('fill', HOST_COLOR).attr('opacity', 0.7);
     });
 
-    // Project→Project arrows
-    projRels.forEach(r => {
-        const s = projPos[r.from], t = projPos[r.to];
-        if (!s || !t) return;
-        const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2 - 30;
-        g.append('path').attr('d', `M${s.x},${s.y} Q${mx},${my} ${t.x},${t.y}`)
-            .attr('fill', 'none').attr('stroke', PROJ_COLOR).attr('stroke-width', 1)
-            .attr('opacity', 0.5).attr('marker-end', 'url(#pa)');
-        g.append('text').text(r.relation_type)
-            .attr('x', mx).attr('y', my - 3)
-            .attr('text-anchor', 'middle').attr('font-size', 7).attr('fill', 'var(--binary-outline)');
-    });
 }
 
 // ── Data fetch ───────────────────────────────────────────────────
