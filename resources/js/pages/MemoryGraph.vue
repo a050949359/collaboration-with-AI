@@ -4,7 +4,6 @@ import { Head } from '@inertiajs/vue3';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
 
-interface Observation { content: string }
 interface Entity {
     id: number;
     name: string;
