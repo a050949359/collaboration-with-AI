@@ -19,7 +19,7 @@ class CreateUserApiKeyRequest extends FormRequest
     {
         return [
             'name'      => ['sometimes', 'string', 'max:64'],
-            'scopes'    => ['sometimes', 'nullable', 'array'],
+            'scopes'    => ['required', 'array', 'min:1'],
             'scopes.*'  => [Rule::enum(ApiKeyScope::class)],
             'publicKey' => ['required', 'string', 'starts_with:-----BEGIN'],
         ];
