@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use App\Enums\ArticleAspectRatio;
 use App\Services\AI\Contracts\GeneratesArticleImage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -11,10 +12,11 @@ use Illuminate\Support\Facades\Log;
 class VertexImageGenerationService implements GeneratesArticleImage
 {
     /** @var array<int, string> */
-    private array $allowedAspectRatios = ['1:1', '3:4', '4:3', '9:16', '16:9'];
+    private array $allowedAspectRatios;
 
     public function __construct(private readonly GcpAccessTokenProvider $tokenProvider)
     {
+        $this->allowedAspectRatios = array_column(ArticleAspectRatio::cases(), 'value');
     }
 
     public function generate(string $prompt, string $directory = 'articles', string $aspectRatio = '1:1'): array
@@ -36,7 +38,7 @@ class VertexImageGenerationService implements GeneratesArticleImage
         );
 
         $prompt = $this->sanitizeUtf8($prompt);
-        $aspectRatio = in_array($aspectRatio, $this->allowedAspectRatios, true) ? $aspectRatio : '1:1';
+        $aspectRatio = in_array($aspectRatio, $this->allowedAspectRatios, true) ? $aspectRatio : ArticleAspectRatio::R1x1->value;
 
         $payload = [
             'instances' => [

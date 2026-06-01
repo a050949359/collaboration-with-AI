@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Travel;
 
+use App\Enums\PassengerFilter;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class PassengerRequest extends FormRequest
 {
@@ -23,7 +25,7 @@ class PassengerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'filter' => ['nullable', 'string', 'in:no_booking,companion_only,booker'],
+            'filter' => ['nullable', Rule::enum(PassengerFilter::class)],
         ];
     }
 }

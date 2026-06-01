@@ -62,8 +62,8 @@ return [
             'trim',
             explode(',', (string) env('GEMINI_CHAT_MODELS', '')),
         ))),
-        'story_model'       => env('GEMINI_STORY_MODEL', 'gemma-4-26b-a4b-it'),
-        'story_state_model' => env('GEMINI_STORY_STATE_MODEL', 'gemma-4-26b-a4b-it'),
+        'story_model'       => env('GEMINI_STORY_MODEL', 'gemini-2.5-flash'),
+        'story_state_model' => env('GEMINI_STORY_STATE_MODEL', 'gemini-2.5-flash'),
     ],
 
     'turnstile' => [

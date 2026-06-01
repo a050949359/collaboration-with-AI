@@ -517,7 +517,7 @@ export default {
         passenger: {
             filter_all: 'All',
             filter_booker: 'Booker',
-            filter_companion: 'Companion',
+            filter_companion_only: 'Companion',
             filter_no_booking: 'No Booking',
             random_pick: 'Random Pick',
             empty_hint: 'Select a filter then click "Random Pick"',
@@ -623,7 +623,7 @@ export default {
             label_arrive_time: 'Arrival',
             search_airport: 'Search airport…',
             cabin_economy: 'Economy',
-            cabin_premium: 'Premium Economy',
+            cabin_premium_economy: 'Premium Economy',
             cabin_business: 'Business',
             cabin_first: 'First',
             adding: 'Adding…',

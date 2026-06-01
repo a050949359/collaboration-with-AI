@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -16,33 +16,13 @@ import type {ArticleDetail} from '@/lib/articles-api';
 import { routes } from '@/lib/routes';
 import { useAuth } from '@/composables/useAuth';
 
-// ── Enums（與後端 PHP Enum 同步） ────────────────────────
-const TOPICS = [
-    { value: 'travel' },
-    { value: 'food' },
-    { value: 'technology' },
-    { value: 'lifestyle' },
-    { value: 'nature' },
-    { value: 'culture' },
-    { value: 'business' },
-    { value: 'health' },
-] as const;
+// ── Enums（從後端 pageProps 注入） ────────────────────────
+const TOPICS     = computed(() => page.props.articleTopics);
+const LANGUAGES  = computed(() => page.props.articleLanguages);
+const STYLES     = computed(() => page.props.articleStyles);
 
-const LANGUAGES = [
-    { value: 'zh-TW' },
-    { value: 'zh-CN' },
-    { value: 'en' },
-    { value: 'ja' },
-] as const;
-
-const STYLES = [
-    { value: 'practical' },
-    { value: 'narrative' },
-    { value: 'journalistic' },
-    { value: 'casual' },
-] as const;
-
-const ASPECT_RATIOS = ['16:9', '1:1', '3:4', '4:3', '9:16'] as const;
+const page = usePage<{ articleAspectRatios: string[]; articleTopics: string[]; articleLanguages: string[]; articleStyles: string[] }>();
+const ASPECT_RATIOS = computed(() => page.props.articleAspectRatios);
 const PROMPT_MAX = 300;
 const { t } = useI18n();
 
@@ -288,19 +268,19 @@ onUnmounted(() => stopPolling());
                             <div>
                                 <label class="binary-label mb-1 block text-[10px] uppercase text-[var(--binary-outline)]">{{ t('articles.generate.topic') }}</label>
                                 <select v-model="topic" class="binary-input w-full">
-                                    <option v-for="topicOption in TOPICS" :key="topicOption.value" :value="topicOption.value">{{ t(`articles.generate.options.topics.${topicOption.value}`) }}</option>
+                                    <option v-for="v in TOPICS" :key="v" :value="v">{{ t(`articles.generate.options.topics.${v}`) }}</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="binary-label mb-1 block text-[10px] uppercase text-[var(--binary-outline)]">{{ t('articles.generate.language') }}</label>
                                 <select v-model="language" class="binary-input w-full">
-                                    <option v-for="languageOption in LANGUAGES" :key="languageOption.value" :value="languageOption.value">{{ t(`articles.generate.options.languages.${languageOption.value}`) }}</option>
+                                    <option v-for="v in LANGUAGES" :key="v" :value="v">{{ t(`articles.generate.options.languages.${v}`) }}</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="binary-label mb-1 block text-[10px] uppercase text-[var(--binary-outline)]">{{ t('articles.generate.style') }}</label>
                                 <select v-model="style" class="binary-input w-full">
-                                    <option v-for="styleOption in STYLES" :key="styleOption.value" :value="styleOption.value">{{ t(`articles.generate.options.styles.${styleOption.value}`) }}</option>
+                                    <option v-for="v in STYLES" :key="v" :value="v">{{ t(`articles.generate.options.styles.${v}`) }}</option>
                                 </select>
                             </div>
                         </div>

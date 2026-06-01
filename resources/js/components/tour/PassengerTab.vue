@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { tourFetch, type Passenger } from '@/lib/tour-api';
 
 defineProps<{ active: boolean }>();
 
 const { t } = useI18n();
+const page = usePage<{ passengerFilters: string[] }>();
 
-const PASSENGER_FILTERS = [
+const PASSENGER_FILTERS = computed(() => [
     { value: '',               labelKey: 'tour_playground.passenger.filter_all' },
-    { value: 'booker',         labelKey: 'tour_playground.passenger.filter_booker' },
-    { value: 'companion_only', labelKey: 'tour_playground.passenger.filter_companion' },
-    { value: 'no_booking',     labelKey: 'tour_playground.passenger.filter_no_booking' },
-];
+    ...page.props.passengerFilters.map(v => ({
+        value: v,
+        labelKey: `tour_playground.passenger.filter_${v}`,
+    })),
+]);
 
 const passengerFilter = ref<string>('booker');
 const passenger = ref<Passenger | null>(null);

@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Story;
 
+use App\Enums\StoryGenre;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class GenerateSetupRequest extends FormRequest
 {
@@ -16,7 +18,7 @@ class GenerateSetupRequest extends FormRequest
     {
         return [
             'keywords' => ['required', 'string', 'max:200'],
-            'genre'    => ['nullable', 'string', 'in:fantasy,mystery,scifi,modern'],
+            'genre'    => ['nullable', Rule::enum(StoryGenre::class)],
         ];
     }
 }

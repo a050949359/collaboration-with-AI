@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AppLayout from '../layouts/AppLayout.vue';
 import { useAuth } from '../composables/useAuth';
@@ -8,10 +8,11 @@ import { api } from '../lib/routes';
 
 const { t } = useI18n();
 const { user } = useAuth();
+const page = usePage<{ taskStatuses: string[] }>();
 
 const isOwner = (task: { created_by: number }) => !!user.value && user.value.id === task.created_by;
 
-type TaskStatus = 'todo' | 'in_progress' | 'done';
+type TaskStatus = string;
 
 interface TaskItem {
     id: number;
@@ -37,7 +38,8 @@ const expandedIds = ref<Set<number>>(new Set());
 
 // 編輯 task
 const editingId = ref<number | null>(null);
-const editForm = ref({ title: '', description: '', status: 'todo' as TaskStatus });
+const taskStatuses = computed(() => page.props.taskStatuses);
+const editForm = ref({ title: '', description: '', status: taskStatuses.value[0] as TaskStatus });
 
 
 const statusLabels = computed<Record<TaskStatus, string>>(() => ({
@@ -52,11 +54,9 @@ const statusColors: Record<TaskStatus, string> = {
     done: 'text-green-400 border-green-500/30',
 };
 
-const counts = computed(() => ({
-    todo: tasks.value.filter(t => t.status === 'todo').length,
-    in_progress: tasks.value.filter(t => t.status === 'in_progress').length,
-    done: tasks.value.filter(t => t.status === 'done').length,
-}));
+const counts = computed(() =>
+    Object.fromEntries(taskStatuses.value.map(s => [s, tasks.value.filter(t => t.status === s).length]))
+);
 
 async function fetchTasks() {
     loading.value = true;

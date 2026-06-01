@@ -2,6 +2,7 @@
 
 namespace App\Models\Story;
 
+use App\Enums\StoryCharacterType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,6 +23,7 @@ class StoryCharacter extends Model
     protected $casts = [
         'model_config' => 'array',
         'is_narrator'  => 'boolean',
+        'type'         => StoryCharacterType::class,
     ];
 
     public function session(): BelongsTo

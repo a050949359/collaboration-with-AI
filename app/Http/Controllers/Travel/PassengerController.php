@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Travel;
 
-use App\Models\Travel\Passenger;
+use App\Enums\PassengerFilter;
+use App\Http\Controllers\Controller;
 use App\Models\Travel\Booking;
 use App\Models\Travel\BookingCompanion;
-use App\Http\Controllers\Controller;
+use App\Models\Travel\Passenger;
 use App\Http\Requests\Travel\PassengerRequest;
 use Illuminate\Http\Request;
 
@@ -18,14 +19,14 @@ class PassengerController extends Controller
         $filter = $validated['filter'] ?? null;
 
         $passengers = Passenger::query()
-        ->when($filter === 'no_booking', fn($q) =>
+        ->when($filter === PassengerFilter::NoBooking->value, fn($q) =>
             $q->whereDoesntHave('bookings')->whereDoesntHave('companionOf')
         )
-        ->when($filter === 'companion_only', fn($q) =>
+        ->when($filter === PassengerFilter::CompanionOnly->value, fn($q) =>
             $q->whereDoesntHave('bookings')->whereHas('companionOf')
             ->with('companionOf.tour')
         )
-        ->when($filter === 'booker', fn($q) =>
+        ->when($filter === PassengerFilter::Booker->value, fn($q) =>
             $q->whereHas('bookings')
             ->with(['bookings.payments', 'bookings.tour'])
         )
@@ -48,7 +49,7 @@ class PassengerController extends Controller
         $filter = $request->validated()['filter'] ?? null;
 
         switch ($filter) {
-            case 'booker':
+            case PassengerFilter::Booker->value:
                 $count = Booking::distinct('passenger_id')
                     ->count('passenger_id');
 
@@ -63,7 +64,7 @@ class PassengerController extends Controller
                     ->find($passengerId);
                 break;
 
-            case 'companion_only':
+            case PassengerFilter::CompanionOnly->value:
                 $count = BookingCompanion::distinct('passenger_id')
                     ->count('passenger_id');
 
@@ -77,7 +78,7 @@ class PassengerController extends Controller
                 $passenger = Passenger::with('companionOf.tour')->find($passengerId);
                 break;
 
-            case 'no_booking':
+            case PassengerFilter::NoBooking->value:
                 $passenger = Passenger::query()
                     ->whereNotIn('id', Booking::select('passenger_id'))
                     ->whereNotIn('id', BookingCompanion::select('passenger_id'))

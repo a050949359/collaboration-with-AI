@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { ref, reactive, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AirportGlobe from '../components/airports/AirportGlobe.vue';
 import AppLayout from '../layouts/AppLayout.vue';
 
 const { t } = useI18n();
+const page = usePage<{ airportTypes: string[] }>();
 
 // ── Types ─────────────────────────────────────────────────
 interface AirportLocation {
@@ -65,10 +66,7 @@ const statsError = ref('');
 
 const activeTab = ref<'search' | 'stats' | 'globe'>('search');
 
-const typeKeys = [
-    'large_airport', 'medium_airport', 'small_airport',
-    'heliport', 'seaplane_base', 'closed',
-] as const;
+const typeKeys = computed(() => page.props.airportTypes);
 
 const continentKeys = ['AF', 'AN', 'AS', 'EU', 'NA', 'OC', 'SA'] as const;
 

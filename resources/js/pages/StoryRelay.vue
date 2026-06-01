@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -7,13 +7,17 @@ import { useI18n } from 'vue-i18n';
 import { useAuth } from '@/composables/useAuth';
 import { api } from '@/lib/routes';
 
+const page = usePage<{ storyGenres: string[]; contentRatings: string[] }>();
+const storyGenres    = computed(() => page.props.storyGenres);
+const contentRatings = computed(() => page.props.contentRatings);
+
 // ── Types ─────────────────────────────────────────────────
 
 type SessionListItem = {
     id: number;
     title: string;
-    status: 'active' | 'paused' | 'completed';
-    content_rating: 'general' | 'mature';
+    status: string;
+    content_rating: string;
     next_advance_at: string | null;
     updated_at: string;
 };
@@ -22,7 +26,7 @@ type StoryCharacter = {
     id: number;
     name: string;
     persona: string;
-    type: 'llm' | 'player' | 'npc';
+    type: string;
     status: 'active' | 'unconscious' | 'captured' | 'dead';
     turn_order: number;
 };
@@ -109,12 +113,12 @@ const error       = ref('');
 // Setup flow
 const setupStep    = ref<0 | 1 | 2>(0);
 const keywords     = ref('');
-const genre        = ref<'fantasy' | 'mystery' | 'scifi' | 'modern'>('fantasy');
+const genre        = ref<string>(storyGenres.value[0]);
 const setupDraft   = ref<SetupDraft | null>(null);
 const setupTitle   = ref('');
 const setupInterval     = ref(30);
 const setupRoundsPerAdvance = ref(1);
-const setupRating       = ref<'general' | 'mature'>('general');
+const setupRating       = ref<string>(contentRatings.value[0]);
 const setupLoading = ref(false);
 const setupError   = ref('');
 
@@ -135,7 +139,7 @@ const charLoading     = ref(false);
 const charSaving      = ref(false);
 const charError       = ref('');
 const charGenDesc     = ref('');
-const charGenGenre    = ref<'fantasy' | 'mystery' | 'scifi' | 'modern'>('fantasy');
+const charGenGenre    = ref<string>(storyGenres.value[0]);
 const charRefineNotes = ref('');
 const charImgLoading  = ref(false);
 
@@ -255,7 +259,7 @@ function openSetup() {
     setupLoading.value = false;
     setupInterval.value = 30;
     setupRoundsPerAdvance.value = 1;
-    setupRating.value = 'general';
+    setupRating.value = contentRatings.value[0];
     stopPolling();
     stopCountdown();
     selected.value = null;
@@ -554,12 +558,9 @@ const statusColor: Record<string, string> = {
     completed: 'text-[var(--binary-text-muted)]',
 };
 
-const genreOptions = computed(() => [
-    { value: 'fantasy', label: t('story_relay.genre_fantasy') },
-    { value: 'mystery', label: t('story_relay.genre_mystery') },
-    { value: 'scifi',   label: t('story_relay.genre_scifi') },
-    { value: 'modern',  label: t('story_relay.genre_modern') },
-]);
+const genreOptions = computed(() =>
+    storyGenres.value.map(v => ({ value: v, label: t(`story_relay.genre_${v}`) }))
+);
 
 function isPlayerTurn(): boolean {
     return (
@@ -746,11 +747,13 @@ onMounted(() => { loadSessions(); loadCharacters(); });
                             <div>
                                 <p class="binary-label mb-2 text-[10px] uppercase text-[var(--binary-outline)]">{{ t('story_relay.setup_rating') }}</p>
                                 <div class="flex gap-3">
-                                    <label class="flex cursor-pointer items-center gap-2 text-xs text-[var(--binary-text)]">
-                                        <input v-model="setupRating" type="radio" value="general" class="accent-[var(--binary-primary)]" /> {{ t('story_relay.rating_general') }}
-                                    </label>
-                                    <label class="flex cursor-pointer items-center gap-2 text-xs text-[var(--binary-text-muted)]">
-                                        <input v-model="setupRating" type="radio" value="mature" class="accent-[var(--binary-primary)]" /> {{ t('story_relay.rating_mature') }}
+                                    <label
+                                        v-for="r in contentRatings"
+                                        :key="r"
+                                        class="flex cursor-pointer items-center gap-2 text-xs"
+                                        :class="r === contentRatings[0] ? 'text-[var(--binary-text)]' : 'text-[var(--binary-text-muted)]'"
+                                    >
+                                        <input v-model="setupRating" type="radio" :value="r" class="accent-[var(--binary-primary)]" /> {{ t(`story_relay.rating_${r}`) }}
                                     </label>
                                 </div>
                             </div>

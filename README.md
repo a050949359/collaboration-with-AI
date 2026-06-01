@@ -30,7 +30,7 @@
 
 ### Lab
 - **MCP（Model Context Protocol）**：JSON-RPC 2.0 endpoint，供 AI assistant（Claude Desktop 等）以 API Key 呼叫；以任務管理（Task CRUD + 子項目）為操作目標，共 8 個工具
-- **ws-lab**：Go WebSocket server 管理介面，多房間架構，含即時串流
+- **ws-lab**：Go WebSocket server 管理介面，多房間架構，含即時串流（生產環境需 nginx 將 `/ws-lab` proxy 到 Go binary，本地開發無 nginx 時 WebSocket 無法連線）
 - **Computer Vision**：WASM 邊緣偵測（OpenCV）
 - **mini-orch**：輕量壓測 / 任務排程觀測介面
 - **故事接龍**：多角色 LLM 輪流推進，含世界狀態、道具系統、定時排程

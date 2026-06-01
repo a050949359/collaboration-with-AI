@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\ArticleAspectRatio;
 use App\Enums\ArticleTopic;
 use App\Models\Article\Article;
 use App\Services\AI\Contracts\GeneratesArticleImage;
@@ -24,7 +25,7 @@ class GenerateArticleImageJob implements ShouldQueue, ShouldBeUnique
 
     public function __construct(
         public int $articleId,
-        public string $aspectRatio = '16:9',
+        public string $aspectRatio = ArticleAspectRatio::R16x9->value,
     ) {
     }
 

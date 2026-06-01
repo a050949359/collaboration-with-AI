@@ -2,6 +2,8 @@
 
 namespace App\Models\Story;
 
+use App\Enums\StoryContentRating;
+use App\Enums\StorySessionStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,8 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int              $advance_interval_minutes
  * @property int              $rounds_per_advance
  * @property int              $rounds_without_progress
- * @property string           $status
- * @property string           $content_rating
+ * @property StorySessionStatus $status
+ * @property StoryContentRating $content_rating
  * @property \Carbon\Carbon|null $next_advance_at
  * @property bool             $needs_event
  * @property string|null      $pending_scene_location
@@ -45,10 +47,12 @@ class StorySession extends Model
     ];
 
     protected $casts = [
-        'setting'          => 'array',
+        'setting'        => 'array',
         'next_advance_at'  => 'datetime',
         'needs_event'      => 'boolean',
         'needs_complete'   => 'boolean',
+        'content_rating' => StoryContentRating::class,
+        'status'         => StorySessionStatus::class,
     ];
 
     public function characters(): HasMany
@@ -89,7 +93,7 @@ class StorySession extends Model
     public function advanceToNextCharacter(): ?StoryCharacter
     {
         $activeCharacters = $this->characters()
-            ->where('status', 'active')
+            ->where('status', StorySessionStatus::Active)
             ->orderBy('turn_order')
             ->get();
 

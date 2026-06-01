@@ -2,6 +2,7 @@
 
 namespace App\Services\Task;
 
+use App\Enums\TaskStatus;
 use App\Models\Task;
 use App\Models\TaskItem;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -32,7 +33,7 @@ class TaskService
             'title'       => $data['title'],
             'description' => $data['description'] ?? null,
             'project'     => $data['project'] ?? null,
-            'status'      => $data['status'] ?? 'todo',
+            'status'      => $data['status'] ?? TaskStatus::Todo,
             'sort'        => $data['sort'] ?? 0,
         ]);
         $task->created_by = $userId;

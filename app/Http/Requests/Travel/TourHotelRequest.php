@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Travel;
 
+use App\Enums\RoomType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class TourHotelRequest extends FormRequest
 {
@@ -26,7 +28,7 @@ class TourHotelRequest extends FormRequest
             'hotel_name'          => ['required', 'string', 'max:255'],
             'check_in_date'       => ['required', 'date'],
             'check_out_date'      => ['required', 'date', 'after:check_in_date'],
-            'room_type'           => ['required', 'string', 'in:single,double,twin,suite,deluxe'],
+            'room_type'           => ['required', Rule::enum(RoomType::class)],
             'number_of_rooms'     => ['required', 'integer', 'min:1'],
             'cost_price_per_night'=> ['required', 'numeric', 'min:0'],
             'remarks'             => ['nullable', 'string'],

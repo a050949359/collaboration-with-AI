@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Aviation;
 
+use App\Enums\AirportType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Aviation\AirportResource;
 use App\Models\Aviation\Airports;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class NearbyAirportController extends Controller
 {
@@ -19,7 +21,7 @@ class NearbyAirportController extends Controller
             'lat'    => ['required', 'numeric', 'between:-90,90'],
             'lng'    => ['required', 'numeric', 'between:-180,180'],
             'radius' => ['nullable', 'numeric', 'min:1', 'max:500'],
-            'type'   => ['nullable', 'in:large_airport,medium_airport,small_airport,heliport,seaplane_base'],
+            'type'   => ['nullable', Rule::in(AirportType::searchable())],
             'limit'  => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 

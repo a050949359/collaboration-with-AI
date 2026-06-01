@@ -73,7 +73,7 @@ class GeminiService
 
             $response = Http::withQueryParameters(['key' => $this->apiKey])
                 ->acceptJson()
-                ->timeout(90)
+                ->timeout(180)
                 ->post($this->endpointForModel($model), $body);
 
             Log::debug('GeminiService response', [

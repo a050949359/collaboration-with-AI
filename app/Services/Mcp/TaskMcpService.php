@@ -2,6 +2,7 @@
 
 namespace App\Services\Mcp;
 
+use App\Enums\TaskStatus;
 use App\Models\TaskItem;
 use App\Services\Task\TaskService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -129,7 +130,7 @@ class TaskMcpService implements McpToolServiceInterface
                 'inputSchema' => [
                     'type'       => 'object',
                     'properties' => [
-                        'status'  => ['type' => 'string', 'enum' => ['todo', 'in_progress', 'done'], 'description' => '篩選狀態（選填）'],
+                        'status'  => ['type' => 'string', 'enum' => array_column(TaskStatus::cases(), 'value'), 'description' => '篩選狀態（選填）'],
                         'project' => ['type' => 'string', 'description' => '篩選專案（選填）'],
                     ],
                 ],
@@ -152,7 +153,7 @@ class TaskMcpService implements McpToolServiceInterface
                         'title'       => ['type' => 'string'],
                         'description' => ['type' => 'string'],
                         'project'     => ['type' => 'string', 'description' => '所屬專案（選填）'],
-                        'status'      => ['type' => 'string', 'enum' => ['todo', 'in_progress', 'done']],
+                        'status'      => ['type' => 'string', 'enum' => array_column(TaskStatus::cases(), 'value')],
                         'sort'        => ['type' => 'integer'],
                     ],
                     'required' => ['title'],
@@ -168,7 +169,7 @@ class TaskMcpService implements McpToolServiceInterface
                         'title'       => ['type' => 'string'],
                         'description' => ['type' => 'string'],
                         'project'     => ['type' => 'string'],
-                        'status'      => ['type' => 'string', 'enum' => ['todo', 'in_progress', 'done']],
+                        'status'      => ['type' => 'string', 'enum' => array_column(TaskStatus::cases(), 'value')],
                         'sort'        => ['type' => 'integer'],
                     ],
                     'required' => ['id'],

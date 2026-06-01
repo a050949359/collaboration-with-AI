@@ -2,6 +2,8 @@
 
 namespace App\Jobs\Story;
 
+use App\Enums\StoryCharacterType;
+use App\Enums\StorySessionStatus;
 use App\Models\Story\StorySegment;
 use App\Models\Story\StorySession;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -22,30 +24,30 @@ class StoryOrchestrateJob implements ShouldQueue
     {
         $session = StorySession::find($this->sessionId);
 
-        if ($session === null || $session->status !== 'active') {
+        if ($session === null || $session->status !== StorySessionStatus::Active) {
             return;
         }
 
         // Use the most recent character segment to determine starting point.
         // This handles both normal rounds and resume-after-failure correctly.
         $lastSegment  = StorySegment::where('session_id', $session->id)
-            ->whereHas('character', fn($q) => $q->where('type', 'llm')->where('is_narrator', true))
+            ->whereHas('character', fn($q) => $q->where('type', StoryCharacterType::Llm)->where('is_narrator', true))
             ->orderByDesc('turn_number')
             ->with('character')
             ->first();
         $currentOrder = $lastSegment?->character?->turn_order ?? -1;
 
         // Active LLM characters after current turn_order, wrapping around
-        $after  = $session->characters()->where('status', 'active')->where('type', 'llm')->where('is_narrator', true)
+        $after  = $session->characters()->where('status', 'active')->where('type', StoryCharacterType::Llm)->where('is_narrator', true)
             ->orderBy('turn_order')->where('turn_order', '>', $currentOrder)->get();
-        $before = $session->characters()->where('status', 'active')->where('type', 'llm')->where('is_narrator', true)
+        $before = $session->characters()->where('status', 'active')->where('type', StoryCharacterType::Llm)->where('is_narrator', true)
             ->orderBy('turn_order')->where('turn_order', '<=', $currentOrder)->get();
 
         $narrators = $after->merge($before);
 
         if ($narrators->isEmpty()) {
             Log::warning("StoryOrchestrate: no active LLM characters in session {$session->id}, pausing");
-            $session->update(['status' => 'paused']);
+            $session->update(['status' => StorySessionStatus::Paused]);
             return;
         }
 

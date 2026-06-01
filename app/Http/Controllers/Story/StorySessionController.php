@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Story;
 
+use App\Enums\StoryCharacterType;
+use App\Enums\StoryContentRating;
+use App\Enums\StorySessionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Story\CreateSessionRequest;
 use App\Http\Requests\Story\PlayerTurnRequest;
@@ -13,6 +16,7 @@ use App\Models\Story\StorySession;
 use App\Services\Story\GeminiStoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class StorySessionController extends Controller
@@ -30,7 +34,7 @@ class StorySessionController extends Controller
 
     public function store(CreateSessionRequest $request): JsonResponse
     {
-        if (StorySession::where('status', 'active')->exists()) {
+        if (StorySession::where('status', StorySessionStatus::Active)->exists()) {
             throw ValidationException::withMessages([
                 'status' => ['已有一個進行中的故事，請先暫停或完成後再建立新故事。'],
             ]);
@@ -42,7 +46,7 @@ class StorySessionController extends Controller
             'world_state'              => $request->input('setting.opening', ''),
             'advance_interval_minutes' => $request->integer('advance_interval_minutes', 30),
             'rounds_per_advance'       => $request->integer('rounds_per_advance', 1),
-            'content_rating'           => $request->string('content_rating', 'general')->toString(),
+            'content_rating'           => $request->string('content_rating', StoryContentRating::General->value)->toString(),
         ]);
 
         foreach ($request->array('characters') as $index => $char) {
@@ -50,7 +54,7 @@ class StorySessionController extends Controller
                 'session_id'   => $session->id,
                 'name'         => $char['name'],
                 'persona'      => $char['persona'],
-                'type'         => $char['type'] ?? 'llm',
+                'type'         => $char['type'] ?? StoryCharacterType::Llm->value,
                 'model_config' => $char['model_config'] ?? null,
                 'turn_order'   => $index,
                 'is_narrator'  => $char['is_narrator'] ?? true,
@@ -98,29 +102,29 @@ class StorySessionController extends Controller
     public function updateStatus(Request $request, StorySession $session): JsonResponse
     {
         $request->validate([
-            'status' => ['required', 'string', 'in:active,paused,completed'],
+            'status' => ['required', Rule::enum(StorySessionStatus::class)],
         ]);
 
-        $newStatus = $request->string('status')->toString();
+        $newStatus = StorySessionStatus::from($request->string('status')->toString());
 
-        if ($newStatus === 'active' && StorySession::where('status', 'active')->where('id', '!=', $session->id)->exists()) {
+        if ($newStatus === StorySessionStatus::Active && StorySession::where('status', StorySessionStatus::Active)->where('id', '!=', $session->id)->exists()) {
             throw ValidationException::withMessages([
                 'status' => ['已有一個進行中的故事。'],
             ]);
         }
 
-        if ($newStatus === 'active' && $session->status === 'paused') {
+        if ($newStatus === StorySessionStatus::Active && $session->status === StorySessionStatus::Paused) {
             $session->update([
-                'status'          => 'active',
+                'status'          => StorySessionStatus::Active,
                 'next_advance_at' => now()->addMinutes($session->advance_interval_minutes),
             ]);
 
             StoryOrchestrateJob::dispatch($session->id);
-        } elseif ($newStatus === 'completed' && in_array($session->status, ['active', 'paused'], true)) {
+        } elseif ($newStatus === StorySessionStatus::Completed && in_array($session->status, [StorySessionStatus::Active, StorySessionStatus::Paused], true)) {
             $currentMaxTurn = $session->segments()->max('turn_number') ?? 0;
 
             $session->update([
-                'status'                 => 'active',
+                'status'                 => StorySessionStatus::Active,
                 'needs_complete'         => true,
                 'complete_deadline_turn' => $currentMaxTurn + 20,
                 'next_advance_at'        => now()->addMinutes($session->advance_interval_minutes),
@@ -136,13 +140,13 @@ class StorySessionController extends Controller
 
     public function playerTurn(PlayerTurnRequest $request, StorySession $session): JsonResponse
     {
-        if ($session->status !== 'active') {
+        if ($session->status !== StorySessionStatus::Active) {
             return response()->json(['message' => '故事目前不在進行狀態。'], 422);
         }
 
         $current = $session->currentCharacter;
 
-        if ($current === null || $current->type !== 'player') {
+        if ($current === null || $current->type !== StoryCharacterType::Player) {
             return response()->json(['message' => '目前輪到的角色不是玩家角色。'], 422);
         }
 

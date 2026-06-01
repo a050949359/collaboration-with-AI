@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Travel;
 
+use App\Enums\CabinClass;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class TourFlightRequest extends FormRequest
 {
@@ -24,7 +26,7 @@ class TourFlightRequest extends FormRequest
     {
         return [
             'flight_number'          => ['required', 'string', 'max:20'],
-            'cabin_class'            => ['required', 'string', 'in:economy,premium_economy,business,first'],
+            'cabin_class'            => ['required', Rule::enum(CabinClass::class)],
             'origin_airport_id'      => ['required', 'integer', 'exists:airports,id'],
             'destination_airport_id' => ['required', 'integer', 'exists:airports,id', 'different:origin_airport_id'],
             'departure_time'         => ['required', 'date'],

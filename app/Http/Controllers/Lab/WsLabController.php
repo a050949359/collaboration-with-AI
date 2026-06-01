@@ -83,12 +83,21 @@ class WsLabController extends Controller
 
         exec($cmd);
 
-        // wait briefly for process to start and write PID
-        usleep(300_000);
+        // poll up to 3s for PID file
+        $pid = null;
+        for ($i = 0; $i < 10; $i++) {
+            usleep(300_000);
+            $pid = $this->readPid();
+            if ($pid !== null) break;
+        }
+
+        if ($pid === null) {
+            return response()->json(['message' => 'start failed: process did not write PID'], 500);
+        }
 
         return response()->json([
             'message' => 'started',
-            'pid'     => $this->readPid(),
+            'pid'     => $pid,
             'ws_addr' => $this->wsAddr,
         ]);
     }

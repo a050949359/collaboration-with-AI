@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Task;
 
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Task;
 use App\Services\Task\TaskService;
@@ -9,6 +10,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
 {
@@ -29,7 +31,7 @@ class TaskController extends Controller
         $data = $request->validate([
             'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
-            'status'      => 'in:todo,in_progress,done',
+            'status'      => ['nullable', Rule::enum(TaskStatus::class)],
             'sort'        => 'integer',
         ]);
         $task = $this->service->createTask($data, Auth::id());
@@ -41,7 +43,7 @@ class TaskController extends Controller
         $data = $request->validate([
             'title'       => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'status'      => 'sometimes|in:todo,in_progress,done',
+            'status'      => ['sometimes', Rule::enum(TaskStatus::class)],
             'sort'        => 'sometimes|integer',
         ]);
         try {

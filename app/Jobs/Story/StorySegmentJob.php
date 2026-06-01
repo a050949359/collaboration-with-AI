@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Story;
 
+use App\Enums\StorySessionStatus;
 use App\Models\Story\StoryCharacter;
 use App\Models\Story\StoryScene;
 use App\Models\Story\StorySegment;
@@ -28,7 +29,7 @@ class StorySegmentJob implements ShouldQueue
         $session   = StorySession::with(['items.holder'])->find($this->sessionId);
         $character = StoryCharacter::find($this->characterId);
 
-        if ($session === null || $session->status !== 'active' || $character === null || $character->status !== 'active') {
+        if ($session === null || $session->status !== StorySessionStatus::Active || $character === null || $character->status !== 'active') {
             return;
         }
 

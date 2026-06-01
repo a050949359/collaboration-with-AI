@@ -517,7 +517,7 @@ export default {
         passenger: {
             filter_all: '全部',
             filter_booker: '訂購人',
-            filter_companion: '同行人',
+            filter_companion_only: '同行人',
             filter_no_booking: '無關聯',
             random_pick: '隨機挑選',
             empty_hint: '選擇類型後點「隨機挑選」',
@@ -623,7 +623,7 @@ export default {
             label_arrive_time: '抵達時間',
             search_airport: '搜尋機場…',
             cabin_economy: '經濟艙',
-            cabin_premium: '豪華經濟艙',
+            cabin_premium_economy: '豪華經濟艙',
             cabin_business: '商務艙',
             cabin_first: '頭等艙',
             adding: '新增中⋯',

@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Article;
 
+use App\Enums\ArticleAspectRatio;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class GenerateArticleImageRequest extends FormRequest
 {
@@ -18,7 +20,7 @@ class GenerateArticleImageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'aspect_ratio' => ['nullable', 'in:1:1,3:4,4:3,9:16,16:9'],
+            'aspect_ratio' => ['nullable', Rule::enum(ArticleAspectRatio::class)],
         ];
     }
 }

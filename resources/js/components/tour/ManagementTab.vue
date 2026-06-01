@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { api } from '@/lib/routes';
 import {
@@ -8,6 +9,9 @@ import {
 } from '@/lib/tour-api';
 
 const props = defineProps<{ active: boolean }>();
+const page = usePage<{ cabinClasses: string[]; roomTypes: string[] }>();
+const cabinClasses = computed(() => page.props.cabinClasses);
+const roomTypes    = computed(() => page.props.roomTypes);
 
 const { t } = useI18n();
 
@@ -175,8 +179,8 @@ function cancelTourForm() {
     tourFormSuccess.value = '';
     editingTourFlights.value = [];
     editingTourHotels.value = [];
-    flightForm.value = { flight_number: '', cabin_class: 'economy', origin_airport_id: 0, destination_airport_id: 0, departure_time: '', arrival_time: '', cost_price: 0, remarks: '' };
-    hotelForm.value = { hotel_name: '', check_in_date: '', check_out_date: '', room_type: 'twin', number_of_rooms: 1, cost_price_per_night: 0, remarks: '' };
+    flightForm.value = { flight_number: '', cabin_class: cabinClasses.value[0], origin_airport_id: 0, destination_airport_id: 0, departure_time: '', arrival_time: '', cost_price: 0, remarks: '' };
+    hotelForm.value = { hotel_name: '', check_in_date: '', check_out_date: '', room_type: roomTypes.value[0], number_of_rooms: 1, cost_price_per_night: 0, remarks: '' };
     originQuery.value = ''; destQuery.value = '';
 }
 
@@ -206,7 +210,7 @@ async function submitTour() {
 
 const editingTourFlights = ref<TourFlight[]>([]);
 const flightsLoading = ref(false);
-const flightForm = ref({ flight_number: '', cabin_class: 'economy', origin_airport_id: 0, destination_airport_id: 0, departure_time: '', arrival_time: '', cost_price: 0, remarks: '' });
+const flightForm = ref({ flight_number: '', cabin_class: cabinClasses.value[0], origin_airport_id: 0, destination_airport_id: 0, departure_time: '', arrival_time: '', cost_price: 0, remarks: '' });
 const flightFormError = ref('');
 const flightSubmitting = ref(false);
 
@@ -266,7 +270,7 @@ async function addFlight() {
     flightFormError.value = '';
     try {
         await tourFetch(`/${editingTour.value.id}/flights`, { method: 'POST', body: JSON.stringify(flightForm.value) });
-        flightForm.value = { flight_number: '', cabin_class: 'economy', origin_airport_id: 0, destination_airport_id: 0, departure_time: '', arrival_time: '', cost_price: 0, remarks: '' };
+        flightForm.value = { flight_number: '', cabin_class: cabinClasses.value[0], origin_airport_id: 0, destination_airport_id: 0, departure_time: '', arrival_time: '', cost_price: 0, remarks: '' };
         originQuery.value = ''; destQuery.value = '';
         await loadEditingTourFlights();
     } catch (e) {
@@ -286,7 +290,7 @@ async function deleteFlight(flightId: number) {
 
 const editingTourHotels = ref<TourHotel[]>([]);
 const hotelsLoading = ref(false);
-const hotelForm = ref({ hotel_name: '', check_in_date: '', check_out_date: '', room_type: 'twin', number_of_rooms: 1, cost_price_per_night: 0, remarks: '' });
+const hotelForm = ref({ hotel_name: '', check_in_date: '', check_out_date: '', room_type: roomTypes.value[0], number_of_rooms: 1, cost_price_per_night: 0, remarks: '' });
 const hotelFormError = ref('');
 const hotelSubmitting = ref(false);
 
@@ -303,7 +307,7 @@ async function addHotel() {
     hotelFormError.value = '';
     try {
         await tourFetch(`/${editingTour.value.id}/hotels`, { method: 'POST', body: JSON.stringify(hotelForm.value) });
-        hotelForm.value = { hotel_name: '', check_in_date: '', check_out_date: '', room_type: 'twin', number_of_rooms: 1, cost_price_per_night: 0, remarks: '' };
+        hotelForm.value = { hotel_name: '', check_in_date: '', check_out_date: '', room_type: roomTypes.value[0], number_of_rooms: 1, cost_price_per_night: 0, remarks: '' };
         await loadEditingTourHotels();
     } catch (e) {
         hotelFormError.value = e instanceof Error ? e.message : t('tour_playground.mgmt.add_failed');
@@ -651,10 +655,7 @@ watch(mgmtTab, (tab) => {
                             <div>
                                 <label class="binary-label mb-1 block text-[10px] uppercase">{{ t('tour_playground.mgmt.label_cabin') }}</label>
                                 <select v-model="flightForm.cabin_class" class="binary-input w-full">
-                                    <option value="economy">{{ t('tour_playground.mgmt.cabin_economy') }}</option>
-                                    <option value="premium_economy">{{ t('tour_playground.mgmt.cabin_premium') }}</option>
-                                    <option value="business">{{ t('tour_playground.mgmt.cabin_business') }}</option>
-                                    <option value="first">{{ t('tour_playground.mgmt.cabin_first') }}</option>
+                                    <option v-for="v in cabinClasses" :key="v" :value="v">{{ t(`tour_playground.mgmt.cabin_${v}`) }}</option>
                                 </select>
                             </div>
                             <div>
@@ -742,11 +743,7 @@ watch(mgmtTab, (tab) => {
                             <div>
                                 <label class="binary-label mb-1 block text-[10px] uppercase">{{ t('tour_playground.mgmt.label_room_type') }}</label>
                                 <select v-model="hotelForm.room_type" class="binary-input w-full">
-                                    <option value="single">{{ t('tour_playground.mgmt.room_single') }}</option>
-                                    <option value="double">{{ t('tour_playground.mgmt.room_double') }}</option>
-                                    <option value="twin">{{ t('tour_playground.mgmt.room_twin') }}</option>
-                                    <option value="suite">{{ t('tour_playground.mgmt.room_suite') }}</option>
-                                    <option value="deluxe">{{ t('tour_playground.mgmt.room_deluxe') }}</option>
+                                    <option v-for="v in roomTypes" :key="v" :value="v">{{ t(`tour_playground.mgmt.room_${v}`) }}</option>
                                 </select>
                             </div>
                             <div>

@@ -32,7 +32,7 @@ app/
       DecryptPasswordFields.php  # RSA-OAEP 解密 password 欄位
       AuthTokenFromCookie.php
       EnsureAdmin.php
-      HandleInertiaRequests.php  # 共享 props（user、name）
+      HandleInertiaRequests.php  # 共享 props（user、name）+ pageProps() 依路由注入 enum 值
     Requests/         # Form Request 驗證
   Models/
     User.php          # avatar() Attribute 在 $appends
@@ -104,6 +104,16 @@ resources/js/
 - nginx 會攔截不存在的副檔名，因此路由 URL 不加 `.svg`
 - Controller：`AvatarController::default()`，使用 Multiavatar 函式庫
 - `AvatarGenerator::defaultFor()` 回傳完整 URL，seed 優先序：name → email → id
+
+### Enum 前後端分工
+- **後端（單一來源）**：`app/Enums/` 定義 PHP enum，是所有合法值的唯一定義
+  - Model cast：`'field' => MyEnum::class`
+  - Controller 驗證：`Rule::enum(MyEnum::class)`（取代 `'in:a,b,c'`）
+  - MCP schema：`array_column(MyEnum::cases(), 'value')`（動態，不 hardcode）
+- **傳入前端**：`HandleInertiaRequests::pageProps()` 依路由注入 enum values（`array_column(cases, 'value')`）
+  - 前端透過 `usePage().props` 取得，用於 select options 預設值、動態計算
+- **前端職責**：i18n 顯示文字（`statusLabels`）和 CSS class（`statusColors`）保留在前端，因為這是純顯示邏輯
+- **新增 enum case 時**：後端加 case → 前端補 label + color，各自職責清楚，不需要重複定義合法值
 
 ### Countries.vue 架構
 - mainTab：`cities` | `jobs`

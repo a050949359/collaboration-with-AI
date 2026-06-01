@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\Story;
 
+use App\Enums\StoryCharacterType;
+use App\Enums\StoryContentRating;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreateSessionRequest extends FormRequest
 {
@@ -21,11 +24,11 @@ class CreateSessionRequest extends FormRequest
             'setting.opening'                => ['required', 'string'],
             'advance_interval_minutes'       => ['nullable', 'integer', 'min:10', 'max:1440'],
             'rounds_per_advance'             => ['nullable', 'integer', 'min:1', 'max:10'],
-            'content_rating'                 => ['nullable', 'string', 'in:general,mature'],
+            'content_rating'                 => ['nullable', Rule::enum(StoryContentRating::class)],
             'characters'                     => ['required', 'array', 'min:2'],
             'characters.*.name'              => ['required', 'string', 'max:50'],
             'characters.*.persona'           => ['required', 'string', 'max:500'],
-            'characters.*.type'              => ['nullable', 'string', 'in:llm,player,npc'],
+            'characters.*.type'              => ['nullable', Rule::enum(StoryCharacterType::class)],
             'characters.*.model_config'      => ['nullable', 'array'],
             'characters.*.is_narrator'       => ['nullable', 'boolean'],
             'items'                          => ['nullable', 'array'],

@@ -2,8 +2,19 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\AirportType;
 use App\Enums\ApiKeyScope;
+use App\Enums\ArticleAspectRatio;
+use App\Enums\CabinClass;
+use App\Enums\PassengerFilter;
+use App\Enums\RoomType;
+use App\Enums\ArticleLanguage;
+use App\Enums\ArticleStyle;
+use App\Enums\ArticleTopic;
 use App\Enums\ShareTokenScope;
+use App\Enums\StoryContentRating;
+use App\Enums\StoryGenre;
+use App\Enums\TaskStatus;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -76,6 +87,27 @@ class HandleInertiaRequests extends Middleware
                     'value'     => $s->value,
                     'adminOnly' => $s->adminOnly(),
                 ], ApiKeyScope::cases()),
+            ],
+            $request->routeIs('mcp') => [
+                'taskStatuses' => array_column(TaskStatus::cases(), 'value'),
+            ],
+            $request->routeIs('story-relay') => [
+                'storyGenres'   => array_column(StoryGenre::cases(), 'value'),
+                'contentRatings' => array_column(StoryContentRating::cases(), 'value'),
+            ],
+            $request->routeIs('airports') => [
+                'airportTypes' => array_column(AirportType::cases(), 'value'),
+            ],
+            $request->routeIs('tour-playground') => [
+                'passengerFilters' => array_column(PassengerFilter::cases(), 'value'),
+                'cabinClasses'     => array_column(CabinClass::cases(), 'value'),
+                'roomTypes'        => array_column(RoomType::cases(), 'value'),
+            ],
+            $request->routeIs('articles.generate.new') => [
+                'articleAspectRatios' => array_column(ArticleAspectRatio::cases(), 'value'),
+                'articleTopics'       => array_column(ArticleTopic::cases(), 'value'),
+                'articleLanguages'    => array_column(ArticleLanguage::cases(), 'value'),
+                'articleStyles'       => array_column(ArticleStyle::cases(), 'value'),
             ],
             default => [],
         };

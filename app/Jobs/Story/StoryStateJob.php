@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Story;
 
+use App\Enums\StorySessionStatus;
 use App\Models\Story\StorySegment;
 use App\Models\Story\StorySession;
 use App\Services\Story\GeminiStoryService;
@@ -30,7 +31,7 @@ class StoryStateJob implements ShouldQueue
     {
         $session = StorySession::with(['items.holder', 'characters'])->find($this->sessionId);
 
-        if ($session === null || $session->status !== 'active') {
+        if ($session === null || $session->status !== StorySessionStatus::Active) {
             return;
         }
 
@@ -78,7 +79,7 @@ class StoryStateJob implements ShouldQueue
             'current_character_id'   => $this->lastCharacterId,
             'next_advance_at'        => now()->addMinutes($session->advance_interval_minutes),
             'state_last_turn'        => $lastSegment->turn_number,
-            'status'                 => $storyCompleted ? 'completed' : $session->status,
+            'status'                 => $storyCompleted ? StorySessionStatus::Completed : $session->status,
         ]);
 
         Log::info("StoryState: session {$session->id} state updated, next advance in {$session->advance_interval_minutes}min"

@@ -12,6 +12,7 @@ use App\Models\SocialAccount;
 use App\Support\LineBotHmac;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class LineArticleController extends Controller
 {
@@ -23,9 +24,9 @@ class LineArticleController extends Controller
 
         $payload = $request->validate([
             'line_user_id' => ['required', 'string', 'max:64'],
-            'topic' => ['required', 'string', 'in:travel,food,technology,lifestyle,nature,culture,business,health'],
-            'language' => ['required', 'string', 'in:zh-TW,zh-CN,en,ja'],
-            'style' => ['required', 'string', 'in:practical,narrative,journalistic,casual'],
+            'topic'    => ['required', Rule::enum(ArticleTopic::class)],
+            'language' => ['required', Rule::enum(ArticleLanguage::class)],
+            'style'    => ['required', Rule::enum(ArticleStyle::class)],
             'prompt' => ['nullable', 'string', 'max:300'],
         ]);
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Article;
 
+use App\Enums\ArticleAspectRatio;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Article\GenerateArticleContentRequest;
 use App\Http\Requests\Article\GenerateArticleImageRequest;
@@ -111,7 +112,7 @@ class ArticleGenerationController extends Controller
 
         GenerateArticleImageJob::dispatch(
             $article->id,
-            (string) $request->input('aspect_ratio', '16:9'),
+            (string) $request->input('aspect_ratio', ArticleAspectRatio::R16x9->value),
         );
 
         return $this->success($this->toPayload($article->fresh()), 'Article image generation queued.', 202);

@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Aviation;
 
+use App\Enums\AirportType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Aviation\AirportResource;
 use App\Models\Aviation\Airports;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AirportController extends Controller
 {
@@ -18,7 +20,7 @@ class AirportController extends Controller
         $request->validate([
             'search'      => ['nullable', 'string', 'max:100'],
             'type'        => ['nullable', 'array'],
-            'type.*'      => ['in:large_airport,medium_airport,small_airport,heliport,seaplane_base,closed'],
+            'type.*'      => [Rule::enum(AirportType::class)],
             'continent'   => ['nullable', 'array'],
             'continent.*' => ['in:AF,AN,AS,EU,NA,OC,SA'],
             'country'     => ['nullable', 'string', 'size:2'],

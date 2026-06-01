@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Story;
 
+use App\Enums\StoryGenre;
 use App\Http\Controllers\Controller;
 use App\Models\Story\Character;
 use App\Services\Story\GeminiCharacterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CharacterController extends Controller
 {
@@ -74,12 +76,12 @@ class CharacterController extends Controller
     {
         $request->validate([
             'description' => ['nullable', 'string', 'max:500'],
-            'genre'       => ['nullable', 'string', 'in:fantasy,mystery,scifi,modern'],
+            'genre'       => ['nullable', Rule::enum(StoryGenre::class)],
         ]);
 
         $data = $this->ai->generate(
             $request->string('description', '')->toString(),
-            $request->string('genre', 'fantasy')->toString(),
+            $request->string('genre', StoryGenre::Fantasy->value)->toString(),
         );
 
         return response()->json(['character' => $data]);
