@@ -194,7 +194,7 @@ php artisan import:countries           # 寫入 DB
     },
     "collab-memory": {
       "url": "https://your-domain.com/api/mcp/memory",
-      "headers": { "Authorization": "Bearer <memory-write-key>" }
+      "headers": { "Authorization": "Bearer <memory-mcp-key>" }
     }
   }
 }
