@@ -22,12 +22,8 @@ class MemoryMcpService implements McpToolServiceInterface
         return \in_array($name, [...self::WRITE_TOOLS, ...self::READ_TOOLS]);
     }
 
-    public function call(string $name, array $args, mixed $id, bool $isAdmin, ?array $_scopes = null): JsonResponse
+    public function call(string $name, array $args, mixed $id): JsonResponse
     {
-        if (! $isAdmin) {
-            return $this->text($id, 'Unauthorized: admin required.', true);
-        }
-
         return match ($name) {
             'create_entity'    => $this->createEntity($id, $args),
             'delete_entity'    => $this->deleteEntity($id, $args),

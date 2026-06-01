@@ -15,11 +15,13 @@ class CheckApiKeyScope
 
         $keyScopes = $request->attributes->get('api_key_scopes'); // null = 無限制
 
-        if ($keyScopes !== null) {
-            foreach ($requiredScopes as $scope) {
-                if (! \in_array($scope, $keyScopes)) {
-                    return response()->json(['error' => "Forbidden: scope '{$scope}' required."], 403);
-                }
+        if ($keyScopes === null) {
+            return response()->json(['error' => 'Forbidden: API key has no scopes.'], 403);
+        }
+
+        foreach ($requiredScopes as $scope) {
+            if (! \in_array($scope, $keyScopes)) {
+                return response()->json(['error' => 'Forbidden: insufficient scope.'], 403);
             }
         }
 

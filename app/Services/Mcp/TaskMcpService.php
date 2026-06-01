@@ -22,17 +22,8 @@ class TaskMcpService implements McpToolServiceInterface
         return \in_array($name, self::TOOLS);
     }
 
-    public function call(string $name, array $args, mixed $id, bool $_isAdmin, ?array $scopes = null): JsonResponse
+    public function call(string $name, array $args, mixed $id): JsonResponse
     {
-        if (! Auth::check()) {
-            return $this->text($id, 'Unauthorized: API key required.', true);
-        }
-
-        $hasScope = $scopes === null || \in_array('task:mcp', $scopes);
-        if (! $hasScope) {
-            return $this->text($id, 'Unauthorized: task:mcp scope required.', true);
-        }
-
         return match ($name) {
             'list_tasks'       => $this->listTasks($id, $args),
             'get_task'         => $this->getTask($id, $args),

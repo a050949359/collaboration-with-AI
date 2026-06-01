@@ -25,7 +25,6 @@ class TaskMcpController extends Controller
                                 $params['name'] ?? '',
                                 $params['arguments'] ?? [],
                                 $id,
-                                $request->user()?->isAdmin() ?? false,
                             ),
             default       => $this->error($id, -32601, 'Method not found'),
         };

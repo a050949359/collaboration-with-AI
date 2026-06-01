@@ -11,11 +11,11 @@ class MemoryGraphController extends Controller
 {
     public function index(): JsonResponse
     {
-        $entities = McpEntity::with('observations')->get()->map(fn($e) => [
-            'id'           => $e->id,
-            'name'         => $e->name,
-            'type'         => $e->type,
-            'observations' => $e->observations->pluck('content'),
+        $entities = McpEntity::withCount('observations')->get()->map(fn($e) => [
+            'id'                => $e->id,
+            'name'              => $e->name,
+            'type'              => $e->type,
+            'observation_count' => $e->observations_count,
         ]);
 
         $relations = McpRelation::with('from', 'to')->get()->map(fn($r) => [

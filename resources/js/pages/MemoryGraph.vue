@@ -5,7 +5,7 @@ import { drag, forceCenter, forceLink, forceManyBody, forceSimulation, forceX, f
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
 
-interface Entity { id: number; name: string; type: string; observations: string[] }
+interface Entity { id: number; name: string; type: string; observation_count: number }
 interface Relation { from: string; relation_type: string; to: string }
 interface GraphData { entities: Entity[]; relations: Relation[] }
 
@@ -85,7 +85,7 @@ function drawGraph(data: GraphData) {
         });
     });
 
-    const nodeRadius = (d: GraphNode) => 12 + d.observations.length * 3;
+    const nodeRadius = (d: GraphNode) => 12 + d.observation_count * 3;
 
     const nodeG = g.append('g').selectAll('g').data(nodes).join('g').style('cursor', 'grab');
 

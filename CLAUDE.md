@@ -163,8 +163,8 @@ php artisan import:countries           # 寫入 DB
 ## MCP Memory 使用規範
 
 ### Endpoints
-- `POST /api/mcp/task` — Task 工具（需要 API key）
-- `POST /api/mcp/memory` — 知識圖譜工具（讀取公開；寫入需要 admin + `memory:write` scope key）
+- `POST /api/mcp/task` — Task 工具（需要 `task:mcp` scope key，任何登入者可自行建立）
+- `POST /api/mcp/memory` — 知識圖譜工具（需要 admin 建立的 `memory:mcp` scope key，讀寫皆同）
 
 ### 跨專案知識圖譜
 知識圖譜用於記錄**跨機器、跨專案**的持久性知識（entity/relation/observation）。

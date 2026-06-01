@@ -25,8 +25,6 @@ class MemoryMcpController extends Controller
                                 $params['name'] ?? '',
                                 $params['arguments'] ?? [],
                                 $id,
-                                $request->user()?->isAdmin() ?? false,
-                                $request->attributes->get('api_key_scopes'),
                             ),
             default       => $this->error($id, -32601, 'Method not found'),
         };

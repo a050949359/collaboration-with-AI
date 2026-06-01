@@ -10,5 +10,5 @@ interface McpToolServiceInterface
 
     public function canHandle(string $name): bool;
 
-    public function call(string $name, array $args, mixed $id, bool $isAdmin, ?array $scopes = null): JsonResponse;
+    public function call(string $name, array $args, mixed $id): JsonResponse;
 }
