@@ -11,9 +11,13 @@ const pages = import.meta.glob<DefineComponent>('./pages/**/*.vue');
 
 createInertiaApp({
     title: (title: string) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name: string) => resolvePageComponent(`./pages/${name}.vue`, pages),
+    resolve: (name: string) =>
+        resolvePageComponent(`./pages/${name}.vue`, pages),
     setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) }).use(plugin).use(i18n).mount(el);
+        createApp({ render: () => h(App, props) })
+            .use(plugin)
+            .use(i18n)
+            .mount(el);
     },
     progress: {
         color: '#00ff41',

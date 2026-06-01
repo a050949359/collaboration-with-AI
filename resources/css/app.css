@@ -33,9 +33,21 @@
     body {
         min-height: 100vh;
         background:
-            radial-gradient(circle at top right, rgba(107, 220, 159, 0.12), transparent 28%),
-            radial-gradient(circle at 20% 80%, rgba(44, 164, 109, 0.16), transparent 24%),
-            linear-gradient(180deg, rgba(11, 16, 13, 0.72), rgba(11, 16, 13, 0.94)),
+            radial-gradient(
+                circle at top right,
+                rgba(107, 220, 159, 0.12),
+                transparent 28%
+            ),
+            radial-gradient(
+                circle at 20% 80%,
+                rgba(44, 164, 109, 0.16),
+                transparent 24%
+            ),
+            linear-gradient(
+                180deg,
+                rgba(11, 16, 13, 0.72),
+                rgba(11, 16, 13, 0.94)
+            ),
             var(--binary-background);
         color: var(--binary-text);
     }
@@ -47,7 +59,10 @@
     }
 
     .binary-grid {
-        background-image: radial-gradient(rgba(165, 209, 180, 0.1) 1px, transparent 0);
+        background-image: radial-gradient(
+            rgba(165, 209, 180, 0.1) 1px,
+            transparent 0
+        );
         background-size: 40px 40px;
     }
 
@@ -68,7 +83,7 @@
     }
 
     .binary-input {
-        @apply w-full rounded-md border-0 px-4 py-4 text-sm shadow-none outline-none transition;
+        @apply w-full rounded-md border-0 px-4 py-4 text-sm shadow-none transition outline-none;
         background-color: var(--binary-surface-lowest);
         color: var(--binary-text);
         box-shadow: inset 0 -1px 0 rgba(107, 220, 159, 0.12);
@@ -80,18 +95,26 @@
 
     .binary-input:focus {
         background-color: var(--binary-surface-low);
-        box-shadow: inset 0 -2px 0 rgba(107, 220, 159, 0.65), 0 0 0 1px rgba(107, 220, 159, 0.08);
+        box-shadow:
+            inset 0 -2px 0 rgba(107, 220, 159, 0.65),
+            0 0 0 1px rgba(107, 220, 159, 0.08);
     }
 
     .binary-button {
         @apply flex w-full items-center justify-center gap-2 rounded-md px-5 py-4 text-sm font-bold uppercase transition;
         letter-spacing: 0.08em;
-        background: linear-gradient(145deg, var(--binary-primary) 0%, var(--binary-primary-container) 100%);
+        background: linear-gradient(
+            145deg,
+            var(--binary-primary) 0%,
+            var(--binary-primary-container) 100%
+        );
         color: var(--binary-on-primary-container);
     }
 
     .binary-button:hover {
-        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22), 0 0 0 4px rgba(107, 220, 159, 0.08);
+        box-shadow:
+            0 16px 32px rgba(0, 0, 0, 0.22),
+            0 0 0 4px rgba(107, 220, 159, 0.08);
     }
 
     .binary-ghost-button {
@@ -114,10 +137,15 @@
     }
 
     .binary-glass::after {
-        content: "";
+        content: '';
         position: absolute;
         inset: 0;
-        background: linear-gradient(90deg, transparent 0%, rgba(107, 220, 159, 0.07) 50%, transparent 100%);
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(107, 220, 159, 0.07) 50%,
+            transparent 100%
+        );
         z-index: -1;
         pointer-events: none;
     }
@@ -207,14 +235,25 @@
 .nav-glyph .square.inner {
     width: 7px;
     height: 7px;
-    background: linear-gradient(145deg, var(--binary-primary), var(--binary-primary-container));
+    background: linear-gradient(
+        145deg,
+        var(--binary-primary),
+        var(--binary-primary-container)
+    );
     box-shadow: 0 0 8px rgba(107, 220, 159, 0.5);
     animation-delay: -1.4s;
 }
 
 @keyframes glyph-breathe {
-    0%, 100% { transform: rotate(45deg) scale(1);    opacity: 1; }
-    50%       { transform: rotate(225deg) scale(0.8); opacity: 0.7; }
+    0%,
+    100% {
+        transform: rotate(45deg) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: rotate(225deg) scale(0.8);
+        opacity: 0.7;
+    }
 }
 
 /* ── Background animation ── */
@@ -222,13 +261,23 @@
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(ellipse 70% 70% at 50% 50%, rgba(107, 220, 159, 0.05), transparent 60%),
-        radial-gradient(ellipse 70% 70% at 20% 80%, rgba(107, 220, 159, 0.04), transparent 70%),
-        radial-gradient(ellipse 50% 50% at 80% 20%, rgba(165, 209, 180, 0.03), transparent 70%);
+        radial-gradient(
+            ellipse 70% 70% at 50% 50%,
+            rgba(107, 220, 159, 0.05),
+            transparent 60%
+        ),
+        radial-gradient(
+            ellipse 70% 70% at 20% 80%,
+            rgba(107, 220, 159, 0.04),
+            transparent 70%
+        ),
+        radial-gradient(
+            ellipse 50% 50% at 80% 20%,
+            rgba(165, 209, 180, 0.03),
+            transparent 70%
+        );
     pointer-events: none;
 }
-
-
 
 .bg-anim-rain {
     position: absolute;
@@ -254,4 +303,3 @@
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(107, 220, 159, 0.5);
 }
-

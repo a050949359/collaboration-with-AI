@@ -19,7 +19,12 @@ export class AuthApiError extends Error {
     fieldErrors: ValidationErrors;
     payload?: unknown;
 
-    constructor(message: string, status: number, fieldErrors: ValidationErrors = {}, payload?: unknown) {
+    constructor(
+        message: string,
+        status: number,
+        fieldErrors: ValidationErrors = {},
+        payload?: unknown,
+    ) {
         super(message);
         this.name = 'AuthApiError';
         this.status = status;
@@ -70,7 +75,10 @@ async function request<T>(path: string, payload: unknown) {
     const response = await fetch(resolveUrl(path), {
         method: 'POST',
         credentials: 'include',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload),
     });
 

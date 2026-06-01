@@ -31,7 +31,9 @@ async function submit() {
             token,
             email,
             password: await encryptPassword(form.password),
-            password_confirmation: await encryptPassword(form.password_confirmation),
+            password_confirmation: await encryptPassword(
+                form.password_confirmation,
+            ),
         });
         successMessage.value = res?.message ?? '密碼已重設，請使用新密碼登入。';
     } catch (error) {
@@ -58,7 +60,10 @@ async function submit() {
     >
         <form v-if="!successMessage" class="space-y-8" @submit.prevent="submit">
             <div class="space-y-2">
-                <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="password">
+                <label
+                    class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                    for="password"
+                >
                     新密碼 / new password
                 </label>
                 <input
@@ -69,14 +74,20 @@ async function submit() {
                     placeholder="••••••••"
                     autocomplete="new-password"
                     @input="fieldErrors.password = []"
+                />
+                <p
+                    v-if="fieldErrors.password?.length"
+                    class="text-xs text-red-300"
                 >
-                <p v-if="fieldErrors.password?.length" class="text-xs text-red-300">
                     {{ fieldErrors.password[0] }}
                 </p>
             </div>
 
             <div class="space-y-2">
-                <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="password_confirmation">
+                <label
+                    class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                    for="password_confirmation"
+                >
                     確認密碼 / confirm password
                 </label>
                 <input
@@ -86,15 +97,22 @@ async function submit() {
                     type="password"
                     placeholder="••••••••"
                     autocomplete="new-password"
-                >
+                />
             </div>
 
-            <p v-if="generalError" class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200">
+            <p
+                v-if="generalError"
+                class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
+            >
                 {{ generalError }}
             </p>
 
             <div class="pt-4">
-                <button class="binary-button" :disabled="isSubmitting" type="submit">
+                <button
+                    class="binary-button"
+                    :disabled="isSubmitting"
+                    type="submit"
+                >
                     {{ isSubmitting ? '更新中...' : '確認重設密碼' }}
                     <span aria-hidden="true">-></span>
                 </button>
@@ -102,7 +120,9 @@ async function submit() {
         </form>
 
         <div v-else class="space-y-6">
-            <p class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]">
+            <p
+                class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]"
+            >
                 {{ successMessage }}
             </p>
             <Link class="binary-button inline-flex" :href="routes.login()">

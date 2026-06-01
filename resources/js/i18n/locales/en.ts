@@ -22,7 +22,8 @@ export default {
             head_title: 'Articles',
             title: 'Latest Articles',
             load_failed: 'Failed to load article list',
-            mode_auth: 'Signed-in mode: switch between all and my articles with pagination.',
+            mode_auth:
+                'Signed-in mode: switch between all and my articles with pagination.',
             mode_public: 'Public mode: only published articles are shown.',
             scope_all: 'All',
             scope_mine: 'Mine',
@@ -39,7 +40,8 @@ export default {
             title: 'AI Generate',
             to_edit: 'Switch to Edit',
             to_show: 'Back to View',
-            no_article_hint: 'No article yet. Click "Generate Article" to create a draft and start generation.',
+            no_article_hint:
+                'No article yet. Click "Generate Article" to create a draft and start generation.',
             content_section: 'Content Generation',
             image_section: 'Cover Image Generation',
             preview_section: 'Current Preview',
@@ -48,7 +50,8 @@ export default {
             style: 'Style',
             extra_prompt: 'Extra Prompt',
             extra_prompt_suffix: '(optional, max {max} chars)',
-            extra_prompt_placeholder: 'e.g. Focus on Tainan with historical landmarks and local food itinerary',
+            extra_prompt_placeholder:
+                'e.g. Focus on Tainan with historical landmarks and local food itinerary',
             generating_content: 'Generating content, please wait...',
             generating_image: 'Generating image, please wait...',
             content_ready: 'Content generated successfully!',
@@ -60,7 +63,8 @@ export default {
             submit_retry: 'Submit failed, please try again later',
             create_draft_failed: 'Failed to create draft',
             queued: 'Submitted, generating...',
-            missing_article_id: 'Article ID not found. Please click "Generate Article" first.',
+            missing_article_id:
+                'Article ID not found. Please click "Generate Article" first.',
             image_not_found: 'Image generation failed: article ID not found.',
             generate_article: 'Generate Article',
             generate_image: 'Generate Image',
@@ -69,7 +73,8 @@ export default {
             status_image: 'Image',
             status_category: 'Category',
             no_content: '(No content yet)',
-            image_auto_hint: 'Image will be generated from article topic and title automatically, using matched style.',
+            image_auto_hint:
+                'Image will be generated from article topic and title automatically, using matched style.',
             aspect_ratio: 'Aspect Ratio',
             article_status_pending: '-',
             options: {
@@ -126,7 +131,8 @@ export default {
             delete: 'Delete Article',
             untitled: 'UNTITLED ARTICLE',
             article_image_alt: 'Article image',
-            confirm_delete: 'Are you sure you want to delete this article? This action cannot be undone.',
+            confirm_delete:
+                'Are you sure you want to delete this article? This action cannot be undone.',
             delete_failed: 'Delete failed. Please try again later.',
         },
         edit: {
@@ -144,7 +150,8 @@ export default {
             field_tags_hint: '(comma-separated)',
             field_content: 'Content',
             title_placeholder: 'Article title',
-            summary_placeholder: 'Brief description of this article (max 500 chars)',
+            summary_placeholder:
+                'Brief description of this article (max 500 chars)',
             tags_placeholder: 'e.g. Tainan, Travel, Local Food',
             content_placeholder: 'Article content (Markdown supported)',
             saving: 'Saving...',
@@ -188,7 +195,7 @@ export default {
         apikey_copy: 'Copy',
         apikey_copied: 'Copied!',
         apikey_restore: 'Restore',
-        apikey_revoke:'Revoke',
+        apikey_revoke: 'Revoke',
         apikey_revoked: 'Revoked',
         apikey_delete: 'Delete',
         apikey_fetch_failed: 'Failed to fetch API keys',
@@ -222,7 +229,8 @@ export default {
     },
     airports: {
         title: 'Airport Database',
-        subtitle: '84,000+ global airports. Search by name, IATA / ICAO code, filter by type or continent.',
+        subtitle:
+            '84,000+ global airports. Search by name, IATA / ICAO code, filter by type or continent.',
         source_label: 'Data source: ',
         source_link: 'OurAirports Credits',
         source_link_wiki: 'Wikidata (Chinese names)',
@@ -290,7 +298,8 @@ export default {
     },
     countries: {
         title: 'Country Database',
-        subtitle: '200+ countries and territories with ISO codes and recognition status.',
+        subtitle:
+            '200+ countries and territories with ISO codes and recognition status.',
         source_label: 'Source: ',
         source_link_wiki: 'Wikidata',
         col_code: 'Code',
@@ -404,7 +413,8 @@ export default {
         no_stories: 'No stories',
         empty_select: 'Select a story or create a new one',
         setup_title: 'New Story Setup',
-        setup_keywords_placeholder: 'Enter keywords, e.g.: magic academy, stolen memory, twin brothers…',
+        setup_keywords_placeholder:
+            'Enter keywords, e.g.: magic academy, stolen memory, twin brothers…',
         setup_generate: 'Generate Draft',
         setup_generating: 'Generating…',
         setup_world: 'World',
@@ -458,7 +468,8 @@ export default {
         no_chars: 'No characters',
         empty_char_select: 'Select a character or create a new one',
         char_generate_title: 'AI Character Generator',
-        char_desc_placeholder: 'Character description (leave empty for AI creativity)',
+        char_desc_placeholder:
+            'Character description (leave empty for AI creativity)',
         btn_ai_generate: 'AI Generate Character',
         char_edit_title: 'Edit Character',
         btn_delete: 'Delete',
@@ -499,10 +510,12 @@ export default {
     },
     about: {
         token_required_title: 'Access required',
-        token_required_body: 'This page is for invited guests only. Paste the share link or token provided by the admin to continue.',
+        token_required_body:
+            'This page is for invited guests only. Paste the share link or token provided by the admin to continue.',
         token_placeholder: 'Paste share link or token...',
         token_submit: 'Enter',
-        token_exhausted: 'This share link has been used up. Please request a new one from the admin.',
+        token_exhausted:
+            'This share link has been used up. Please request a new one from the admin.',
     },
     tour_playground: {
         subtitle: 'Queue / Worker sandbox · data isolated from main system',
@@ -613,7 +626,8 @@ export default {
             op_failed: 'Operation failed',
             no_flights: 'No flights set',
             add_flight_title: 'Add Flight',
-            flights_max_reached: 'Both outbound and return set. Delete to modify.',
+            flights_max_reached:
+                'Both outbound and return set. Delete to modify.',
             label_flight_no: 'Flight No.',
             label_cabin: 'Cabin',
             label_cost: 'Cost',
@@ -632,7 +646,8 @@ export default {
             delete: 'Delete',
             no_hotels: 'No hotels set',
             add_hotel_title: 'Add Hotel',
-            hotels_full: 'Full itinerary covered ({n} nights). Delete to modify.',
+            hotels_full:
+                'Full itinerary covered ({n} nights). Delete to modify.',
             label_hotel_name: 'Hotel Name',
             placeholder_hotel_name: 'Hokkaido Grand Hotel',
             label_room_type: 'Room Type',

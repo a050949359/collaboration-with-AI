@@ -12,52 +12,84 @@ defineProps<Props>();
 <template>
     <div class="binary-page">
         <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-            <div class="absolute inset-0 binary-grid opacity-[0.04]" />
-            <div class="absolute right-0 top-0 h-[42vw] w-[42vw] bg-[var(--binary-primary)]/[0.08] blur-[140px]" />
-            <div class="absolute bottom-0 left-0 h-[34vw] w-[34vw] bg-[var(--binary-primary-container)]/20 blur-[110px]" />
+            <div class="binary-grid absolute inset-0 opacity-[0.04]" />
+            <div
+                class="absolute top-0 right-0 h-[42vw] w-[42vw] bg-[var(--binary-primary)]/[0.08] blur-[140px]"
+            />
+            <div
+                class="absolute bottom-0 left-0 h-[34vw] w-[34vw] bg-[var(--binary-primary-container)]/20 blur-[110px]"
+            />
         </div>
 
         <main class="binary-shell mx-auto w-full max-w-5xl">
-            <section class="relative hidden w-1/2 flex-col justify-between bg-[var(--binary-surface)] px-12 py-16 lg:flex">
+            <section
+                class="relative hidden w-1/2 flex-col justify-between bg-[var(--binary-surface)] px-12 py-16 lg:flex"
+            >
                 <div>
-                    <a href="/app/" class="binary-label mb-8 inline-flex items-center gap-2 text-xs font-bold uppercase text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)]">
+                    <a
+                        href="/app/"
+                        class="binary-label mb-8 inline-flex items-center gap-2 text-xs font-bold text-[var(--binary-outline)] uppercase transition hover:text-[var(--binary-primary)]"
+                    >
                         <span aria-hidden="true">&lt;-</span> 返回首頁
                     </a>
-                    <p class="binary-label mb-8 mt-6 text-xs font-bold uppercase text-[var(--binary-primary)]">
+                    <p
+                        class="binary-label mt-6 mb-8 text-xs font-bold text-[var(--binary-primary)] uppercase"
+                    >
                         > ACCOUNT_CENTER
                     </p>
-                    <h1 class="binary-display text-6xl font-bold uppercase leading-[0.92] tracking-tight text-[var(--binary-text)] xl:text-7xl">
+                    <h1
+                        class="binary-display text-6xl leading-[0.92] font-bold tracking-tight text-[var(--binary-text)] uppercase xl:text-7xl"
+                    >
                         <span class="block">Secure</span>
-                        <span class="ml-12 block text-[var(--binary-primary)]">Access</span>
+                        <span class="ml-12 block text-[var(--binary-primary)]"
+                            >Access</span
+                        >
                     </h1>
-                    <p class="mt-8 max-w-[26rem] text-base leading-8 text-[var(--binary-text-muted)]">
+                    <p
+                        class="mt-8 max-w-[26rem] text-base leading-8 text-[var(--binary-text-muted)]"
+                    >
                         這裡提供統一的登入與註冊入口，讓使用者可以用清楚、穩定的流程完成身分驗證與帳號建立。
                     </p>
                 </div>
 
                 <div>
                     <div class="flex items-center gap-4">
-                        <div class="h-px w-14 bg-[var(--binary-primary)] transition-all duration-300 hover:w-24" />
-                        <span class="binary-label text-[10px] uppercase text-[var(--binary-outline)]">
+                        <div
+                            class="h-px w-14 bg-[var(--binary-primary)] transition-all duration-300 hover:w-24"
+                        />
+                        <span
+                            class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                        >
                             account access / stable
                         </span>
                     </div>
                 </div>
             </section>
 
-            <section class="flex w-full items-center justify-center px-6 py-10 md:px-10 lg:w-1/2 lg:px-14">
+            <section
+                class="flex w-full items-center justify-center px-6 py-10 md:px-10 lg:w-1/2 lg:px-14"
+            >
                 <div class="w-full max-w-md">
-                    <a href="/app/" class="binary-label mb-8 inline-flex items-center gap-2 text-xs font-bold uppercase text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)] lg:hidden">
+                    <a
+                        href="/app/"
+                        class="binary-label mb-8 inline-flex items-center gap-2 text-xs font-bold text-[var(--binary-outline)] uppercase transition hover:text-[var(--binary-primary)] lg:hidden"
+                    >
                         <span aria-hidden="true">&lt;-</span> 返回首頁
                     </a>
                     <div class="mb-12">
-                        <p class="binary-label mb-4 text-xs font-bold uppercase text-[var(--binary-primary)]">
+                        <p
+                            class="binary-label mb-4 text-xs font-bold text-[var(--binary-primary)] uppercase"
+                        >
                             {{ eyebrow }}
                         </p>
-                        <h2 class="binary-display text-4xl font-bold tracking-tight text-[var(--binary-text)]">
+                        <h2
+                            class="binary-display text-4xl font-bold tracking-tight text-[var(--binary-text)]"
+                        >
                             {{ title }}
                         </h2>
-                        <p class="mt-4 text-sm leading-7 text-[var(--binary-text-muted)]">
+                        <p
+                            class="mt-4 text-sm leading-7 text-[var(--binary-text-muted)]"
+                        >
                             {{ summary }}
                         </p>
                     </div>
@@ -65,8 +97,6 @@ defineProps<Props>();
                     <div class="binary-panel rounded-[1.75rem] p-8 md:p-10">
                         <slot />
                     </div>
-
-                    
                 </div>
             </section>
         </main>

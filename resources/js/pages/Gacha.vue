@@ -1,69 +1,90 @@
 <template>
     <AppLayout>
         <div
-            class="mx-auto max-w-7xl flex flex-col lg:flex-row gap-4 lg:gap-6 items-start justify-center px-4 pb-8 pt-24 lg:px-8"
+            class="mx-auto flex max-w-7xl flex-col items-start justify-center gap-4 px-4 pt-24 pb-8 lg:flex-row lg:gap-6 lg:px-8"
         >
             <!-- Right Panel: Physics Chamber -->
             <div
-                class="relative w-full lg:flex-[4] lg:order-last bg-[#151c17] rounded-2xl p-3 lg:p-5 border border-white/5 emerald-glow flex flex-col"
+                class="emerald-glow relative flex w-full flex-col rounded-2xl border border-white/5 bg-[#151c17] p-3 lg:order-last lg:flex-[4] lg:p-5"
             >
                 <!-- Resonance Chamber -->
                 <div
                     ref="chamberEl"
-                    class="relative w-full h-36 bg-[#0a100c] rounded-xl border-2 border-[#343b36] overflow-hidden mb-5 shadow-inner"
+                    class="relative mb-5 h-36 w-full overflow-hidden rounded-xl border-2 border-[#343b36] bg-[#0a100c] shadow-inner"
                 />
 
                 <!-- Sync Button -->
                 <div class="flex flex-col items-center gap-4">
                     <button
                         :disabled="!canPressButton"
-                        class="group relative w-[72px] h-[72px] rounded-full bg-[#1c251f] border-4 border-[#343b36] flex items-center justify-center transition-all active:scale-90 hover:border-[#6bdc9f]/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="group relative flex h-[72px] w-[72px] items-center justify-center rounded-full border-4 border-[#343b36] bg-[#1c251f] transition-all hover:border-[#6bdc9f]/50 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50"
                         @click="startSync"
                     >
                         <div
-                            class="w-1 h-10 bg-[#6bdc9f] rounded-full transition-transform duration-700 ease-in-out"
-                            :style="{ transform: syncing ? 'rotate(180deg)' : 'rotate(0deg)' }"
+                            class="h-10 w-1 rounded-full bg-[#6bdc9f] transition-transform duration-700 ease-in-out"
+                            :style="{
+                                transform: syncing
+                                    ? 'rotate(180deg)'
+                                    : 'rotate(0deg)',
+                            }"
                         />
                         <div
-                            class="absolute inset-0 rounded-full bg-[#6bdc9f]/5 opacity-0 group-hover:opacity-100 transition-opacity"
+                            class="absolute inset-0 rounded-full bg-[#6bdc9f]/5 opacity-0 transition-opacity group-hover:opacity-100"
                         />
                     </button>
                 </div>
 
                 <!-- Extraction Port -->
                 <div
-                    class="mt-7 mb-4 grid grid-cols-5 gap-1.5 min-h-[48px] p-3 bg-black/30 rounded-xl border border-white/5"
+                    class="mt-7 mb-4 grid min-h-[48px] grid-cols-5 gap-1.5 rounded-xl border border-white/5 bg-black/30 p-3"
                 >
                     <div
                         v-for="(dot, i) in extractionDots"
                         :key="i"
-                        class="w-5 h-5 rounded-full emerald-glow animate-bounce-in mx-auto border border-white/10"
+                        class="emerald-glow animate-bounce-in mx-auto h-5 w-5 rounded-full border border-white/10"
                         :style="{ backgroundColor: dot.color }"
                     />
                 </div>
 
-                <div class="text-center w-full mt-auto">
-                    <h2 class="text-[#6bdc9f] font-bold tracking-[0.3em] uppercase mb-2 text-[10px]">
+                <div class="mt-auto w-full text-center">
+                    <h2
+                        class="mb-2 text-[10px] font-bold tracking-[0.3em] text-[#6bdc9f] uppercase"
+                    >
                         {{ statusText }}
                     </h2>
 
                     <div
                         v-if="drawsPerUser > 0"
-                        class="mb-1.5 text-[9px] tracking-widest font-bold"
-                        :class="drawsRemaining > 0 ? 'text-[#6bdc9f]/70' : 'text-red-400/70'"
+                        class="mb-1.5 text-[9px] font-bold tracking-widest"
+                        :class="
+                            drawsRemaining > 0
+                                ? 'text-[#6bdc9f]/70'
+                                : 'text-red-400/70'
+                        "
                     >
-                        {{ t('gacha.draws_label') }}：{{ drawsRemaining }} / {{ drawsPerUser }}
+                        {{ t('gacha.draws_label') }}：{{ drawsRemaining }} /
+                        {{ drawsPerUser }}
                     </div>
 
-                    <div class="flex gap-3 justify-center text-[9px] tracking-widest text-[#6bdc9f]/40 font-medium mb-2">
-                        <span v-if="isTenPull">{{ t('gacha.ten_sync_badge') }}</span>
-                        <span v-if="skipAnim">{{ t('gacha.skip_anim_badge') }}</span>
-                        <span v-if="mode === 'in-room' && !canDraw && !isHost" class="text-red-400/60">{{ t('gacha.locked_badge') }}</span>
+                    <div
+                        class="mb-2 flex justify-center gap-3 text-[9px] font-medium tracking-widest text-[#6bdc9f]/40"
+                    >
+                        <span v-if="isTenPull">{{
+                            t('gacha.ten_sync_badge')
+                        }}</span>
+                        <span v-if="skipAnim">{{
+                            t('gacha.skip_anim_badge')
+                        }}</span>
+                        <span
+                            v-if="mode === 'in-room' && !canDraw && !isHost"
+                            class="text-red-400/60"
+                            >{{ t('gacha.locked_badge') }}</span
+                        >
                     </div>
 
                     <button
                         :disabled="lastResults.length === 0"
-                        class="px-3 py-1.5 rounded-lg bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-[9px] tracking-[0.2em] font-bold transition-colors hover:bg-[#233328] disabled:opacity-40 disabled:cursor-not-allowed"
+                        class="rounded-lg border border-[#2f4739] bg-[#1d2a22] px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] text-[#6bdc9f] transition-colors hover:bg-[#233328] disabled:cursor-not-allowed disabled:opacity-40"
                         @click="showModal = true"
                     >
                         {{ t('gacha.show_results') }}
@@ -71,63 +92,112 @@
                 </div>
 
                 <!-- In-room status bar -->
-                <div v-if="mode === 'in-room' && currentRoom" class="mt-4 pt-4 border-t border-white/5">
-                    <div class="flex items-center justify-between text-[10px] font-mono">
+                <div
+                    v-if="mode === 'in-room' && currentRoom"
+                    class="mt-4 border-t border-white/5 pt-4"
+                >
+                    <div
+                        class="flex items-center justify-between font-mono text-[10px]"
+                    >
                         <div>
-                            <span class="text-[#6bdc9f]/50 tracking-widest">ROOM </span>
-                            <span class="text-[#6bdc9f] font-bold">{{ currentRoom.code }}</span>
-                            <span v-if="isHost" class="ml-2 text-[#6bdc9f]/50">[HOST]</span>
+                            <span class="tracking-widest text-[#6bdc9f]/50"
+                                >ROOM
+                            </span>
+                            <span class="font-bold text-[#6bdc9f]">{{
+                                currentRoom.code
+                            }}</span>
+                            <span v-if="isHost" class="ml-2 text-[#6bdc9f]/50"
+                                >[HOST]</span
+                            >
                         </div>
                         <span
-                            class="px-2 py-px rounded text-[9px] tracking-widest"
-                            :class="wsStatus === 'connected' ? 'text-[#6bdc9f]/70' : 'text-[#6bdc9f]/30 animate-pulse'"
-                        >{{ wsStatus }}</span>
+                            class="rounded px-2 py-px text-[9px] tracking-widest"
+                            :class="
+                                wsStatus === 'connected'
+                                    ? 'text-[#6bdc9f]/70'
+                                    : 'animate-pulse text-[#6bdc9f]/30'
+                            "
+                            >{{ wsStatus }}</span
+                        >
                     </div>
                     <button
-                        class="mt-2 w-full py-1.5 rounded-lg border border-red-900/50 text-red-400/70 text-[9px] tracking-widest font-bold hover:border-red-400/50 hover:text-red-400 transition-colors"
+                        class="mt-2 w-full rounded-lg border border-red-900/50 py-1.5 text-[9px] font-bold tracking-widest text-red-400/70 transition-colors hover:border-red-400/50 hover:text-red-400"
                         @click="leaveRoom"
                     >
-                        {{ isHost ? t('gacha.close_room') : t('gacha.leave_room') }}
+                        {{
+                            isHost
+                                ? t('gacha.close_room')
+                                : t('gacha.leave_room')
+                        }}
                     </button>
                 </div>
             </div>
 
             <!-- Right Panel -->
-            <aside class="w-full lg:flex-[6] min-w-0 bg-[#131a15] rounded-3xl border border-white/5 p-5 lg:p-6 emerald-glow overflow-auto flex flex-col gap-6">
-
+            <aside
+                class="emerald-glow flex w-full min-w-0 flex-col gap-6 overflow-auto rounded-3xl border border-white/5 bg-[#131a15] p-5 lg:flex-[6] lg:p-6"
+            >
                 <!-- LOBBY -->
                 <template v-if="mode === 'lobby'">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-1 font-bold">{{ t('gacha.gacha_rooms_label') }}</div>
-                            <h3 class="text-xl text-white font-semibold tracking-tight">{{ t('gacha.room_list_title') }}</h3>
+                            <div
+                                class="mb-1 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                            >
+                                {{ t('gacha.gacha_rooms_label') }}
+                            </div>
+                            <h3
+                                class="text-xl font-semibold tracking-tight text-white"
+                            >
+                                {{ t('gacha.room_list_title') }}
+                            </h3>
                         </div>
                         <button
                             v-if="user"
-                            class="px-4 py-2 rounded-xl bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#233328] transition-colors"
+                            class="rounded-xl border border-[#2f4739] bg-[#1d2a22] px-4 py-2 text-xs font-bold tracking-widest text-[#6bdc9f] transition-colors hover:bg-[#233328]"
                             @click="openCreateModal"
                         >
                             {{ t('gacha.create_room') }}
                         </button>
                     </div>
 
-                    <div v-if="roomListLoading" class="text-[#6bdc9f]/30 text-xs tracking-widest text-center py-8">{{ t('gacha.loading') }}</div>
-                    <div v-else-if="roomList.length === 0" class="text-[#6bdc9f]/30 text-xs tracking-widest text-center py-8">{{ t('gacha.no_rooms') }}</div>
+                    <div
+                        v-if="roomListLoading"
+                        class="py-8 text-center text-xs tracking-widest text-[#6bdc9f]/30"
+                    >
+                        {{ t('gacha.loading') }}
+                    </div>
+                    <div
+                        v-else-if="roomList.length === 0"
+                        class="py-8 text-center text-xs tracking-widest text-[#6bdc9f]/30"
+                    >
+                        {{ t('gacha.no_rooms') }}
+                    </div>
                     <div v-else class="flex flex-col gap-3">
                         <div
                             v-for="room in roomList"
                             :key="room.id"
-                            class="flex items-center gap-4 p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-[#6bdc9f]/20 transition-colors"
+                            class="flex items-center gap-4 rounded-2xl border border-white/5 bg-black/30 p-4 transition-colors hover:border-[#6bdc9f]/20"
                         >
-                            <div class="flex-1 min-w-0">
-                                <div class="text-white font-semibold text-sm truncate">{{ room.room_name }}</div>
-                                <div class="text-[10px] tracking-widest text-[#6bdc9f]/40 mt-0.5 flex gap-3">
+                            <div class="min-w-0 flex-1">
+                                <div
+                                    class="truncate text-sm font-semibold text-white"
+                                >
+                                    {{ room.room_name }}
+                                </div>
+                                <div
+                                    class="mt-0.5 flex gap-3 text-[10px] tracking-widest text-[#6bdc9f]/40"
+                                >
                                     <span>{{ room.code }}</span>
-                                    <span>{{ room.players_count }}/{{ room.max_players }}</span>
+                                    <span
+                                        >{{ room.players_count }}/{{
+                                            room.max_players
+                                        }}</span
+                                    >
                                 </div>
                             </div>
                             <button
-                                class="px-4 py-1.5 rounded-xl border border-[#6bdc9f]/30 text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#6bdc9f]/10 transition-colors shrink-0"
+                                class="shrink-0 rounded-xl border border-[#6bdc9f]/30 px-4 py-1.5 text-xs font-bold tracking-widest text-[#6bdc9f] transition-colors hover:bg-[#6bdc9f]/10"
                                 @click="openJoinModal(room)"
                             >
                                 {{ t('gacha.join') }}
@@ -136,7 +206,7 @@
                     </div>
 
                     <button
-                        class="mt-auto text-[10px] tracking-widest text-[#6bdc9f]/30 hover:text-[#6bdc9f]/60 transition-colors"
+                        class="mt-auto text-[10px] tracking-widest text-[#6bdc9f]/30 transition-colors hover:text-[#6bdc9f]/60"
                         :disabled="roomListLoading"
                         @click="fetchRooms"
                     >
@@ -148,61 +218,124 @@
                 <template v-else-if="mode === 'in-room'">
                     <!-- Machine controls (host only) -->
                     <section v-if="isHost">
-                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">{{ t('gacha.host_control') }}</div>
-                        <h3 class="text-xl text-white font-semibold tracking-tight mb-4">{{ t('gacha.machine_control') }}</h3>
+                        <div
+                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                        >
+                            {{ t('gacha.host_control') }}
+                        </div>
+                        <h3
+                            class="mb-4 text-xl font-semibold tracking-tight text-white"
+                        >
+                            {{ t('gacha.machine_control') }}
+                        </h3>
 
                         <div class="space-y-3 text-sm">
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.allow_draw') }}</span>
-                                <button
-                                    class="w-12 h-6 rounded-full transition-colors relative"
-                                    :class="canDraw ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
-                                    @click="canDraw = !canDraw; sendMachineState()"
+                                <span
+                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    >{{ t('gacha.allow_draw') }}</span
                                 >
-                                    <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="canDraw ? 'translate-x-6' : ''" />
+                                <button
+                                    class="relative h-6 w-12 rounded-full transition-colors"
+                                    :class="
+                                        canDraw
+                                            ? 'bg-[#6bdc9f]'
+                                            : 'bg-[#2f4739]'
+                                    "
+                                    @click="
+                                        canDraw = !canDraw;
+                                        sendMachineState();
+                                    "
+                                >
+                                    <span
+                                        class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
+                                        :class="canDraw ? 'translate-x-6' : ''"
+                                    />
                                 </button>
                             </div>
 
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.ten_sync_mode') }}</span>
-                                <button
-                                    class="w-12 h-6 rounded-full transition-colors relative"
-                                    :class="isTenPull ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
-                                    @click="isTenPull = !isTenPull; sendMachineState()"
+                                <span
+                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    >{{ t('gacha.ten_sync_mode') }}</span
                                 >
-                                    <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="isTenPull ? 'translate-x-6' : ''" />
+                                <button
+                                    class="relative h-6 w-12 rounded-full transition-colors"
+                                    :class="
+                                        isTenPull
+                                            ? 'bg-[#6bdc9f]'
+                                            : 'bg-[#2f4739]'
+                                    "
+                                    @click="
+                                        isTenPull = !isTenPull;
+                                        sendMachineState();
+                                    "
+                                >
+                                    <span
+                                        class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
+                                        :class="
+                                            isTenPull ? 'translate-x-6' : ''
+                                        "
+                                    />
                                 </button>
                             </div>
 
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.skip_animation') }}</span>
-                                <button
-                                    class="w-12 h-6 rounded-full transition-colors relative"
-                                    :class="skipAnim ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
-                                    @click="skipAnim = !skipAnim; sendMachineState()"
+                                <span
+                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    >{{ t('gacha.skip_animation') }}</span
                                 >
-                                    <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="skipAnim ? 'translate-x-6' : ''" />
+                                <button
+                                    class="relative h-6 w-12 rounded-full transition-colors"
+                                    :class="
+                                        skipAnim
+                                            ? 'bg-[#6bdc9f]'
+                                            : 'bg-[#2f4739]'
+                                    "
+                                    @click="
+                                        skipAnim = !skipAnim;
+                                        sendMachineState();
+                                    "
+                                >
+                                    <span
+                                        class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
+                                        :class="skipAnim ? 'translate-x-6' : ''"
+                                    />
                                 </button>
                             </div>
 
                             <div v-show="canDraw">
-                                <div class="flex justify-between mb-1 text-[#6bdc9f]/80 text-xs tracking-wider">
+                                <div
+                                    class="mb-1 flex justify-between text-xs tracking-wider text-[#6bdc9f]/80"
+                                >
                                     <span>{{ t('gacha.draws_limit') }}</span>
-                                    <span>{{ drawsPerUser === 0 ? t('gacha.unlimited') : drawsPerUser }}</span>
+                                    <span>{{
+                                        drawsPerUser === 0
+                                            ? t('gacha.unlimited')
+                                            : drawsPerUser
+                                    }}</span>
                                 </div>
                                 <input
                                     type="range"
                                     :value="drawsPerUser"
-                                    min="0" max="20" step="1"
+                                    min="0"
+                                    max="20"
+                                    step="1"
                                     class="tune-slider w-full"
-                                    @change="drawsPerUser = parseInt(($event.target as HTMLInputElement).value); sendMachineState()"
+                                    @change="
+                                        drawsPerUser = parseInt(
+                                            ($event.target as HTMLInputElement)
+                                                .value,
+                                        );
+                                        sendMachineState();
+                                    "
                                 />
                             </div>
                         </div>
 
                         <button
                             v-show="drawsPerUser > 0"
-                            class="mt-4 w-full py-2.5 rounded-xl bg-[#1d2a22] border border-[#2f4739] text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#233328] transition-colors disabled:opacity-40"
+                            class="mt-4 w-full rounded-xl border border-[#2f4739] bg-[#1d2a22] py-2.5 text-xs font-bold tracking-widest text-[#6bdc9f] transition-colors hover:bg-[#233328] disabled:opacity-40"
                             @click="resetAllDraws"
                         >
                             {{ t('gacha.reset_draws') }}
@@ -213,16 +346,33 @@
 
                     <!-- Broadcast log -->
                     <section>
-                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">{{ t('gacha.broadcast_label') }}</div>
-                        <div v-if="broadcastLog.length === 0" class="text-[#6bdc9f]/30 text-xs tracking-widest py-2 text-center">—</div>
-                        <div class="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                        <div
+                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                        >
+                            {{ t('gacha.broadcast_label') }}
+                        </div>
+                        <div
+                            v-if="broadcastLog.length === 0"
+                            class="py-2 text-center text-xs tracking-widest text-[#6bdc9f]/30"
+                        >
+                            —
+                        </div>
+                        <div
+                            class="flex max-h-32 flex-col gap-1 overflow-y-auto"
+                        >
                             <div
-                                v-for="(entry, i) in [...broadcastLog].reverse()"
+                                v-for="(entry, i) in [
+                                    ...broadcastLog,
+                                ].reverse()"
                                 :key="i"
-                                class="flex items-baseline gap-2 text-[10px] font-mono"
+                                class="flex items-baseline gap-2 font-mono text-[10px]"
                             >
-                                <span class="text-[#6bdc9f]/25 shrink-0">{{ new Date(entry.ts).toLocaleTimeString() }}</span>
-                                <span class="text-[#6bdc9f]/70">{{ entry.text }}</span>
+                                <span class="shrink-0 text-[#6bdc9f]/25">{{
+                                    new Date(entry.ts).toLocaleTimeString()
+                                }}</span>
+                                <span class="text-[#6bdc9f]/70">{{
+                                    entry.text
+                                }}</span>
                             </div>
                         </div>
                     </section>
@@ -231,25 +381,49 @@
 
                     <!-- Draw history -->
                     <section>
-                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">{{ t('gacha.draw_log_label') }}</div>
-                        <div v-if="drawHistory.length === 0" class="text-[#6bdc9f]/30 text-xs tracking-widest py-4 text-center">{{ t('gacha.waiting_draw') }}</div>
-                        <div class="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                        <div
+                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                        >
+                            {{ t('gacha.draw_log_label') }}
+                        </div>
+                        <div
+                            v-if="drawHistory.length === 0"
+                            class="py-4 text-center text-xs tracking-widest text-[#6bdc9f]/30"
+                        >
+                            {{ t('gacha.waiting_draw') }}
+                        </div>
+                        <div
+                            class="flex max-h-64 flex-col gap-2 overflow-y-auto"
+                        >
                             <div
                                 v-for="(event, i) in [...drawHistory].reverse()"
                                 :key="i"
-                                class="text-xs p-3 rounded-xl bg-black/30 border border-white/5"
+                                class="rounded-xl border border-white/5 bg-black/30 p-3 text-xs"
                             >
-                                <div class="flex justify-between mb-1.5 text-[10px]">
-                                    <span class="text-[#6bdc9f]/70 font-bold tracking-wider">{{ event.player }}</span>
-                                    <span class="text-[#6bdc9f]/30">{{ new Date(event.ts).toLocaleTimeString() }}</span>
+                                <div
+                                    class="mb-1.5 flex justify-between text-[10px]"
+                                >
+                                    <span
+                                        class="font-bold tracking-wider text-[#6bdc9f]/70"
+                                        >{{ event.player }}</span
+                                    >
+                                    <span class="text-[#6bdc9f]/30">{{
+                                        new Date(event.ts).toLocaleTimeString()
+                                    }}</span>
                                 </div>
                                 <div class="flex flex-wrap gap-1">
                                     <span
                                         v-for="(r, j) in event.results"
                                         :key="j"
-                                        class="px-1.5 py-0.5 rounded text-[9px] font-bold border"
-                                        :style="{ color: r.quality.color, borderColor: r.quality.color + '55' }"
-                                    >{{ r.quality.code.split('_')[0] }}</span>
+                                        class="rounded border px-1.5 py-0.5 text-[9px] font-bold"
+                                        :style="{
+                                            color: r.quality.color,
+                                            borderColor: r.quality.color + '55',
+                                        }"
+                                        >{{
+                                            r.quality.code.split('_')[0]
+                                        }}</span
+                                    >
                                 </div>
                             </div>
                         </div>
@@ -259,54 +433,117 @@
                 <!-- STANDALONE -->
                 <template v-else>
                     <section>
-                        <div class="text-[10px] tracking-[0.35em] text-[#6bdc9f]/55 mb-2 font-bold">{{ t('gacha.host_control') }}</div>
-                        <h3 class="text-xl text-white font-semibold tracking-tight mb-4">{{ t('gacha.machine_control') }}</h3>
+                        <div
+                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                        >
+                            {{ t('gacha.host_control') }}
+                        </div>
+                        <h3
+                            class="mb-4 text-xl font-semibold tracking-tight text-white"
+                        >
+                            {{ t('gacha.machine_control') }}
+                        </h3>
 
                         <div class="space-y-3 text-sm">
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.ten_sync_mode') }}</span>
+                                <span
+                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    >{{ t('gacha.ten_sync_mode') }}</span
+                                >
                                 <button
-                                    class="w-12 h-6 rounded-full transition-colors relative"
-                                    :class="isTenPull ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
+                                    class="relative h-6 w-12 rounded-full transition-colors"
+                                    :class="
+                                        isTenPull
+                                            ? 'bg-[#6bdc9f]'
+                                            : 'bg-[#2f4739]'
+                                    "
                                     @click="isTenPull = !isTenPull"
                                 >
-                                    <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="isTenPull ? 'translate-x-6' : ''" />
+                                    <span
+                                        class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
+                                        :class="
+                                            isTenPull ? 'translate-x-6' : ''
+                                        "
+                                    />
                                 </button>
                             </div>
 
                             <div class="flex items-center justify-between">
-                                <span class="text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.skip_animation') }}</span>
+                                <span
+                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    >{{ t('gacha.skip_animation') }}</span
+                                >
                                 <button
-                                    class="w-12 h-6 rounded-full transition-colors relative"
-                                    :class="skipAnim ? 'bg-[#6bdc9f]' : 'bg-[#2f4739]'"
+                                    class="relative h-6 w-12 rounded-full transition-colors"
+                                    :class="
+                                        skipAnim
+                                            ? 'bg-[#6bdc9f]'
+                                            : 'bg-[#2f4739]'
+                                    "
                                     @click="skipAnim = !skipAnim"
                                 >
-                                    <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="skipAnim ? 'translate-x-6' : ''" />
+                                    <span
+                                        class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
+                                        :class="skipAnim ? 'translate-x-6' : ''"
+                                    />
                                 </button>
                             </div>
 
                             <div v-if="!isTenPull">
-                                <div class="mb-1 text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.force_quality') }}</div>
+                                <div
+                                    class="mb-1 text-xs tracking-wider text-[#6bdc9f]/80"
+                                >
+                                    {{ t('gacha.force_quality') }}
+                                </div>
                                 <QualitySelect v-model="selectedQuality" />
                             </div>
 
                             <div v-if="isTenPull">
-                                <div class="mb-2 text-[#6bdc9f]/80 text-xs tracking-wider">{{ t('gacha.ten_pull_qualities') }}</div>
+                                <div
+                                    class="mb-2 text-xs tracking-wider text-[#6bdc9f]/80"
+                                >
+                                    {{ t('gacha.ten_pull_qualities') }}
+                                </div>
                                 <div class="grid grid-cols-2 gap-2">
-                                    <label v-for="(_, i) in tenPullQualities" :key="i" class="block text-[10px] tracking-wider text-[#6bdc9f]/75">
-                                        <div class="mb-1">{{ t('gacha.slot_label', { n: i + 1 }) }}</div>
-                                        <QualitySelect :model-value="tenPullQualities[i]" @update:model-value="tenPullQualities[i] = $event" />
+                                    <label
+                                        v-for="(_, i) in tenPullQualities"
+                                        :key="i"
+                                        class="block text-[10px] tracking-wider text-[#6bdc9f]/75"
+                                    >
+                                        <div class="mb-1">
+                                            {{
+                                                t('gacha.slot_label', {
+                                                    n: i + 1,
+                                                })
+                                            }}
+                                        </div>
+                                        <QualitySelect
+                                            :model-value="tenPullQualities[i]"
+                                            @update:model-value="
+                                                tenPullQualities[i] = $event
+                                            "
+                                        />
                                     </label>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <div v-if="wsAvailable" class="mt-auto pt-4 border-t border-white/5">
-                        <p class="text-[10px] text-[#6bdc9f]/30 tracking-widest text-center mb-3">{{ t('gacha.ws_available') }}</p>
+                    <div
+                        v-if="wsAvailable"
+                        class="mt-auto border-t border-white/5 pt-4"
+                    >
+                        <p
+                            class="mb-3 text-center text-[10px] tracking-widest text-[#6bdc9f]/30"
+                        >
+                            {{ t('gacha.ws_available') }}
+                        </p>
                         <button
-                            class="w-full py-2 rounded-xl border border-[#6bdc9f]/30 text-[#6bdc9f] text-xs tracking-widest font-bold hover:bg-[#6bdc9f]/10 transition-colors"
-                            @click="mode = 'lobby'; fetchRooms()"
+                            class="w-full rounded-xl border border-[#6bdc9f]/30 py-2 text-xs font-bold tracking-widest text-[#6bdc9f] transition-colors hover:bg-[#6bdc9f]/10"
+                            @click="
+                                mode = 'lobby';
+                                fetchRooms();
+                            "
                         >
                             {{ t('gacha.enter_lobby') }}
                         </button>
@@ -319,35 +556,69 @@
         <Teleport to="body">
             <div
                 v-if="showModal"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
                 @click.self="showModal = false"
             >
-                <div class="glass-panel p-8 rounded-3xl max-w-md w-full text-center shadow-2xl">
-                    <div class="text-[10px] tracking-[0.4em] text-[#6bdc9f]/50 mb-2 font-bold">DECODING COMPLETE</div>
-                    <h3 class="text-white text-2xl font-medium mb-6 tracking-tight">ENTITY_DATA_RECOVERED</h3>
-                    <div class="grid grid-cols-2 gap-3 mb-8">
+                <div
+                    class="glass-panel w-full max-w-md rounded-3xl p-8 text-center shadow-2xl"
+                >
+                    <div
+                        class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[#6bdc9f]/50"
+                    >
+                        DECODING COMPLETE
+                    </div>
+                    <h3
+                        class="mb-6 text-2xl font-medium tracking-tight text-white"
+                    >
+                        ENTITY_DATA_RECOVERED
+                    </h3>
+                    <div class="mb-8 grid grid-cols-2 gap-3">
                         <div
                             v-for="(result, i) in lastResults"
                             :key="i"
-                            class="bg-black/40 p-4 rounded-xl text-left"
-                            :class="result.quality.name === 'legendary' ? 'border border-[#d4af3755]' : 'border border-white/5'"
+                            class="rounded-xl bg-black/40 p-4 text-left"
+                            :class="
+                                result.quality.name === 'legendary'
+                                    ? 'border border-[#d4af3755]'
+                                    : 'border border-white/5'
+                            "
                         >
                             <div
-                                class="text-[8px] tracking-widest font-bold mb-1"
-                                :class="{ 'gradient-text': result.quality.name === 'legendary' }"
-                                :style="result.quality.name !== 'legendary' ? { color: result.quality.color + 'aa' } : {}"
-                            >{{ result.quality.code }}</div>
+                                class="mb-1 text-[8px] font-bold tracking-widest"
+                                :class="{
+                                    'gradient-text':
+                                        result.quality.name === 'legendary',
+                                }"
+                                :style="
+                                    result.quality.name !== 'legendary'
+                                        ? { color: result.quality.color + 'aa' }
+                                        : {}
+                                "
+                            >
+                                {{ result.quality.code }}
+                            </div>
                             <div
-                                class="font-bold text-sm"
-                                :class="{ 'gradient-text': result.quality.name === 'legendary' }"
-                                :style="result.quality.name !== 'legendary' ? { color: result.quality.color } : {}"
-                            >{{ result.code }}</div>
+                                class="text-sm font-bold"
+                                :class="{
+                                    'gradient-text':
+                                        result.quality.name === 'legendary',
+                                }"
+                                :style="
+                                    result.quality.name !== 'legendary'
+                                        ? { color: result.quality.color }
+                                        : {}
+                                "
+                            >
+                                {{ result.code }}
+                            </div>
                         </div>
                     </div>
                     <button
-                        class="w-full py-4 btn-gradient text-[#0f1511] font-bold rounded-xl hover:brightness-110 transition-all uppercase tracking-widest text-xs"
+                        class="btn-gradient w-full rounded-xl py-4 text-xs font-bold tracking-widest text-[#0f1511] uppercase transition-all hover:brightness-110"
                         @click="showModal = false"
-                    >Acknowledge</button>
+                    >
+                        Acknowledge
+                    </button>
                 </div>
             </div>
         </Teleport>
@@ -356,26 +627,40 @@
         <Teleport to="body">
             <div
                 v-if="showCreateModal"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
                 @click.self="showCreateModal = false"
             >
-                <div class="glass-panel p-8 rounded-3xl max-w-sm w-full shadow-2xl">
-                    <div class="text-[10px] tracking-[0.4em] text-[#6bdc9f]/50 mb-2 font-bold">CREATE ROOM</div>
-                    <h3 class="text-white text-lg font-medium mb-1 tracking-tight">{{ t('gacha.create_modal_title') }}</h3>
-                    <p class="text-[#6bdc9f]/40 text-xs tracking-widest mb-6">{{ t('gacha.name_hint') }}</p>
+                <div
+                    class="glass-panel w-full max-w-sm rounded-3xl p-8 shadow-2xl"
+                >
+                    <div
+                        class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[#6bdc9f]/50"
+                    >
+                        CREATE ROOM
+                    </div>
+                    <h3
+                        class="mb-1 text-lg font-medium tracking-tight text-white"
+                    >
+                        {{ t('gacha.create_modal_title') }}
+                    </h3>
+                    <p class="mb-6 text-xs tracking-widest text-[#6bdc9f]/40">
+                        {{ t('gacha.name_hint') }}
+                    </p>
                     <input
                         v-model="createName"
                         type="text"
                         maxlength="30"
                         :placeholder="t('gacha.name_placeholder')"
-                        class="w-full bg-transparent border-b border-[#2f4739] focus:border-[#6bdc9f] outline-none text-[#6bdc9f] text-sm pb-1 mb-6 placeholder:text-[#6bdc9f]/30 transition-colors"
+                        class="mb-6 w-full border-b border-[#2f4739] bg-transparent pb-1 text-sm text-[#6bdc9f] transition-colors outline-none placeholder:text-[#6bdc9f]/30 focus:border-[#6bdc9f]"
                         @keyup.enter="submitCreateModal"
                     />
                     <button
                         :disabled="!createName.trim()"
-                        class="w-full py-3 btn-gradient text-[#0f1511] font-bold rounded-xl hover:brightness-110 transition-all uppercase tracking-widest text-xs disabled:opacity-40"
+                        class="btn-gradient w-full rounded-xl py-3 text-xs font-bold tracking-widest text-[#0f1511] uppercase transition-all hover:brightness-110 disabled:opacity-40"
                         @click="submitCreateModal"
-                    >{{ t('gacha.create_submit') }}</button>
+                    >
+                        {{ t('gacha.create_submit') }}
+                    </button>
                 </div>
             </div>
         </Teleport>
@@ -384,27 +669,46 @@
         <Teleport to="body">
             <div
                 v-if="joinTarget"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
                 @click.self="joinTarget = null"
             >
-                <div class="glass-panel p-8 rounded-3xl max-w-sm w-full shadow-2xl">
-                    <div class="text-[10px] tracking-[0.4em] text-[#6bdc9f]/50 mb-2 font-bold">JOIN ROOM</div>
-                    <h3 class="text-white text-lg font-medium mb-1 tracking-tight">{{ joinTarget.room_name }}</h3>
-                    <p class="text-[#6bdc9f]/40 text-xs tracking-widest mb-6">{{ t('gacha.name_hint') }}</p>
+                <div
+                    class="glass-panel w-full max-w-sm rounded-3xl p-8 shadow-2xl"
+                >
+                    <div
+                        class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[#6bdc9f]/50"
+                    >
+                        JOIN ROOM
+                    </div>
+                    <h3
+                        class="mb-1 text-lg font-medium tracking-tight text-white"
+                    >
+                        {{ joinTarget.room_name }}
+                    </h3>
+                    <p class="mb-6 text-xs tracking-widest text-[#6bdc9f]/40">
+                        {{ t('gacha.name_hint') }}
+                    </p>
                     <input
                         v-model="joinName"
                         type="text"
                         maxlength="30"
                         :placeholder="t('gacha.name_placeholder')"
-                        class="w-full bg-transparent border-b border-[#2f4739] focus:border-[#6bdc9f] outline-none text-[#6bdc9f] text-sm pb-1 mb-6 placeholder:text-[#6bdc9f]/30 transition-colors"
+                        class="mb-6 w-full border-b border-[#2f4739] bg-transparent pb-1 text-sm text-[#6bdc9f] transition-colors outline-none placeholder:text-[#6bdc9f]/30 focus:border-[#6bdc9f]"
                         @keyup.enter="submitJoinModal"
                     />
-                    <p v-if="joinError" class="text-red-400 text-xs mb-4 tracking-wide">{{ joinError }}</p>
+                    <p
+                        v-if="joinError"
+                        class="mb-4 text-xs tracking-wide text-red-400"
+                    >
+                        {{ joinError }}
+                    </p>
                     <button
                         :disabled="!joinName.trim() || joinLoading"
-                        class="w-full py-3 btn-gradient text-[#0f1511] font-bold rounded-xl hover:brightness-110 transition-all uppercase tracking-widest text-xs disabled:opacity-40"
+                        class="btn-gradient w-full rounded-xl py-3 text-xs font-bold tracking-widest text-[#0f1511] uppercase transition-all hover:brightness-110 disabled:opacity-40"
                         @click="submitJoinModal"
-                    >{{ joinLoading ? t('gacha.joining') : t('gacha.join') }}</button>
+                    >
+                        {{ joinLoading ? t('gacha.joining') : t('gacha.join') }}
+                    </button>
                 </div>
             </div>
         </Teleport>
@@ -413,38 +717,67 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import QualitySelect from '@/components/gacha/QualitySelect.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useGachaPhysics } from '@/composables/useGachaPhysics';
 import { useGachaRoom } from '@/composables/useGachaRoom';
 import AppLayout from '@/layouts/AppLayout.vue';
-import QualitySelect from '@/components/gacha/QualitySelect.vue';
 
 const { t } = useI18n();
 
 const { user } = useAuth();
 const { chamberEl, runAnimation } = useGachaPhysics();
 const {
-    mode, wsAvailable,
-    currentRoom, isHost,
-    roomList, roomListLoading,
+    mode,
+    wsAvailable,
+    currentRoom,
+    isHost,
+    roomList,
+    roomListLoading,
     wsStatus,
-    showCreateModal, createName, openCreateModal, submitCreateModal,
-    joinTarget, joinName, joinLoading, joinError, openJoinModal, submitJoinModal,
-    canDraw, isTenPull, skipAnim, drawsPerUser,
-    selectedQuality, tenPullQualities,
-    drawHistory, broadcastLog,
-    syncing, extractionDots, lastResults, showModal, statusText,
-    drawsRemaining, canPressButton,
-    sendMachineState, leaveRoom, resetAllDraws, startSync, fetchRooms,
+    showCreateModal,
+    createName,
+    openCreateModal,
+    submitCreateModal,
+    joinTarget,
+    joinName,
+    joinLoading,
+    joinError,
+    openJoinModal,
+    submitJoinModal,
+    canDraw,
+    isTenPull,
+    skipAnim,
+    drawsPerUser,
+    selectedQuality,
+    tenPullQualities,
+    drawHistory,
+    broadcastLog,
+    syncing,
+    extractionDots,
+    lastResults,
+    showModal,
+    statusText,
+    drawsRemaining,
+    canPressButton,
+    sendMachineState,
+    leaveRoom,
+    resetAllDraws,
+    startSync,
+    fetchRooms,
 } = useGachaRoom(user, runAnimation);
-
-
 </script>
 
 <style scoped>
-.emerald-glow { box-shadow: 0 0 30px rgba(107, 220, 159, 0.15); }
-.btn-gradient { background: linear-gradient(145deg, #6bdc9f 0%, #2ca46d 100%); }
-.tune-slider { accent-color: #6bdc9f; }
+.emerald-glow {
+    box-shadow: 0 0 30px rgba(107, 220, 159, 0.15);
+}
+.btn-gradient {
+    background: linear-gradient(145deg, #6bdc9f 0%, #2ca46d 100%);
+}
+.tune-slider {
+    accent-color: #6bdc9f;
+}
 .glass-panel {
     background: rgba(28, 37, 31, 0.85);
     backdrop-filter: blur(20px);
@@ -457,10 +790,24 @@ const {
     font-weight: bold;
 }
 @keyframes bounce-in {
-    0%   { transform: scale(0.3); opacity: 0; }
-    50%  { transform: scale(1.05); opacity: 0.8; }
-    70%  { transform: scale(0.9); opacity: 0.9; }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+    70% {
+        transform: scale(0.9);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
-.animate-bounce-in { animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.animate-bounce-in {
+    animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
 </style>

@@ -28,7 +28,10 @@ async function parseJson<T>(response: Response): Promise<T> {
     const payload = await response.json();
 
     if (!response.ok) {
-        throw new AdminApiError(payload?.message || 'Request failed.', response.status);
+        throw new AdminApiError(
+            payload?.message || 'Request failed.',
+            response.status,
+        );
     }
 
     return payload as T;
@@ -45,7 +48,9 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
     return payload.data;
 }
 
-export async function saveAdminSettings(settings: AdminSettings): Promise<{ message: string; settings: AdminSettings }> {
+export async function saveAdminSettings(
+    settings: AdminSettings,
+): Promise<{ message: string; settings: AdminSettings }> {
     const response = await fetch(api.admin.settings(), {
         method: 'PATCH',
         credentials: 'include',
@@ -56,7 +61,10 @@ export async function saveAdminSettings(settings: AdminSettings): Promise<{ mess
         body: JSON.stringify(settings),
     });
 
-    const payload = await parseJson<{ message: string; settings: AdminSettings }>(response);
+    const payload = await parseJson<{
+        message: string;
+        settings: AdminSettings;
+    }>(response);
 
     return payload;
 }

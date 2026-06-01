@@ -27,7 +27,9 @@ async function submit() {
         const res = await changePasswordWithApi({
             current_password: await encryptPassword(form.current_password),
             password: await encryptPassword(form.password),
-            password_confirmation: await encryptPassword(form.password_confirmation),
+            password_confirmation: await encryptPassword(
+                form.password_confirmation,
+            ),
         });
         successMessage.value = res?.message ?? '密碼已成功更新';
         form.current_password = '';
@@ -57,7 +59,10 @@ async function submit() {
     >
         <form class="space-y-8" @submit.prevent="submit">
             <div class="space-y-2">
-                <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="current_password">
+                <label
+                    class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                    for="current_password"
+                >
                     目前密碼 / current password
                 </label>
                 <input
@@ -68,14 +73,20 @@ async function submit() {
                     placeholder="••••••••"
                     autocomplete="current-password"
                     @input="fieldErrors.current_password = []"
+                />
+                <p
+                    v-if="fieldErrors.current_password?.length"
+                    class="text-xs text-red-300"
                 >
-                <p v-if="fieldErrors.current_password?.length" class="text-xs text-red-300">
                     {{ fieldErrors.current_password[0] }}
                 </p>
             </div>
 
             <div class="space-y-2">
-                <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="password">
+                <label
+                    class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                    for="password"
+                >
                     新密碼 / new password
                 </label>
                 <input
@@ -86,14 +97,20 @@ async function submit() {
                     placeholder="••••••••"
                     autocomplete="new-password"
                     @input="fieldErrors.password = []"
+                />
+                <p
+                    v-if="fieldErrors.password?.length"
+                    class="text-xs text-red-300"
                 >
-                <p v-if="fieldErrors.password?.length" class="text-xs text-red-300">
                     {{ fieldErrors.password[0] }}
                 </p>
             </div>
 
             <div class="space-y-2">
-                <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="password_confirmation">
+                <label
+                    class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                    for="password_confirmation"
+                >
                     確認新密碼 / confirm password
                 </label>
                 <input
@@ -103,19 +120,29 @@ async function submit() {
                     type="password"
                     placeholder="••••••••"
                     autocomplete="new-password"
-                >
+                />
             </div>
 
-            <p v-if="generalError" class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200">
+            <p
+                v-if="generalError"
+                class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
+            >
                 {{ generalError }}
             </p>
 
-            <p v-if="successMessage" class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]">
+            <p
+                v-if="successMessage"
+                class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]"
+            >
                 {{ successMessage }}
             </p>
 
             <div class="pt-4">
-                <button class="binary-button" :disabled="isSubmitting" type="submit">
+                <button
+                    class="binary-button"
+                    :disabled="isSubmitting"
+                    type="submit"
+                >
                     {{ isSubmitting ? '更新中...' : '確認修改密碼' }}
                     <span aria-hidden="true">-></span>
                 </button>
@@ -124,7 +151,10 @@ async function submit() {
 
         <div class="mt-8 border-t border-[rgba(59,75,55,0.18)] pt-8">
             <div class="flex items-center gap-2 text-sm">
-                <Link class="font-semibold text-[var(--binary-text-muted)] transition hover:text-[var(--binary-primary)]" :href="routes.home()">
+                <Link
+                    class="font-semibold text-[var(--binary-text-muted)] transition hover:text-[var(--binary-primary)]"
+                    :href="routes.home()"
+                >
                     ← 返回首頁
                 </Link>
             </div>

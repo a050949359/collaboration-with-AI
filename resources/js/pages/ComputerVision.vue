@@ -4,69 +4,83 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 // ── WASM / script state ──────────────────────────────────
-const wasmReady   = ref(false);
-const cameras     = ref<MediaDeviceInfo[]>([]);
+const wasmReady = ref(false);
+const cameras = ref<MediaDeviceInfo[]>([]);
 const selectedCam = ref('');
-const started     = ref(false);
-const camError    = ref('');
+const started = ref(false);
+const camError = ref('');
 
 // ── Processing params ────────────────────────────────────
-const algorithm   = ref(0);   // 0=Canny 1=Laplacian 2=Sobel 3=Scharr
-const t1          = ref(50);
-const t2          = ref(150);
-const aperture    = ref(3);
-const algKsize    = ref(3);
+const algorithm = ref(0); // 0=Canny 1=Laplacian 2=Sobel 3=Scharr
+const t1 = ref(50);
+const t2 = ref(150);
+const aperture = ref(3);
+const algKsize = ref(3);
 const blurEnabled = ref(false);
-const blurKsize   = ref(5);
-const invert      = ref(false);
-const overlay     = ref(false);
+const blurKsize = ref(5);
+const invert = ref(false);
+const overlay = ref(false);
 
 const showCannyParams = computed(() => algorithm.value === 0);
-const showKsizeParams = computed(() => algorithm.value === 1 || algorithm.value === 2);
-const showScharrNote  = computed(() => algorithm.value === 3);
+const showKsizeParams = computed(
+    () => algorithm.value === 1 || algorithm.value === 2,
+);
+const showScharrNote = computed(() => algorithm.value === 3);
 
 // ── DOM refs ─────────────────────────────────────────────
-const videoRef  = ref<HTMLVideoElement | null>(null);
+const videoRef = ref<HTMLVideoElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
-let mod: any                 = null;
+let mod: any = null;
 let stream: MediaStream | null = null;
-let animFrame: number | null   = null;
+let animFrame: number | null = null;
 
 // ── Camera enumeration ───────────────────────────────────
 async function enumerateCams() {
     try {
         const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
-        tmp.getTracks().forEach(t => t.stop());
+        tmp.getTracks().forEach((t) => t.stop());
         const devices = await navigator.mediaDevices.enumerateDevices();
-        cameras.value = devices.filter(d => d.kind === 'videoinput');
-        if (cameras.value.length) selectedCam.value = cameras.value[0].deviceId;
-        else camError.value = '找不到相機裝置';
+        cameras.value = devices.filter((d) => d.kind === 'videoinput');
+
+        if (cameras.value.length) {
+            selectedCam.value = cameras.value[0].deviceId;
+        } else {
+            camError.value = '找不到相機裝置';
+        }
     } catch (e: any) {
         cameras.value = [];
-        if (e?.name === 'NotFoundError' || e?.name === 'DevicesNotFoundError')
+
+        if (e?.name === 'NotFoundError' || e?.name === 'DevicesNotFoundError') {
             camError.value = '找不到相機裝置';
-        else if (e?.name === 'NotAllowedError' || e?.name === 'PermissionDeniedError')
+        } else if (
+            e?.name === 'NotAllowedError' ||
+            e?.name === 'PermissionDeniedError'
+        ) {
             camError.value = '請允許存取相機';
-        else if (e?.name === 'NotReadableError')
+        } else if (e?.name === 'NotReadableError') {
             camError.value = '相機裝置已被其他程式佔用';
-        else
+        } else {
             camError.value = '無法存取相機';
+        }
     }
 }
 
 // ── Start camera ─────────────────────────────────────────
 async function startCamera() {
-    if (!mod || !canvasRef.value || !videoRef.value) return;
+    if (!mod || !canvasRef.value || !videoRef.value) {
+        return;
+    }
+
     stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: selectedCam.value } },
     });
-    const video  = videoRef.value;
+    const video = videoRef.value;
     const canvas = canvasRef.value;
     video.srcObject = stream;
     await video.play();
-    const scale   = Math.min(1, 640 / video.videoWidth);
-    canvas.width  = Math.round(video.videoWidth  * scale);
+    const scale = Math.min(1, 640 / video.videoWidth);
+    canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     started.value = true;
     renderLoop();
@@ -74,21 +88,29 @@ async function startCamera() {
 
 // ── Render loop ───────────────────────────────────────────
 function renderLoop() {
-    const video  = videoRef.value;
+    const video = videoRef.value;
     const canvas = canvasRef.value;
-    if (!video || !canvas || !mod) return;
-    const ctx   = canvas.getContext('2d', { willReadFrequently: true })!;
+
+    if (!video || !canvas || !mod) {
+        return;
+    }
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const buf   = mod._malloc(frame.data.length);
+    const buf = mod._malloc(frame.data.length);
     mod.HEAPU8.set(frame.data, buf);
     mod.detectEdges(
-        buf, canvas.width, canvas.height,
+        buf,
+        canvas.width,
+        canvas.height,
         algorithm.value,
-        t1.value, t2.value,
+        t1.value,
+        t2.value,
         algorithm.value === 0 ? aperture.value : algKsize.value,
         blurEnabled.value ? blurKsize.value : 0,
-        invert.value, overlay.value,
+        invert.value,
+        overlay.value,
     );
     frame.data.set(mod.HEAPU8.subarray(buf, buf + frame.data.length));
     mod._free(buf);
@@ -106,14 +128,20 @@ onMounted(() => {
         },
     };
     const script = document.createElement('script');
-    script.src   = '/lab/cv/edge.js';
+    script.src = '/lab/cv/edge.js';
     script.async = true;
     document.body.appendChild(script);
 });
 
 onUnmounted(() => {
-    if (animFrame !== null) cancelAnimationFrame(animFrame);
-    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (animFrame !== null) {
+        cancelAnimationFrame(animFrame);
+    }
+
+    if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+    }
+
     delete (window as any).Module;
     document.querySelector('script[src="/lab/cv/edge.js"]')?.remove();
 });
@@ -123,72 +151,130 @@ onUnmounted(() => {
     <AppLayout>
         <Head title="Computer Vision Lab" />
 
-        <div class="min-h-screen flex flex-col px-8 pb-16 pt-24"
-             style="background:#0f1511; color:#dee4dd;">
-
+        <div
+            class="flex min-h-screen flex-col px-8 pt-24 pb-16"
+            style="background: #0f1511; color: #dee4dd"
+        >
             <!-- Header -->
             <div class="mb-8">
-                <p class="text-xs font-bold tracking-widest uppercase mb-2"
-                   style="color:#6bdc9f;">Computer Vision Lab</p>
-                <h2 class="text-4xl font-bold"
-                   style="font-family:'Space Grotesk',sans-serif;">邊緣偵測</h2>
+                <p
+                    class="mb-2 text-xs font-bold tracking-widest uppercase"
+                    style="color: #6bdc9f"
+                >
+                    Computer Vision Lab
+                </p>
+                <h2
+                    class="text-4xl font-bold"
+                    style="font-family: 'Space Grotesk', sans-serif"
+                >
+                    邊緣偵測
+                </h2>
             </div>
 
             <!-- Loading -->
             <div v-if="!wasmReady" class="animate-pulse">
-                <span class="text-xs font-bold tracking-widest uppercase"
-                      style="color:#6bdc9f;">— 載入 WASM 模組 —</span>
+                <span
+                    class="text-xs font-bold tracking-widest uppercase"
+                    style="color: #6bdc9f"
+                    >— 載入 WASM 模組 —</span
+                >
             </div>
 
             <!-- Camera select (before start) -->
-            <div v-if="wasmReady && !started" class="flex flex-col gap-3 max-w-sm w-full">
+            <div
+                v-if="wasmReady && !started"
+                class="flex w-full max-w-sm flex-col gap-3"
+            >
                 <div class="flex items-center gap-4">
-                    <select v-model="selectedCam"
-                            class="flex-1 px-4 py-3 rounded-md text-sm"
-                            style="background:#1a2820; color:#dee4dd; outline:none;">
-                        <option v-if="!cameras.length" value="">— 無相機 —</option>
-                        <option v-for="cam in cameras" :key="cam.deviceId" :value="cam.deviceId">
+                    <select
+                        v-model="selectedCam"
+                        class="flex-1 rounded-md px-4 py-3 text-sm"
+                        style="
+                            background: #1a2820;
+                            color: #dee4dd;
+                            outline: none;
+                        "
+                    >
+                        <option v-if="!cameras.length" value="">
+                            — 無相機 —
+                        </option>
+                        <option
+                            v-for="cam in cameras"
+                            :key="cam.deviceId"
+                            :value="cam.deviceId"
+                        >
                             {{ cam.label || 'Camera' }}
                         </option>
                     </select>
-                    <button :disabled="!cameras.length"
-                            class="px-6 py-3 rounded-md text-sm font-bold tracking-wide transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                            style="background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;"
-                            @click="startCamera">
+                    <button
+                        :disabled="!cameras.length"
+                        class="shrink-0 rounded-md px-6 py-3 text-sm font-bold tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-40"
+                        style="
+                            background: linear-gradient(
+                                145deg,
+                                #6bdc9f,
+                                #2ca46d
+                            );
+                            color: #0f1511;
+                        "
+                        @click="startCamera"
+                    >
                         開始
                     </button>
                 </div>
-                <p v-if="camError"
-                   class="text-xs font-bold tracking-wide"
-                   style="color:#ffb3b2;">{{ camError }}</p>
+                <p
+                    v-if="camError"
+                    class="text-xs font-bold tracking-wide"
+                    style="color: #ffb3b2"
+                >
+                    {{ camError }}
+                </p>
             </div>
 
             <!-- Left / Right split (always in DOM, shown after start) -->
-            <div v-show="started" class="flex gap-6 items-start flex-1">
-
+            <div v-show="started" class="flex flex-1 items-start gap-6">
                 <!-- Left: canvas -->
-                <div class="flex-1 min-w-0">
-                    <canvas ref="canvasRef"
-                            class="block w-full rounded-xl"
-                            style="box-shadow:0 0 40px rgba(107,220,159,0.07);" />
+                <div class="min-w-0 flex-1">
+                    <canvas
+                        ref="canvasRef"
+                        class="block w-full rounded-xl"
+                        style="box-shadow: 0 0 40px rgba(107, 220, 159, 0.07)"
+                    />
                 </div>
 
                 <!-- Right: control panel -->
-                <div class="w-72 shrink-0 rounded-xl p-6 flex flex-col gap-6"
-                     style="background:rgba(15,21,17,0.7); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);">
-
+                <div
+                    class="flex w-72 shrink-0 flex-col gap-6 rounded-xl p-6"
+                    style="
+                        background: rgba(15, 21, 17, 0.7);
+                        backdrop-filter: blur(20px);
+                        -webkit-backdrop-filter: blur(20px);
+                    "
+                >
                     <!-- Algorithm -->
                     <div class="flex flex-col gap-3">
-                        <span class="text-xs font-bold tracking-widest uppercase"
-                              style="color:#6bdc9f;">算法</span>
-                        <div class="flex gap-2 flex-wrap">
-                            <button v-for="(alg, i) in ['Canny', 'Laplacian', 'Sobel', 'Scharr']"
-                                    :key="i"
-                                    class="px-3 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all"
-                                    :style="algorithm === i
+                        <span
+                            class="text-xs font-bold tracking-widest uppercase"
+                            style="color: #6bdc9f"
+                            >算法</span
+                        >
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="(alg, i) in [
+                                    'Canny',
+                                    'Laplacian',
+                                    'Sobel',
+                                    'Scharr',
+                                ]"
+                                :key="i"
+                                class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
+                                :style="
+                                    algorithm === i
                                         ? 'background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;'
-                                        : 'background:#253a2f; color:#a5d1b4;'"
-                                    @click="algorithm = i">
+                                        : 'background:#253a2f; color:#a5d1b4;'
+                                "
+                                @click="algorithm = i"
+                            >
                                 {{ alg }}
                             </button>
                         </div>
@@ -196,28 +282,63 @@ onUnmounted(() => {
 
                     <!-- Canny params -->
                     <template v-if="showCannyParams">
-                        <div class="flex flex-col gap-4 rounded-lg px-4 py-4"
-                             style="background:#131f18;">
+                        <div
+                            class="flex flex-col gap-4 rounded-lg px-4 py-4"
+                            style="background: #131f18"
+                        >
                             <div class="flex items-center gap-3">
-                                <span class="text-xs font-bold tracking-widest uppercase w-14 shrink-0"
-                                      style="color:#a5d1b4;">低閾值</span>
-                                <input type="range" min="0" max="300" v-model.number="t1"
-                                       class="flex-1" style="accent-color:#6bdc9f;" />
-                                <span class="text-xs tabular-nums w-7 text-right">{{ t1 }}</span>
+                                <span
+                                    class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
+                                    style="color: #a5d1b4"
+                                    >低閾值</span
+                                >
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="300"
+                                    v-model.number="t1"
+                                    class="flex-1"
+                                    style="accent-color: #6bdc9f"
+                                />
+                                <span
+                                    class="w-7 text-right text-xs tabular-nums"
+                                    >{{ t1 }}</span
+                                >
                             </div>
                             <div class="flex items-center gap-3">
-                                <span class="text-xs font-bold tracking-widest uppercase w-14 shrink-0"
-                                      style="color:#a5d1b4;">高閾值</span>
-                                <input type="range" min="0" max="300" v-model.number="t2"
-                                       class="flex-1" style="accent-color:#6bdc9f;" />
-                                <span class="text-xs tabular-nums w-7 text-right">{{ t2 }}</span>
+                                <span
+                                    class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
+                                    style="color: #a5d1b4"
+                                    >高閾值</span
+                                >
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="300"
+                                    v-model.number="t2"
+                                    class="flex-1"
+                                    style="accent-color: #6bdc9f"
+                                />
+                                <span
+                                    class="w-7 text-right text-xs tabular-nums"
+                                    >{{ t2 }}</span
+                                >
                             </div>
                             <div class="flex items-center gap-3">
-                                <span class="text-xs font-bold tracking-widest uppercase w-14 shrink-0"
-                                      style="color:#a5d1b4;">孔徑</span>
-                                <select v-model.number="aperture"
-                                        class="px-2 py-1 rounded text-xs"
-                                        style="background:#1a2820; color:#dee4dd; outline:none;">
+                                <span
+                                    class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
+                                    style="color: #a5d1b4"
+                                    >孔徑</span
+                                >
+                                <select
+                                    v-model.number="aperture"
+                                    class="rounded px-2 py-1 text-xs"
+                                    style="
+                                        background: #1a2820;
+                                        color: #dee4dd;
+                                        outline: none;
+                                    "
+                                >
                                     <option :value="3">3</option>
                                     <option :value="5">5</option>
                                     <option :value="7">7</option>
@@ -228,13 +349,24 @@ onUnmounted(() => {
 
                     <!-- Laplacian / Sobel ksize -->
                     <template v-if="showKsizeParams">
-                        <div class="flex items-center gap-3 rounded-lg px-4 py-4"
-                             style="background:#131f18;">
-                            <span class="text-xs font-bold tracking-widest uppercase w-14 shrink-0"
-                                  style="color:#a5d1b4;">核大小</span>
-                            <select v-model.number="algKsize"
-                                    class="px-2 py-1 rounded text-xs"
-                                    style="background:#1a2820; color:#dee4dd; outline:none;">
+                        <div
+                            class="flex items-center gap-3 rounded-lg px-4 py-4"
+                            style="background: #131f18"
+                        >
+                            <span
+                                class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
+                                style="color: #a5d1b4"
+                                >核大小</span
+                            >
+                            <select
+                                v-model.number="algKsize"
+                                class="rounded px-2 py-1 text-xs"
+                                style="
+                                    background: #1a2820;
+                                    color: #dee4dd;
+                                    outline: none;
+                                "
+                            >
                                 <option :value="1">1</option>
                                 <option :value="3">3</option>
                                 <option :value="5">5</option>
@@ -244,47 +376,80 @@ onUnmounted(() => {
                     </template>
 
                     <!-- Scharr note -->
-                    <p v-if="showScharrNote" class="text-xs tracking-wide"
-                       style="color:#a5d1b4;">固定 3×3 Scharr 核，無需調整大小</p>
+                    <p
+                        v-if="showScharrNote"
+                        class="text-xs tracking-wide"
+                        style="color: #a5d1b4"
+                    >
+                        固定 3×3 Scharr 核，無需調整大小
+                    </p>
 
                     <!-- Blur -->
                     <div class="flex flex-col gap-3">
-                        <span class="text-xs font-bold tracking-widest uppercase"
-                              style="color:#6bdc9f;">預模糊</span>
-                        <div class="flex items-center gap-3 rounded-lg px-4 py-4"
-                             style="background:#131f18;">
-                            <button class="px-3 py-1 rounded-full text-xs font-bold tracking-wide transition-all shrink-0"
-                                    :style="blurEnabled
+                        <span
+                            class="text-xs font-bold tracking-widest uppercase"
+                            style="color: #6bdc9f"
+                            >預模糊</span
+                        >
+                        <div
+                            class="flex items-center gap-3 rounded-lg px-4 py-4"
+                            style="background: #131f18"
+                        >
+                            <button
+                                class="shrink-0 rounded-full px-3 py-1 text-xs font-bold tracking-wide transition-all"
+                                :style="
+                                    blurEnabled
                                         ? 'background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;'
-                                        : 'background:#253a2f; color:#a5d1b4;'"
-                                    @click="blurEnabled = !blurEnabled">
+                                        : 'background:#253a2f; color:#a5d1b4;'
+                                "
+                                @click="blurEnabled = !blurEnabled"
+                            >
                                 {{ blurEnabled ? '開' : '關' }}
                             </button>
-                            <input type="range" min="3" max="21" step="2" v-model.number="blurKsize"
-                                   :disabled="!blurEnabled"
-                                   class="flex-1 disabled:opacity-30"
-                                   style="accent-color:#6bdc9f;" />
-                            <span class="text-xs tabular-nums w-7 text-right">{{ blurKsize }}</span>
+                            <input
+                                type="range"
+                                min="3"
+                                max="21"
+                                step="2"
+                                v-model.number="blurKsize"
+                                :disabled="!blurEnabled"
+                                class="flex-1 disabled:opacity-30"
+                                style="accent-color: #6bdc9f"
+                            />
+                            <span class="w-7 text-right text-xs tabular-nums">{{
+                                blurKsize
+                            }}</span>
                         </div>
                     </div>
 
                     <!-- Invert + Overlay -->
                     <div class="flex flex-col gap-3">
-                        <span class="text-xs font-bold tracking-widest uppercase"
-                              style="color:#6bdc9f;">輸出</span>
-                        <div class="flex gap-2 flex-wrap">
-                            <button class="px-3 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all"
-                                    :style="invert
+                        <span
+                            class="text-xs font-bold tracking-widest uppercase"
+                            style="color: #6bdc9f"
+                            >輸出</span
+                        >
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
+                                :style="
+                                    invert
                                         ? 'background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;'
-                                        : 'background:#253a2f; color:#a5d1b4;'"
-                                    @click="invert = !invert">
+                                        : 'background:#253a2f; color:#a5d1b4;'
+                                "
+                                @click="invert = !invert"
+                            >
                                 反色
                             </button>
-                            <button class="px-3 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all"
-                                    :style="overlay
+                            <button
+                                class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
+                                :style="
+                                    overlay
                                         ? 'background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;'
-                                        : 'background:#253a2f; color:#a5d1b4;'"
-                                    @click="overlay = !overlay">
+                                        : 'background:#253a2f; color:#a5d1b4;'
+                                "
+                                @click="overlay = !overlay"
+                            >
                                 疊加原圖
                             </button>
                         </div>

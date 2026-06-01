@@ -17,7 +17,8 @@ onMounted(() => {
     // 確保 Turnstile script 只載入一次
     if (!window.turnstile) {
         const script = document.createElement('script');
-        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.src =
+            'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
@@ -42,9 +43,9 @@ const renderWidget = () => {
             emit('update:modelValue', null);
         },
         'expired-callback': () => {
-             // 驗證過期，清空 token 要求重做
+            // 驗證過期，清空 token 要求重做
             emit('update:modelValue', null);
-        }
+        },
     });
 };
 </script>

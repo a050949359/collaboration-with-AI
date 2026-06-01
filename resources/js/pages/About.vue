@@ -2,9 +2,9 @@
 import { Head } from '@inertiajs/vue3';
 import { nextTick, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAuth } from '@/composables/useAuth';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { api } from '@/lib/routes';
-import { useAuth } from '@/composables/useAuth';
 
 const { t } = useI18n();
 
@@ -28,10 +28,14 @@ const canChat = computed(() => isAdmin.value || !!shareToken.value);
 
 async function submitToken() {
     const raw = tokenInput.value.trim();
-    if (!raw || isCheckingToken.value) return;
+
+    if (!raw || isCheckingToken.value) {
+        return;
+    }
 
     // 支援貼整個 URL 或純 token
     let candidate: string;
+
     try {
         const t = new URL(raw).searchParams.get('t');
         candidate = t ?? raw;
@@ -41,17 +45,24 @@ async function submitToken() {
 
     isCheckingToken.value = true;
     tokenError.value = '';
+
     try {
         const res = await fetch(api.shareTokens.check(), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
             body: JSON.stringify({ token: candidate, scope: 'about' }),
         });
+
         if (!res.ok) {
             const data = await res.json();
             tokenError.value = data.message ?? '連結無效';
+
             return;
         }
+
         shareToken.value = candidate;
         tokenInput.value = '';
     } catch {
@@ -77,7 +88,10 @@ const QUICK_QUESTIONS = [
 
 async function send(text?: string) {
     const message = (text ?? input.value).trim();
-    if (!message || isSending.value) return;
+
+    if (!message || isSending.value) {
+        return;
+    }
 
     input.value = '';
     errorMessage.value = '';
@@ -90,14 +104,19 @@ async function send(text?: string) {
             Accept: 'application/json',
             'Content-Type': 'application/json',
         };
+
         if (shareToken.value) {
             headers['Authorization'] = `Bearer ${shareToken.value}`;
         }
+
         const res = await fetch(api.about.ask(), {
             method: 'POST',
             credentials: 'include',
             headers,
-            body: JSON.stringify({ message, history: history.value.slice(0, -1) }),
+            body: JSON.stringify({
+                message,
+                history: history.value.slice(0, -1),
+            }),
         });
         const data = await res.json();
 
@@ -108,7 +127,9 @@ async function send(text?: string) {
             } else {
                 errorMessage.value = data.message ?? '發生錯誤，請稍後再試';
             }
+
             history.value.pop();
+
             return;
         }
 
@@ -124,6 +145,7 @@ async function send(text?: string) {
 
 async function scrollToBottom() {
     await nextTick();
+
     if (chatBox.value) {
         chatBox.value.scrollTop = chatBox.value.scrollHeight;
     }
@@ -138,6 +160,7 @@ const showContextPanel = ref(false);
 
 async function loadContext() {
     isLoadingContext.value = true;
+
     try {
         const res = await fetch('/api/about/context', {
             credentials: 'include',
@@ -153,11 +176,15 @@ async function loadContext() {
 async function saveContext() {
     isSavingContext.value = true;
     contextMessage.value = '';
+
     try {
         const res = await fetch('/api/about/context', {
             method: 'PUT',
             credentials: 'include',
-            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({ context: contextText.value }),
         });
         const data = await res.json();
@@ -169,6 +196,7 @@ async function saveContext() {
 
 function toggleContextPanel() {
     showContextPanel.value = !showContextPanel.value;
+
     if (showContextPanel.value && contextText.value === '') {
         loadContext();
     }
@@ -179,48 +207,90 @@ function toggleContextPanel() {
     <Head title="About" />
 
     <AppLayout>
-            <!-- Token 輸入擋板（非 admin 且無 token） -->
-            <template v-if="!canChat">
-                <div class="flex flex-col items-center justify-center min-h-[60vh] bg-[var(--binary-surface)]">
-                    <div
-                        class="w-full max-w-xl px-10 py-12"
-                        style="background:rgba(15,21,17,0.92);backdrop-filter:blur(20px);border-radius:2rem;box-shadow:0 8px 32px 0 rgba(107,220,159,0.10);"
+        <!-- Token 輸入擋板（非 admin 且無 token） -->
+        <template v-if="!canChat">
+            <div
+                class="flex min-h-[60vh] flex-col items-center justify-center bg-[var(--binary-surface)]"
+            >
+                <div
+                    class="w-full max-w-xl px-10 py-12"
+                    style="
+                        background: rgba(15, 21, 17, 0.92);
+                        backdrop-filter: blur(20px);
+                        border-radius: 2rem;
+                        box-shadow: 0 8px 32px 0 rgba(107, 220, 159, 0.1);
+                    "
+                >
+                    <h2
+                        class="mb-3 text-[2rem] font-bold tracking-tight text-[var(--binary-primary)]"
+                        style="letter-spacing: -1px"
                     >
-                        <h2 class="text-[2rem] font-bold mb-3 text-[var(--binary-primary)] tracking-tight" style="letter-spacing:-1px;">{{ t('about.token_required_title') }}</h2>
-                        <p class="text-[var(--binary-text)] text-sm mb-6 leading-relaxed opacity-70">{{ t('about.token_required_body') }}</p>
-                        <input
-                            v-model="tokenInput"
-                            type="text"
-                            class="binary-input w-full mb-3"
-                            :placeholder="t('about.token_placeholder')"
-                            @keydown.enter.prevent="submitToken"
-                        />
-                        <p v-if="tokenError" class="mb-3 text-xs text-red-400">{{ tokenError }}</p>
-                        <div class="flex justify-end">
-                            <button
-                                class="px-8 py-3 rounded-md text-base font-semibold disabled:opacity-50"
-                                style="background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container));color:var(--binary-on-primary-container);"
-                                :disabled="isCheckingToken"
-                                @click="submitToken"
-                            >{{ isCheckingToken ? '驗證中...' : t('about.token_submit') }}</button>
-                        </div>
+                        {{ t('about.token_required_title') }}
+                    </h2>
+                    <p
+                        class="mb-6 text-sm leading-relaxed text-[var(--binary-text)] opacity-70"
+                    >
+                        {{ t('about.token_required_body') }}
+                    </p>
+                    <input
+                        v-model="tokenInput"
+                        type="text"
+                        class="binary-input mb-3 w-full"
+                        :placeholder="t('about.token_placeholder')"
+                        @keydown.enter.prevent="submitToken"
+                    />
+                    <p v-if="tokenError" class="mb-3 text-xs text-red-400">
+                        {{ tokenError }}
+                    </p>
+                    <div class="flex justify-end">
+                        <button
+                            class="rounded-md px-8 py-3 text-base font-semibold disabled:opacity-50"
+                            style="
+                                background: linear-gradient(
+                                    145deg,
+                                    var(--binary-primary),
+                                    var(--binary-primary-container)
+                                );
+                                color: var(--binary-on-primary-container);
+                            "
+                            :disabled="isCheckingToken"
+                            @click="submitToken"
+                        >
+                            {{
+                                isCheckingToken
+                                    ? '驗證中...'
+                                    : t('about.token_submit')
+                            }}
+                        </button>
                     </div>
                 </div>
-            </template>
-            <template v-else>
+            </div>
+        </template>
+        <template v-else>
             <main class="pt-24 pb-24">
                 <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
                     <!-- Header -->
                     <div class="mb-8">
-                        <span class="binary-label mb-2 block text-xs font-bold uppercase text-[var(--binary-primary)]">&gt; about_me</span>
+                        <span
+                            class="binary-label mb-2 block text-xs font-bold text-[var(--binary-primary)] uppercase"
+                            >&gt; about_me</span
+                        >
                         <div class="flex items-end justify-between gap-4">
-                            <h1 class="binary-display text-5xl font-black uppercase tracking-tight md:text-6xl">Ask Me</h1>
+                            <h1
+                                class="binary-display text-5xl font-black tracking-tight uppercase md:text-6xl"
+                            >
+                                Ask Me
+                            </h1>
                             <button
                                 v-if="isAdmin"
                                 class="binary-ghost-button px-4 py-1.5 text-xs"
                                 @click="toggleContextPanel"
                             >
-                                {{ showContextPanel ? '關閉 Context' : '匯入 Context' }}
+                                {{
+                                    showContextPanel
+                                        ? '關閉 Context'
+                                        : '匯入 Context'
+                                }}
                             </button>
                         </div>
                         <p class="mt-3 text-sm text-[var(--binary-text-muted)]">
@@ -228,14 +298,25 @@ function toggleContextPanel() {
                         </p>
                     </div>
                     <!-- Admin: Context Panel -->
-                    <div v-if="isAdmin && showContextPanel" class="binary-card-raised mb-8 rounded-2xl space-y-4">
-                        <h2 class="binary-label text-xs font-bold uppercase tracking-widest text-[var(--binary-outline)]">
+                    <div
+                        v-if="isAdmin && showContextPanel"
+                        class="binary-card-raised mb-8 space-y-4 rounded-2xl"
+                    >
+                        <h2
+                            class="binary-label text-xs font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                        >
                             &gt; resume_context（管理員）
                         </h2>
                         <p class="text-xs text-[var(--binary-text-muted)]">
-                            貼入你的履歷或背景資料，Gemini 將依此內容回答訪客問題。
+                            貼入你的履歷或背景資料，Gemini
+                            將依此內容回答訪客問題。
                         </p>
-                        <div v-if="isLoadingContext" class="text-xs text-[var(--binary-text-muted)]">載入中...</div>
+                        <div
+                            v-if="isLoadingContext"
+                            class="text-xs text-[var(--binary-text-muted)]"
+                        >
+                            載入中...
+                        </div>
                         <textarea
                             v-else
                             v-model="contextText"
@@ -244,16 +325,30 @@ function toggleContextPanel() {
                             class="binary-input w-full resize-y font-mono text-sm"
                         />
                         <div class="flex items-center justify-between gap-3">
-                            <span class="text-xs" :class="contextMessage === '已儲存' ? 'text-[var(--binary-primary)]' : 'text-red-400'">
+                            <span
+                                class="text-xs"
+                                :class="
+                                    contextMessage === '已儲存'
+                                        ? 'text-[var(--binary-primary)]'
+                                        : 'text-red-400'
+                                "
+                            >
                                 {{ contextMessage }}
                             </span>
                             <button
                                 class="binary-button"
-                                :class="{ 'opacity-50 cursor-not-allowed': isSavingContext }"
+                                :class="{
+                                    'cursor-not-allowed opacity-50':
+                                        isSavingContext,
+                                }"
                                 :disabled="isSavingContext"
                                 @click="saveContext"
                             >
-                                {{ isSavingContext ? '儲存中...' : '儲存 Context' }}
+                                {{
+                                    isSavingContext
+                                        ? '儲存中...'
+                                        : '儲存 Context'
+                                }}
                             </button>
                         </div>
                     </div>
@@ -262,7 +357,7 @@ function toggleContextPanel() {
                         <button
                             v-for="q in QUICK_QUESTIONS"
                             :key="q"
-                            class="binary-label rounded-lg bg-[var(--binary-surface-container)] px-3 py-1.5 text-[10px] uppercase text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)]"
+                            class="binary-label rounded-lg bg-[var(--binary-surface-container)] px-3 py-1.5 text-[10px] text-[var(--binary-outline)] uppercase transition hover:text-[var(--binary-primary)]"
                             @click="send(q)"
                         >
                             {{ q }}
@@ -272,37 +367,62 @@ function toggleContextPanel() {
                     <div class="binary-card-raised rounded-2xl">
                         <div
                             ref="chatBox"
-                            class="mb-4 max-h-[480px] min-h-[200px] overflow-y-auto space-y-4"
+                            class="mb-4 max-h-[480px] min-h-[200px] space-y-4 overflow-y-auto"
                         >
-                            <div v-if="history.length === 0" class="py-12 text-center text-sm text-[var(--binary-text-muted)]">
+                            <div
+                                v-if="history.length === 0"
+                                class="py-12 text-center text-sm text-[var(--binary-text-muted)]"
+                            >
                                 請輸入問題或點選上方快捷按鈕開始對話。
                             </div>
                             <div
                                 v-for="(turn, i) in history"
                                 :key="i"
                                 class="flex"
-                                :class="turn.role === 'user' ? 'justify-end' : 'justify-start'"
+                                :class="
+                                    turn.role === 'user'
+                                        ? 'justify-end'
+                                        : 'justify-start'
+                                "
                             >
                                 <div
                                     class="max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed"
-                                    :class="turn.role === 'user'
-                                        ? 'bg-[var(--binary-primary)] text-[var(--binary-on-primary-container)]'
-                                        : 'bg-[var(--binary-surface-container)] text-[var(--binary-text)]'"
+                                    :class="
+                                        turn.role === 'user'
+                                            ? 'bg-[var(--binary-primary)] text-[var(--binary-on-primary-container)]'
+                                            : 'bg-[var(--binary-surface-container)] text-[var(--binary-text)]'
+                                    "
                                 >
                                     {{ turn.text }}
                                 </div>
                             </div>
                             <div v-if="isSending" class="flex justify-start">
-                                <div class="rounded-2xl bg-[var(--binary-surface-container)] px-4 py-3">
+                                <div
+                                    class="rounded-2xl bg-[var(--binary-surface-container)] px-4 py-3"
+                                >
                                     <span class="inline-flex gap-1">
-                                        <span class="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--binary-outline)]" style="animation-delay:0ms" />
-                                        <span class="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--binary-outline)]" style="animation-delay:150ms" />
-                                        <span class="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--binary-outline)]" style="animation-delay:300ms" />
+                                        <span
+                                            class="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--binary-outline)]"
+                                            style="animation-delay: 0ms"
+                                        />
+                                        <span
+                                            class="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--binary-outline)]"
+                                            style="animation-delay: 150ms"
+                                        />
+                                        <span
+                                            class="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--binary-outline)]"
+                                            style="animation-delay: 300ms"
+                                        />
                                     </span>
                                 </div>
                             </div>
                         </div>
-                        <p v-if="errorMessage" class="mb-3 text-xs text-red-400">{{ errorMessage }}</p>
+                        <p
+                            v-if="errorMessage"
+                            class="mb-3 text-xs text-red-400"
+                        >
+                            {{ errorMessage }}
+                        </p>
                         <div class="flex items-center gap-3">
                             <input
                                 v-model="input"
@@ -311,10 +431,13 @@ function toggleContextPanel() {
                                 placeholder="輸入問題..."
                                 class="binary-input min-w-0 flex-1"
                                 @keydown.enter.prevent="send()"
-                            >
+                            />
                             <button
                                 class="binary-button !w-auto shrink-0 px-4 py-2 text-xs"
-                                :class="{ 'opacity-50 cursor-not-allowed': isSending || !input.trim() }"
+                                :class="{
+                                    'cursor-not-allowed opacity-50':
+                                        isSending || !input.trim(),
+                                }"
                                 :disabled="isSending || !input.trim()"
                                 @click="send()"
                             >

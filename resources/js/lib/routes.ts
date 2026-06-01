@@ -13,14 +13,16 @@ export const routes = {
 
     // Assets
     assets: {
-        avatarDefault: (seed: string) => `${WEB_PREFIX}/avatar/default/${encodeURIComponent(seed)}`,
+        avatarDefault: (seed: string) =>
+            `${WEB_PREFIX}/avatar/default/${encodeURIComponent(seed)}`,
     },
 
     // Auth
     login: () => `${WEB_PREFIX}/login`,
     register: () => `${WEB_PREFIX}/register`,
     forgotPassword: () => `${WEB_PREFIX}/forgot-password`,
-    resetPassword: (token: string, email: string) => `${WEB_PREFIX}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`,
+    resetPassword: (token: string, email: string) =>
+        `${WEB_PREFIX}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`,
     profile: () => `${WEB_PREFIX}/profile`,
 
     // Articles
@@ -41,7 +43,8 @@ export const routes = {
     countries: () => `${WEB_PREFIX}/countries`,
 
     // City Search
-    citySearch: (countryCode?: string) => `${WEB_PREFIX}/city-search${countryCode ? `?country=${countryCode}` : ''}`,
+    citySearch: (countryCode?: string) =>
+        `${WEB_PREFIX}/city-search${countryCode ? `?country=${countryCode}` : ''}`,
 
     // About
     about: () => `${WEB_PREFIX}/about`,
@@ -99,20 +102,22 @@ export const api = {
     memoryGraph: () => '/api/memory/graph',
 
     tasks: {
-        index:       () => '/api/v1/tasks',
-        show:        (id: number) => `/api/v1/tasks/${id}`,
-        store:       () => '/api/v1/tasks',
-        update:      (id: number) => `/api/v1/tasks/${id}`,
-        destroy:     (id: number) => `/api/v1/tasks/${id}`,
-        itemStore:   (taskId: number) => `/api/v1/tasks/${taskId}/items`,
-        itemUpdate:  (taskId: number, itemId: number) => `/api/v1/tasks/${taskId}/items/${itemId}`,
-        itemDestroy: (taskId: number, itemId: number) => `/api/v1/tasks/${taskId}/items/${itemId}`,
+        index: () => '/api/v1/tasks',
+        show: (id: number) => `/api/v1/tasks/${id}`,
+        store: () => '/api/v1/tasks',
+        update: (id: number) => `/api/v1/tasks/${id}`,
+        destroy: (id: number) => `/api/v1/tasks/${id}`,
+        itemStore: (taskId: number) => `/api/v1/tasks/${taskId}/items`,
+        itemUpdate: (taskId: number, itemId: number) =>
+            `/api/v1/tasks/${taskId}/items/${itemId}`,
+        itemDestroy: (taskId: number, itemId: number) =>
+            `/api/v1/tasks/${taskId}/items/${itemId}`,
     },
 
     userApiKeys: {
-        index:   () => '/api/v1/user-api-keys',
-        store:   () => '/api/v1/user-api-keys',
-        update:  (id: number) => `/api/v1/user-api-keys/${id}`,
+        index: () => '/api/v1/user-api-keys',
+        store: () => '/api/v1/user-api-keys',
+        update: (id: number) => `/api/v1/user-api-keys/${id}`,
         destroy: (id: number) => `/api/v1/user-api-keys/${id}`,
     },
 
@@ -125,8 +130,8 @@ export const api = {
     },
 
     admin: {
-        settings:          () => '/api/admin/settings',
-        shareTokens:       () => '/api/admin/share-tokens',
+        settings: () => '/api/admin/settings',
+        shareTokens: () => '/api/admin/share-tokens',
         shareTokenDestroy: (id: number) => `/api/admin/share-tokens/${id}`,
     },
 
@@ -143,7 +148,8 @@ export const api = {
     publicArticles: {
         index: () => '/api/v1/articles',
         show: (id: number) => `/api/v1/articles/${id}`,
-        comments: (articleId: number) => `/api/v1/articles/${articleId}/comments`,
+        comments: (articleId: number) =>
+            `/api/v1/articles/${articleId}/comments`,
     },
 
     comments: {
@@ -167,15 +173,15 @@ export const api = {
 
     countries: {
         index: () => '/api/v1/countries',
-        show:  (code: string) => `/api/v1/countries/${code}`,
+        show: (code: string) => `/api/v1/countries/${code}`,
     },
 
     cities: {
-        index:   () => '/api/v1/cities',
+        index: () => '/api/v1/cities',
         preview: () => '/api/v1/cities/preview',
-        search:  {
-            index: ()        => '/api/v1/cities/search',
-            show:  (id: number) => `/api/v1/cities/search/${id}`,
+        search: {
+            index: () => '/api/v1/cities/search',
+            show: (id: number) => `/api/v1/cities/search/${id}`,
         },
     },
 
@@ -186,49 +192,51 @@ export const api = {
     },
 
     wsLab: {
-        status:      () => '/api/ws-lab/status',
-        rooms:       () => '/api/ws-lab/rooms',
-        authToken:   () => '/api/ws-lab/auth-token',
-        start:       () => '/api/ws-lab/start',
-        stop:        () => '/api/ws-lab/stop',
+        status: () => '/api/ws-lab/status',
+        rooms: () => '/api/ws-lab/rooms',
+        authToken: () => '/api/ws-lab/auth-token',
+        start: () => '/api/ws-lab/start',
+        stop: () => '/api/ws-lab/stop',
         streamStart: () => '/api/ws-lab/stream/start',
-        streamStop:  () => '/api/ws-lab/stream/stop',
+        streamStop: () => '/api/ws-lab/stream/stop',
     },
 
     characters: {
-        list:              () => '/api/v1/characters',
-        create:            () => '/api/v1/characters',
-        show:              (id: number) => `/api/v1/characters/${id}`,
-        update:            (id: number) => `/api/v1/characters/${id}`,
-        destroy:           (id: number) => `/api/v1/characters/${id}`,
-        aiGenerate:        () => '/api/v1/characters/ai/generate',
-        aiRefine:          () => '/api/v1/characters/ai/refine',
-        imagePrompt:       (id: number) => `/api/v1/characters/${id}/image-prompt`,
+        list: () => '/api/v1/characters',
+        create: () => '/api/v1/characters',
+        show: (id: number) => `/api/v1/characters/${id}`,
+        update: (id: number) => `/api/v1/characters/${id}`,
+        destroy: (id: number) => `/api/v1/characters/${id}`,
+        aiGenerate: () => '/api/v1/characters/ai/generate',
+        aiRefine: () => '/api/v1/characters/ai/refine',
+        imagePrompt: (id: number) => `/api/v1/characters/${id}/image-prompt`,
     },
 
     gacha: {
-        rooms:       () => '/api/v1/gacha/rooms',
-        store:       () => '/api/v1/gacha/rooms',
-        destroy:     (code: string) => `/api/v1/gacha/rooms/${code}`,
-        join:        (code: string) => `/api/v1/gacha/rooms/${code}/join`,
-        draw:        (code: string) => `/api/v1/gacha/rooms/${code}/draw`,
-        resetDraws:  (code: string) => `/api/v1/gacha/rooms/${code}/reset-draws`,
+        rooms: () => '/api/v1/gacha/rooms',
+        store: () => '/api/v1/gacha/rooms',
+        destroy: (code: string) => `/api/v1/gacha/rooms/${code}`,
+        join: (code: string) => `/api/v1/gacha/rooms/${code}/join`,
+        draw: (code: string) => `/api/v1/gacha/rooms/${code}/draw`,
+        resetDraws: (code: string) => `/api/v1/gacha/rooms/${code}/reset-draws`,
     },
 
     story: {
         setupGenerate: () => '/api/v1/story/setup/generate',
-        setupRefine:   () => '/api/v1/story/setup/refine',
-        sessions:      () => '/api/v1/story/sessions',
-        session:       (id: number) => `/api/v1/story/sessions/${id}`,
+        setupRefine: () => '/api/v1/story/setup/refine',
+        sessions: () => '/api/v1/story/sessions',
+        session: (id: number) => `/api/v1/story/sessions/${id}`,
         sessionStatus: (id: number) => `/api/v1/story/sessions/${id}/status`,
-        playerTurn:    (id: number) => `/api/v1/story/sessions/${id}/player-turn`,
-        publicKey:     () => '/api/auth/key',
+        playerTurn: (id: number) => `/api/v1/story/sessions/${id}/player-turn`,
+        publicKey: () => '/api/auth/key',
     },
 
     tour: {
         stats: () => '/api/v1/tour/stats',
-        passengers: (filter?: string) => `/api/v1/tour/passengers${filter ? `?filter=${filter}` : ''}`,
-        tours: (hasVacancy?: boolean) => `/api/v1/tour/tours${hasVacancy ? '?has_vacancy=1' : ''}`,
+        passengers: (filter?: string) =>
+            `/api/v1/tour/passengers${filter ? `?filter=${filter}` : ''}`,
+        tours: (hasVacancy?: boolean) =>
+            `/api/v1/tour/tours${hasVacancy ? '?has_vacancy=1' : ''}`,
         storeTour: () => '/api/v1/tour/tours',
         updateTour: (id: number) => `/api/v1/tour/tours/${id}`,
         bookings: () => '/api/v1/tour/bookings',

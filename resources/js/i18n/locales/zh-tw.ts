@@ -39,7 +39,8 @@ export default {
             title: 'AI 生成',
             to_edit: '切換到編輯',
             to_show: '返回瀏覽',
-            no_article_hint: '尚未建立文章，按下「生成文章」後才會建立草稿並開始生成。',
+            no_article_hint:
+                '尚未建立文章，按下「生成文章」後才會建立草稿並開始生成。',
             content_section: '文章內容生成',
             image_section: '封面圖片生成',
             preview_section: '目前內容預覽',
@@ -48,7 +49,8 @@ export default {
             style: '風格',
             extra_prompt: '額外描述',
             extra_prompt_suffix: '(可選，最多 {max} 字)',
-            extra_prompt_placeholder: '例如：以台南為主軸，聚焦古蹟與小吃的旅遊行程',
+            extra_prompt_placeholder:
+                '例如：以台南為主軸，聚焦古蹟與小吃的旅遊行程',
             generating_content: '生成中，請稍候...',
             generating_image: '圖片生成中，請稍候...',
             content_ready: '文章內容已生成完成！',
@@ -69,7 +71,8 @@ export default {
             status_image: 'Image',
             status_category: 'Category',
             no_content: '（尚無內容）',
-            image_auto_hint: '圖片將依據文章主題與標題自動生成，使用與主題匹配的風格。',
+            image_auto_hint:
+                '圖片將依據文章主題與標題自動生成，使用與主題匹配的風格。',
             aspect_ratio: '長寬比',
             article_status_pending: '-',
             options: {
@@ -188,7 +191,7 @@ export default {
         apikey_copy: '複製',
         apikey_copied: '已複製！',
         apikey_restore: '復原',
-        apikey_revoke:'暫停',
+        apikey_revoke: '暫停',
         apikey_revoked: '已暫停',
         apikey_delete: '刪除',
         apikey_fetch_failed: '取得 API 金鑰失敗',
@@ -222,7 +225,8 @@ export default {
     },
     airports: {
         title: '機場資料庫',
-        subtitle: '全球 84,000+ 筆機場資料，支援 IATA / ICAO 代碼搜尋、類型篩選與洲別統計。',
+        subtitle:
+            '全球 84,000+ 筆機場資料，支援 IATA / ICAO 代碼搜尋、類型篩選與洲別統計。',
         source_label: '資料來源：',
         source_link: 'OurAirports Credits',
         source_link_wiki: 'Wikidata（中文名稱）',
@@ -280,7 +284,8 @@ export default {
     },
     airlines: {
         title: '航空公司資料庫',
-        subtitle: '全球 850+ 家航空公司，支援中英文名稱、IATA / ICAO 代碼搜尋。',
+        subtitle:
+            '全球 850+ 家航空公司，支援中英文名稱、IATA / ICAO 代碼搜尋。',
         source_label: '參考資料：',
         source_link_caa: '交通部民用航空局',
         source_link_wiki: 'Wikidata（中文名稱）',
@@ -404,7 +409,8 @@ export default {
         no_stories: '尚無故事',
         empty_select: '選擇故事或建立新故事',
         setup_title: '新故事設定',
-        setup_keywords_placeholder: '輸入關鍵字，例如：魔法學院、記憶失竊、雙生兄弟…',
+        setup_keywords_placeholder:
+            '輸入關鍵字，例如：魔法學院、記憶失竊、雙生兄弟…',
         setup_generate: '產生草稿',
         setup_generating: '生成中…',
         setup_world: '世界觀',
@@ -499,7 +505,8 @@ export default {
     },
     about: {
         token_required_title: '需要分享連結',
-        token_required_body: '此頁面僅限受邀訪客使用，請貼上管理員提供的分享連結或 token 以繼續。',
+        token_required_body:
+            '此頁面僅限受邀訪客使用，請貼上管理員提供的分享連結或 token 以繼續。',
         token_placeholder: '貼上分享連結或 token...',
         token_submit: '進入',
         token_exhausted: '此分享連結的使用次數已用盡，請向管理員申請新連結。',

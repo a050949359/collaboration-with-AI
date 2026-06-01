@@ -2,9 +2,9 @@
 import { Head } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAuth } from '@/composables/useAuth';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { api } from '@/lib/routes';
-import { useAuth } from '@/composables/useAuth';
 
 type DataPoint = { ts: number; value: number };
 type CommandEntry = { user: string; text: string; ts: number };
@@ -37,14 +37,21 @@ let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 // ── WebSocket ────────────────────────────────────────────────────────────────
 
 function connectWs() {
-    if (ws) return;
+    if (ws) {
+        return;
+    }
+
     wsStatus.value = 'connecting';
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${proto}://${location.host}/ws-lab`);
 
     ws.onopen = () => {
         wsStatus.value = 'connected';
-        heartbeatTimer = setInterval(() => ws?.send(JSON.stringify({ type: 'ping' })), 10_000);
+        heartbeatTimer = setInterval(
+            () => ws?.send(JSON.stringify({ type: 'ping' })),
+            10_000,
+        );
+
         if (authToken.value) {
             ws?.send(JSON.stringify({ type: 'auth', token: authToken.value }));
             authToken.value = '';
@@ -54,27 +61,51 @@ function connectWs() {
     ws.onmessage = (e) => {
         try {
             const msg = JSON.parse(e.data);
+
             if (msg.type === 'data') {
                 history.value.push({ ts: msg.ts, value: msg.value });
-                if (history.value.length > MAX_POINTS) history.value.shift();
+
+                if (history.value.length > MAX_POINTS) {
+                    history.value.shift();
+                }
             } else if (msg.type === 'command') {
-                commands.value.push({ user: msg.user, text: msg.text, ts: Number(msg.ts) });
-                if (commands.value.length > MAX_COMMANDS) commands.value.shift();
+                commands.value.push({
+                    user: msg.user,
+                    text: msg.text,
+                    ts: Number(msg.ts),
+                });
+
+                if (commands.value.length > MAX_COMMANDS) {
+                    commands.value.shift();
+                }
             }
-        } catch { /* ignore */ }
+        } catch {
+            /* ignore */
+        }
     };
 
     ws.onclose = () => {
         wsStatus.value = 'offline';
-        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+
         ws = null;
     };
 
-    ws.onerror = () => { ws?.close(); };
+    ws.onerror = () => {
+        ws?.close();
+    };
 }
 
 function disconnectWs() {
-    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+    if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+    }
+
     ws?.close();
     ws = null;
     wsStatus.value = 'offline';
@@ -84,9 +115,17 @@ function disconnectWs() {
 
 async function startServer() {
     serverLoading.value = true;
+
     try {
-        const res = await fetch(api.wsLab.start(), { method: 'POST', credentials: 'include' });
-        if (!res.ok) return;
+        const res = await fetch(api.wsLab.start(), {
+            method: 'POST',
+            credentials: 'include',
+        });
+
+        if (!res.ok) {
+            return;
+        }
+
         serverRunning.value = true;
         setTimeout(connectWs, 400);
     } finally {
@@ -96,10 +135,14 @@ async function startServer() {
 
 async function stopServer() {
     serverLoading.value = true;
+
     try {
         streaming.value = false;
         disconnectWs();
-        await fetch(api.wsLab.stop(), { method: 'POST', credentials: 'include' });
+        await fetch(api.wsLab.stop(), {
+            method: 'POST',
+            credentials: 'include',
+        });
         serverRunning.value = false;
     } finally {
         serverLoading.value = false;
@@ -110,11 +153,22 @@ async function stopServer() {
 
 async function startStream() {
     streamLoading.value = true;
+
     try {
-        const res = await fetch(api.wsLab.streamStart(), { method: 'POST', credentials: 'include' });
-        if (!res.ok) return;
+        const res = await fetch(api.wsLab.streamStart(), {
+            method: 'POST',
+            credentials: 'include',
+        });
+
+        if (!res.ok) {
+            return;
+        }
+
         streaming.value = true;
-        if (wsStatus.value === 'offline') setTimeout(connectWs, 400);
+
+        if (wsStatus.value === 'offline') {
+            setTimeout(connectWs, 400);
+        }
     } finally {
         streamLoading.value = false;
     }
@@ -122,8 +176,12 @@ async function startStream() {
 
 async function stopStream() {
     streamLoading.value = true;
+
     try {
-        await fetch(api.wsLab.streamStop(), { method: 'POST', credentials: 'include' });
+        await fetch(api.wsLab.streamStop(), {
+            method: 'POST',
+            credentials: 'include',
+        });
         streaming.value = false;
     } finally {
         streamLoading.value = false;
@@ -134,19 +192,36 @@ async function stopStream() {
 
 async function fetchRooms() {
     roomsLoading.value = true;
+
     try {
         const res = await fetch(api.wsLab.rooms(), { credentials: 'include' });
-        if (res.ok) rooms.value = await res.json();
-    } catch { rooms.value = []; }
-    finally { roomsLoading.value = false; }
+
+        if (res.ok) {
+            rooms.value = await res.json();
+        }
+    } catch {
+        rooms.value = [];
+    } finally {
+        roomsLoading.value = false;
+    }
 }
 
 // ── Command ───────────────────────────────────────────────────────────────────
 
 function sendCommand() {
     const text = cmdInput.value.trim();
-    if (!text || !ws || wsStatus.value !== 'connected') return;
-    ws.send(JSON.stringify({ type: 'command', text, user: user.value?.name ?? 'unknown' }));
+
+    if (!text || !ws || wsStatus.value !== 'connected') {
+        return;
+    }
+
+    ws.send(
+        JSON.stringify({
+            type: 'command',
+            text,
+            user: user.value?.name ?? 'unknown',
+        }),
+    );
     cmdInput.value = '';
 }
 
@@ -154,40 +229,63 @@ function sendCommand() {
 
 function buildLinePath(): string {
     const pts = history.value;
-    if (pts.length < 2) return '';
+
+    if (pts.length < 2) {
+        return '';
+    }
+
     const step = CHART_W / (MAX_POINTS - 1);
     const offset = MAX_POINTS - pts.length;
-    return pts.map((p, i) => {
-        const x = (offset + i) * step;
-        const y = CHART_H - (p.value / 100) * CHART_H;
-        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
+
+    return pts
+        .map((p, i) => {
+            const x = (offset + i) * step;
+            const y = CHART_H - (p.value / 100) * CHART_H;
+
+            return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(' ');
 }
 
 function buildFillPath(): string {
     const pts = history.value;
-    if (pts.length < 2) return '';
+
+    if (pts.length < 2) {
+        return '';
+    }
+
     const step = CHART_W / (MAX_POINTS - 1);
     const offset = MAX_POINTS - pts.length;
-    const line = pts.map((p, i) => {
-        const x = (offset + i) * step;
-        const y = CHART_H - (p.value / 100) * CHART_H;
-        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
+    const line = pts
+        .map((p, i) => {
+            const x = (offset + i) * step;
+            const y = CHART_H - (p.value / 100) * CHART_H;
+
+            return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(' ');
     const lastX = ((offset + pts.length - 1) * step).toFixed(1);
     const firstX = (offset * step).toFixed(1);
+
     return `${line} L${lastX},${CHART_H} L${firstX},${CHART_H} Z`;
 }
 
 const linePath = computed(() => buildLinePath());
 const fillPath = computed(() => buildFillPath());
-const latestValue = computed(() => history.value.at(-1)?.value.toFixed(1) ?? null);
+const latestValue = computed(
+    () => history.value.at(-1)?.value.toFixed(1) ?? null,
+);
 
 onMounted(async () => {
     try {
         const [statusRes, tokenRes] = await Promise.all([
             fetch(api.wsLab.status(), { credentials: 'include' }),
-            user.value ? fetch(api.wsLab.authToken(), { method: 'POST', credentials: 'include' }) : Promise.resolve(null),
+            user.value
+                ? fetch(api.wsLab.authToken(), {
+                      method: 'POST',
+                      credentials: 'include',
+                  })
+                : Promise.resolve(null),
         ]);
 
         if (statusRes.ok) {
@@ -204,7 +302,9 @@ onMounted(async () => {
             connectWs();
             fetchRooms();
         }
-    } catch { /* server offline, stay disconnected */ }
+    } catch {
+        /* server offline, stay disconnected */
+    }
 });
 onUnmounted(() => disconnectWs());
 </script>
@@ -212,64 +312,124 @@ onUnmounted(() => disconnectWs());
 <template>
     <Head :title="t('ws_lab.head_title')" />
     <AppLayout>
-        <div class="flex flex-col gap-6 px-4 pb-8 pt-20 max-w-3xl mx-auto">
-
+        <div class="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-20 pb-8">
             <!-- Header -->
             <div class="flex items-center gap-3">
-                <span class="font-mono text-sm text-[--binary-primary] tracking-widest uppercase">ws-lab</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded-full border" :class="{
-                    'border-[--binary-primary] text-[--binary-primary]': wsStatus === 'connected',
-                    'border-[--binary-tertiary] text-[--binary-tertiary] animate-pulse': wsStatus === 'connecting',
-                    'border-[--binary-outline-variant] text-[--binary-text-muted]': wsStatus === 'offline',
-                }">{{ wsStatus }}</span>
+                <span
+                    class="font-mono text-sm tracking-widest text-[--binary-primary] uppercase"
+                    >ws-lab</span
+                >
+                <span
+                    class="rounded-full border px-2 py-0.5 font-mono text-[10px]"
+                    :class="{
+                        'border-[--binary-primary] text-[--binary-primary]':
+                            wsStatus === 'connected',
+                        'animate-pulse border-[--binary-tertiary] text-[--binary-tertiary]':
+                            wsStatus === 'connecting',
+                        'border-[--binary-outline-variant] text-[--binary-text-muted]':
+                            wsStatus === 'offline',
+                    }"
+                    >{{ wsStatus }}</span
+                >
 
                 <div v-if="user" class="ml-auto flex items-center gap-2">
                     <!-- Server start / stop -->
                     <button
-                        class="px-4 py-1.5 text-xs font-mono rounded border transition-colors disabled:opacity-40"
-                        :class="serverRunning
-                            ? 'border-[--binary-tertiary] text-[--binary-tertiary] hover:bg-[--binary-tertiary]/10'
-                            : 'border-[--binary-outline-variant] text-[--binary-text-muted] hover:border-[--binary-primary] hover:text-[--binary-primary]'"
+                        class="rounded border px-4 py-1.5 font-mono text-xs transition-colors disabled:opacity-40"
+                        :class="
+                            serverRunning
+                                ? 'border-[--binary-tertiary] text-[--binary-tertiary] hover:bg-[--binary-tertiary]/10'
+                                : 'border-[--binary-outline-variant] text-[--binary-text-muted] hover:border-[--binary-primary] hover:text-[--binary-primary]'
+                        "
                         :disabled="serverLoading"
                         @click="serverRunning ? stopServer() : startServer()"
-                    >{{ serverLoading ? '…' : serverRunning ? t('ws_lab.server_stop') : t('ws_lab.server_start') }}</button>
+                    >
+                        {{
+                            serverLoading
+                                ? '…'
+                                : serverRunning
+                                  ? t('ws_lab.server_stop')
+                                  : t('ws_lab.server_start')
+                        }}
+                    </button>
 
                     <!-- Stream start / stop -->
                     <button
-                        class="px-4 py-1.5 text-xs font-mono rounded border transition-colors disabled:opacity-40"
-                        :class="streaming
-                            ? 'border-[--binary-tertiary] text-[--binary-tertiary] hover:bg-[--binary-tertiary]/10'
-                            : 'border-[--binary-primary] text-[--binary-primary] hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container]'"
+                        class="rounded border px-4 py-1.5 font-mono text-xs transition-colors disabled:opacity-40"
+                        :class="
+                            streaming
+                                ? 'border-[--binary-tertiary] text-[--binary-tertiary] hover:bg-[--binary-tertiary]/10'
+                                : 'border-[--binary-primary] text-[--binary-primary] hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container]'
+                        "
                         :disabled="streamLoading || !serverRunning"
                         @click="streaming ? stopStream() : startStream()"
-                    >{{ streamLoading ? '…' : streaming ? t('ws_lab.stream_stop') : t('ws_lab.stream_start') }}</button>
+                    >
+                        {{
+                            streamLoading
+                                ? '…'
+                                : streaming
+                                  ? t('ws_lab.stream_stop')
+                                  : t('ws_lab.stream_start')
+                        }}
+                    </button>
                 </div>
             </div>
 
             <!-- Chart card -->
-            <div class="rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5">
-                <p class="font-mono text-5xl font-bold text-[--binary-primary] mb-5 tabular-nums">
+            <div
+                class="rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5"
+            >
+                <p
+                    class="mb-5 font-mono text-5xl font-bold text-[--binary-primary] tabular-nums"
+                >
                     {{ latestValue ?? '--' }}
                 </p>
 
-                <svg :viewBox="`0 0 ${CHART_W} ${CHART_H}`" class="w-full" :height="CHART_H" preserveAspectRatio="none">
+                <svg
+                    :viewBox="`0 0 ${CHART_W} ${CHART_H}`"
+                    class="w-full"
+                    :height="CHART_H"
+                    preserveAspectRatio="none"
+                >
                     <defs>
-                        <linearGradient id="ws-fill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="var(--binary-primary)" stop-opacity="0.18" />
-                            <stop offset="100%" stop-color="var(--binary-primary)" stop-opacity="0" />
+                        <linearGradient
+                            id="ws-fill"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                        >
+                            <stop
+                                offset="0%"
+                                stop-color="var(--binary-primary)"
+                                stop-opacity="0.18"
+                            />
+                            <stop
+                                offset="100%"
+                                stop-color="var(--binary-primary)"
+                                stop-opacity="0"
+                            />
                         </linearGradient>
                     </defs>
 
                     <!-- grid -->
-                    <line v-for="n in [0.25, 0.5, 0.75]" :key="n"
-                        x1="0" :y1="CHART_H * n" :x2="CHART_W" :y2="CHART_H * n"
-                        stroke="rgba(165,209,180,0.06)" stroke-width="1" />
+                    <line
+                        v-for="n in [0.25, 0.5, 0.75]"
+                        :key="n"
+                        x1="0"
+                        :y1="CHART_H * n"
+                        :x2="CHART_W"
+                        :y2="CHART_H * n"
+                        stroke="rgba(165,209,180,0.06)"
+                        stroke-width="1"
+                    />
 
                     <template v-if="linePath">
                         <!-- fill -->
                         <path :d="fillPath" fill="url(#ws-fill)" />
                         <!-- line -->
-                        <path :d="linePath"
+                        <path
+                            :d="linePath"
                             fill="none"
                             stroke="var(--binary-primary)"
                             stroke-width="2"
@@ -278,78 +438,146 @@ onUnmounted(() => disconnectWs());
                         />
                     </template>
 
-                    <text v-else
-                        x="300" :y="CHART_H / 2 + 4"
+                    <text
+                        v-else
+                        x="300"
+                        :y="CHART_H / 2 + 4"
                         text-anchor="middle"
-                        font-family="monospace" font-size="12"
-                        fill="rgba(165,209,180,0.2)">
-                        {{ wsStatus === 'offline' ? t('ws_lab.chart_offline') : t('ws_lab.chart_waiting') }}
+                        font-family="monospace"
+                        font-size="12"
+                        fill="rgba(165,209,180,0.2)"
+                    >
+                        {{
+                            wsStatus === 'offline'
+                                ? t('ws_lab.chart_offline')
+                                : t('ws_lab.chart_waiting')
+                        }}
                     </text>
                 </svg>
             </div>
 
             <!-- Rooms panel -->
-            <div class="rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5 flex flex-col gap-3">
+            <div
+                class="flex flex-col gap-3 rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5"
+            >
                 <div class="flex items-center gap-2">
-                    <span class="font-mono text-xs text-[--binary-text-muted] tracking-widest uppercase">{{ t('ws_lab.rooms_label') }}</span>
+                    <span
+                        class="font-mono text-xs tracking-widest text-[--binary-text-muted] uppercase"
+                        >{{ t('ws_lab.rooms_label') }}</span
+                    >
                     <button
-                        class="ml-auto font-mono text-[10px] px-2 py-0.5 rounded border border-[--binary-outline-variant] text-[--binary-text-muted] hover:border-[--binary-primary] hover:text-[--binary-primary] disabled:opacity-40 transition-colors"
+                        class="ml-auto rounded border border-[--binary-outline-variant] px-2 py-0.5 font-mono text-[10px] text-[--binary-text-muted] transition-colors hover:border-[--binary-primary] hover:text-[--binary-primary] disabled:opacity-40"
                         :disabled="roomsLoading || !serverRunning"
                         @click="fetchRooms"
-                    >{{ roomsLoading ? '…' : t('ws_lab.rooms_refresh') }}</button>
+                    >
+                        {{ roomsLoading ? '…' : t('ws_lab.rooms_refresh') }}
+                    </button>
                 </div>
 
-                <div v-if="!serverRunning" class="font-mono text-xs text-[--binary-text-muted] opacity-40">{{ t('ws_lab.rooms_server_offline') }}</div>
-                <div v-else-if="rooms.length === 0" class="font-mono text-xs text-[--binary-text-muted] opacity-40">{{ t('ws_lab.rooms_empty') }}</div>
+                <div
+                    v-if="!serverRunning"
+                    class="font-mono text-xs text-[--binary-text-muted] opacity-40"
+                >
+                    {{ t('ws_lab.rooms_server_offline') }}
+                </div>
+                <div
+                    v-else-if="rooms.length === 0"
+                    class="font-mono text-xs text-[--binary-text-muted] opacity-40"
+                >
+                    {{ t('ws_lab.rooms_empty') }}
+                </div>
                 <div v-else class="flex flex-col gap-1.5">
-                    <div v-for="room in rooms" :key="room.id"
-                        class="flex items-center gap-3 font-mono text-xs px-3 py-1.5 rounded border border-[--binary-outline-variant] bg-[--binary-surface]">
-                        <span class="text-[--binary-primary]">{{ room.id }}</span>
-                        <span class="px-1.5 py-px rounded text-[10px] border"
-                            :class="room.type === 'gacha'
-                                ? 'border-[--binary-tertiary] text-[--binary-tertiary]'
-                                : 'border-[--binary-outline-variant] text-[--binary-text-muted]'"
-                        >{{ room.type }}</span>
-                        <span class="ml-auto text-[--binary-text-muted] tabular-nums">{{ room.clients }} client{{ room.clients !== 1 ? 's' : '' }}</span>
+                    <div
+                        v-for="room in rooms"
+                        :key="room.id"
+                        class="flex items-center gap-3 rounded border border-[--binary-outline-variant] bg-[--binary-surface] px-3 py-1.5 font-mono text-xs"
+                    >
+                        <span class="text-[--binary-primary]">{{
+                            room.id
+                        }}</span>
+                        <span
+                            class="rounded border px-1.5 py-px text-[10px]"
+                            :class="
+                                room.type === 'gacha'
+                                    ? 'border-[--binary-tertiary] text-[--binary-tertiary]'
+                                    : 'border-[--binary-outline-variant] text-[--binary-text-muted]'
+                            "
+                            >{{ room.type }}</span
+                        >
+                        <span
+                            class="ml-auto text-[--binary-text-muted] tabular-nums"
+                            >{{ room.clients }} client{{
+                                room.clients !== 1 ? 's' : ''
+                            }}</span
+                        >
                     </div>
                 </div>
             </div>
 
             <!-- Command panel -->
-            <div class="rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5 flex flex-col gap-3">
-                <span class="font-mono text-xs text-[--binary-text-muted] tracking-widest uppercase">{{ t('ws_lab.cmd_label') }}</span>
+            <div
+                class="flex flex-col gap-3 rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5"
+            >
+                <span
+                    class="font-mono text-xs tracking-widest text-[--binary-text-muted] uppercase"
+                    >{{ t('ws_lab.cmd_label') }}</span
+                >
 
                 <!-- Log -->
-                <div class="font-mono text-xs flex flex-col gap-1 min-h-[80px] max-h-48 overflow-y-auto">
-                    <span v-if="commands.length === 0" class="text-[--binary-text-muted] opacity-40">{{ t('ws_lab.cmd_empty') }}</span>
-                    <div v-for="(cmd, i) in commands" :key="i" class="flex gap-2">
-                        <span class="text-[--binary-tertiary] shrink-0">{{ cmd.user }}</span>
+                <div
+                    class="flex max-h-48 min-h-[80px] flex-col gap-1 overflow-y-auto font-mono text-xs"
+                >
+                    <span
+                        v-if="commands.length === 0"
+                        class="text-[--binary-text-muted] opacity-40"
+                        >{{ t('ws_lab.cmd_empty') }}</span
+                    >
+                    <div
+                        v-for="(cmd, i) in commands"
+                        :key="i"
+                        class="flex gap-2"
+                    >
+                        <span class="shrink-0 text-[--binary-tertiary]">{{
+                            cmd.user
+                        }}</span>
                         <span class="text-[--binary-text-muted]">&gt;</span>
-                        <span class="text-[--binary-primary] break-all">{{ cmd.text }}</span>
-                        <span class="text-[--binary-text-muted] ml-auto shrink-0 tabular-nums">
+                        <span class="break-all text-[--binary-primary]">{{
+                            cmd.text
+                        }}</span>
+                        <span
+                            class="ml-auto shrink-0 text-[--binary-text-muted] tabular-nums"
+                        >
                             {{ new Date(cmd.ts).toLocaleTimeString() }}
                         </span>
                     </div>
                 </div>
 
                 <!-- Input (auth only) -->
-                <form v-if="user" class="flex gap-2" @submit.prevent="sendCommand">
-                    <span class="font-mono text-xs text-[--binary-tertiary] self-center">&gt;</span>
+                <form
+                    v-if="user"
+                    class="flex gap-2"
+                    @submit.prevent="sendCommand"
+                >
+                    <span
+                        class="self-center font-mono text-xs text-[--binary-tertiary]"
+                        >&gt;</span
+                    >
                     <input
                         v-model="cmdInput"
                         type="text"
                         :placeholder="t('ws_lab.cmd_placeholder')"
                         :disabled="wsStatus !== 'connected'"
-                        class="flex-1 bg-transparent border-b border-[--binary-outline-variant] focus:border-[--binary-primary] outline-none font-mono text-xs text-[--binary-primary] placeholder:text-[--binary-text-muted] pb-0.5 disabled:opacity-40 transition-colors"
+                        class="flex-1 border-b border-[--binary-outline-variant] bg-transparent pb-0.5 font-mono text-xs text-[--binary-primary] transition-colors outline-none placeholder:text-[--binary-text-muted] focus:border-[--binary-primary] disabled:opacity-40"
                     />
                     <button
                         type="submit"
                         :disabled="wsStatus !== 'connected' || !cmdInput.trim()"
-                        class="font-mono text-xs px-3 py-1 rounded border border-[--binary-primary] text-[--binary-primary] hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container] disabled:opacity-40 transition-colors"
-                    >{{ t('ws_lab.cmd_send') }}</button>
+                        class="rounded border border-[--binary-primary] px-3 py-1 font-mono text-xs text-[--binary-primary] transition-colors hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container] disabled:opacity-40"
+                    >
+                        {{ t('ws_lab.cmd_send') }}
+                    </button>
                 </form>
             </div>
-
         </div>
     </AppLayout>
 </template>

@@ -75,25 +75,39 @@ async function parseJson<T>(response: Response): Promise<T> {
     return payload as T;
 }
 
-export async function fetchPublicArticles(perPage = 50): Promise<ArticlePreview[]> {
-    const response = await fetch(resolveUrl(`${api.publicArticles.index()}?per_page=${perPage}`), {
-        headers: {
-            Accept: 'application/json',
+export async function fetchPublicArticles(
+    perPage = 50,
+): Promise<ArticlePreview[]> {
+    const response = await fetch(
+        resolveUrl(`${api.publicArticles.index()}?per_page=${perPage}`),
+        {
+            headers: {
+                Accept: 'application/json',
+            },
         },
-    });
+    );
 
     const payload = await parseJson<ApiEnvelope<ArticlePreview[]>>(response);
 
     return payload.data || [];
 }
 
-export async function fetchAuthArticles(scope: 'all' | 'mine', page = 1, perPage = 10): Promise<PaginatedArticles> {
-    const response = await fetch(resolveUrl(`${api.articles.index()}?scope=${scope}&page=${page}&per_page=${perPage}`), {
-        credentials: 'include',
-        headers: {
-            Accept: 'application/json',
+export async function fetchAuthArticles(
+    scope: 'all' | 'mine',
+    page = 1,
+    perPage = 10,
+): Promise<PaginatedArticles> {
+    const response = await fetch(
+        resolveUrl(
+            `${api.articles.index()}?scope=${scope}&page=${page}&per_page=${perPage}`,
+        ),
+        {
+            credentials: 'include',
+            headers: {
+                Accept: 'application/json',
+            },
         },
-    });
+    );
 
     const payload = await parseJson<ApiEnvelope<ArticlePreview[]>>(response);
 
@@ -106,19 +120,26 @@ export async function fetchAuthArticles(scope: 'all' | 'mine', page = 1, perPage
     };
 }
 
-export async function fetchPublicArticleDetail(articleId: number): Promise<ArticleDetail> {
-    const response = await fetch(resolveUrl(api.publicArticles.show(articleId)), {
-        headers: {
-            Accept: 'application/json',
+export async function fetchPublicArticleDetail(
+    articleId: number,
+): Promise<ArticleDetail> {
+    const response = await fetch(
+        resolveUrl(api.publicArticles.show(articleId)),
+        {
+            headers: {
+                Accept: 'application/json',
+            },
         },
-    });
+    );
 
     const payload = await parseJson<ApiEnvelope<ArticleDetail>>(response);
 
     return payload.data;
 }
 
-export async function fetchAuthArticleDetail(articleId: number): Promise<ArticleDetail> {
+export async function fetchAuthArticleDetail(
+    articleId: number,
+): Promise<ArticleDetail> {
     const response = await fetch(resolveUrl(api.articles.show(articleId)), {
         credentials: 'include',
         headers: {
@@ -150,7 +171,12 @@ export async function createArticle(title?: string): Promise<ArticlePreview> {
 
 export async function updateArticle(
     articleId: number,
-    data: { title?: string | null; content?: string | null; summary?: string | null; tags?: string[] },
+    data: {
+        title?: string | null;
+        content?: string | null;
+        summary?: string | null;
+        tags?: string[];
+    },
 ): Promise<ArticleDetail> {
     const response = await fetch(resolveUrl(api.articles.update(articleId)), {
         method: 'PUT',
@@ -199,11 +225,16 @@ export type ArticleComment = {
     can_edit: boolean;
 };
 
-export async function fetchComments(articleId: number): Promise<ArticleComment[]> {
-    const response = await fetch(resolveUrl(api.publicArticles.comments(articleId)), {
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-    });
+export async function fetchComments(
+    articleId: number,
+): Promise<ArticleComment[]> {
+    const response = await fetch(
+        resolveUrl(api.publicArticles.comments(articleId)),
+        {
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+        },
+    );
 
     return parseJson<ArticleComment[]>(response);
 }
@@ -212,12 +243,18 @@ export async function postComment(
     articleId: number,
     data: { body: string; guest_name?: string; parent_id?: number | null },
 ): Promise<void> {
-    const response = await fetch(resolveUrl(api.publicArticles.comments(articleId)), {
-        method: 'POST',
-        credentials: 'include',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-    });
+    const response = await fetch(
+        resolveUrl(api.publicArticles.comments(articleId)),
+        {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        },
+    );
 
     await parseJson<{ message: string }>(response);
 }
@@ -229,7 +266,10 @@ export async function updateComment(
     const response = await fetch(resolveUrl(api.comments.update(commentId)), {
         method: 'PUT',
         credentials: 'include',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
         body: JSON.stringify(data),
     });
 
@@ -259,12 +299,18 @@ export async function triggerGenerateContent(
     articleId: number,
     payload: GenerateContentPayload,
 ): Promise<ArticleDetail> {
-    const response = await fetch(resolveUrl(api.articles.generateContent(articleId)), {
-        method: 'POST',
-        credentials: 'include',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    });
+    const response = await fetch(
+        resolveUrl(api.articles.generateContent(articleId)),
+        {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        },
+    );
 
     const data = await parseJson<ApiEnvelope<ArticleDetail>>(response);
 
@@ -275,15 +321,20 @@ export async function triggerGenerateImage(
     articleId: number,
     aspectRatio: string,
 ): Promise<ArticleDetail> {
-    const response = await fetch(resolveUrl(api.articles.generateImage(articleId)), {
-        method: 'POST',
-        credentials: 'include',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aspect_ratio: aspectRatio }),
-    });
+    const response = await fetch(
+        resolveUrl(api.articles.generateImage(articleId)),
+        {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ aspect_ratio: aspectRatio }),
+        },
+    );
 
     const data = await parseJson<ApiEnvelope<ArticleDetail>>(response);
 
     return data.data;
 }
-

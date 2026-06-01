@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { computed, reactive, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { computed, reactive, ref, watch } from 'vue';
+import { onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import AppLayout from '../layouts/AppLayout.vue';
 import { useAuth } from '../composables/useAuth';
+import AppLayout from '../layouts/AppLayout.vue';
 import { AuthApiError, changePasswordWithApi } from '../lib/auth-api';
 import { encryptPassword } from '../lib/crypto';
 import { api, routes } from '../lib/routes';
@@ -13,15 +14,18 @@ const { t } = useI18n();
 
 const { user, isAdmin } = useAuth();
 
-
 const activeTab = ref<'password' | 'name' | 'apikey'>('password');
 
 // ── API-KEY 管理 ───────────────────────────────
-import { onMounted } from 'vue';
 
-interface ApiKeyScopeOption { value: string; adminOnly: boolean; }
+interface ApiKeyScopeOption {
+    value: string;
+    adminOnly: boolean;
+}
 const page = usePage();
-const apiKeyScopeOptions = computed(() => (page.props.apiKeyScopes as ApiKeyScopeOption[]) ?? []);
+const apiKeyScopeOptions = computed(
+    () => (page.props.apiKeyScopes as ApiKeyScopeOption[]) ?? [],
+);
 
 interface ApiKey {
     id: number;
@@ -35,7 +39,7 @@ const apiKeys = ref<ApiKey[]>([]);
 const apiKeyLoading = ref(false);
 const apiKeyError = ref('');
 const newApiKey = ref('');
-const newApiKeyId = ref<number|null>(null);
+const newApiKeyId = ref<number | null>(null);
 const newApiKeyLoading = ref(false);
 const newKeyName = ref('api-key');
 const newKeyScopes = ref<string[]>([]);
@@ -58,8 +62,11 @@ function closeCreateModal() {
 async function fetchApiKeys() {
     apiKeyLoading.value = true;
     apiKeyError.value = '';
+
     try {
-        const res = await fetch(api.userApiKeys.index(), { credentials: 'include' });
+        const res = await fetch(api.userApiKeys.index(), {
+            credentials: 'include',
+        });
         apiKeys.value = await res.json();
     } catch {
         apiKeyError.value = t('profile.apikey_fetch_failed');
@@ -69,47 +76,85 @@ async function fetchApiKeys() {
 }
 
 function bufferToPem(buffer: ArrayBuffer, label: string): string {
-    const bytes = new Uint8Array(buffer)
-    let str = ''
-    for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i])
-    const b64 = btoa(str).replace(/(.{64})/g, '$1\n')
-    return `-----BEGIN ${label}-----\n${b64}\n-----END ${label}-----`
+    const bytes = new Uint8Array(buffer);
+    let str = '';
+
+    for (let i = 0; i < bytes.length; i++) {
+        str += String.fromCharCode(bytes[i]);
+    }
+
+    const b64 = btoa(str).replace(/(.{64})/g, '$1\n');
+
+    return `-----BEGIN ${label}-----\n${b64}\n-----END ${label}-----`;
 }
 
 // 前端產生 RSA 金鑰對，私鑰只存在記憶體（不持久化）
-async function generateKeyPair(): Promise<{ publicKeyPem: string; privateKey: CryptoKey }> {
+async function generateKeyPair(): Promise<{
+    publicKeyPem: string;
+    privateKey: CryptoKey;
+}> {
     const keyPair = await window.crypto.subtle.generateKey(
-        { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-1' },
+        {
+            name: 'RSA-OAEP',
+            modulusLength: 2048,
+            publicExponent: new Uint8Array([1, 0, 1]),
+            hash: 'SHA-1',
+        },
         false,
-        ['encrypt', 'decrypt']
-    )
-    const spki = await window.crypto.subtle.exportKey('spki', keyPair.publicKey)
-    return { publicKeyPem: bufferToPem(spki, 'PUBLIC KEY'), privateKey: keyPair.privateKey }
+        ['encrypt', 'decrypt'],
+    );
+    const spki = await window.crypto.subtle.exportKey(
+        'spki',
+        keyPair.publicKey,
+    );
+
+    return {
+        publicKeyPem: bufferToPem(spki, 'PUBLIC KEY'),
+        privateKey: keyPair.privateKey,
+    };
 }
 
 // 新增 API 金鑰
 async function createApiKey() {
     if (!newKeyScopes.value.length) {
         apiKeyError.value = '請選擇至少一個 Scope';
+
         return;
     }
+
     newApiKeyLoading.value = true;
     newApiKey.value = '';
     newApiKeyId.value = null;
     apiKeyError.value = '';
+
     try {
         const { publicKeyPem, privateKey } = await generateKeyPair();
         const res = await fetch(api.userApiKeys.store(), {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publicKey: publicKeyPem, type: 'mcp', name: newKeyName.value || 'api-key', scopes: newKeyScopes.value.length ? newKeyScopes.value : null }),
+            body: JSON.stringify({
+                publicKey: publicKeyPem,
+                type: 'mcp',
+                name: newKeyName.value || 'api-key',
+                scopes: newKeyScopes.value.length ? newKeyScopes.value : null,
+            }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || t('profile.apikey_create_failed'));
+
+        if (!res.ok) {
+            throw new Error(data.message || t('profile.apikey_create_failed'));
+        }
+
         // 解密回傳的 api_key（私鑰只存在此 function 的 scope）
-        const encrypted = Uint8Array.from(atob(data.api_key), c => c.charCodeAt(0));
-        const decrypted = await window.crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, encrypted);
+        const encrypted = Uint8Array.from(atob(data.api_key), (c) =>
+            c.charCodeAt(0),
+        );
+        const decrypted = await window.crypto.subtle.decrypt(
+            { name: 'RSA-OAEP' },
+            privateKey,
+            encrypted,
+        );
         newApiKey.value = new TextDecoder().decode(decrypted);
         newApiKeyId.value = data.id;
         apiKeys.value.unshift({
@@ -121,7 +166,9 @@ async function createApiKey() {
             created_at: new Date().toISOString(),
         });
     } catch (e) {
-        apiKeyError.value = (e instanceof Error ? e.message : null) || t('profile.apikey_create_failed');
+        apiKeyError.value =
+            (e instanceof Error ? e.message : null) ||
+            t('profile.apikey_create_failed');
     } finally {
         newApiKeyLoading.value = false;
     }
@@ -130,7 +177,9 @@ async function createApiKey() {
 async function copyKey(key: string) {
     await navigator.clipboard.writeText(key);
     copied.value = true;
-    setTimeout(() => { copied.value = false; }, 1000);
+    setTimeout(() => {
+        copied.value = false;
+    }, 1000);
 }
 
 async function setRevoked(id: number, revoked: boolean) {
@@ -140,15 +189,25 @@ async function setRevoked(id: number, revoked: boolean) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ revoked }),
     });
+
     if (res.ok) {
-        const key = apiKeys.value.find(k => k.id === id);
-        if (key) key.revoked_at = revoked ? new Date().toISOString() : null;
+        const key = apiKeys.value.find((k) => k.id === id);
+
+        if (key) {
+            key.revoked_at = revoked ? new Date().toISOString() : null;
+        }
     }
 }
 
 async function deleteApiKey(id: number) {
-    const res = await fetch(api.userApiKeys.destroy(id), { method: 'DELETE', credentials: 'include' });
-    if (res.ok) apiKeys.value = apiKeys.value.filter(k => k.id !== id);
+    const res = await fetch(api.userApiKeys.destroy(id), {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+
+    if (res.ok) {
+        apiKeys.value = apiKeys.value.filter((k) => k.id !== id);
+    }
 }
 
 onMounted(() => {
@@ -157,7 +216,15 @@ onMounted(() => {
 
 // ── 改名 ────────────────────────────────────────────────
 const nameForm = reactive({ name: '' });
-watch(user, (u) => { if (u && !nameForm.name) nameForm.name = u.name; }, { immediate: true });
+watch(
+    user,
+    (u) => {
+        if (u && !nameForm.name) {
+            nameForm.name = u.name;
+        }
+    },
+    { immediate: true },
+);
 const nameSubmitting = ref(false);
 const nameError = ref('');
 const nameSuccess = ref('');
@@ -166,16 +233,24 @@ async function submitName() {
     nameError.value = '';
     nameSuccess.value = '';
     nameSubmitting.value = true;
+
     try {
         const res = await fetch(api.auth.updateName(), {
             method: 'PATCH',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
             body: JSON.stringify({ name: nameForm.name }),
         });
         const data = await res.json();
+
         if (!res.ok) {
-            nameError.value = data?.errors?.name?.[0] ?? data?.message ?? t('profile.name_update_failed');
+            nameError.value =
+                data?.errors?.name?.[0] ??
+                data?.message ??
+                t('profile.name_update_failed');
         } else {
             nameSuccess.value = data.message ?? t('profile.name_updated');
             router.reload({ only: ['auth'] });
@@ -210,7 +285,9 @@ async function submit() {
         const res = await changePasswordWithApi({
             current_password: await encryptPassword(form.current_password),
             password: await encryptPassword(form.password),
-            password_confirmation: await encryptPassword(form.password_confirmation),
+            password_confirmation: await encryptPassword(
+                form.password_confirmation,
+            ),
         });
         successMessage.value = res?.message ?? t('profile.password_updated');
         form.current_password = '';
@@ -232,287 +309,633 @@ async function submit() {
 <template>
     <Head :title="t('profile.head_title')" />
     <AppLayout>
-        <div class="mx-auto w-full max-w-screen-2xl px-6 pb-16 md:px-8" style="padding-top: 6rem;">
-
-            <p class="binary-label mb-2 text-xs font-bold uppercase text-[var(--binary-primary)]">&gt; {{ t('profile.breadcrumb') }}</p>
-            <h1 class="binary-display mb-12 text-4xl font-black uppercase tracking-tight text-[var(--binary-text)] md:text-6xl">{{ t('profile.title') }}</h1>
+        <div
+            class="mx-auto w-full max-w-screen-2xl px-6 pb-16 md:px-8"
+            style="padding-top: 6rem"
+        >
+            <p
+                class="binary-label mb-2 text-xs font-bold text-[var(--binary-primary)] uppercase"
+            >
+                &gt; {{ t('profile.breadcrumb') }}
+            </p>
+            <h1
+                class="binary-display mb-12 text-4xl font-black tracking-tight text-[var(--binary-text)] uppercase md:text-6xl"
+            >
+                {{ t('profile.title') }}
+            </h1>
 
             <div class="grid gap-6 md:grid-cols-[220px_1fr]">
-
                 <!-- 帳號資訊 -->
-                <div class="rounded-2xl bg-[var(--binary-surface-low)] p-6" style="box-shadow: inset 4px 0 0 0 var(--binary-primary);">
-                    <p class="binary-label mb-4 text-[10px] font-bold uppercase tracking-widest text-[var(--binary-outline)]">{{ t('profile.section_account') }}</p>
+                <div
+                    class="rounded-2xl bg-[var(--binary-surface-low)] p-6"
+                    style="box-shadow: inset 4px 0 0 0 var(--binary-primary)"
+                >
+                    <p
+                        class="binary-label mb-4 text-[10px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                    >
+                        {{ t('profile.section_account') }}
+                    </p>
                     <div v-if="user" class="flex flex-col gap-4">
                         <img
-                            :src="String(user.avatar || routes.assets.avatarDefault('user'))"
+                            :src="
+                                String(
+                                    user.avatar ||
+                                        routes.assets.avatarDefault('user'),
+                                )
+                            "
                             alt="avatar"
                             class="h-16 w-16 rounded-full object-cover"
-                        >
+                        />
                         <div>
-                            <p class="binary-label text-[10px] uppercase text-[var(--binary-outline)]">{{ t('profile.field_name') }}</p>
-                            <p class="mt-1 font-mono text-sm text-[var(--binary-text)]">{{ user.name }}</p>
+                            <p
+                                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                            >
+                                {{ t('profile.field_name') }}
+                            </p>
+                            <p
+                                class="mt-1 font-mono text-sm text-[var(--binary-text)]"
+                            >
+                                {{ user.name }}
+                            </p>
                         </div>
                         <div>
-                            <p class="binary-label text-[10px] uppercase text-[var(--binary-outline)]">{{ t('profile.field_email') }}</p>
-                            <p class="mt-1 font-mono text-sm text-[var(--binary-text)]">{{ user.email }}</p>
+                            <p
+                                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                            >
+                                {{ t('profile.field_email') }}
+                            </p>
+                            <p
+                                class="mt-1 font-mono text-sm text-[var(--binary-text)]"
+                            >
+                                {{ user.email }}
+                            </p>
                             <span
                                 v-if="user.email_verified_at"
-                                class="mt-1 inline-block binary-label text-[9px] uppercase text-[var(--binary-primary)]"
-                            >{{ t('profile.verified') }}</span>
+                                class="binary-label mt-1 inline-block text-[9px] text-[var(--binary-primary)] uppercase"
+                                >{{ t('profile.verified') }}</span
+                            >
                         </div>
                     </div>
                 </div>
 
                 <!-- 修改密碼 -->
-                <div class="rounded-2xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] overflow-hidden">
+                <div
+                    class="overflow-hidden rounded-2xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)]"
+                >
                     <!-- Tabs -->
-                    <div class="flex border-b border-[var(--binary-outline-variant)]">
+                    <div
+                        class="flex border-b border-[var(--binary-outline-variant)]"
+                    >
                         <button
                             type="button"
-                            class="binary-label px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-colors"
-                            :class="activeTab === 'name'
-                                ? 'border-b-2 border-[var(--binary-primary)] text-[var(--binary-primary)] -mb-px'
-                                : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
+                            class="binary-label px-6 py-3 text-[11px] font-bold tracking-widest uppercase transition-colors"
+                            :class="
+                                activeTab === 'name'
+                                    ? '-mb-px border-b-2 border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                                    : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
+                            "
                             @click="activeTab = 'name'"
-                        >{{ t('profile.tab_rename') }}</button>
+                        >
+                            {{ t('profile.tab_rename') }}
+                        </button>
                         <button
                             type="button"
-                            class="binary-label px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-colors"
-                            :class="activeTab === 'password'
-                                ? 'border-b-2 border-[var(--binary-primary)] text-[var(--binary-primary)] -mb-px'
-                                : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
+                            class="binary-label px-6 py-3 text-[11px] font-bold tracking-widest uppercase transition-colors"
+                            :class="
+                                activeTab === 'password'
+                                    ? '-mb-px border-b-2 border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                                    : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
+                            "
                             @click="activeTab = 'password'"
-                        >{{ t('profile.tab_password') }}</button>
+                        >
+                            {{ t('profile.tab_password') }}
+                        </button>
                         <button
                             type="button"
-                            class="binary-label px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-colors"
-                            :class="activeTab === 'apikey'
-                                ? 'border-b-2 border-[var(--binary-primary)] text-[var(--binary-primary)] -mb-px'
-                                : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'"
+                            class="binary-label px-6 py-3 text-[11px] font-bold tracking-widest uppercase transition-colors"
+                            :class="
+                                activeTab === 'apikey'
+                                    ? '-mb-px border-b-2 border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                                    : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
+                            "
                             @click="activeTab = 'apikey'"
-                        >API-KEY</button>
+                        >
+                            API-KEY
+                        </button>
                     </div>
 
                     <div class="px-10 py-6">
-
-                    <!-- 改名 tab -->
-                    <form v-if="activeTab === 'name'" class="space-y-5 max-w-sm" @submit.prevent="submitName">
-                        <div class="space-y-1.5">
-                            <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="display_name">
-                                {{ t('profile.label_display_name') }}
-                            </label>
-                            <input
-                                id="display_name"
-                                v-model="nameForm.name"
-                                class="binary-input"
-                                type="text"
-                                :placeholder="t('profile.placeholder_name')"
-                                maxlength="255"
+                        <!-- 改名 tab -->
+                        <form
+                            v-if="activeTab === 'name'"
+                            class="max-w-sm space-y-5"
+                            @submit.prevent="submitName"
+                        >
+                            <div class="space-y-1.5">
+                                <label
+                                    class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                    for="display_name"
+                                >
+                                    {{ t('profile.label_display_name') }}
+                                </label>
+                                <input
+                                    id="display_name"
+                                    v-model="nameForm.name"
+                                    class="binary-input"
+                                    type="text"
+                                    :placeholder="t('profile.placeholder_name')"
+                                    maxlength="255"
+                                />
+                            </div>
+                            <p
+                                v-if="nameError"
+                                class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
                             >
-                        </div>
-                        <p v-if="nameError" class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200">{{ nameError }}</p>
-                        <p v-if="nameSuccess" class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]">{{ nameSuccess }}</p>
-                        <button class="binary-button" :disabled="nameSubmitting" type="submit">
-                            {{ nameSubmitting ? t('profile.submitting') : t('profile.submit_rename') }}
-                            <span aria-hidden="true">-></span>
-                        </button>
-                    </form>
-
-                    <form v-if="activeTab === 'password'" class="space-y-5 max-w-sm" @submit.prevent="submit">
-                        <div class="space-y-1.5">
-                            <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="current_password">
-                                {{ t('profile.label_current_password') }}
-                            </label>
-                            <div class="relative">
-                                <input
-                                    id="current_password"
-                                    v-model="form.current_password"
-                                    class="binary-input pr-10"
-                                    :type="show.current ? 'text' : 'password'"
-                                    placeholder="••••••••"
-                                    autocomplete="current-password"
-                                    @input="fieldErrors.current_password = []"
-                                >
-                                <button type="button" class="absolute inset-y-0 right-3 flex items-center text-[var(--binary-outline)] hover:text-[var(--binary-text)] transition-colors" @click="show.current = !show.current">
-                                    <svg v-if="show.current" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                </button>
-                            </div>
-                            <p v-if="fieldErrors.current_password?.length" class="text-xs text-red-300">
-                                {{ fieldErrors.current_password[0] }}
+                                {{ nameError }}
                             </p>
-                        </div>
-
-                        <div class="space-y-1.5">
-                            <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="password">
-                                {{ t('profile.label_new_password') }}
-                            </label>
-                            <div class="relative">
-                                <input
-                                    id="password"
-                                    v-model="form.password"
-                                    class="binary-input pr-10"
-                                    :type="show.password ? 'text' : 'password'"
-                                    placeholder="••••••••"
-                                    autocomplete="new-password"
-                                    @input="fieldErrors.password = []"
-                                >
-                                <button type="button" class="absolute inset-y-0 right-3 flex items-center text-[var(--binary-outline)] hover:text-[var(--binary-text)] transition-colors" @click="show.password = !show.password">
-                                    <svg v-if="show.password" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                </button>
-                            </div>
-                            <p v-if="fieldErrors.password?.length" class="text-xs text-red-300">
-                                {{ fieldErrors.password[0] }}
-                            </p>
-                        </div>
-
-                        <div class="space-y-1.5">
-                            <label class="binary-label block text-[11px] font-bold uppercase text-[var(--binary-outline)]" for="password_confirmation">
-                                {{ t('profile.label_confirm_password') }}
-                            </label>
-                            <div class="relative">
-                                <input
-                                    id="password_confirmation"
-                                    v-model="form.password_confirmation"
-                                    class="binary-input pr-10"
-                                    :type="show.confirm ? 'text' : 'password'"
-                                    placeholder="••••••••"
-                                    autocomplete="new-password"
-                                >
-                                <button type="button" class="absolute inset-y-0 right-3 flex items-center text-[var(--binary-outline)] hover:text-[var(--binary-text)] transition-colors" @click="show.confirm = !show.confirm">
-                                    <svg v-if="show.confirm" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <p v-if="generalError" class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200">
-                            {{ generalError }}
-                        </p>
-
-                        <p v-if="successMessage" class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]">
-                            {{ successMessage }}
-                        </p>
-
-                        <button class="binary-button" :disabled="isSubmitting" type="submit">
-                            {{ isSubmitting ? t('profile.submitting') : t('profile.submit_password') }}
-                            <span aria-hidden="true">-></span>
-                        </button>
-                    </form>
-
-                    <!-- API-KEY tab -->
-                    <div v-if="activeTab === 'apikey'">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-lg font-bold">{{ t('profile.apikey_title') }}</span>
-                            <button class="binary-button text-xs px-4 py-1.5 w-fit" @click="openCreateModal">{{ t('profile.apikey_generate') }}</button>
-                        </div>
-
-                        <!-- 金鑰清單 -->
-                        <div v-if="apiKeyLoading" class="text-xs opacity-50">{{ t('common.loading') }}</div>
-                        <div v-else class="space-y-2">
-                            <div
-                                v-for="key in apiKeys"
-                                :key="key.id"
-                                class="flex items-center gap-3 px-3 py-2 rounded-lg border"
-                                :class="key.revoked_at ? 'border-red-500/20' : 'border-[var(--binary-outline-variant)]'"
+                            <p
+                                v-if="nameSuccess"
+                                class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]"
                             >
-                                <span class="text-sm font-medium text-[var(--binary-text)] flex-1 truncate transition-opacity" :class="key.revoked_at ? 'opacity-40' : ''">{{ key.name }}</span>
-                                <template v-if="key.scopes?.length">
-                                    <span v-for="scope in key.scopes" :key="scope" class="text-xs font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">{{ scope }}</span>
-                                </template>
-                                <span class="text-xs text-[var(--binary-outline)] shrink-0 transition-opacity" :class="key.revoked_at ? 'opacity-40' : ''">
-                                    {{ t('profile.apikey_created_label') }} {{ new Date(key.created_at).toLocaleDateString() }}
-                                    <template v-if="key.revoked_at"> · {{ t('profile.apikey_revoked_label') }} {{ new Date(key.revoked_at).toLocaleDateString() }}</template>
-                                </span>
-                                <button
-                                    v-if="key.revoked_at"
-                                    class="text-xs px-2 py-0.5 rounded border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-colors"
-                                    @click="setRevoked(key.id, false)"
-                                >{{ t('profile.apikey_restore') }}</button>
-                                <button
-                                    v-else
-                                    class="text-xs px-2 py-0.5 rounded border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 transition-colors"
-                                    @click="setRevoked(key.id, true)"
-                                >{{ t('profile.apikey_revoke') }}</button>
-                                <button
-                                    class="text-xs px-2 py-0.5 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
-                                    @click="deleteApiKey(key.id)"
-                                >{{ t('profile.apikey_delete') }}</button>
-                            </div>
-                        </div>
-                    </div>
-                    </div><!-- /tab content -->
-                </div>
-
-            </div>
-        </div>
-    <!-- 產生 API Key Modal -->
-    <Teleport to="body">
-        <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" @click.self="closeCreateModal">
-            <div class="w-full max-w-md mx-4 rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface)] p-6 shadow-2xl">
-                <div class="text-base font-bold mb-5">{{ t('profile.apikey_generate') }}</div>
-
-                <!-- 名稱 -->
-                <div class="mb-4">
-                    <label class="text-xs text-[var(--binary-outline)] mb-1.5 block">名稱</label>
-                    <input
-                        v-model="newKeyName"
-                        class="binary-input w-full text-sm"
-                        type="text"
-                        placeholder="api-key"
-                        maxlength="64"
-                    />
-                </div>
-
-                <!-- Scope 必選 -->
-                <div class="mb-5">
-                    <label class="text-xs text-[var(--binary-outline)] mb-2 block">Scope <span class="text-red-400">*</span></label>
-                    <div class="flex flex-wrap gap-2">
-                        <template v-for="s in apiKeyScopeOptions" :key="s.value">
+                                {{ nameSuccess }}
+                            </p>
                             <button
-                                v-if="!s.adminOnly || isAdmin"
-                                type="button"
-                                class="text-xs font-mono px-3 py-1.5 rounded border transition-colors"
-                                :class="newKeyScopes.includes(s.value)
-                                    ? 'border-[var(--binary-primary)] text-[var(--binary-primary)] bg-[var(--binary-primary)]/10'
-                                    : 'border-[var(--binary-outline-variant)] text-[var(--binary-outline)] hover:border-[var(--binary-outline)]'"
-                                @click="newKeyScopes.includes(s.value) ? newKeyScopes.splice(newKeyScopes.indexOf(s.value), 1) : newKeyScopes.push(s.value)"
-                            >{{ s.value }}</button>
-                        </template>
+                                class="binary-button"
+                                :disabled="nameSubmitting"
+                                type="submit"
+                            >
+                                {{
+                                    nameSubmitting
+                                        ? t('profile.submitting')
+                                        : t('profile.submit_rename')
+                                }}
+                                <span aria-hidden="true">-></span>
+                            </button>
+                        </form>
+
+                        <form
+                            v-if="activeTab === 'password'"
+                            class="max-w-sm space-y-5"
+                            @submit.prevent="submit"
+                        >
+                            <div class="space-y-1.5">
+                                <label
+                                    class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                    for="current_password"
+                                >
+                                    {{ t('profile.label_current_password') }}
+                                </label>
+                                <div class="relative">
+                                    <input
+                                        id="current_password"
+                                        v-model="form.current_password"
+                                        class="binary-input pr-10"
+                                        :type="
+                                            show.current ? 'text' : 'password'
+                                        "
+                                        placeholder="••••••••"
+                                        autocomplete="current-password"
+                                        @input="
+                                            fieldErrors.current_password = []
+                                        "
+                                    />
+                                    <button
+                                        type="button"
+                                        class="absolute inset-y-0 right-3 flex items-center text-[var(--binary-outline)] transition-colors hover:text-[var(--binary-text)]"
+                                        @click="show.current = !show.current"
+                                    >
+                                        <svg
+                                            v-if="show.current"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                                            />
+                                        </svg>
+                                        <svg
+                                            v-else
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                            />
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <p
+                                    v-if="fieldErrors.current_password?.length"
+                                    class="text-xs text-red-300"
+                                >
+                                    {{ fieldErrors.current_password[0] }}
+                                </p>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label
+                                    class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                    for="password"
+                                >
+                                    {{ t('profile.label_new_password') }}
+                                </label>
+                                <div class="relative">
+                                    <input
+                                        id="password"
+                                        v-model="form.password"
+                                        class="binary-input pr-10"
+                                        :type="
+                                            show.password ? 'text' : 'password'
+                                        "
+                                        placeholder="••••••••"
+                                        autocomplete="new-password"
+                                        @input="fieldErrors.password = []"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="absolute inset-y-0 right-3 flex items-center text-[var(--binary-outline)] transition-colors hover:text-[var(--binary-text)]"
+                                        @click="show.password = !show.password"
+                                    >
+                                        <svg
+                                            v-if="show.password"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                                            />
+                                        </svg>
+                                        <svg
+                                            v-else
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                            />
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <p
+                                    v-if="fieldErrors.password?.length"
+                                    class="text-xs text-red-300"
+                                >
+                                    {{ fieldErrors.password[0] }}
+                                </p>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label
+                                    class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                    for="password_confirmation"
+                                >
+                                    {{ t('profile.label_confirm_password') }}
+                                </label>
+                                <div class="relative">
+                                    <input
+                                        id="password_confirmation"
+                                        v-model="form.password_confirmation"
+                                        class="binary-input pr-10"
+                                        :type="
+                                            show.confirm ? 'text' : 'password'
+                                        "
+                                        placeholder="••••••••"
+                                        autocomplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="absolute inset-y-0 right-3 flex items-center text-[var(--binary-outline)] transition-colors hover:text-[var(--binary-text)]"
+                                        @click="show.confirm = !show.confirm"
+                                    >
+                                        <svg
+                                            v-if="show.confirm"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                                            />
+                                        </svg>
+                                        <svg
+                                            v-else
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                            />
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p
+                                v-if="generalError"
+                                class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
+                            >
+                                {{ generalError }}
+                            </p>
+
+                            <p
+                                v-if="successMessage"
+                                class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]"
+                            >
+                                {{ successMessage }}
+                            </p>
+
+                            <button
+                                class="binary-button"
+                                :disabled="isSubmitting"
+                                type="submit"
+                            >
+                                {{
+                                    isSubmitting
+                                        ? t('profile.submitting')
+                                        : t('profile.submit_password')
+                                }}
+                                <span aria-hidden="true">-></span>
+                            </button>
+                        </form>
+
+                        <!-- API-KEY tab -->
+                        <div v-if="activeTab === 'apikey'">
+                            <div class="mb-4 flex items-center justify-between">
+                                <span class="text-lg font-bold">{{
+                                    t('profile.apikey_title')
+                                }}</span>
+                                <button
+                                    class="binary-button w-fit px-4 py-1.5 text-xs"
+                                    @click="openCreateModal"
+                                >
+                                    {{ t('profile.apikey_generate') }}
+                                </button>
+                            </div>
+
+                            <!-- 金鑰清單 -->
+                            <div
+                                v-if="apiKeyLoading"
+                                class="text-xs opacity-50"
+                            >
+                                {{ t('common.loading') }}
+                            </div>
+                            <div v-else class="space-y-2">
+                                <div
+                                    v-for="key in apiKeys"
+                                    :key="key.id"
+                                    class="flex items-center gap-3 rounded-lg border px-3 py-2"
+                                    :class="
+                                        key.revoked_at
+                                            ? 'border-red-500/20'
+                                            : 'border-[var(--binary-outline-variant)]'
+                                    "
+                                >
+                                    <span
+                                        class="flex-1 truncate text-sm font-medium text-[var(--binary-text)] transition-opacity"
+                                        :class="
+                                            key.revoked_at ? 'opacity-40' : ''
+                                        "
+                                        >{{ key.name }}</span
+                                    >
+                                    <template v-if="key.scopes?.length">
+                                        <span
+                                            v-for="scope in key.scopes"
+                                            :key="scope"
+                                            class="shrink-0 rounded border border-purple-500/20 bg-purple-500/10 px-1.5 py-0.5 font-mono text-xs text-purple-400"
+                                            >{{ scope }}</span
+                                        >
+                                    </template>
+                                    <span
+                                        class="shrink-0 text-xs text-[var(--binary-outline)] transition-opacity"
+                                        :class="
+                                            key.revoked_at ? 'opacity-40' : ''
+                                        "
+                                    >
+                                        {{ t('profile.apikey_created_label') }}
+                                        {{
+                                            new Date(
+                                                key.created_at,
+                                            ).toLocaleDateString()
+                                        }}
+                                        <template v-if="key.revoked_at">
+                                            ·
+                                            {{
+                                                t(
+                                                    'profile.apikey_revoked_label',
+                                                )
+                                            }}
+                                            {{
+                                                new Date(
+                                                    key.revoked_at,
+                                                ).toLocaleDateString()
+                                            }}</template
+                                        >
+                                    </span>
+                                    <button
+                                        v-if="key.revoked_at"
+                                        class="rounded border border-green-500/30 px-2 py-0.5 text-xs text-green-400 transition-colors hover:bg-green-500/10"
+                                        @click="setRevoked(key.id, false)"
+                                    >
+                                        {{ t('profile.apikey_restore') }}
+                                    </button>
+                                    <button
+                                        v-else
+                                        class="rounded border border-yellow-500/30 px-2 py-0.5 text-xs text-yellow-400 transition-colors hover:bg-yellow-500/10"
+                                        @click="setRevoked(key.id, true)"
+                                    >
+                                        {{ t('profile.apikey_revoke') }}
+                                    </button>
+                                    <button
+                                        class="rounded border border-red-500/30 px-2 py-0.5 text-xs text-red-400 transition-colors hover:bg-red-500/10"
+                                        @click="deleteApiKey(key.id)"
+                                    >
+                                        {{ t('profile.apikey_delete') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- 產生後顯示 key -->
-                <div v-if="newApiKey" class="mb-4 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
-                    <div class="mb-2 text-xs text-green-400 font-bold tracking-wider">{{ t('profile.apikey_once_hint') }}</div>
-                    <div class="flex items-center gap-2">
-                        <code class="flex-1 text-xs font-mono break-all text-green-300 select-all">{{ newApiKey }}</code>
-                        <button
-                            class="shrink-0 px-3 py-1 rounded border text-xs transition-colors"
-                            :class="copied ? 'border-green-500 text-green-400' : 'border-[var(--binary-outline)] text-[var(--binary-text)] hover:border-[var(--binary-primary)]'"
-                            @click="copyKey(newApiKey)"
-                        >{{ copied ? t('profile.apikey_copied') : t('profile.apikey_copy') }}</button>
-                    </div>
-                </div>
-
-                <div v-if="apiKeyError" class="text-red-400 text-xs mb-3">{{ apiKeyError }}</div>
-
-                <!-- 按鈕 -->
-                <div class="flex gap-2">
-                    <button
-                        class="flex-1 text-xs py-2 rounded border border-[var(--binary-outline-variant)] text-[var(--binary-outline)] hover:border-[var(--binary-outline)] transition-colors"
-                        @click="closeCreateModal"
-                    >{{ newApiKey ? '完成' : '取消' }}</button>
-                    <button
-                        v-if="!newApiKey"
-                        class="binary-button flex-1 text-xs py-2"
-                        :disabled="newApiKeyLoading"
-                        @click="createApiKey"
-                    >{{ newApiKeyLoading ? t('profile.apikey_generating') : t('profile.apikey_generate') }}</button>
+                    <!-- /tab content -->
                 </div>
             </div>
         </div>
-    </Teleport>
+        <!-- 產生 API Key Modal -->
+        <Teleport to="body">
+            <div
+                v-if="showCreateModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                @click.self="closeCreateModal"
+            >
+                <div
+                    class="mx-4 w-full max-w-md rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface)] p-6 shadow-2xl"
+                >
+                    <div class="mb-5 text-base font-bold">
+                        {{ t('profile.apikey_generate') }}
+                    </div>
+
+                    <!-- 名稱 -->
+                    <div class="mb-4">
+                        <label
+                            class="mb-1.5 block text-xs text-[var(--binary-outline)]"
+                            >名稱</label
+                        >
+                        <input
+                            v-model="newKeyName"
+                            class="binary-input w-full text-sm"
+                            type="text"
+                            placeholder="api-key"
+                            maxlength="64"
+                        />
+                    </div>
+
+                    <!-- Scope 必選 -->
+                    <div class="mb-5">
+                        <label
+                            class="mb-2 block text-xs text-[var(--binary-outline)]"
+                            >Scope <span class="text-red-400">*</span></label
+                        >
+                        <div class="flex flex-wrap gap-2">
+                            <template
+                                v-for="s in apiKeyScopeOptions"
+                                :key="s.value"
+                            >
+                                <button
+                                    v-if="!s.adminOnly || isAdmin"
+                                    type="button"
+                                    class="rounded border px-3 py-1.5 font-mono text-xs transition-colors"
+                                    :class="
+                                        newKeyScopes.includes(s.value)
+                                            ? 'border-[var(--binary-primary)] bg-[var(--binary-primary)]/10 text-[var(--binary-primary)]'
+                                            : 'border-[var(--binary-outline-variant)] text-[var(--binary-outline)] hover:border-[var(--binary-outline)]'
+                                    "
+                                    @click="
+                                        newKeyScopes.includes(s.value)
+                                            ? newKeyScopes.splice(
+                                                  newKeyScopes.indexOf(s.value),
+                                                  1,
+                                              )
+                                            : newKeyScopes.push(s.value)
+                                    "
+                                >
+                                    {{ s.value }}
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- 產生後顯示 key -->
+                    <div
+                        v-if="newApiKey"
+                        class="mb-4 rounded-lg border border-green-500/30 bg-green-500/5 p-3"
+                    >
+                        <div
+                            class="mb-2 text-xs font-bold tracking-wider text-green-400"
+                        >
+                            {{ t('profile.apikey_once_hint') }}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <code
+                                class="flex-1 font-mono text-xs break-all text-green-300 select-all"
+                                >{{ newApiKey }}</code
+                            >
+                            <button
+                                class="shrink-0 rounded border px-3 py-1 text-xs transition-colors"
+                                :class="
+                                    copied
+                                        ? 'border-green-500 text-green-400'
+                                        : 'border-[var(--binary-outline)] text-[var(--binary-text)] hover:border-[var(--binary-primary)]'
+                                "
+                                @click="copyKey(newApiKey)"
+                            >
+                                {{
+                                    copied
+                                        ? t('profile.apikey_copied')
+                                        : t('profile.apikey_copy')
+                                }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="apiKeyError" class="mb-3 text-xs text-red-400">
+                        {{ apiKeyError }}
+                    </div>
+
+                    <!-- 按鈕 -->
+                    <div class="flex gap-2">
+                        <button
+                            class="flex-1 rounded border border-[var(--binary-outline-variant)] py-2 text-xs text-[var(--binary-outline)] transition-colors hover:border-[var(--binary-outline)]"
+                            @click="closeCreateModal"
+                        >
+                            {{ newApiKey ? '完成' : '取消' }}
+                        </button>
+                        <button
+                            v-if="!newApiKey"
+                            class="binary-button flex-1 py-2 text-xs"
+                            :disabled="newApiKeyLoading"
+                            @click="createApiKey"
+                        >
+                            {{
+                                newApiKeyLoading
+                                    ? t('profile.apikey_generating')
+                                    : t('profile.apikey_generate')
+                            }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </AppLayout>
 </template>

@@ -15,7 +15,9 @@ type RunEntry = {
 };
 
 const showRunForm = ref(false);
-const runBody = ref('{\n  "vus": 20,\n  "duration": "30s",\n  "api_url": "http://"\n}');
+const runBody = ref(
+    '{\n  "vus": 20,\n  "duration": "30s",\n  "api_url": "http://"\n}',
+);
 const parseError = ref('');
 const submitting = ref(false);
 const submitError = ref('');
@@ -36,17 +38,23 @@ function validateBody(): boolean {
     try {
         JSON.parse(runBody.value);
         parseError.value = '';
+
         return true;
     } catch (e: unknown) {
         parseError.value = e instanceof Error ? e.message : 'Invalid JSON';
+
         return false;
     }
 }
 
 async function submitRun() {
-    if (!validateBody()) return;
+    if (!validateBody()) {
+        return;
+    }
+
     submitting.value = true;
     submitError.value = '';
+
     try {
         const res = await fetch(api.miniOrch.createRun(), {
             method: 'POST',
@@ -55,16 +63,24 @@ async function submitRun() {
             credentials: 'include',
         });
         const contentType = res.headers.get('content-type') ?? '';
+
         if (!contentType.includes('application/json')) {
             submitError.value = t('mini_orch.auth_required');
+
             return;
         }
+
         const data = await res.json();
+
         if (!res.ok) {
             submitError.value = data?.message ?? `Error ${res.status}`;
+
             return;
         }
-        const runId: string = String(data.run_id ?? data.id ?? Object.values(data)[0] ?? '');
+
+        const runId: string = String(
+            data.run_id ?? data.id ?? Object.values(data)[0] ?? '',
+        );
         runs.value.unshift({
             run_id: runId,
             status: data.status ?? 'running',
@@ -83,21 +99,36 @@ async function pollRuns() {
     for (const run of runs.value) {
         if (run.status === 'running' || run.status === 'pending') {
             try {
-                const res = await fetch(api.miniOrch.getRun(run.run_id), { credentials: 'include' });
-                if (!res.ok) continue;
+                const res = await fetch(api.miniOrch.getRun(run.run_id), {
+                    credentials: 'include',
+                });
+
+                if (!res.ok) {
+                    continue;
+                }
+
                 const data = await res.json();
                 run.status = data.status ?? run.status;
+
                 if (run.status !== 'running' && run.status !== 'pending') {
                     run.result = data;
                 }
-            } catch { /* ignore */ }
+            } catch {
+                /* ignore */
+            }
         }
     }
 }
 
 function statusClass(status: string) {
-    if (status === 'running' || status === 'pending') return 'text-[--binary-tertiary]';
-    if (status === 'done' || status === 'completed' || status === 'success') return 'text-[--binary-primary]';
+    if (status === 'running' || status === 'pending') {
+        return 'text-[--binary-tertiary]';
+    }
+
+    if (status === 'done' || status === 'completed' || status === 'success') {
+        return 'text-[--binary-primary]';
+    }
+
     return 'text-[--binary-text-muted]';
 }
 
@@ -107,91 +138,155 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-    if (pollTimer) clearInterval(pollTimer);
+    if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+    }
+
+    if (pollTimer) {
+        clearInterval(pollTimer);
+    }
 });
 </script>
 
 <template>
     <Head :title="t('mini_orch.head_title')" />
     <AppLayout>
-        <div class="mx-auto flex w-full max-w-screen-2xl flex-col px-6 pb-4 gap-3 overflow-hidden md:px-8" style="height: calc(100vh - 5rem); margin-top: 5rem;">
-
+        <div
+            class="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 overflow-hidden px-6 pb-4 md:px-8"
+            style="height: calc(100vh - 5rem); margin-top: 5rem"
+        >
             <!-- Title -->
-            <div class="flex flex-col gap-3 shrink-0">
-                <div class="flex items-center gap-3 flex-wrap">
-                    <span class="font-mono text-sm text-[--binary-primary] tracking-widest uppercase">mini-orch</span>
-                    <div class="flex items-center gap-2 ml-auto">
+            <div class="flex shrink-0 flex-col gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <span
+                        class="font-mono text-sm tracking-widest text-[--binary-primary] uppercase"
+                        >mini-orch</span
+                    >
+                    <div class="ml-auto flex items-center gap-2">
                         <button
-                            class="px-3 py-1.5 text-xs font-mono rounded border border-[--binary-outline] text-[--binary-text-muted] hover:text-[--binary-text] hover:border-[--binary-primary] transition-colors"
+                            class="rounded border border-[--binary-outline] px-3 py-1.5 font-mono text-xs text-[--binary-text-muted] transition-colors hover:border-[--binary-primary] hover:text-[--binary-text]"
                             @click="refreshDashboard"
                             :title="t('mini_orch.refresh_title')"
-                        >{{ t('mini_orch.refresh') }}</button>
+                        >
+                            {{ t('mini_orch.refresh') }}
+                        </button>
                         <button
-                            class="px-3 py-1.5 text-xs font-mono rounded border transition-colors"
-                            :class="showRunForm
-                                ? 'border-[--binary-primary] text-[--binary-primary]'
-                                : 'border-[--binary-outline] text-[--binary-text-muted] hover:text-[--binary-text] hover:border-[--binary-primary]'"
-                            @click="showRunForm = !showRunForm; submitError = ''"
-                        >{{ showRunForm ? t('mini_orch.cancel') : t('mini_orch.new_run') }}</button>
+                            class="rounded border px-3 py-1.5 font-mono text-xs transition-colors"
+                            :class="
+                                showRunForm
+                                    ? 'border-[--binary-primary] text-[--binary-primary]'
+                                    : 'border-[--binary-outline] text-[--binary-text-muted] hover:border-[--binary-primary] hover:text-[--binary-text]'
+                            "
+                            @click="
+                                showRunForm = !showRunForm;
+                                submitError = '';
+                            "
+                        >
+                            {{
+                                showRunForm
+                                    ? t('mini_orch.cancel')
+                                    : t('mini_orch.new_run')
+                            }}
+                        </button>
                     </div>
                 </div>
 
                 <Transition name="slide-down">
                     <div
                         v-if="showRunForm"
-                        class="rounded-lg border border-[--binary-outline] bg-[--binary-surface-low] p-4 space-y-3"
+                        class="space-y-3 rounded-lg border border-[--binary-outline] bg-[--binary-surface-low] p-4"
                     >
-                        <p class="text-xs font-mono text-[--binary-text-muted]">{{ t('mini_orch.body_label') }}</p>
+                        <p class="font-mono text-xs text-[--binary-text-muted]">
+                            {{ t('mini_orch.body_label') }}
+                        </p>
                         <textarea
                             v-model="runBody"
                             rows="6"
                             spellcheck="false"
-                            class="w-full font-mono text-xs bg-[--binary-surface-dim] border border-[--binary-outline-variant] rounded p-3 text-[--binary-text] resize-none focus:outline-none focus:border-[--binary-primary] transition-colors"
+                            class="w-full resize-none rounded border border-[--binary-outline-variant] bg-[--binary-surface-dim] p-3 font-mono text-xs text-[--binary-text] transition-colors focus:border-[--binary-primary] focus:outline-none"
                             @input="parseError = ''"
                         />
-                        <p v-if="parseError" class="text-xs text-[--binary-tertiary] font-mono">{{ parseError }}</p>
-                        <p v-if="submitError" class="text-xs text-[--binary-tertiary] font-mono">{{ submitError }}</p>
+                        <p
+                            v-if="parseError"
+                            class="font-mono text-xs text-[--binary-tertiary]"
+                        >
+                            {{ parseError }}
+                        </p>
+                        <p
+                            v-if="submitError"
+                            class="font-mono text-xs text-[--binary-tertiary]"
+                        >
+                            {{ submitError }}
+                        </p>
                         <div class="flex justify-end">
                             <button
-                                class="px-4 py-1.5 text-xs font-mono rounded border border-[--binary-primary] text-[--binary-primary] hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container] transition-colors disabled:opacity-40"
+                                class="rounded border border-[--binary-primary] px-4 py-1.5 font-mono text-xs text-[--binary-primary] transition-colors hover:bg-[--binary-primary] hover:text-[--binary-on-primary-container] disabled:opacity-40"
                                 :disabled="submitting"
                                 @click="submitRun"
-                            >{{ submitting ? t('mini_orch.sending') : t('mini_orch.trigger') }}</button>
+                            >
+                                {{
+                                    submitting
+                                        ? t('mini_orch.sending')
+                                        : t('mini_orch.trigger')
+                                }}
+                            </button>
                         </div>
                     </div>
                 </Transition>
 
-                <div v-if="runs.length" class="flex items-center gap-2 flex-wrap">
-                    <span class="text-xs font-mono text-[--binary-text-muted]">{{ t('mini_orch.runs_label') }}</span>
+                <div
+                    v-if="runs.length"
+                    class="flex flex-wrap items-center gap-2"
+                >
+                    <span
+                        class="font-mono text-xs text-[--binary-text-muted]"
+                        >{{ t('mini_orch.runs_label') }}</span
+                    >
                     <div
                         v-for="run in runs"
                         :key="run.run_id"
-                        class="flex items-center gap-1.5 px-2 py-1 rounded border border-[--binary-outline-variant] bg-[--binary-surface-container] text-xs font-mono"
-                        :title="run.result ? JSON.stringify(run.result, null, 2) : undefined"
+                        class="flex items-center gap-1.5 rounded border border-[--binary-outline-variant] bg-[--binary-surface-container] px-2 py-1 font-mono text-xs"
+                        :title="
+                            run.result
+                                ? JSON.stringify(run.result, null, 2)
+                                : undefined
+                        "
                     >
                         <span
-                            v-if="run.status === 'running' || run.status === 'pending'"
-                            class="inline-block w-1.5 h-1.5 rounded-full bg-[--binary-tertiary] animate-pulse"
+                            v-if="
+                                run.status === 'running' ||
+                                run.status === 'pending'
+                            "
+                            class="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[--binary-tertiary]"
                         />
-                        <span v-else class="inline-block w-1.5 h-1.5 rounded-full bg-[--binary-primary]" />
-                        <span class="text-[--binary-text-muted]">{{ run.run_id }}</span>
-                        <span :class="statusClass(run.status)">{{ run.status }}</span>
-                        <span class="text-[--binary-text-muted] opacity-50">{{ run.created_at }}</span>
+                        <span
+                            v-else
+                            class="inline-block h-1.5 w-1.5 rounded-full bg-[--binary-primary]"
+                        />
+                        <span class="text-[--binary-text-muted]">{{
+                            run.run_id
+                        }}</span>
+                        <span :class="statusClass(run.status)">{{
+                            run.status
+                        }}</span>
+                        <span class="text-[--binary-text-muted] opacity-50">{{
+                            run.created_at
+                        }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- iframe -->
-            <div class="flex-1 min-h-0 rounded-lg overflow-hidden border border-[--binary-outline-variant]">
+            <div
+                class="min-h-0 flex-1 overflow-hidden rounded-lg border border-[--binary-outline-variant]"
+            >
                 <iframe
                     ref="iframeRef"
                     :src="iframeSrc"
-                    class="w-full h-full"
+                    class="h-full w-full"
                     frameborder="0"
                 />
             </div>
-
         </div>
     </AppLayout>
 </template>
