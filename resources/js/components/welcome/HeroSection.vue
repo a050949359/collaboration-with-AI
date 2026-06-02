@@ -1,15 +1,20 @@
 <script setup lang="ts">
-defineProps<{
-    stackInfo: [string, string][];
-}>();
+const categories = [
+    { label: 'Backend', items: ['Laravel 13', 'PHP 8.4', 'Go', 'Python'] },
+    { label: 'Frontend', items: ['Vue 3', 'TypeScript', 'Inertia.js', 'Tailwind CSS', 'Vite', 'Matter.js'] },
+    { label: 'Database', items: ['SQLite', 'Redis'] },
+    { label: 'AI / LLM', items: ['Gemini', 'Vertex AI'] },
+    { label: 'Infrastructure', items: ['Nginx', 'Cloudflare', 'Ansible', "Let's Encrypt", 'SNMP', 'GCP', 'Oracle Cloud', 'LightNode'] },
+    { label: 'Tooling', items: ['WebSocket', 'Flask', 'k6', 'Queue', 'Wikidata', 'D3'] },
+];
 </script>
 
 <template>
     <section
         id="about"
-        class="mx-auto grid h-screen max-w-screen-2xl grid-cols-1 items-center gap-8 px-6 pt-24 pb-60 md:grid-cols-12 md:px-8"
+        class="mx-auto grid min-h-screen max-w-screen-2xl grid-cols-1 gap-8 px-6 pt-32 pb-20 md:grid-cols-12 md:items-start md:px-8 md:pt-40"
     >
-        <div class="md:col-span-6 md:col-start-2">
+        <div class="md:col-span-6 md:col-start-2 md:pt-8">
             <h1
                 class="binary-display text-5xl leading-[0.9] font-black tracking-tight md:text-8xl"
             >
@@ -30,35 +35,27 @@ defineProps<{
             </p>
         </div>
 
-        <div class="flex flex-col justify-center md:col-span-4">
+        <div class="md:col-span-4 md:-mt-24">
             <div class="binary-card-raised rounded-[1.5rem]">
-                <div class="mb-4 flex items-end justify-between">
-                    <div class="flex items-center gap-1">
-                        <span class="text-sm text-[var(--binary-primary)]"
-                            >&gt;_</span
-                        >
-                        <span
-                            class="terminal-typed binary-label text-[10px] text-[var(--binary-outline)] uppercase"
-                            >stack.info</span
-                        ><span
-                            class="terminal-caret text-[var(--binary-outline)]"
-                        ></span>
-                    </div>
+                <div class="mb-4 flex items-center gap-1">
+                    <span class="text-sm text-[var(--binary-primary)]">&gt;_</span>
+                    <span class="terminal-typed binary-label text-[10px] text-[var(--binary-outline)] uppercase">This Project</span>
+                    <span class="terminal-caret text-[var(--binary-outline)]"></span>
                 </div>
-                <div class="binary-label space-y-2 text-sm">
+                <div class="space-y-2">
                     <div
-                        v-for="[label, value] in stackInfo"
-                        :key="label"
-                        class="flex flex-col gap-0.5 rounded-xl bg-[rgba(15,21,17,0.24)] px-3 py-2"
+                        v-for="cat in categories"
+                        :key="cat.label"
+                        class="rounded-xl bg-[rgba(15,21,17,0.24)] px-3 py-2"
                     >
-                        <span
-                            class="text-[10px] tracking-wider text-[var(--binary-text-muted)] uppercase"
-                            >{{ label }}</span
-                        >
-                        <span
-                            class="leading-snug text-[var(--binary-primary)]"
-                            >{{ value }}</span
-                        >
+                        <span class="binary-label mb-1.5 block text-[10px] tracking-wider text-[var(--binary-text-muted)] uppercase">{{ cat.label }}</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span
+                                v-for="item in cat.items"
+                                :key="item"
+                                class="binary-chip binary-label text-[10px] uppercase"
+                            >&gt; {{ item }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -73,7 +70,7 @@ defineProps<{
     width: 0;
     display: inline-block;
     vertical-align: middle;
-    animation: type-out 0.7s steps(10) 0.4s forwards;
+    animation: type-out 0.7s steps(12) 0.4s forwards;
 }
 
 .terminal-caret {
@@ -88,7 +85,7 @@ defineProps<{
 
 @keyframes type-out {
     to {
-        width: 10ch;
+        width: 13ch;
     }
 }
 

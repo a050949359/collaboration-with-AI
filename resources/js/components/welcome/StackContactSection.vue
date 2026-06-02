@@ -1,46 +1,7 @@
 <script setup lang="ts">
-const categories = [
-    {
-        label: 'Backend',
-        items: ['Laravel 13', 'PHP 8.4', 'Go', 'Python'],
-    },
-    {
-        label: 'Frontend',
-        items: [
-            'Vue 3',
-            'TypeScript',
-            'Inertia.js',
-            'Tailwind CSS',
-            'Vite',
-            'Matter.js',
-        ],
-    },
-    {
-        label: 'Database',
-        items: ['SQLite', 'Redis'],
-    },
-    {
-        label: 'AI / LLM',
-        items: ['Gemini', 'Vertex AI'],
-    },
-    {
-        label: 'Infrastructure',
-        items: [
-            'Nginx',
-            'Cloudflare',
-            'Ansible',
-            "Let's Encrypt",
-            'SNMP',
-            'GCP',
-            'Oracle Cloud',
-            'LightNode',
-        ],
-    },
-    {
-        label: 'Tooling',
-        items: ['WebSocket', 'Flask', 'k6', 'Queue', 'Wikidata', 'D3'],
-    },
-];
+defineProps<{
+    stackInfo: [string, string][];
+}>();
 
 const githubUrl = 'https://github.com/a050949359/collaboration-with-AI';
 </script>
@@ -59,29 +20,19 @@ const githubUrl = 'https://github.com/a050949359/collaboration-with-AI';
                 <div
                     class="binary-label text-sm tracking-[0.2em] text-[var(--binary-outline)] uppercase"
                 >
-                    &gt; stack.enumerate()
+                    &gt; stack.info
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4 md:grid-cols-3">
                 <div
-                    v-for="cat in categories"
-                    :key="cat.label"
+                    v-for="[label, value] in stackInfo"
+                    :key="label"
                     class="rounded-2xl bg-[var(--binary-surface)] p-5"
                     style="box-shadow: inset 4px 0 0 0 var(--binary-primary)"
                 >
-                    <span
-                        class="binary-label mb-3 block text-[10px] tracking-[0.2em] text-[var(--binary-outline)] uppercase"
-                        >{{ cat.label }}</span
-                    >
-                    <div class="flex flex-wrap gap-2">
-                        <span
-                            v-for="item in cat.items"
-                            :key="item"
-                            class="binary-chip binary-label text-[10px] uppercase"
-                            >&gt; {{ item }}</span
-                        >
-                    </div>
+                    <span class="binary-label mb-3 block text-[10px] tracking-[0.2em] text-[var(--binary-outline)] uppercase">{{ label }}</span>
+                    <p class="binary-label text-xs leading-relaxed text-[var(--binary-primary)]">{{ value }}</p>
                 </div>
             </div>
 

@@ -2,6 +2,25 @@
 
 🌐 **https://ohya.vip/app**
 
+## 核心特色
+ 
+### 🔐 RSA-OAEP 加密傳輸
+登入與註冊的密碼不以明文傳送。前端於瀏覽器產生 RSA 金鑰對，以公鑰加密後傳至後端，私鑰僅存於記憶體、不持久化，Server 解密後立即丟棄明文。這是有意識的安全設計，而非依賴 HTTPS 了事。
+ 
+### 🤖 MCP Server 自行實作
+基於 JSON-RPC 2.0 實作 Model Context Protocol endpoint，供 Claude Desktop 等 AI Assistant 以 API Key 呼叫。提供任務管理（Task CRUD + 子項目）共 8 個工具，以及知識圖譜讀寫（Admin）共 8 個工具，是 2024 年後 AI 整合的新興標準。
+ 
+### 🌐 大規模資料工程
+設計 Artisan 指令從 Wikidata SPARQL 自動抓取、清洗、補全 84,000+ 筆多語系航空資料，處理重複資料、缺漏 IATA/ICAO 代碼、語言 fallback（zh-tw → zh）等問題，並支援 dry-run 預覽與增量更新。
+ 
+### ⚡ WebSocket 多房間即時同步
+以 Laravel Reverb 實作多人抽卡房間，使用 Presence Channel 追蹤在線玩家，隨機邏輯在 Server 端執行防止客戶端作弊，結果以 Broadcast Event 即時推播給全房間。另有獨立的 Go WebSocket Server 管理介面（ws-lab）。
+ 
+### 🧠 多角色 LLM 故事系統
+多個 LLM 角色輪流推進故事，維護共享世界狀態與道具系統，並以定時排程驅動劇情進展，展示 LLM 在結構化狀態管理下的應用。
+ 
+---
+
 ## Tech Stack
 
 - Laravel 13.5 / PHP 8.4

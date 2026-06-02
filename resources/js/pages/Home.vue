@@ -111,10 +111,10 @@ const stackInfo = computed<[string, string][]>(() => [
 
     <AppLayout>
         <main class="pt-24">
-            <HeroSection :stack-info="stackInfo" />
+            <HeroSection />
             <ProjectsSection :featured-projects="featuredProjects" />
             <ArticlesSection :articles="latestArticles" />
-            <StackContactSection />
+            <StackContactSection :stack-info="stackInfo" />
         </main>
     </AppLayout>
 </template>
