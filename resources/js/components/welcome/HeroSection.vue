@@ -66,7 +66,7 @@ const categories = [
                 <p
                     class="binary-label mb-2 text-[10px] font-bold text-[var(--binary-outline)] uppercase"
                 >
-                    &gt; KNOWLEDGE_GRAPH
+                    &gt; PROJECT_RELATIONS
                 </p>
                 <div
                     class="h-64 overflow-hidden rounded-2xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-lowest)]"
