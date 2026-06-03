@@ -173,7 +173,7 @@ onMounted(() => fetchAirports());
     <Head :title="t('airports.title')" />
 
     <AppLayout>
-        <main class="pt-24 pb-24">
+        <main class="nav-pt pb-24">
             <div class="mx-auto max-w-screen-2xl px-6 md:px-8">
                 <!-- Header -->
                 <div class="mb-10 pt-8">

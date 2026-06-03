@@ -312,7 +312,7 @@ onUnmounted(() => disconnectWs());
 <template>
     <Head :title="t('ws_lab.head_title')" />
     <AppLayout>
-        <div class="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-20 pb-8">
+        <div class="nav-pt mx-auto flex max-w-3xl flex-col gap-6 px-4 pb-8">
             <!-- Header -->
             <div class="flex items-center gap-3">
                 <span

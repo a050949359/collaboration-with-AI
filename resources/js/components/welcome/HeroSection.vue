@@ -39,9 +39,12 @@ const categories = [
 <template>
     <section
         id="about"
-        class="mx-auto grid min-h-screen max-w-screen-2xl grid-cols-1 gap-8 px-6 pt-24 pb-20 md:grid-cols-12 md:items-start md:px-8 md:pt-28"
+        class="mx-auto grid max-w-screen-2xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-12 md:gap-8 md:px-8"
+        style="min-height: calc(100vh - 4rem)"
     >
-        <div class="flex flex-col md:col-span-6 md:col-start-2">
+        <div
+            class="flex min-h-0 flex-col md:col-span-6 md:col-start-2 md:h-full"
+        >
             <h1
                 class="binary-display text-5xl leading-[0.9] font-black tracking-tight md:text-8xl"
             >
@@ -62,22 +65,22 @@ const categories = [
             </p>
 
             <!-- Knowledge Graph Widget -->
-            <div class="mt-8 flex-1">
+            <div class="mt-8 flex min-h-0 flex-1 flex-col">
                 <p
-                    class="binary-label mb-2 text-[10px] font-bold text-[var(--binary-outline)] uppercase"
+                    class="binary-label mb-2 shrink-0 text-[10px] font-bold text-[var(--binary-outline)] uppercase"
                 >
                     &gt; PROJECT_RELATIONS
                 </p>
                 <div
-                    class="h-64 overflow-hidden rounded-2xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-lowest)]"
+                    class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-lowest)]"
                 >
                     <KnowledgeGraphWidget />
                 </div>
             </div>
         </div>
 
-        <div class="md:col-span-4">
-            <div class="binary-card-raised rounded-[1.5rem]">
+        <div class="md:col-span-4 md:h-full">
+            <div class="binary-card-raised h-full rounded-[1.5rem]">
                 <div class="mb-4 flex items-center gap-1">
                     <span class="text-sm text-[var(--binary-primary)]"
                         >&gt;_</span

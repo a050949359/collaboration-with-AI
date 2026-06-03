@@ -577,7 +577,7 @@ onUnmounted(() => simulation?.stop());
 <template>
     <Head title="Knowledge Graph" />
     <AppLayout>
-        <div class="flex h-screen flex-col pt-[72px]">
+        <div class="nav-pt-lg flex h-screen flex-col">
             <!-- Header -->
             <div
                 class="flex shrink-0 items-center justify-between border-b border-[var(--binary-outline-variant)] px-6 py-3"

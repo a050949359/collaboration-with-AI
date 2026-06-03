@@ -152,7 +152,7 @@ onUnmounted(() => {
         <Head title="Computer Vision Lab" />
 
         <div
-            class="flex min-h-screen flex-col bg-[var(--binary-background)] px-8 pt-24 pb-16 text-[var(--binary-text)]"
+            class="nav-pt flex min-h-screen flex-col bg-[var(--binary-background)] px-8 pb-16 text-[var(--binary-text)]"
         >
             <!-- Header -->
             <div class="mb-8">

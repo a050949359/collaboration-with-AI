@@ -267,7 +267,7 @@ function toggleContextPanel() {
             </div>
         </template>
         <template v-else>
-            <main class="pt-24 pb-24">
+            <main class="nav-pt pb-24">
                 <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
                     <!-- Header -->
                     <div class="mb-8">

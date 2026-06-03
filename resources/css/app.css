@@ -90,6 +90,16 @@
     }
 }
 
+@layer utilities {
+    /* Navbar height offset — use instead of hardcoded pt-24 */
+    .nav-pt {
+        padding-top: 4rem; /* 64px = exact navbar height */
+    }
+    .nav-pt-lg {
+        padding-top: 5rem; /* 80px = navbar + small buffer */
+    }
+}
+
 @layer components {
     .binary-page {
         @apply relative min-h-screen overflow-hidden bg-transparent;

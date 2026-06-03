@@ -78,7 +78,7 @@ onMounted(() => fetchAirlines(1));
     <AppLayout>
         <Head :title="t('airlines.title')" />
 
-        <div class="mx-auto max-w-screen-xl px-6 pt-32 pb-24 md:px-8">
+        <div class="nav-pt-lg mx-auto max-w-screen-xl px-6 pb-24 md:px-8">
             <!-- Header -->
             <div class="mb-10 pt-8">
                 <span
