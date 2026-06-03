@@ -126,6 +126,20 @@ function draw(data: { entities: Entity[]; relations: Relation[] }) {
         .attr('opacity', 0.6)
         .attr('marker-end', 'url(#kgw-arrow)');
 
+    linkG.each(function (d) {
+        d.relation_types.forEach((rt, i) => {
+            select(this)
+                .append('text')
+                .attr('class', `rl rl-${i}`)
+                .text(rt)
+                .attr('font-size', 8)
+                .attr('fill', 'var(--binary-outline)')
+                .attr('text-anchor', 'middle')
+                .attr('dominant-baseline', 'middle')
+                .attr('opacity', 0.7);
+        });
+    });
+
     const nodeRadius = (d: GraphNode) => 8 + d.observation_count * 2;
 
     const nodeG = g
@@ -202,6 +216,19 @@ function draw(data: { entities: Entity[]; relations: Relation[] }) {
                     .attr('y1', s.y!)
                     .attr('x2', t.x! - (dx / dist) * r)
                     .attr('y2', t.y! - (dy / dist) * r);
+            });
+            linkG.each(function (d) {
+                const s = d.source as GraphNode,
+                    t = d.target as GraphNode;
+                const n = d.relation_types.length;
+                select(this)
+                    .selectAll<SVGTextElement, string>('text.rl')
+                    .each(function (_, i) {
+                        const frac = (i + 1) / (n + 1);
+                        select(this)
+                            .attr('x', s.x! + (t.x! - s.x!) * frac)
+                            .attr('y', s.y! + (t.y! - s.y!) * frac);
+                    });
             });
             nodeG.attr('transform', (d) => `translate(${d.x},${d.y})`);
         });
