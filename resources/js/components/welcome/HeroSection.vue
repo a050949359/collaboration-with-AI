@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import KnowledgeGraphWidget from './KnowledgeGraphWidget.vue';
+
 const categories = [
     { label: 'Backend', items: ['Laravel 13', 'PHP 8.4', 'Go', 'Python'] },
     {
@@ -37,9 +39,9 @@ const categories = [
 <template>
     <section
         id="about"
-        class="mx-auto grid min-h-screen max-w-screen-2xl grid-cols-1 gap-8 px-6 pt-32 pb-20 md:grid-cols-12 md:items-start md:px-8 md:pt-40"
+        class="mx-auto grid min-h-screen max-w-screen-2xl grid-cols-1 gap-8 px-6 pt-24 pb-20 md:grid-cols-12 md:items-start md:px-8 md:pt-28"
     >
-        <div class="md:col-span-6 md:col-start-2 md:pt-8">
+        <div class="flex flex-col md:col-span-6 md:col-start-2">
             <h1
                 class="binary-display text-5xl leading-[0.9] font-black tracking-tight md:text-8xl"
             >
@@ -48,7 +50,7 @@ const categories = [
                 <span class="text-[var(--binary-primary)]">ARCHITECT</span>
             </h1>
             <p
-                class="mt-8 max-w-2xl text-xl leading-relaxed text-[var(--binary-text-muted)] md:text-2xl"
+                class="mt-6 max-w-2xl text-xl leading-relaxed text-[var(--binary-text-muted)] md:text-2xl"
             >
                 一個軟體工程師的開發日誌。與 AI 協同、拿 Laravel
                 打底，思考把已具備的技術變成跑在 server 上展示的東西。不讓 AI
@@ -58,9 +60,23 @@ const categories = [
                     >by LLM</span
                 >
             </p>
+
+            <!-- Knowledge Graph Widget -->
+            <div class="mt-8 flex-1">
+                <p
+                    class="binary-label mb-2 text-[10px] font-bold text-[var(--binary-outline)] uppercase"
+                >
+                    &gt; KNOWLEDGE_GRAPH
+                </p>
+                <div
+                    class="h-64 overflow-hidden rounded-2xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-lowest)]"
+                >
+                    <KnowledgeGraphWidget />
+                </div>
+            </div>
         </div>
 
-        <div class="md:col-span-4 md:-mt-24">
+        <div class="md:col-span-4">
             <div class="binary-card-raised rounded-[1.5rem]">
                 <div class="mb-4 flex items-center gap-1">
                     <span class="text-sm text-[var(--binary-primary)]"
