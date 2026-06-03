@@ -217,10 +217,7 @@ onMounted(() => {
 <template>
     <Head title="系統管理" />
     <AppLayout>
-        <div
-            class="mx-auto w-full max-w-screen-2xl px-6 pb-16 md:px-8"
-            style="padding-top: 6rem"
-        >
+        <div class="mx-auto w-full max-w-screen-2xl px-6 pt-8 pb-16 md:px-8">
             <!-- Header -->
             <p
                 class="binary-label mb-2 text-xs font-bold text-[var(--binary-primary)] uppercase"

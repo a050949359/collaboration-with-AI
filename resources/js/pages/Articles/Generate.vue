@@ -249,7 +249,7 @@ onUnmounted(() => stopPolling());
     <Head :title="t('articles.generate.head_title')" />
 
     <AppLayout>
-        <main class="nav-pt pb-24">
+        <main class="pb-24">
             <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
                 <!-- 標題列 -->
                 <div class="binary-card-raised mb-6 rounded-2xl">

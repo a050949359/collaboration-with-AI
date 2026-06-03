@@ -1,7 +1,7 @@
 <template>
     <AppLayout>
         <div
-            class="nav-pt mx-auto flex max-w-7xl flex-col items-start justify-center gap-4 px-4 pb-8 lg:flex-row lg:gap-6 lg:px-8"
+            class="mx-auto flex max-w-7xl flex-col items-start justify-center gap-4 px-4 pt-8 pb-8 lg:flex-row lg:gap-6 lg:px-8"
         >
             <!-- Right Panel: Physics Chamber -->
             <div

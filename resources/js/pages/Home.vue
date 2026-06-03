@@ -110,7 +110,7 @@ const stackInfo = computed<[string, string][]>(() => [
     <Head title="Home" />
 
     <AppLayout>
-        <main class="nav-pt">
+        <main>
             <HeroSection />
             <ProjectsSection :featured-projects="featuredProjects" />
             <ArticlesSection :articles="latestArticles" />

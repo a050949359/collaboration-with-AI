@@ -754,7 +754,7 @@ onMounted(() => {
         <Head :title="t('story_relay.head_title')" />
 
         <div
-            class="mx-auto mt-24 flex h-[calc(100vh-6rem)] w-full max-w-screen-2xl flex-col overflow-hidden px-6 font-mono md:px-8"
+            class="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-screen-2xl flex-col overflow-hidden px-6 font-mono md:px-8"
         >
             <!-- ── Tab bar ───────────────────────────────────── -->
             <div

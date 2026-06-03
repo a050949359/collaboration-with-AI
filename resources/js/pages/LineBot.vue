@@ -7,7 +7,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
     <Head title="LineBot" />
 
     <AppLayout>
-        <main class="nav-pt pb-24">
+        <main class="pb-24">
             <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
                 <div class="binary-card-raised rounded-2xl">
                     <span

@@ -99,7 +99,7 @@ onMounted(async () => {
     <Head :title="article?.title || t('articles.show.head_title_fallback')" />
 
     <AppLayout>
-        <main class="nav-pt pb-24">
+        <main class="pb-24">
             <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
                 <div
                     v-if="isLoading"

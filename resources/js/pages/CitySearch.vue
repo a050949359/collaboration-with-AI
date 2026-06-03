@@ -160,7 +160,7 @@ onMounted(() => {
     <AppLayout>
         <Head title="City Search" />
 
-        <div class="nav-pt-lg mx-auto max-w-screen-md px-6 pb-24 md:px-8">
+        <div class="mx-auto max-w-screen-md px-6 pb-24 md:px-8">
             <div class="mb-8 pt-8">
                 <span
                     class="binary-label mb-2 block text-xs font-bold text-[var(--binary-primary)] uppercase"

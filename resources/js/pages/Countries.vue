@@ -262,7 +262,7 @@ onMounted(() => fetchCountries());
     <AppLayout>
         <Head title="Countries" />
 
-        <div class="nav-pt-lg mx-auto max-w-screen-xl px-6 pb-24 md:px-8">
+        <div class="mx-auto max-w-screen-xl px-6 pb-24 md:px-8">
             <!-- Header -->
             <div class="mb-6 pt-8">
                 <span

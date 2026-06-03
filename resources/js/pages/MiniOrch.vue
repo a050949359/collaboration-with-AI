@@ -152,8 +152,8 @@ onUnmounted(() => {
     <Head :title="t('mini_orch.head_title')" />
     <AppLayout>
         <div
-            class="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 overflow-hidden px-6 pb-4 md:px-8"
-            style="height: calc(100vh - 5rem); margin-top: 5rem"
+            class="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 overflow-hidden px-6 pt-4 pb-4 md:px-8"
+            style="height: calc(100vh - 4rem)"
         >
             <!-- Title -->
             <div class="flex shrink-0 flex-col gap-3">

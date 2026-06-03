@@ -425,7 +425,9 @@ function toggleLocale() {
         </transition>
 
         <!-- Page content -->
-        <slot />
+        <div class="nav-pt">
+            <slot />
+        </div>
 
         <!-- Auth drawer -->
         <AuthDrawer v-model:open="authDrawerOpen" v-model:tab="authDrawerTab" />
