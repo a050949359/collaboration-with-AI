@@ -217,7 +217,7 @@ async function submit() {
             >
                 {{ successMessage }}
             </p>
-            <Link class="binary-button inline-flex" :href="routes.login()">
+            <Link class="binary-button inline-flex" :href="routes.home()">
                 前往登入 <span aria-hidden="true">-></span>
             </Link>
         </div>

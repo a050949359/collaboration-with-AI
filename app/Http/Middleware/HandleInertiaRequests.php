@@ -66,6 +66,12 @@ class HandleInertiaRequests extends Middleware
                 'user'     => $request->user('sanctum'),
                 'is_admin' => $request->user('sanctum')?->isAdmin() ?? false,
             ],
+            'apiKeyScopes' => $request->user('sanctum')
+                ? array_values(array_filter(
+                    array_map(fn($s) => ['value' => $s->value, 'adminOnly' => $s->adminOnly()], ApiKeyScope::cases()),
+                    fn($s) => !$s['adminOnly'] || $request->user('sanctum')->isAdmin()
+                ))
+                : [],
             ...$this->pageProps($request),
         ];
     }
@@ -81,12 +87,6 @@ class HandleInertiaRequests extends Middleware
         return match (true) {
             $request->routeIs('admin') => [
                 'shareTokenScopes' => array_column(ShareTokenScope::cases(), 'value'),
-            ],
-            $request->routeIs('profile') => [
-                'apiKeyScopes' => array_map(fn($s) => [
-                    'value'     => $s->value,
-                    'adminOnly' => $s->adminOnly(),
-                ], ApiKeyScope::cases()),
             ],
             $request->routeIs('mcp') => [
                 'taskStatuses' => array_column(TaskStatus::cases(), 'value'),

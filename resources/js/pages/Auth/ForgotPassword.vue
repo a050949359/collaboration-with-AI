@@ -93,7 +93,7 @@ async function submit() {
                 >
                 <Link
                     class="font-semibold text-[var(--binary-primary)] transition hover:underline"
-                    :href="routes.login()"
+                    :href="routes.home()"
                 >
                     返回登入
                 </Link>

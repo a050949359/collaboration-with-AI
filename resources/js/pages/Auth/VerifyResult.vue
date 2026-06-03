@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
+import { routes } from '@/lib/routes';
 
 // 直接從 query string 取得 status
 const status =
@@ -11,21 +12,21 @@ const statusMap = {
         message: '您的信箱已成功驗證，已自動登出，請重新登入！',
         color: 'var(--binary-primary)',
         shadow: 'rgba(107,220,159,0.13)',
-        action: { text: '前往登入', href: '/app/login' },
+        action: { text: '前往首頁', href: routes.home() },
     },
     expired: {
         title: '驗證連結已過期',
         message: '此驗證連結已失效，請重新登入後重寄驗證信。',
         color: 'var(--binary-tertiary)',
         shadow: 'rgba(255,179,178,0.13)',
-        action: { text: '前往登入', href: '/app/login' },
+        action: { text: '前往首頁', href: routes.home() },
     },
     already: {
         title: '已驗證過',
         message: '您的信箱已經驗證過，請直接登入。',
         color: 'var(--binary-secondary)',
         shadow: 'rgba(165,209,180,0.13)',
-        action: { text: '前往登入', href: '/app/login' },
+        action: { text: '前往首頁', href: routes.home() },
     },
     error: {
         title: '驗證失敗',

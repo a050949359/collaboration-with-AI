@@ -229,7 +229,7 @@ async function generateImage() {
 // ── Lifecycle ────────────────────────────────────────────
 onMounted(async () => {
     if (!user.value) {
-        router.visit(routes.login());
+        router.visit(routes.home());
 
         return;
     }

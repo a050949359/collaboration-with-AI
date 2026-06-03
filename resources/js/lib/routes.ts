@@ -18,12 +18,9 @@ export const routes = {
     },
 
     // Auth
-    login: () => `${WEB_PREFIX}/login`,
-    register: () => `${WEB_PREFIX}/register`,
     forgotPassword: () => `${WEB_PREFIX}/forgot-password`,
     resetPassword: (token: string, email: string) =>
         `${WEB_PREFIX}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`,
-    profile: () => `${WEB_PREFIX}/profile`,
 
     // Articles
     articles: {

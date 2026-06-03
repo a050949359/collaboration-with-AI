@@ -41,11 +41,10 @@ Route::prefix('app')->group(function () {
         Route::inertia('/story-relay', 'StoryRelay')->name('story-relay');
     });
 
-    Route::inertia('/login', 'Auth/Login')->name('login');
-    Route::inertia('/register', 'Auth/Register')->name('register');
+    Route::redirect('/login', '/app/')->name('login');
+    Route::redirect('/register', '/app/')->name('register');
     Route::inertia('/forgot-password', 'Auth/ForgotPassword')->name('forgot-password');
     Route::inertia('/reset-password', 'Auth/ResetPassword')->name('reset-password');
-    Route::inertia('/profile', 'Profile')->name('profile');
     Route::get('/avatar/default/{seed}', [AvatarController::class, 'default'])->name('avatar.default');
 
     // 信箱驗證結果頁

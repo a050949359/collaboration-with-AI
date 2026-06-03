@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, ref } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, provide, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import AuthDrawer from '../components/auth/AuthDrawer.vue';
 import MatrixRainBackground from '../components/MatrixRainBackground.vue';
 import NavIcon from '../components/NavIcon.vue';
 import SmokeBackground from '../components/SmokeBackground.vue';
 import { useAuth } from '../composables/useAuth';
 import { useTheme } from '../composables/useTheme';
 import { getLocale, setLocale } from '../i18n';
-import { logoutWithApi } from '../lib/auth-api';
-import { routes, api } from '../lib/routes';
+import { routes } from '../lib/routes';
 
 const currentLocale = ref(getLocale());
 const { t } = useI18n();
@@ -166,7 +166,18 @@ const defaultNavLinks = computed((): NavLink[] => {
 });
 
 const effectiveUser = computed(() => currentUser.value);
-const isLoggingOut = ref(false);
+
+const authDrawerOpen = ref(false);
+const authDrawerTab = ref<'login' | 'register' | 'profile'>('login');
+
+function toggleDrawer(tab: 'login' | 'register' | 'profile') {
+    if (authDrawerOpen.value && authDrawerTab.value === tab) {
+        authDrawerOpen.value = false;
+    } else {
+        authDrawerTab.value = tab;
+        authDrawerOpen.value = true;
+    }
+}
 
 onMounted(() => {
     initTheme();
@@ -187,52 +198,12 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
     }, 3200);
 }
 
+provide('showToast', showToast);
+
 function toggleLocale() {
     const next = currentLocale.value === 'zh-tw' ? 'en' : 'zh-tw';
     setLocale(next as 'zh-tw' | 'en');
     currentLocale.value = next;
-}
-
-function bindGoogle() {
-    window.location.href = api.auth.googleRedirect();
-}
-
-async function resendVerification() {
-    const _fetch =
-        (typeof window !== 'undefined' && window.fetch) ||
-        (typeof self !== 'undefined' && self.fetch) ||
-        (typeof globalThis !== 'undefined' && globalThis.fetch);
-
-    if (!_fetch) {
-        showToast('瀏覽器不支援 fetch，請更新瀏覽器', 'error');
-
-        return;
-    }
-
-    try {
-        await _fetch(api.auth.resendVerification(), {
-            method: 'POST',
-            credentials: 'include',
-        });
-        showToast('驗證信已寄出，請至信箱收信', 'success');
-    } catch {
-        showToast('重寄失敗，請稍後再試', 'error');
-    }
-}
-
-async function logout() {
-    if (isLoggingOut.value) {
-        return;
-    }
-
-    isLoggingOut.value = true;
-
-    try {
-        await logoutWithApi();
-        router.visit(routes.home(), { replace: true });
-    } finally {
-        isLoggingOut.value = false;
-    }
 }
 </script>
 
@@ -368,138 +339,64 @@ async function logout() {
                     >
                         {{ currentLocale === 'zh-tw' ? '中' : 'EN' }}
                     </button>
+                    <!-- Logged in: avatar button -->
                     <template v-if="effectiveUser">
-                        <details class="relative">
-                            <summary
-                                class="binary-label flex cursor-pointer list-none items-center gap-2 rounded-md bg-[var(--binary-surface-container)] px-3 py-2 text-xs font-bold text-[var(--binary-primary)] uppercase"
-                            >
-                                <img
-                                    :src="
-                                        String(
-                                            effectiveUser.avatar ||
-                                                routes.assets.avatarDefault(
-                                                    'user',
-                                                ),
-                                        )
-                                    "
-                                    alt="avatar"
-                                    class="h-7 w-7 rounded-full object-cover"
-                                />
-                                <span
-                                    class="flex hidden items-center gap-1 sm:inline"
-                                >
-                                    {{ effectiveUser.name }}
-                                    <svg
-                                        v-if="effectiveUser.email_verified_at"
-                                        class="inline-block h-4 w-4 text-[var(--binary-primary)]"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                        aria-label="已驗證信箱"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M16.707 6.293a1 1 0 010 1.414l-6.364 6.364a1 1 0 01-1.414 0l-3.182-3.182a1 1 0 111.414-1.414l2.475 2.475 5.657-5.657a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </span>
-                            </summary>
-
-                            <div
-                                class="absolute right-0 mt-2 w-56 rounded-xl bg-[var(--binary-surface-high)] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.35)]"
-                            >
-                                <div
-                                    class="mb-2 flex items-center gap-2 rounded-lg bg-[var(--binary-surface-container)] p-2"
-                                >
-                                    <img
-                                        :src="
-                                            String(
-                                                effectiveUser.avatar ||
-                                                    routes.assets.avatarDefault(
-                                                        'user',
-                                                    ),
-                                            )
-                                        "
-                                        alt="avatar"
-                                        class="h-8 w-8 rounded-full object-cover"
-                                    />
-                                    <div class="min-w-0">
-                                        <p
-                                            class="binary-label truncate text-[11px] font-bold text-[var(--binary-text)] uppercase"
-                                        >
-                                            {{ effectiveUser.name }}
-                                        </p>
-                                        <p
-                                            class="truncate text-[10px] text-[var(--binary-outline)]"
-                                        >
-                                            {{ effectiveUser.email }}
-                                        </p>
-                                    </div>
-                                </div>
-                                <button
-                                    v-if="!effectiveUser.has_google_account"
-                                    type="button"
-                                    class="binary-label w-full rounded-lg px-3 py-2 text-left text-xs text-[var(--binary-text)] uppercase transition hover:bg-[var(--binary-surface-container)]"
-                                    @click="bindGoogle"
-                                >
-                                    {{ t('layout.bind_google') }}
-                                </button>
-                                <!-- 僅未驗證 email 的登入使用者顯示重寄驗證信 -->
-                                <button
-                                    v-if="!effectiveUser.email_verified_at"
-                                    type="button"
-                                    class="binary-label w-full rounded-lg px-3 py-2 text-left text-xs text-[var(--binary-primary)] uppercase transition hover:bg-[var(--binary-surface-container)]"
-                                    @click="resendVerification"
-                                >
-                                    重寄驗證信
-                                </button>
-                                <a
-                                    v-if="isAdmin"
-                                    :href="routes.admin.system()"
-                                    class="binary-label mt-1 block w-full rounded-lg px-3 py-2 text-left text-xs text-[var(--binary-primary)] uppercase transition hover:bg-[var(--binary-surface-container)]"
-                                >
-                                    {{ t('layout.admin_system') }}
-                                </a>
-                                <a
-                                    :href="routes.profile()"
-                                    class="binary-label mt-1 block w-full rounded-lg px-3 py-2 text-left text-xs text-[var(--binary-text)] uppercase transition hover:bg-[var(--binary-surface-container)]"
-                                >
-                                    {{ t('layout.account_settings') }}
-                                </a>
-                                <button
-                                    type="button"
-                                    :disabled="isLoggingOut"
-                                    class="binary-label mt-1 w-full rounded-lg px-3 py-2 text-left text-xs text-[var(--binary-text)] uppercase transition hover:bg-[var(--binary-surface-container)] disabled:opacity-50"
-                                    @click="logout"
-                                >
-                                    {{
-                                        isLoggingOut
-                                            ? t('layout.logging_out')
-                                            : t('layout.logout')
-                                    }}
-                                </button>
-                            </div>
-                        </details>
-                    </template>
-                    <template v-else>
-                        <Link
-                            class="binary-ghost-button hidden sm:inline-flex"
-                            :href="routes.login()"
-                            >{{ t('layout.login') }}</Link
+                        <!-- Admin link -->
+                        <a
+                            v-if="isAdmin"
+                            :href="routes.admin.system()"
+                            class="binary-label rounded px-2 py-1 text-[10px] font-bold text-[var(--binary-primary)] uppercase transition hover:opacity-70"
                         >
-                        <Link
-                            class="binary-display rounded-md px-6 py-2 text-xs font-bold text-[var(--binary-on-primary-container)] uppercase"
-                            :href="routes.register()"
-                            style="
-                                background: linear-gradient(
-                                    145deg,
-                                    var(--binary-primary) 0%,
-                                    var(--binary-primary-container) 100%
-                                );
+                            {{ t('layout.admin_system') }}
+                        </a>
+                        <button
+                            type="button"
+                            class="rounded-full ring-2 ring-transparent transition hover:ring-[var(--binary-primary)]/50 focus:outline-none"
+                            :class="
+                                authDrawerOpen && authDrawerTab === 'profile'
+                                    ? 'ring-[var(--binary-primary)]/70'
+                                    : ''
                             "
+                            @click="toggleDrawer('profile')"
                         >
-                            {{ t('layout.register') }}
-                        </Link>
+                            <img
+                                :src="
+                                    String(
+                                        effectiveUser.avatar ||
+                                            routes.assets.avatarDefault('user'),
+                                    )
+                                "
+                                alt="avatar"
+                                class="h-8 w-8 rounded-full object-cover"
+                            />
+                        </button>
+                    </template>
+                    <!-- Guest: user icon button -->
+                    <template v-else>
+                        <button
+                            type="button"
+                            class="flex items-center rounded-md p-2 text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)]"
+                            :class="
+                                authDrawerOpen
+                                    ? 'text-[var(--binary-primary)]'
+                                    : ''
+                            "
+                            @click="toggleDrawer('login')"
+                        >
+                            <svg
+                                class="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+                                />
+                            </svg>
+                        </button>
                     </template>
                 </div>
             </div>
@@ -529,5 +426,8 @@ async function logout() {
 
         <!-- Page content -->
         <slot />
+
+        <!-- Auth drawer -->
+        <AuthDrawer v-model:open="authDrawerOpen" v-model:tab="authDrawerTab" />
     </div>
 </template>
