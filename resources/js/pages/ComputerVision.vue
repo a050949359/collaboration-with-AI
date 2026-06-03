@@ -152,14 +152,13 @@ onUnmounted(() => {
         <Head title="Computer Vision Lab" />
 
         <div
-            class="flex min-h-screen flex-col px-8 pt-24 pb-16"
-            style="background: #0f1511; color: #dee4dd"
+            class="flex min-h-screen flex-col bg-[var(--binary-background)] px-8 pt-24 pb-16 text-[var(--binary-text)]"
         >
             <!-- Header -->
             <div class="mb-8">
                 <p
                     class="mb-2 text-xs font-bold tracking-widest uppercase"
-                    style="color: #6bdc9f"
+                    style="color: var(--binary-primary)"
                 >
                     Computer Vision Lab
                 </p>
@@ -175,7 +174,7 @@ onUnmounted(() => {
             <div v-if="!wasmReady" class="animate-pulse">
                 <span
                     class="text-xs font-bold tracking-widest uppercase"
-                    style="color: #6bdc9f"
+                    style="color: var(--binary-primary)"
                     >— 載入 WASM 模組 —</span
                 >
             </div>
@@ -190,8 +189,8 @@ onUnmounted(() => {
                         v-model="selectedCam"
                         class="flex-1 rounded-md px-4 py-3 text-sm"
                         style="
-                            background: #1a2820;
-                            color: #dee4dd;
+                            background: var(--binary-surface-low);
+                            color: var(--binary-text);
                             outline: none;
                         "
                     >
@@ -212,10 +211,10 @@ onUnmounted(() => {
                         style="
                             background: linear-gradient(
                                 145deg,
-                                #6bdc9f,
-                                #2ca46d
+                                var(--binary-primary),
+                                var(--binary-primary-container)
                             );
-                            color: #0f1511;
+                            color: var(--binary-on-primary-container);
                         "
                         @click="startCamera"
                     >
@@ -225,7 +224,7 @@ onUnmounted(() => {
                 <p
                     v-if="camError"
                     class="text-xs font-bold tracking-wide"
-                    style="color: #ffb3b2"
+                    style="color: var(--binary-tertiary)"
                 >
                     {{ camError }}
                 </p>
@@ -238,7 +237,14 @@ onUnmounted(() => {
                     <canvas
                         ref="canvasRef"
                         class="block w-full rounded-xl"
-                        style="box-shadow: 0 0 40px rgba(107, 220, 159, 0.07)"
+                        style="
+                            box-shadow: 0 0 40px
+                                color-mix(
+                                    in srgb,
+                                    var(--binary-primary) 7%,
+                                    transparent
+                                );
+                        "
                     />
                 </div>
 
@@ -246,7 +252,7 @@ onUnmounted(() => {
                 <div
                     class="flex w-72 shrink-0 flex-col gap-6 rounded-xl p-6"
                     style="
-                        background: rgba(15, 21, 17, 0.7);
+                        background: var(--binary-surface);
                         backdrop-filter: blur(20px);
                         -webkit-backdrop-filter: blur(20px);
                     "
@@ -255,7 +261,7 @@ onUnmounted(() => {
                     <div class="flex flex-col gap-3">
                         <span
                             class="text-xs font-bold tracking-widest uppercase"
-                            style="color: #6bdc9f"
+                            style="color: var(--binary-primary)"
                             >算法</span
                         >
                         <div class="flex flex-wrap gap-2">
@@ -270,8 +276,8 @@ onUnmounted(() => {
                                 class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
                                 :style="
                                     algorithm === i
-                                        ? 'background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;'
-                                        : 'background:#253a2f; color:#a5d1b4;'
+                                        ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
+                                        : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
                                 "
                                 @click="algorithm = i"
                             >
@@ -284,12 +290,12 @@ onUnmounted(() => {
                     <template v-if="showCannyParams">
                         <div
                             class="flex flex-col gap-4 rounded-lg px-4 py-4"
-                            style="background: #131f18"
+                            style="background: var(--binary-surface-lowest)"
                         >
                             <div class="flex items-center gap-3">
                                 <span
                                     class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
-                                    style="color: #a5d1b4"
+                                    style="color: var(--binary-text-muted)"
                                     >低閾值</span
                                 >
                                 <input
@@ -298,7 +304,7 @@ onUnmounted(() => {
                                     max="300"
                                     v-model.number="t1"
                                     class="flex-1"
-                                    style="accent-color: #6bdc9f"
+                                    style="accent-color: var(--binary-primary)"
                                 />
                                 <span
                                     class="w-7 text-right text-xs tabular-nums"
@@ -308,7 +314,7 @@ onUnmounted(() => {
                             <div class="flex items-center gap-3">
                                 <span
                                     class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
-                                    style="color: #a5d1b4"
+                                    style="color: var(--binary-text-muted)"
                                     >高閾值</span
                                 >
                                 <input
@@ -317,7 +323,7 @@ onUnmounted(() => {
                                     max="300"
                                     v-model.number="t2"
                                     class="flex-1"
-                                    style="accent-color: #6bdc9f"
+                                    style="accent-color: var(--binary-primary)"
                                 />
                                 <span
                                     class="w-7 text-right text-xs tabular-nums"
@@ -327,15 +333,15 @@ onUnmounted(() => {
                             <div class="flex items-center gap-3">
                                 <span
                                     class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
-                                    style="color: #a5d1b4"
+                                    style="color: var(--binary-text-muted)"
                                     >孔徑</span
                                 >
                                 <select
                                     v-model.number="aperture"
                                     class="rounded px-2 py-1 text-xs"
                                     style="
-                                        background: #1a2820;
-                                        color: #dee4dd;
+                                        background: var(--binary-surface-low);
+                                        color: var(--binary-text);
                                         outline: none;
                                     "
                                 >
@@ -351,19 +357,19 @@ onUnmounted(() => {
                     <template v-if="showKsizeParams">
                         <div
                             class="flex items-center gap-3 rounded-lg px-4 py-4"
-                            style="background: #131f18"
+                            style="background: var(--binary-surface-lowest)"
                         >
                             <span
                                 class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
-                                style="color: #a5d1b4"
+                                style="color: var(--binary-text-muted)"
                                 >核大小</span
                             >
                             <select
                                 v-model.number="algKsize"
                                 class="rounded px-2 py-1 text-xs"
                                 style="
-                                    background: #1a2820;
-                                    color: #dee4dd;
+                                    background: var(--binary-surface-low);
+                                    color: var(--binary-text);
                                     outline: none;
                                 "
                             >
@@ -379,7 +385,7 @@ onUnmounted(() => {
                     <p
                         v-if="showScharrNote"
                         class="text-xs tracking-wide"
-                        style="color: #a5d1b4"
+                        style="color: var(--binary-text-muted)"
                     >
                         固定 3×3 Scharr 核，無需調整大小
                     </p>
@@ -388,19 +394,19 @@ onUnmounted(() => {
                     <div class="flex flex-col gap-3">
                         <span
                             class="text-xs font-bold tracking-widest uppercase"
-                            style="color: #6bdc9f"
+                            style="color: var(--binary-primary)"
                             >預模糊</span
                         >
                         <div
                             class="flex items-center gap-3 rounded-lg px-4 py-4"
-                            style="background: #131f18"
+                            style="background: var(--binary-surface-lowest)"
                         >
                             <button
                                 class="shrink-0 rounded-full px-3 py-1 text-xs font-bold tracking-wide transition-all"
                                 :style="
                                     blurEnabled
-                                        ? 'background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;'
-                                        : 'background:#253a2f; color:#a5d1b4;'
+                                        ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
+                                        : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
                                 "
                                 @click="blurEnabled = !blurEnabled"
                             >
@@ -414,7 +420,7 @@ onUnmounted(() => {
                                 v-model.number="blurKsize"
                                 :disabled="!blurEnabled"
                                 class="flex-1 disabled:opacity-30"
-                                style="accent-color: #6bdc9f"
+                                style="accent-color: var(--binary-primary)"
                             />
                             <span class="w-7 text-right text-xs tabular-nums">{{
                                 blurKsize
@@ -426,7 +432,7 @@ onUnmounted(() => {
                     <div class="flex flex-col gap-3">
                         <span
                             class="text-xs font-bold tracking-widest uppercase"
-                            style="color: #6bdc9f"
+                            style="color: var(--binary-primary)"
                             >輸出</span
                         >
                         <div class="flex flex-wrap gap-2">
@@ -434,8 +440,8 @@ onUnmounted(() => {
                                 class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
                                 :style="
                                     invert
-                                        ? 'background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;'
-                                        : 'background:#253a2f; color:#a5d1b4;'
+                                        ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
+                                        : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
                                 "
                                 @click="invert = !invert"
                             >
@@ -445,8 +451,8 @@ onUnmounted(() => {
                                 class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
                                 :style="
                                     overlay
-                                        ? 'background:linear-gradient(145deg,#6bdc9f,#2ca46d); color:#0f1511;'
-                                        : 'background:#253a2f; color:#a5d1b4;'
+                                        ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
+                                        : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
                                 "
                                 @click="overlay = !overlay"
                             >

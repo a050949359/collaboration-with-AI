@@ -420,7 +420,7 @@ onUnmounted(() => disconnectWs());
                         :y1="CHART_H * n"
                         :x2="CHART_W"
                         :y2="CHART_H * n"
-                        stroke="rgba(165,209,180,0.06)"
+                        :stroke="`color-mix(in srgb, var(--binary-outline) 15%, transparent)`"
                         stroke-width="1"
                     />
 
@@ -445,7 +445,7 @@ onUnmounted(() => disconnectWs());
                         text-anchor="middle"
                         font-family="monospace"
                         font-size="12"
-                        fill="rgba(165,209,180,0.2)"
+                        :fill="`color-mix(in srgb, var(--binary-outline) 45%, transparent)`"
                     >
                         {{
                             wsStatus === 'offline'

@@ -1,11 +1,36 @@
 <script setup lang="ts">
 const categories = [
     { label: 'Backend', items: ['Laravel 13', 'PHP 8.4', 'Go', 'Python'] },
-    { label: 'Frontend', items: ['Vue 3', 'TypeScript', 'Inertia.js', 'Tailwind CSS', 'Vite', 'Matter.js'] },
+    {
+        label: 'Frontend',
+        items: [
+            'Vue 3',
+            'TypeScript',
+            'Inertia.js',
+            'Tailwind CSS',
+            'Vite',
+            'Matter.js',
+        ],
+    },
     { label: 'Database', items: ['SQLite', 'Redis'] },
     { label: 'AI / LLM', items: ['Gemini', 'Vertex AI'] },
-    { label: 'Infrastructure', items: ['Nginx', 'Cloudflare', 'Ansible', "Let's Encrypt", 'SNMP', 'GCP', 'Oracle Cloud', 'LightNode'] },
-    { label: 'Tooling', items: ['WebSocket', 'Flask', 'k6', 'Queue', 'Wikidata', 'D3'] },
+    {
+        label: 'Infrastructure',
+        items: [
+            'Nginx',
+            'Cloudflare',
+            'Ansible',
+            "Let's Encrypt",
+            'SNMP',
+            'GCP',
+            'Oracle Cloud',
+            'LightNode',
+        ],
+    },
+    {
+        label: 'Tooling',
+        items: ['WebSocket', 'Flask', 'k6', 'Queue', 'Wikidata', 'D3'],
+    },
 ];
 </script>
 
@@ -38,9 +63,16 @@ const categories = [
         <div class="md:col-span-4 md:-mt-24">
             <div class="binary-card-raised rounded-[1.5rem]">
                 <div class="mb-4 flex items-center gap-1">
-                    <span class="text-sm text-[var(--binary-primary)]">&gt;_</span>
-                    <span class="terminal-typed binary-label text-[10px] text-[var(--binary-outline)] uppercase">This Project</span>
-                    <span class="terminal-caret text-[var(--binary-outline)]"></span>
+                    <span class="text-sm text-[var(--binary-primary)]"
+                        >&gt;_</span
+                    >
+                    <span
+                        class="terminal-typed binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                        >This Project</span
+                    >
+                    <span
+                        class="terminal-caret text-[var(--binary-outline)]"
+                    ></span>
                 </div>
                 <div class="space-y-2">
                     <div
@@ -48,13 +80,17 @@ const categories = [
                         :key="cat.label"
                         class="rounded-xl bg-[rgba(15,21,17,0.24)] px-3 py-2"
                     >
-                        <span class="binary-label mb-1.5 block text-[10px] tracking-wider text-[var(--binary-text-muted)] uppercase">{{ cat.label }}</span>
+                        <span
+                            class="binary-label mb-1.5 block text-[10px] tracking-wider text-[var(--binary-text-muted)] uppercase"
+                            >{{ cat.label }}</span
+                        >
                         <div class="flex flex-wrap gap-1.5">
                             <span
                                 v-for="item in cat.items"
                                 :key="item"
                                 class="binary-chip binary-label text-[10px] uppercase"
-                            >&gt; {{ item }}</span>
+                                >&gt; {{ item }}</span
+                            >
                         </div>
                     </div>
                 </div>

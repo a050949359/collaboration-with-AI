@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import MatrixRainBackground from '../components/MatrixRainBackground.vue';
 import NavIcon from '../components/NavIcon.vue';
+import SmokeBackground from '../components/SmokeBackground.vue';
 import { useAuth } from '../composables/useAuth';
+import { useTheme } from '../composables/useTheme';
 import { getLocale, setLocale } from '../i18n';
 import { logoutWithApi } from '../lib/auth-api';
 import { routes, api } from '../lib/routes';
 
 const currentLocale = ref(getLocale());
 const { t } = useI18n();
+const { theme, initTheme, toggleTheme } = useTheme();
 
 interface NavLink {
     label: string;
@@ -164,139 +168,8 @@ const defaultNavLinks = computed((): NavLink[] => {
 const effectiveUser = computed(() => currentUser.value);
 const isLoggingOut = ref(false);
 
-// ── Canvas Rain ──────────────────────────────────────────
-const canvasRef = ref<HTMLCanvasElement | null>(null);
-let rafId = 0;
-let resizeHandler: () => void;
-
 onMounted(() => {
-    const canvas = canvasRef.value;
-
-    if (!canvas) {
-        return;
-    }
-
-    const ctx = canvas.getContext('2d')!;
-
-    const CHARS =
-        'ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789ABCDEF'.split(
-            '',
-        );
-    const COL_W = 14;
-    const arcSize = (r: number) => 14 + 44 * r * r;
-
-    interface Stream {
-        col: number;
-        size: number;
-        speed: number;
-        alpha: number;
-        yOffset: number;
-        textLen: number;
-        y: number;
-        history: string[];
-    }
-
-    function makeStream(col: number, cosVal: number, ratio: number): Stream {
-        const textLen = 20 + Math.floor(Math.random() * 30);
-        const ar = Math.abs(ratio);
-
-        return {
-            col,
-            size: arcSize(ar),
-            speed: 0.06 + (1 - cosVal) * 0.16,
-            alpha: (0.06 + 0.94 * Math.pow(ar, 1.5)) * 0.45,
-            yOffset: cosVal * -120,
-            textLen,
-            y: (Math.random() - 1) * 80,
-            history: Array.from(
-                { length: textLen },
-                () => CHARS[Math.floor(Math.random() * CHARS.length)],
-            ),
-        };
-    }
-
-    let streams: Stream[] = [];
-
-    function init() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        streams = [];
-        const columns = Math.floor(canvas.width / COL_W);
-        let i = 0;
-
-        while (i < columns) {
-            const ratio = (i / columns - 0.5) * 2;
-            const cosVal = Math.cos(ratio * Math.PI * 0.42);
-            const step = Math.max(
-                1,
-                Math.round(arcSize(Math.abs(ratio)) / COL_W),
-            );
-
-            if (Math.random() < 0.85 - 0.5 * ratio * ratio) {
-                streams.push(makeStream(i, cosVal, ratio));
-            }
-
-            i += step;
-        }
-    }
-
-    function loop() {
-        ctx.fillStyle = 'rgba(0,0,0,0.18)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        for (const s of streams) {
-            s.y += s.speed;
-
-            if (Math.random() < 0.008) {
-                s.history[Math.floor(Math.random() * s.textLen)] =
-                    CHARS[Math.floor(Math.random() * CHARS.length)];
-            }
-
-            if (s.y * s.size + s.yOffset > canvas.height + 500) {
-                s.y = -s.textLen;
-            }
-
-            ctx.font = `bold ${s.size}px monospace`;
-            const x = s.col * COL_W;
-
-            for (let i = 0; i < s.textLen; i++) {
-                const y =
-                    (s.y - i) * s.size * 0.78 + canvas.height / 2 + s.yOffset;
-
-                if (y < 0 || y > canvas.height) {
-                    continue;
-                }
-
-                const ta = s.alpha * (1 - i / s.textLen);
-
-                if (ta <= 0) {
-                    continue;
-                }
-
-                ctx.fillStyle =
-                    i === 0
-                        ? `rgba(200,255,220,${s.alpha})`
-                        : i < 5
-                          ? `rgba(107,220,159,${ta})`
-                          : `rgba(40,120,80,${ta})`;
-                ctx.fillText(s.history[i], x, y);
-            }
-        }
-
-        rafId = requestAnimationFrame(loop);
-    }
-
-    init();
-    loop();
-    resizeHandler = init;
-    window.addEventListener('resize', resizeHandler);
-});
-
-onUnmounted(() => {
-    cancelAnimationFrame(rafId);
-    window.removeEventListener('resize', resizeHandler);
+    initTheme();
 });
 
 // 全域通知狀態
@@ -369,7 +242,8 @@ async function logout() {
     >
         <!-- Background -->
         <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-            <canvas ref="canvasRef" class="bg-anim-rain" />
+            <MatrixRainBackground v-if="theme === 'emerald'" />
+            <SmokeBackground v-else />
             <div class="bg-anim-glow" />
         </div>
 
@@ -472,6 +346,21 @@ async function logout() {
 
                 <!-- Auth Area -->
                 <div class="flex items-center gap-3">
+                    <!-- Theme toggle -->
+                    <button
+                        class="binary-label rounded px-2 py-1 text-[10px] font-bold uppercase transition"
+                        :style="{
+                            color: theme === 'emerald' ? '#ffb690' : '#6bdc9f',
+                        }"
+                        :title="
+                            theme === 'emerald'
+                                ? 'Switch to Amber & Cosmic'
+                                : 'Switch to Emerald Terminal'
+                        "
+                        @click="toggleTheme"
+                    >
+                        ◈
+                    </button>
                     <!-- Locale toggle -->
                     <button
                         class="binary-label rounded px-2 py-1 text-[10px] font-bold text-[var(--binary-outline)] uppercase transition hover:text-[var(--binary-primary)]"

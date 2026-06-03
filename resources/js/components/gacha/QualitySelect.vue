@@ -39,7 +39,7 @@ const selectedTier = computed(() =>
     <div ref="triggerRef">
         <button
             type="button"
-            class="flex w-full items-center gap-2 rounded-lg border border-[#2f4739] bg-[#0f1511] px-3 py-2 text-xs tracking-wider transition-colors hover:bg-[#121a14]"
+            class="flex w-full items-center gap-2 rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-lowest)] px-3 py-2 text-xs tracking-wider transition-colors hover:bg-[var(--binary-surface-dim)]"
             :class="modelValue === 'legendary' ? 'border-[#d4af3755]' : ''"
             @click="open = !open"
         >
@@ -62,7 +62,7 @@ const selectedTier = computed(() =>
                 "
                 >{{ t(`gacha.quality_${modelValue}`) }}</span
             >
-            <span class="text-[10px] text-[#6bdc9f]/40">▾</span>
+            <span class="text-[10px] text-[var(--binary-primary)]/40">▾</span>
         </button>
 
         <Teleport to="body">
@@ -70,15 +70,17 @@ const selectedTier = computed(() =>
                 v-if="open"
                 ref="dropdownRef"
                 :style="dropdownStyle"
-                class="overflow-hidden rounded-lg border border-[#2f4739] bg-[#0d1410] shadow-xl"
+                class="overflow-hidden rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-background)] shadow-xl"
             >
                 <button
                     v-for="tier in QUALITY_TIERS"
                     :key="tier.name"
                     type="button"
-                    class="flex w-full items-center gap-2 px-3 py-2 text-xs tracking-wider transition-colors hover:bg-[#1d2a22]"
+                    class="flex w-full items-center gap-2 px-3 py-2 text-xs tracking-wider transition-colors hover:bg-[var(--binary-surface-high)]"
                     :class="[
-                        modelValue === tier.name ? 'bg-[#162119]' : '',
+                        modelValue === tier.name
+                            ? 'bg-[var(--binary-surface-container)]'
+                            : '',
                         tier.name === 'legendary'
                             ? 'border-b border-[#d4af3715] last:border-b-0'
                             : '',

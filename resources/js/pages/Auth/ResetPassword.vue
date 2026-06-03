@@ -148,7 +148,9 @@ async function submit() {
                     <button
                         type="button"
                         class="absolute inset-y-0 right-3 flex items-center text-[var(--binary-outline)] transition-colors hover:text-[var(--binary-text)]"
-                        @click="showPasswordConfirmation = !showPasswordConfirmation"
+                        @click="
+                            showPasswordConfirmation = !showPasswordConfirmation
+                        "
                     >
                         <svg
                             v-if="showPasswordConfirmation"

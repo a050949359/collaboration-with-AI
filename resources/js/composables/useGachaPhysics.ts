@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n';
 
 export type PhysicsKey =
     | 'gravity'
-    | 'count'
     | 'bounce'
     | 'friction'
     | 'agitationStrength'
@@ -13,7 +12,6 @@ export type PhysicsKey =
 
 export const PHYSICS_DEFAULTS: Record<PhysicsKey, number> = {
     gravity: 1.2,
-    count: 25,
     bounce: 0.9,
     friction: 0.025,
     agitationStrength: 0.035,
@@ -74,24 +72,33 @@ export function useGachaPhysics() {
             Matter.Bodies.rectangle(cw + 1000, ch / 2, 2000, 4000, wall),
         ]);
 
-        for (let i = 0; i < physics.count; i++) {
-            Matter.Composite.add(
-                engine.world,
-                Matter.Bodies.circle(
-                    Math.random() * (cw - 20) + 10,
-                    Math.random() * (ch - 20) + 10,
-                    7,
-                    {
-                        restitution: physics.bounce,
-                        frictionAir: physics.friction,
-                        render: {
-                            fillStyle: '#6bdc9f',
-                            strokeStyle: '#ffffff22',
-                            lineWidth: 2,
+        const ballMix: { color: string; count: number }[] = [
+            { color: '#b0b8c1', count: 15 }, // silver
+            { color: '#60a5fa', count: 6 }, // azure
+            { color: '#c084fc', count: 3 }, // violet
+            { color: '#fbbf24', count: 1 }, // gold
+        ];
+
+        for (const slot of ballMix) {
+            for (let i = 0; i < slot.count; i++) {
+                Matter.Composite.add(
+                    engine.world,
+                    Matter.Bodies.circle(
+                        Math.random() * (cw - 20) + 10,
+                        Math.random() * (ch - 20) + 10,
+                        7,
+                        {
+                            restitution: physics.bounce,
+                            frictionAir: physics.friction,
+                            render: {
+                                fillStyle: slot.color,
+                                strokeStyle: '#ffffff18',
+                                lineWidth: 1,
+                            },
                         },
-                    },
-                ),
-            );
+                    ),
+                );
+            }
         }
 
         Matter.Render.run(render);

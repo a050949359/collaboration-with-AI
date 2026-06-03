@@ -5,23 +5,23 @@
         >
             <!-- Right Panel: Physics Chamber -->
             <div
-                class="emerald-glow relative flex w-full flex-col rounded-2xl border border-white/5 bg-[#151c17] p-3 lg:order-last lg:flex-[4] lg:p-5"
+                class="emerald-glow relative flex w-full flex-col rounded-2xl border border-white/5 bg-[var(--binary-surface)] p-3 lg:order-last lg:flex-[4] lg:p-5"
             >
                 <!-- Resonance Chamber -->
                 <div
                     ref="chamberEl"
-                    class="relative mb-5 h-36 w-full overflow-hidden rounded-xl border-2 border-[#343b36] bg-[#0a100c] shadow-inner"
+                    class="relative mb-5 h-36 w-full overflow-hidden rounded-xl border-2 border-[var(--binary-outline-variant)] bg-[var(--binary-background)] shadow-inner"
                 />
 
                 <!-- Sync Button -->
                 <div class="flex flex-col items-center gap-4">
                     <button
                         :disabled="!canPressButton"
-                        class="group relative flex h-[72px] w-[72px] items-center justify-center rounded-full border-4 border-[#343b36] bg-[#1c251f] transition-all hover:border-[#6bdc9f]/50 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="group relative flex h-[72px] w-[72px] items-center justify-center rounded-full border-4 border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] transition-all hover:border-[var(--binary-primary)]/50 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50"
                         @click="startSync"
                     >
                         <div
-                            class="h-10 w-1 rounded-full bg-[#6bdc9f] transition-transform duration-700 ease-in-out"
+                            class="h-10 w-1 rounded-full bg-[var(--binary-primary)] transition-transform duration-700 ease-in-out"
                             :style="{
                                 transform: syncing
                                     ? 'rotate(180deg)'
@@ -29,7 +29,7 @@
                             }"
                         />
                         <div
-                            class="absolute inset-0 rounded-full bg-[#6bdc9f]/5 opacity-0 transition-opacity group-hover:opacity-100"
+                            class="absolute inset-0 rounded-full bg-[var(--binary-primary)]/5 opacity-0 transition-opacity group-hover:opacity-100"
                         />
                     </button>
                 </div>
@@ -48,7 +48,7 @@
 
                 <div class="mt-auto w-full text-center">
                     <h2
-                        class="mb-2 text-[10px] font-bold tracking-[0.3em] text-[#6bdc9f] uppercase"
+                        class="mb-2 text-[10px] font-bold tracking-[0.3em] text-[var(--binary-primary)] uppercase"
                     >
                         {{ statusText }}
                     </h2>
@@ -58,7 +58,7 @@
                         class="mb-1.5 text-[9px] font-bold tracking-widest"
                         :class="
                             drawsRemaining > 0
-                                ? 'text-[#6bdc9f]/70'
+                                ? 'text-[var(--binary-primary)]/70'
                                 : 'text-red-400/70'
                         "
                     >
@@ -67,7 +67,7 @@
                     </div>
 
                     <div
-                        class="mb-2 flex justify-center gap-3 text-[9px] font-medium tracking-widest text-[#6bdc9f]/40"
+                        class="mb-2 flex justify-center gap-3 text-[9px] font-medium tracking-widest text-[var(--binary-primary)]/40"
                     >
                         <span v-if="isTenPull">{{
                             t('gacha.ten_sync_badge')
@@ -84,7 +84,7 @@
 
                     <button
                         :disabled="lastResults.length === 0"
-                        class="rounded-lg border border-[#2f4739] bg-[#1d2a22] px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] text-[#6bdc9f] transition-colors hover:bg-[#233328] disabled:cursor-not-allowed disabled:opacity-40"
+                        class="rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] text-[var(--binary-primary)] transition-colors hover:bg-[var(--binary-surface-highest)] disabled:cursor-not-allowed disabled:opacity-40"
                         @click="showModal = true"
                     >
                         {{ t('gacha.show_results') }}
@@ -100,13 +100,17 @@
                         class="flex items-center justify-between font-mono text-[10px]"
                     >
                         <div>
-                            <span class="tracking-widest text-[#6bdc9f]/50"
+                            <span
+                                class="tracking-widest text-[var(--binary-primary)]/50"
                                 >ROOM
                             </span>
-                            <span class="font-bold text-[#6bdc9f]">{{
-                                currentRoom.code
-                            }}</span>
-                            <span v-if="isHost" class="ml-2 text-[#6bdc9f]/50"
+                            <span
+                                class="font-bold text-[var(--binary-primary)]"
+                                >{{ currentRoom.code }}</span
+                            >
+                            <span
+                                v-if="isHost"
+                                class="ml-2 text-[var(--binary-primary)]/50"
                                 >[HOST]</span
                             >
                         </div>
@@ -114,8 +118,8 @@
                             class="rounded px-2 py-px text-[9px] tracking-widest"
                             :class="
                                 wsStatus === 'connected'
-                                    ? 'text-[#6bdc9f]/70'
-                                    : 'animate-pulse text-[#6bdc9f]/30'
+                                    ? 'text-[var(--binary-primary)]/70'
+                                    : 'animate-pulse text-[var(--binary-primary)]/30'
                             "
                             >{{ wsStatus }}</span
                         >
@@ -135,14 +139,14 @@
 
             <!-- Right Panel -->
             <aside
-                class="emerald-glow flex w-full min-w-0 flex-col gap-6 overflow-auto rounded-3xl border border-white/5 bg-[#131a15] p-5 lg:flex-[6] lg:p-6"
+                class="emerald-glow flex w-full min-w-0 flex-col gap-6 overflow-auto rounded-3xl border border-white/5 bg-[var(--binary-surface-dim)] p-5 lg:flex-[6] lg:p-6"
             >
                 <!-- LOBBY -->
                 <template v-if="mode === 'lobby'">
                     <div class="flex items-center justify-between">
                         <div>
                             <div
-                                class="mb-1 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                                class="mb-1 text-[10px] font-bold tracking-[0.35em] text-[var(--binary-primary)]/55"
                             >
                                 {{ t('gacha.gacha_rooms_label') }}
                             </div>
@@ -154,7 +158,7 @@
                         </div>
                         <button
                             v-if="user"
-                            class="rounded-xl border border-[#2f4739] bg-[#1d2a22] px-4 py-2 text-xs font-bold tracking-widest text-[#6bdc9f] transition-colors hover:bg-[#233328]"
+                            class="rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] px-4 py-2 text-xs font-bold tracking-widest text-[var(--binary-primary)] transition-colors hover:bg-[var(--binary-surface-highest)]"
                             @click="openCreateModal"
                         >
                             {{ t('gacha.create_room') }}
@@ -163,13 +167,13 @@
 
                     <div
                         v-if="roomListLoading"
-                        class="py-8 text-center text-xs tracking-widest text-[#6bdc9f]/30"
+                        class="py-8 text-center text-xs tracking-widest text-[var(--binary-primary)]/30"
                     >
                         {{ t('gacha.loading') }}
                     </div>
                     <div
                         v-else-if="roomList.length === 0"
-                        class="py-8 text-center text-xs tracking-widest text-[#6bdc9f]/30"
+                        class="py-8 text-center text-xs tracking-widest text-[var(--binary-primary)]/30"
                     >
                         {{ t('gacha.no_rooms') }}
                     </div>
@@ -177,7 +181,7 @@
                         <div
                             v-for="room in roomList"
                             :key="room.id"
-                            class="flex items-center gap-4 rounded-2xl border border-white/5 bg-black/30 p-4 transition-colors hover:border-[#6bdc9f]/20"
+                            class="flex items-center gap-4 rounded-2xl border border-white/5 bg-black/30 p-4 transition-colors hover:border-[var(--binary-primary)]/20"
                         >
                             <div class="min-w-0 flex-1">
                                 <div
@@ -186,7 +190,7 @@
                                     {{ room.room_name }}
                                 </div>
                                 <div
-                                    class="mt-0.5 flex gap-3 text-[10px] tracking-widest text-[#6bdc9f]/40"
+                                    class="mt-0.5 flex gap-3 text-[10px] tracking-widest text-[var(--binary-primary)]/40"
                                 >
                                     <span>{{ room.code }}</span>
                                     <span
@@ -197,7 +201,7 @@
                                 </div>
                             </div>
                             <button
-                                class="shrink-0 rounded-xl border border-[#6bdc9f]/30 px-4 py-1.5 text-xs font-bold tracking-widest text-[#6bdc9f] transition-colors hover:bg-[#6bdc9f]/10"
+                                class="shrink-0 rounded-xl border border-[var(--binary-primary)]/30 px-4 py-1.5 text-xs font-bold tracking-widest text-[var(--binary-primary)] transition-colors hover:bg-[var(--binary-primary)]/10"
                                 @click="openJoinModal(room)"
                             >
                                 {{ t('gacha.join') }}
@@ -206,7 +210,7 @@
                     </div>
 
                     <button
-                        class="mt-auto text-[10px] tracking-widest text-[#6bdc9f]/30 transition-colors hover:text-[#6bdc9f]/60"
+                        class="mt-auto text-[10px] tracking-widest text-[var(--binary-primary)]/30 transition-colors hover:text-[var(--binary-primary)]/60"
                         :disabled="roomListLoading"
                         @click="fetchRooms"
                     >
@@ -219,7 +223,7 @@
                     <!-- Machine controls (host only) -->
                     <section v-if="isHost">
                         <div
-                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[var(--binary-primary)]/55"
                         >
                             {{ t('gacha.host_control') }}
                         </div>
@@ -232,15 +236,15 @@
                         <div class="space-y-3 text-sm">
                             <div class="flex items-center justify-between">
                                 <span
-                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    class="text-xs tracking-wider text-[var(--binary-primary)]/80"
                                     >{{ t('gacha.allow_draw') }}</span
                                 >
                                 <button
                                     class="relative h-6 w-12 rounded-full transition-colors"
                                     :class="
                                         canDraw
-                                            ? 'bg-[#6bdc9f]'
-                                            : 'bg-[#2f4739]'
+                                            ? 'bg-[var(--binary-primary)]'
+                                            : 'bg-[var(--binary-surface-highest)]'
                                     "
                                     @click="
                                         canDraw = !canDraw;
@@ -256,15 +260,15 @@
 
                             <div class="flex items-center justify-between">
                                 <span
-                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    class="text-xs tracking-wider text-[var(--binary-primary)]/80"
                                     >{{ t('gacha.ten_sync_mode') }}</span
                                 >
                                 <button
                                     class="relative h-6 w-12 rounded-full transition-colors"
                                     :class="
                                         isTenPull
-                                            ? 'bg-[#6bdc9f]'
-                                            : 'bg-[#2f4739]'
+                                            ? 'bg-[var(--binary-primary)]'
+                                            : 'bg-[var(--binary-surface-highest)]'
                                     "
                                     @click="
                                         isTenPull = !isTenPull;
@@ -282,15 +286,15 @@
 
                             <div class="flex items-center justify-between">
                                 <span
-                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    class="text-xs tracking-wider text-[var(--binary-primary)]/80"
                                     >{{ t('gacha.skip_animation') }}</span
                                 >
                                 <button
                                     class="relative h-6 w-12 rounded-full transition-colors"
                                     :class="
                                         skipAnim
-                                            ? 'bg-[#6bdc9f]'
-                                            : 'bg-[#2f4739]'
+                                            ? 'bg-[var(--binary-primary)]'
+                                            : 'bg-[var(--binary-surface-highest)]'
                                     "
                                     @click="
                                         skipAnim = !skipAnim;
@@ -306,7 +310,7 @@
 
                             <div v-show="canDraw">
                                 <div
-                                    class="mb-1 flex justify-between text-xs tracking-wider text-[#6bdc9f]/80"
+                                    class="mb-1 flex justify-between text-xs tracking-wider text-[var(--binary-primary)]/80"
                                 >
                                     <span>{{ t('gacha.draws_limit') }}</span>
                                     <span>{{
@@ -335,7 +339,7 @@
 
                         <button
                             v-show="drawsPerUser > 0"
-                            class="mt-4 w-full rounded-xl border border-[#2f4739] bg-[#1d2a22] py-2.5 text-xs font-bold tracking-widest text-[#6bdc9f] transition-colors hover:bg-[#233328] disabled:opacity-40"
+                            class="mt-4 w-full rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] py-2.5 text-xs font-bold tracking-widest text-[var(--binary-primary)] transition-colors hover:bg-[var(--binary-surface-highest)] disabled:opacity-40"
                             @click="resetAllDraws"
                         >
                             {{ t('gacha.reset_draws') }}
@@ -347,13 +351,13 @@
                     <!-- Broadcast log -->
                     <section>
                         <div
-                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[var(--binary-primary)]/55"
                         >
                             {{ t('gacha.broadcast_label') }}
                         </div>
                         <div
                             v-if="broadcastLog.length === 0"
-                            class="py-2 text-center text-xs tracking-widest text-[#6bdc9f]/30"
+                            class="py-2 text-center text-xs tracking-widest text-[var(--binary-primary)]/30"
                         >
                             —
                         </div>
@@ -367,10 +371,13 @@
                                 :key="i"
                                 class="flex items-baseline gap-2 font-mono text-[10px]"
                             >
-                                <span class="shrink-0 text-[#6bdc9f]/25">{{
-                                    new Date(entry.ts).toLocaleTimeString()
-                                }}</span>
-                                <span class="text-[#6bdc9f]/70">{{
+                                <span
+                                    class="shrink-0 text-[var(--binary-primary)]/25"
+                                    >{{
+                                        new Date(entry.ts).toLocaleTimeString()
+                                    }}</span
+                                >
+                                <span class="text-[var(--binary-primary)]/70">{{
                                     entry.text
                                 }}</span>
                             </div>
@@ -382,13 +389,13 @@
                     <!-- Draw history -->
                     <section>
                         <div
-                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[var(--binary-primary)]/55"
                         >
                             {{ t('gacha.draw_log_label') }}
                         </div>
                         <div
                             v-if="drawHistory.length === 0"
-                            class="py-4 text-center text-xs tracking-widest text-[#6bdc9f]/30"
+                            class="py-4 text-center text-xs tracking-widest text-[var(--binary-primary)]/30"
                         >
                             {{ t('gacha.waiting_draw') }}
                         </div>
@@ -404,12 +411,17 @@
                                     class="mb-1.5 flex justify-between text-[10px]"
                                 >
                                     <span
-                                        class="font-bold tracking-wider text-[#6bdc9f]/70"
+                                        class="font-bold tracking-wider text-[var(--binary-primary)]/70"
                                         >{{ event.player }}</span
                                     >
-                                    <span class="text-[#6bdc9f]/30">{{
-                                        new Date(event.ts).toLocaleTimeString()
-                                    }}</span>
+                                    <span
+                                        class="text-[var(--binary-primary)]/30"
+                                        >{{
+                                            new Date(
+                                                event.ts,
+                                            ).toLocaleTimeString()
+                                        }}</span
+                                    >
                                 </div>
                                 <div class="flex flex-wrap gap-1">
                                     <span
@@ -434,7 +446,7 @@
                 <template v-else>
                     <section>
                         <div
-                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[#6bdc9f]/55"
+                            class="mb-2 text-[10px] font-bold tracking-[0.35em] text-[var(--binary-primary)]/55"
                         >
                             {{ t('gacha.host_control') }}
                         </div>
@@ -447,15 +459,15 @@
                         <div class="space-y-3 text-sm">
                             <div class="flex items-center justify-between">
                                 <span
-                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    class="text-xs tracking-wider text-[var(--binary-primary)]/80"
                                     >{{ t('gacha.ten_sync_mode') }}</span
                                 >
                                 <button
                                     class="relative h-6 w-12 rounded-full transition-colors"
                                     :class="
                                         isTenPull
-                                            ? 'bg-[#6bdc9f]'
-                                            : 'bg-[#2f4739]'
+                                            ? 'bg-[var(--binary-primary)]'
+                                            : 'bg-[var(--binary-surface-highest)]'
                                     "
                                     @click="isTenPull = !isTenPull"
                                 >
@@ -470,15 +482,15 @@
 
                             <div class="flex items-center justify-between">
                                 <span
-                                    class="text-xs tracking-wider text-[#6bdc9f]/80"
+                                    class="text-xs tracking-wider text-[var(--binary-primary)]/80"
                                     >{{ t('gacha.skip_animation') }}</span
                                 >
                                 <button
                                     class="relative h-6 w-12 rounded-full transition-colors"
                                     :class="
                                         skipAnim
-                                            ? 'bg-[#6bdc9f]'
-                                            : 'bg-[#2f4739]'
+                                            ? 'bg-[var(--binary-primary)]'
+                                            : 'bg-[var(--binary-surface-highest)]'
                                     "
                                     @click="skipAnim = !skipAnim"
                                 >
@@ -491,7 +503,7 @@
 
                             <div v-if="!isTenPull">
                                 <div
-                                    class="mb-1 text-xs tracking-wider text-[#6bdc9f]/80"
+                                    class="mb-1 text-xs tracking-wider text-[var(--binary-primary)]/80"
                                 >
                                     {{ t('gacha.force_quality') }}
                                 </div>
@@ -500,7 +512,7 @@
 
                             <div v-if="isTenPull">
                                 <div
-                                    class="mb-2 text-xs tracking-wider text-[#6bdc9f]/80"
+                                    class="mb-2 text-xs tracking-wider text-[var(--binary-primary)]/80"
                                 >
                                     {{ t('gacha.ten_pull_qualities') }}
                                 </div>
@@ -508,7 +520,7 @@
                                     <label
                                         v-for="(_, i) in tenPullQualities"
                                         :key="i"
-                                        class="block text-[10px] tracking-wider text-[#6bdc9f]/75"
+                                        class="block text-[10px] tracking-wider text-[var(--binary-primary)]/75"
                                     >
                                         <div class="mb-1">
                                             {{
@@ -534,12 +546,12 @@
                         class="mt-auto border-t border-white/5 pt-4"
                     >
                         <p
-                            class="mb-3 text-center text-[10px] tracking-widest text-[#6bdc9f]/30"
+                            class="mb-3 text-center text-[10px] tracking-widest text-[var(--binary-primary)]/30"
                         >
                             {{ t('gacha.ws_available') }}
                         </p>
                         <button
-                            class="w-full rounded-xl border border-[#6bdc9f]/30 py-2 text-xs font-bold tracking-widest text-[#6bdc9f] transition-colors hover:bg-[#6bdc9f]/10"
+                            class="w-full rounded-xl border border-[var(--binary-primary)]/30 py-2 text-xs font-bold tracking-widest text-[var(--binary-primary)] transition-colors hover:bg-[var(--binary-primary)]/10"
                             @click="
                                 mode = 'lobby';
                                 fetchRooms();
@@ -563,7 +575,7 @@
                     class="glass-panel w-full max-w-md rounded-3xl p-8 text-center shadow-2xl"
                 >
                     <div
-                        class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[#6bdc9f]/50"
+                        class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[var(--binary-primary)]/50"
                     >
                         DECODING COMPLETE
                     </div>
@@ -614,7 +626,7 @@
                         </div>
                     </div>
                     <button
-                        class="btn-gradient w-full rounded-xl py-4 text-xs font-bold tracking-widest text-[#0f1511] uppercase transition-all hover:brightness-110"
+                        class="btn-gradient w-full rounded-xl py-4 text-xs font-bold tracking-widest text-[var(--binary-on-primary-container)] uppercase transition-all hover:brightness-110"
                         @click="showModal = false"
                     >
                         Acknowledge
@@ -634,7 +646,7 @@
                     class="glass-panel w-full max-w-sm rounded-3xl p-8 shadow-2xl"
                 >
                     <div
-                        class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[#6bdc9f]/50"
+                        class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[var(--binary-primary)]/50"
                     >
                         CREATE ROOM
                     </div>
@@ -643,7 +655,9 @@
                     >
                         {{ t('gacha.create_modal_title') }}
                     </h3>
-                    <p class="mb-6 text-xs tracking-widest text-[#6bdc9f]/40">
+                    <p
+                        class="mb-6 text-xs tracking-widest text-[var(--binary-primary)]/40"
+                    >
                         {{ t('gacha.name_hint') }}
                     </p>
                     <input
@@ -651,12 +665,12 @@
                         type="text"
                         maxlength="30"
                         :placeholder="t('gacha.name_placeholder')"
-                        class="mb-6 w-full border-b border-[#2f4739] bg-transparent pb-1 text-sm text-[#6bdc9f] transition-colors outline-none placeholder:text-[#6bdc9f]/30 focus:border-[#6bdc9f]"
+                        class="mb-6 w-full border-b border-[var(--binary-outline-variant)] bg-transparent pb-1 text-sm text-[var(--binary-primary)] transition-colors outline-none placeholder:text-[var(--binary-primary)]/30 focus:border-[var(--binary-primary)]"
                         @keyup.enter="submitCreateModal"
                     />
                     <button
                         :disabled="!createName.trim()"
-                        class="btn-gradient w-full rounded-xl py-3 text-xs font-bold tracking-widest text-[#0f1511] uppercase transition-all hover:brightness-110 disabled:opacity-40"
+                        class="btn-gradient w-full rounded-xl py-3 text-xs font-bold tracking-widest text-[var(--binary-on-primary-container)] uppercase transition-all hover:brightness-110 disabled:opacity-40"
                         @click="submitCreateModal"
                     >
                         {{ t('gacha.create_submit') }}
@@ -676,7 +690,7 @@
                     class="glass-panel w-full max-w-sm rounded-3xl p-8 shadow-2xl"
                 >
                     <div
-                        class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[#6bdc9f]/50"
+                        class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[var(--binary-primary)]/50"
                     >
                         JOIN ROOM
                     </div>
@@ -685,7 +699,9 @@
                     >
                         {{ joinTarget.room_name }}
                     </h3>
-                    <p class="mb-6 text-xs tracking-widest text-[#6bdc9f]/40">
+                    <p
+                        class="mb-6 text-xs tracking-widest text-[var(--binary-primary)]/40"
+                    >
                         {{ t('gacha.name_hint') }}
                     </p>
                     <input
@@ -693,7 +709,7 @@
                         type="text"
                         maxlength="30"
                         :placeholder="t('gacha.name_placeholder')"
-                        class="mb-6 w-full border-b border-[#2f4739] bg-transparent pb-1 text-sm text-[#6bdc9f] transition-colors outline-none placeholder:text-[#6bdc9f]/30 focus:border-[#6bdc9f]"
+                        class="mb-6 w-full border-b border-[var(--binary-outline-variant)] bg-transparent pb-1 text-sm text-[var(--binary-primary)] transition-colors outline-none placeholder:text-[var(--binary-primary)]/30 focus:border-[var(--binary-primary)]"
                         @keyup.enter="submitJoinModal"
                     />
                     <p
@@ -704,7 +720,7 @@
                     </p>
                     <button
                         :disabled="!joinName.trim() || joinLoading"
-                        class="btn-gradient w-full rounded-xl py-3 text-xs font-bold tracking-widest text-[#0f1511] uppercase transition-all hover:brightness-110 disabled:opacity-40"
+                        class="btn-gradient w-full rounded-xl py-3 text-xs font-bold tracking-widest text-[var(--binary-on-primary-container)] uppercase transition-all hover:brightness-110 disabled:opacity-40"
                         @click="submitJoinModal"
                     >
                         {{ joinLoading ? t('gacha.joining') : t('gacha.join') }}
@@ -770,18 +786,24 @@ const {
 
 <style scoped>
 .emerald-glow {
-    box-shadow: 0 0 30px rgba(107, 220, 159, 0.15);
+    box-shadow: 0 0 30px
+        color-mix(in srgb, var(--binary-primary) 15%, transparent);
 }
 .btn-gradient {
-    background: linear-gradient(145deg, #6bdc9f 0%, #2ca46d 100%);
+    background: linear-gradient(
+        145deg,
+        var(--binary-primary) 0%,
+        var(--binary-primary-container) 100%
+    );
+    color: var(--binary-on-primary-container);
 }
 .tune-slider {
-    accent-color: #6bdc9f;
+    accent-color: var(--binary-primary);
 }
 .glass-panel {
-    background: rgba(28, 37, 31, 0.85);
+    background: var(--binary-surface);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(107, 220, 159, 0.2);
+    border: 1px solid color-mix(in srgb, var(--binary-primary) 20%, transparent);
 }
 .gradient-text {
     background: linear-gradient(to bottom, #d4af37 0%, #b84a2a 100%);

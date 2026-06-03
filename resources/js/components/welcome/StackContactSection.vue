@@ -31,8 +31,15 @@ const githubUrl = 'https://github.com/a050949359/collaboration-with-AI';
                     class="rounded-2xl bg-[var(--binary-surface)] p-5"
                     style="box-shadow: inset 4px 0 0 0 var(--binary-primary)"
                 >
-                    <span class="binary-label mb-3 block text-[10px] tracking-[0.2em] text-[var(--binary-outline)] uppercase">{{ label }}</span>
-                    <p class="binary-label text-xs leading-relaxed text-[var(--binary-primary)]">{{ value }}</p>
+                    <span
+                        class="binary-label mb-3 block text-[10px] tracking-[0.2em] text-[var(--binary-outline)] uppercase"
+                        >{{ label }}</span
+                    >
+                    <p
+                        class="binary-label text-xs leading-relaxed text-[var(--binary-primary)]"
+                    >
+                        {{ value }}
+                    </p>
                 </div>
             </div>
 

@@ -140,12 +140,6 @@ resources/js/
 ## 常見指令速查
 
 ```bash
-# 開發環境（需同時啟動）
-php artisan serve
-php artisan reverb:start
-php artisan queue:work
-npm run dev
-
 # 機場/航空資料補全
 php artisan airports:enrich
 php artisan airlines:enrich
@@ -155,6 +149,90 @@ php artisan import:countries --fetch   # 抓 Wikidata
 php artisan import:countries           # 寫入 DB
 
 # ★ import:cities 已棄用（城市改由使用者 UI 搜尋加入）
+```
+
+---
+
+## 前端主題色規範
+
+新頁面開發時，所有顏色**必須使用下列 CSS 變數**，禁止 hardcode hex/rgba 值。變數在 `resources/css/app.css` 定義，`[data-theme='amber']` 自動覆蓋。
+
+### 主色系
+
+| 變數 | Emerald | Amber | 用途 |
+|------|---------|-------|------|
+| `--binary-primary` | `#6bdc9f` | `#ffb690` | 主要強調色、連結、icon、active 狀態 |
+| `--binary-primary-container` | `#2ca46d` | `#7a4527` | 按鈕漸變深色端、次要強調 |
+| `--binary-primary-fixed` | `#85e7b0` | `#ffdbca` | 較淡版主色 |
+| `--binary-secondary` | `#a5d1b4` | `#ddb7ff` | 次要強調（`.text-gradient-primary` 終點色）|
+| `--binary-tertiary` | `#ffb3b2` | `#ffb4ab` | 錯誤/警告提示文字 |
+| `--binary-on-primary-container` | `#07160e` | `#1a0800` | 主色按鈕上的文字色 |
+
+### 文字色
+
+| 變數 | 用途 |
+|------|------|
+| `--binary-text` | 主要內文 |
+| `--binary-text-muted` | 次要說明文字 |
+| `--binary-outline` | 標籤、placeholder、border（帶透明度）|
+| `--binary-outline-variant` | 極細 border、分隔線 |
+
+### 背景與面板
+
+| 變數 | 透明度 | 用途 |
+|------|--------|------|
+| `--binary-background` | solid | 頁面底色（solid 版） |
+| `--binary-surface-dim` | 0.7 | 最暗面板（aside sidebar 等） |
+| `--binary-surface` | 0.7 | 一般面板 |
+| `--binary-surface-lowest` | 0.7 | 最深 input/section 背景 |
+| `--binary-surface-low` | 0.7 | select/dropdown 背景 |
+| `--binary-surface-container` | 0.3 | 極淡容器（inactive 狀態）|
+| `--binary-surface-high` | 0.7 | 按鈕、card 背景 |
+| `--binary-surface-highest` | 0.7 | toggle track inactive、hover 深一層 |
+
+### 常用 CSS class
+
+```html
+<!-- 主色文字 -->
+<span class="text-[var(--binary-primary)]" />
+
+<!-- 帶透明度（Tailwind v4 支援） -->
+<span class="text-[var(--binary-primary)]/60" />
+
+<!-- 主色漸變按鈕 -->
+<button class="binary-button" />
+
+<!-- Glass 面板（含 backdrop-filter） -->
+<div class="binary-glass" />
+
+<!-- 文字漸變（primary → secondary，雙主題自動切換） -->
+<h1 class="text-gradient-primary" />
+
+<!-- Ghost 按鈕 -->
+<button class="binary-ghost-button" />
+```
+
+### 禁止事項
+
+- ❌ `style="color: #6bdc9f"` → ✅ `style="color: var(--binary-primary)"`
+- ❌ `bg-[#1d2a22]` → ✅ `bg-[var(--binary-surface-high)]`
+- ❌ `rgba(107,220,159,0.1)` → ✅ `color-mix(in srgb, var(--binary-primary) 10%, transparent)`
+- ✅ 品質色（`#d4af37` 傳奇金）、D3/Canvas 視覺化特定色 → 可保留 hardcode
+
+---
+
+## 前端 Commit 規範
+
+**凡涉及前端檔案（`resources/js/`、`resources/css/`）的 commit，提交前必須執行：**
+
+```bash
+npm run lint   # ESLint --fix + Prettier write
+```
+
+若只想確認不自動修改：
+
+```bash
+npm run lint:check   # ESLint + Prettier check（不寫入）
 ```
 
 ---
