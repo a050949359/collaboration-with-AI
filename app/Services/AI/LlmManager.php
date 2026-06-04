@@ -6,7 +6,7 @@ use App\Services\AI\Contracts\ChatCompletion;
 use App\Services\AI\Gemini\GeminiChatService;
 use App\Services\AI\Nvidia\NvidiaChatService;
 use App\Services\AI\Ollama\OllamaChatService;
-use Illuminate\Support\Facades\Cache;
+use App\Support\AppSettings;
 
 /**
  * 依「用途」解析出對應的 LLM driver。
@@ -16,9 +16,6 @@ use Illuminate\Support\Facades\Cache;
  */
 class LlmManager
 {
-    /** 與 Admin\SettingsController 共用的 cache key。 */
-    private const SETTINGS_KEY = 'admin_settings';
-
     /**
      * 取得某用途的 driver。
      */
@@ -54,9 +51,9 @@ class LlmManager
             'model'    => (string) config('services.gemini.model'),
         ]);
 
-        // Redis 掛掉時退回 config 預設，不讓設定讀取打斷 LLM 呼叫。
-        $settings = rescue(fn() => Cache::get(self::SETTINGS_KEY), null);
-        $override = is_array($settings) ? ($settings['llm'][$use] ?? null) : null;
+        // AppSettings 內部已 rescue：Redis 掛掉時退回 config 預設，不讓設定讀取打斷 LLM 呼叫。
+        $llm = AppSettings::get('llm', []);
+        $override = is_array($llm) ? ($llm[$use] ?? null) : null;
 
         $provider = (string) ($override['provider'] ?? $default['provider']);
         $model    = (string) ($override['model'] ?? $default['model']);

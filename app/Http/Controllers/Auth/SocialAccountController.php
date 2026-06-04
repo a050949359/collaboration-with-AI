@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AppSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Laravel\Socialite\Facades\Socialite;
@@ -37,12 +38,15 @@ class SocialAccountController extends Controller
                 ], 422);
             }
 
-            $user = User::firstOrCreate(
-                ['email' => $email],
-                ['name' => $socialUser->getName() ?: 'Social User']
-            );
-            
-            if ($user->wasRecentlyCreated && is_null($user->email_verified_at)) {
+            $user = User::firstOrNew(['email' => $email]);
+
+            // 帳號不存在 = 首次登入即「自行註冊」；後台關閉註冊時擋下，僅放行既有帳號。
+            if (!$user->exists) {
+                if (!AppSettings::bool('allow_registration', true)) {
+                    return $this->denyRegistration();
+                }
+
+                $user->name = $socialUser->getName() ?: 'Social User';
                 $user->email_verified_at = now();
                 $user->save();
             }
@@ -82,5 +86,19 @@ class SocialAccountController extends Controller
                 'message' => ucfirst($provider).' 登入失敗',
             ], 500);
         }
+    }
+
+    /**
+     * 關閉註冊時，OAuth 新帳號被擋：不發 token，單純跳回首頁。
+     */
+    private function denyRegistration(): JsonResponse|RedirectResponse
+    {
+        $frontendUrl = config('services.social_auth.frontend_url');
+
+        if (is_string($frontendUrl) && $frontendUrl !== '') {
+            return redirect()->away(rtrim($frontendUrl, '/').'/');
+        }
+
+        return redirect()->to(route('home'));
     }
 }

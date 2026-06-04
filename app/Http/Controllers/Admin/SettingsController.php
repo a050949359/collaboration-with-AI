@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\AI\LlmManager;
+use App\Support\AppSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -12,8 +13,6 @@ use Inertia\Response;
 
 class SettingsController extends Controller
 {
-    private const SETTINGS_CACHE_KEY = 'admin_settings';
-
     public function index(): Response
     {
         return Inertia::render('Admin/Settings');
@@ -40,7 +39,7 @@ class SettingsController extends Controller
         $current = $this->getSettings();
         $merged = array_merge($current, $validated);
 
-        Cache::forever(self::SETTINGS_CACHE_KEY, $merged);
+        Cache::forever(AppSettings::CACHE_KEY, $merged);
 
         return response()->json([
             'message'  => '設定已更新',
@@ -92,25 +91,11 @@ class SettingsController extends Controller
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function getSettings(): array
     {
-        return Cache::get(self::SETTINGS_CACHE_KEY, $this->defaults());
-    }
-
-    /**
-     * 使用 app.name 作為站台名稱預設值，避免前後端多處硬編碼。
-     *
-     * @return array<string, bool|int|string>
-     */
-    private function defaults(): array
-    {
-        return [
-            'site_name'          => config('app.name'),
-            'maintenance_mode'   => false,
-            'allow_registration' => true,
-            'max_login_attempts' => 5,
-            'avatar_size'        => 128,
-            'llm'                => config('services.llm.uses', []),
-        ];
+        return AppSettings::all();
     }
 }

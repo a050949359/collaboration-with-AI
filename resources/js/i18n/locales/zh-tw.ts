@@ -168,6 +168,8 @@ export default {
         terms_agree: '我同意遵守服務條款與隱私權政策。',
         submit_register: '註冊',
         submitting_register: '建立中...',
+        registration_closed: '目前暫停開放註冊',
+        registration_closed_oauth_hint: '目前暫停開放註冊，僅限既有帳號登入',
     },
     layout: {
         bind_google: '綁定 Google',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Line;
 use App\Http\Controllers\Controller;
 use App\Models\SocialAccount;
 use App\Models\User;
+use App\Support\AppSettings;
 use App\Support\LineBotHmac;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,21 @@ class LineFriendController extends Controller
 
         $lineUserId = $payload['line_user_id'];
         $displayName = trim((string) ($payload['display_name'] ?? ''));
+
+        // 後台關閉註冊時，僅放行既有 LINE 綁定的更新，不替新好友開帳號。
+        if (!AppSettings::bool('allow_registration', true)) {
+            $alreadyBound = SocialAccount::query()
+                ->where('provider', 'line')
+                ->where('provider_user_id', $lineUserId)
+                ->exists();
+
+            if (!$alreadyBound) {
+                return response()->json([
+                    'message' => '目前暫停開放註冊',
+                    'created' => false,
+                ], 403);
+            }
+        }
 
         $result = DB::transaction(function () use ($lineUserId, $displayName, $payload): array {
             $social = SocialAccount::query()

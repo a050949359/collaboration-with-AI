@@ -22,6 +22,7 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            allowRegistration: boolean;
             auth: Auth;
             sidebarOpen: boolean;
             [key: string]: unknown;

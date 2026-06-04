@@ -15,8 +15,8 @@ use App\Enums\ShareTokenScope;
 use App\Enums\StoryContentRating;
 use App\Enums\StoryGenre;
 use App\Enums\TaskStatus;
+use App\Support\AppSettings;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -63,6 +63,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'allowRegistration' => AppSettings::bool('allow_registration', true),
             'auth' => [
                 'user'     => $request->user('sanctum'),
                 'is_admin' => $request->user('sanctum')?->isAdmin() ?? false,
@@ -92,8 +93,7 @@ class HandleInertiaRequests extends Middleware
                     fn($p) => array_values($p['models'] ?? []),
                     config('services.llm.providers', []),
                 ),
-                'llmSettings'      => (rescue(fn() => Cache::get('admin_settings'), null)['llm'] ?? null)
-                    ?: config('services.llm.uses', []),
+                'llmSettings'      => AppSettings::get('llm') ?: config('services.llm.uses', []),
             ],
             $request->routeIs('mcp') => [
                 'taskStatuses' => array_column(TaskStatus::cases(), 'value'),

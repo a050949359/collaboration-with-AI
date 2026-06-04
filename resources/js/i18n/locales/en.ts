@@ -172,6 +172,9 @@ export default {
         terms_agree: 'I agree to the terms of service and privacy policy.',
         submit_register: 'Register',
         submitting_register: 'Creating...',
+        registration_closed: 'Registration is currently closed.',
+        registration_closed_oauth_hint:
+            'Registration paused — existing accounts can still sign in.',
     },
     layout: {
         bind_google: 'Bind Google',

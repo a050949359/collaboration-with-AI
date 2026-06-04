@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useAuth } from '../../composables/useAuth';
@@ -23,7 +23,13 @@ const emit = defineEmits<{
 
 const { user } = useAuth();
 const { t } = useI18n();
+const page = usePage();
 const isLoggingOut = ref(false);
+
+// 後台關閉「開放使用者自行註冊」時，註冊分頁改顯示提示、社群區提醒僅限既有帳號。
+const allowRegistration = computed(
+    () => page.props.allowRegistration !== false,
+);
 
 function close() {
     emit('update:open', false);
@@ -162,11 +168,25 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
                     </p>
 
                     <LoginForm v-if="tab === 'login' && !user" />
-                    <RegisterForm v-else-if="tab === 'register' && !user" />
+                    <template v-else-if="tab === 'register' && !user">
+                        <RegisterForm v-if="allowRegistration" />
+                        <p
+                            v-else
+                            class="text-sm leading-6 text-[var(--binary-text-muted)]"
+                        >
+                            {{ t('auth.registration_closed') }}
+                        </p>
+                    </template>
                     <ProfilePanel v-else-if="user" />
 
                     <!-- Social buttons: guest only -->
                     <div v-if="!user" class="mt-6 flex flex-col gap-3">
+                        <p
+                            v-if="!allowRegistration"
+                            class="text-xs leading-5 text-[var(--binary-outline)]"
+                        >
+                            {{ t('auth.registration_closed_oauth_hint') }}
+                        </p>
                         <button
                             type="button"
                             class="binary-ghost-button flex w-full items-center justify-center gap-3"

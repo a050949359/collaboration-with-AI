@@ -18,6 +18,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PublicKeyController;
 use App\Http\Controllers\Auth\RegistController;
 use App\Http\Middleware\DecryptPasswordFields;
+use App\Http\Middleware\EnsureRegistrationOpen;
 use App\Http\Controllers\Auth\SocialAccountController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -60,7 +61,7 @@ Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
 
 Route::group(['prefix' => 'auth'], function () {
     Route::get('/key', PublicKeyController::class);
-    Route::post('/register', [RegistController::class, 'register'])->middleware([DecryptPasswordFields::class, 'turnstile']);
+    Route::post('/register', [RegistController::class, 'register'])->middleware([EnsureRegistrationOpen::class, DecryptPasswordFields::class, 'turnstile']);
     Route::post('/login', [LoginController::class, 'login'])->middleware([DecryptPasswordFields::class, 'turnstile']);
     Route::post('/forgot-password', [ForgotPasswordController::class, 'sendLink'])->middleware('throttle:5,1');
     Route::post('/reset-password', [ForgotPasswordController::class, 'reset'])->middleware(DecryptPasswordFields::class);
