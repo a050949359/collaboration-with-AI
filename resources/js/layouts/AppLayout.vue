@@ -181,6 +181,22 @@ function toggleDrawer(tab: 'login' | 'register' | 'profile') {
 
 onMounted(() => {
     initTheme();
+
+    // OAuth 註冊被擋時 callback 會帶 ?auth_error 跳回首頁，這裡轉成 toast 並清掉 query。
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get('auth_error') === 'registration_closed') {
+        showToast(t('auth.registration_closed'), 'error');
+        params.delete('auth_error');
+        const qs = params.toString();
+        window.history.replaceState(
+            {},
+            '',
+            window.location.pathname +
+                (qs ? `?${qs}` : '') +
+                window.location.hash,
+        );
+    }
 });
 
 // 全域通知狀態

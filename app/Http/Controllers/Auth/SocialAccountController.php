@@ -89,16 +89,18 @@ class SocialAccountController extends Controller
     }
 
     /**
-     * 關閉註冊時，OAuth 新帳號被擋：不發 token，單純跳回首頁。
+     * 關閉註冊時，OAuth 新帳號被擋：不發 token，跳回首頁並帶 auth_error，
+     * 前端 AppLayout 讀到後顯示「暫停開放註冊」toast。
      */
     private function denyRegistration(): JsonResponse|RedirectResponse
     {
+        $query = http_build_query(['auth_error' => 'registration_closed']);
         $frontendUrl = config('services.social_auth.frontend_url');
 
         if (is_string($frontendUrl) && $frontendUrl !== '') {
-            return redirect()->away(rtrim($frontendUrl, '/').'/');
+            return redirect()->away(rtrim($frontendUrl, '/').'/?'.$query);
         }
 
-        return redirect()->to(route('home'));
+        return redirect()->to(route('home').'?'.$query);
     }
 }
