@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Story;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Story\GenerateSetupRequest;
 use App\Http\Requests\Story\RefineSetupRequest;
-use App\Services\Story\GeminiStoryService;
+use App\Services\Story\LlmStoryService;
 use Illuminate\Http\JsonResponse;
 
 class StorySetupController extends Controller
 {
-    public function __construct(private GeminiStoryService $story) {}
+    public function __construct(private LlmStoryService $story) {}
 
     public function generate(GenerateSetupRequest $request): JsonResponse
     {

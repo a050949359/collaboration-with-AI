@@ -7,7 +7,7 @@ use App\Models\Story\StoryCharacter;
 use App\Models\Story\StoryScene;
 use App\Models\Story\StorySegment;
 use App\Models\Story\StorySession;
-use App\Services\Story\GeminiStoryService;
+use App\Services\Story\LlmStoryService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +24,7 @@ class StorySegmentJob implements ShouldQueue
         public readonly int $characterId,
     ) {}
 
-    public function handle(GeminiStoryService $story): void
+    public function handle(LlmStoryService $story): void
     {
         $session   = StorySession::with(['items.holder'])->find($this->sessionId);
         $character = StoryCharacter::find($this->characterId);
@@ -80,7 +80,7 @@ class StorySegmentJob implements ShouldQueue
         Log::info("StorySegment: session {$session->id} turn {$turnNumber} by {$character->name}");
     }
 
-    private function resolveScene(StorySession $session, string $setting, GeminiStoryService $story): ?string
+    private function resolveScene(StorySession $session, string $setting, LlmStoryService $story): ?string
     {
         $location = $session->pending_scene_location;
 

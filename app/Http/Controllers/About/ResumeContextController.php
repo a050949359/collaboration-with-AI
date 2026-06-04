@@ -4,17 +4,17 @@ namespace App\Http\Controllers\About;
 
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\EnsureAdmin;
-use App\Services\Chat\GeminiChatService;
+use App\Services\About\ResumeChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ResumeContextController extends Controller
 {
-    public function __construct(private readonly GeminiChatService $gemini) {}
+    public function __construct(private readonly ResumeChatService $resumeChat) {}
 
     public function show(): JsonResponse
     {
-        return response()->json(['context' => $this->gemini->loadContext()]);
+        return response()->json(['context' => $this->resumeChat->loadContext()]);
     }
 
     public function update(Request $request): JsonResponse
@@ -23,7 +23,7 @@ class ResumeContextController extends Controller
             'context' => ['required', 'string', 'max:20000'],
         ]);
 
-        $this->gemini->saveContext($request->string('context')->toString());
+        $this->resumeChat->saveContext($request->string('context')->toString());
 
         return response()->json(['message' => 'Context saved.']);
     }

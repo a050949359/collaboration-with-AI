@@ -5,14 +5,14 @@ namespace App\Http\Controllers\About;
 use App\Http\Controllers\Controller;
 use App\Models\ShareToken;
 use App\Services\AI\AIServiceException;
-use App\Services\Chat\GeminiChatService;
+use App\Services\About\ResumeChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AboutController extends Controller
 {
-    public function __construct(private readonly GeminiChatService $gemini) {}
+    public function __construct(private readonly ResumeChatService $resumeChat) {}
 
     public function ask(Request $request): JsonResponse
     {
@@ -38,7 +38,7 @@ class AboutController extends Controller
         ]);
 
         try {
-            $reply = $this->gemini->chat(
+            $reply = $this->resumeChat->chat(
                 message: $request->string('message')->toString(),
                 history: $request->input('history', []),
             );

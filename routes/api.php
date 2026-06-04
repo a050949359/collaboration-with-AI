@@ -88,6 +88,7 @@ Route::group(['prefix' => 'auth'], function () {
 Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(function () {
     Route::get('/settings', [SettingsController::class, 'show']);
     Route::patch('/settings', [SettingsController::class, 'update']);
+    Route::post('/settings/llm/test', [SettingsController::class, 'testLlm']);
 });
 
 Route::prefix('v1/articles')->group(function () {

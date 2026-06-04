@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services\Chat;
+namespace App\Services\About;
 
-use App\Services\AI\Gemini\GeminiService;
+use App\Services\AI\LlmManager;
 use Illuminate\Support\Facades\Storage;
 
-class GeminiChatService
+class ResumeChatService
 {
-    public function __construct(private GeminiService $gemini) {}
+    public function __construct(private LlmManager $llm) {}
 
     /**
      * Send a multi-turn chat message grounded on imported resume context.
@@ -25,7 +25,7 @@ class GeminiChatService
         $messages   = $history;
         $messages[] = ['role' => 'user', 'text' => $message];
 
-        return $this->gemini->generate($this->buildSystemPrompt($context), $messages);
+        return $this->llm->for('chat')->generate($this->buildSystemPrompt($context), $messages);
     }
 
     public function saveContext(string $context): void

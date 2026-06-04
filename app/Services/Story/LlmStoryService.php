@@ -2,59 +2,46 @@
 
 namespace App\Services\Story;
 
-use App\Services\AI\Gemini\GeminiService;
+use App\Services\AI\LlmManager;
 
-class GeminiStoryService
+class LlmStoryService
 {
-    private GeminiService $storyGemini;
-    private GeminiService $stateGemini;
-
-    /** generationConfig for generateSetup / refineSetup */
+    /** Neutral JSON Schema for generateSetup / refineSetup */
     private const SETUP_SCHEMA = [
-        'responseMimeType' => 'application/json',
-        'responseSchema'   => [
-            'type'       => 'object',
-            'properties' => [
-                'world'      => ['type' => 'string'],
-                'opening'    => ['type' => 'string'],
-                'characters' => [
-                    'type'  => 'array',
-                    'items' => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'name'        => ['type' => 'string'],
-                            'persona'     => ['type' => 'string'],
-                            'secret'      => ['type' => 'string', 'nullable' => true],
-                            'is_narrator' => ['type' => 'boolean'],
-                        ],
-                        'required' => ['name', 'persona', 'is_narrator'],
-                    ],
-                ],
+        'type'       => 'object',
+        'properties' => [
+            'world'      => ['type' => 'string'],
+            'opening'    => ['type' => 'string'],
+            'characters' => [
+                'type'  => 'array',
                 'items' => [
-                    'type'  => 'array',
-                    'items' => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'name'        => ['type' => 'string'],
-                            'description' => ['type' => 'string'],
-                            'holder'      => ['type' => 'string', 'nullable' => true],
-                        ],
-                        'required' => ['name', 'description'],
+                    'type'       => 'object',
+                    'properties' => [
+                        'name'        => ['type' => 'string'],
+                        'persona'     => ['type' => 'string'],
+                        'secret'      => ['type' => 'string', 'nullable' => true],
+                        'is_narrator' => ['type' => 'boolean'],
                     ],
+                    'required' => ['name', 'persona', 'is_narrator'],
                 ],
             ],
-            'required' => ['world', 'opening', 'characters', 'items'],
+            'items' => [
+                'type'  => 'array',
+                'items' => [
+                    'type'       => 'object',
+                    'properties' => [
+                        'name'        => ['type' => 'string'],
+                        'description' => ['type' => 'string'],
+                        'holder'      => ['type' => 'string', 'nullable' => true],
+                    ],
+                    'required' => ['name', 'description'],
+                ],
+            ],
         ],
+        'required' => ['world', 'opening', 'characters', 'items'],
     ];
 
-    public function __construct()
-    {
-        $storyModel = (string) config('services.gemini.story_model');
-        $stateModel = (string) config('services.gemini.story_state_model');
-
-        $this->storyGemini = new GeminiService($storyModel);
-        $this->stateGemini = new GeminiService($stateModel);
-    }
+    public function __construct(private LlmManager $llm) {}
 
     /**
      * Generate the next story segment for a character's turn.
@@ -97,7 +84,7 @@ class GeminiStoryService
 
         $messages[] = ['role' => 'user', 'text' => $turnInstruction];
 
-        return $this->storyGemini->generate($systemPrompt, $messages);
+        return $this->llm->for('story')->generate($systemPrompt, $messages);
     }
 
     /**
@@ -139,7 +126,7 @@ class GeminiStoryService
             ],
         ];
 
-        return $this->stateGemini->generate($systemPrompt, $messages);
+        return $this->llm->for('story_state')->generate($systemPrompt, $messages);
     }
 
     /**
@@ -163,7 +150,7 @@ class GeminiStoryService
             ['role' => 'user', 'text' => "關鍵字：{$keywords}"],
         ];
 
-        return $this->storyGemini->generate($systemPrompt, $messages, self::SETUP_SCHEMA);
+        return $this->llm->for('story')->generate($systemPrompt, $messages, ['json_schema' => self::SETUP_SCHEMA]);
     }
 
     /**
@@ -190,7 +177,7 @@ class GeminiStoryService
             ],
         ];
 
-        return $this->storyGemini->generate($systemPrompt, $messages, self::SETUP_SCHEMA);
+        return $this->llm->for('story')->generate($systemPrompt, $messages, ['json_schema' => self::SETUP_SCHEMA]);
     }
 
     /** @return string */
@@ -230,7 +217,7 @@ class GeminiStoryService
             ],
         ];
 
-        return $this->storyGemini->generate($systemPrompt, $messages);
+        return $this->llm->for('story')->generate($systemPrompt, $messages);
     }
 
     private function buildSegmentPrompt(

@@ -68,3 +68,50 @@ export async function saveAdminSettings(
 
     return payload;
 }
+
+// ── LLM provider/model 設定 ──────────────────────────────
+
+export type LlmSelection = { provider: string; model: string };
+export type LlmSettings = Record<string, LlmSelection>;
+export type LlmTestResult = {
+    ok: boolean;
+    latency_ms: number;
+    reply?: string;
+    error?: string;
+};
+
+/** 局部更新 settings：只送 llm 區（後端 sometimes 驗證，其餘欄位保留）。 */
+export async function saveLlmSettings(
+    llm: LlmSettings,
+): Promise<{ message: string }> {
+    const response = await fetch(api.admin.settings(), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ llm }),
+    });
+
+    return parseJson<{ message: string }>(response);
+}
+
+/** 連線測試：失敗時後端仍回 200（ok:false），故直接讀回應。 */
+export async function testLlmConnection(
+    provider: string,
+    model: string,
+    withSchema = false,
+): Promise<LlmTestResult> {
+    const response = await fetch(api.admin.llmTest(), {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider, model, with_schema: withSchema }),
+    });
+
+    return parseJson<LlmTestResult>(response);
+}

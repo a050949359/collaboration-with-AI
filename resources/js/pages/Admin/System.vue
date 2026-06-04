@@ -6,11 +6,17 @@ import {
     AdminApiError,
     fetchAdminSettings,
     saveAdminSettings,
+    saveLlmSettings,
+    testLlmConnection,
 } from '@/lib/admin-api';
-import type { AdminSettings } from '@/lib/admin-api';
+import type {
+    AdminSettings,
+    LlmSettings,
+    LlmTestResult,
+} from '@/lib/admin-api';
 import { api, routes } from '@/lib/routes';
 
-type Tab = 'settings' | 'tokens';
+type Tab = 'settings' | 'tokens' | 'llm';
 const activeTab = ref<Tab>('settings');
 
 // ── Settings ─────────────────────────────────────────────
@@ -61,6 +67,101 @@ async function saveSettings() {
             e instanceof AdminApiError ? e.message : '連線異常，請稍後再試';
     } finally {
         isSaving.value = false;
+    }
+}
+
+// ── LLM 模型設定 ─────────────────────────────────────────
+
+const LLM_USES = [
+    { key: 'story', label: '故事段落生成' },
+    { key: 'story_state', label: '世界狀態更新' },
+    { key: 'character', label: '角色生成' },
+    { key: 'chat', label: 'About 履歷對話' },
+] as const;
+
+const llmCatalog = computed<Record<string, string[]>>(
+    () => (page.props.llmCatalog as Record<string, string[]>) ?? {},
+);
+const llmProviders = computed(() => Object.keys(llmCatalog.value));
+
+function modelsFor(provider: string): string[] {
+    return llmCatalog.value[provider] ?? [];
+}
+
+const llmForm = ref<LlmSettings>(
+    Object.fromEntries(
+        LLM_USES.map((u) => {
+            const existing = (
+                page.props.llmSettings as LlmSettings | undefined
+            )?.[u.key];
+
+            return [
+                u.key,
+                {
+                    provider: existing?.provider ?? 'gemini',
+                    model: existing?.model ?? '',
+                },
+            ];
+        }),
+    ),
+);
+
+function onProviderChange(useKey: string) {
+    const sel = llmForm.value[useKey];
+    const models = modelsFor(sel.provider);
+
+    if (models.length && !models.includes(sel.model)) {
+        sel.model = models[0];
+    }
+}
+
+const llmSaving = ref(false);
+const llmSaveMsg = ref('');
+const llmSaveErr = ref('');
+
+async function saveLlm() {
+    if (llmSaving.value) {
+        return;
+    }
+
+    llmSaving.value = true;
+    llmSaveMsg.value = '';
+    llmSaveErr.value = '';
+
+    try {
+        const r = await saveLlmSettings(llmForm.value);
+        llmSaveMsg.value = r.message || '模型設定已更新';
+    } catch (e: unknown) {
+        llmSaveErr.value =
+            e instanceof AdminApiError ? e.message : '儲存失敗，請稍後再試';
+    } finally {
+        llmSaving.value = false;
+    }
+}
+
+const llmTesting = ref<Record<string, boolean>>({});
+const llmTestSchema = ref<Record<string, boolean>>({});
+const llmResults = ref<Record<string, LlmTestResult>>({});
+
+async function testLlm(useKey: string) {
+    const sel = llmForm.value[useKey];
+    llmTesting.value[useKey] = true;
+    delete llmResults.value[useKey];
+
+    try {
+        llmResults.value[useKey] = await testLlmConnection(
+            sel.provider,
+            sel.model,
+            llmTestSchema.value[useKey] ?? false,
+        );
+    } catch (e: unknown) {
+        llmResults.value[useKey] = {
+            ok: false,
+            latency_ms: 0,
+            error: e instanceof Error ? e.message : '測試失敗',
+        };
+    } finally {
+        llmTesting.value[useKey] = false;
     }
 }
 
@@ -241,6 +342,7 @@ onMounted(() => {
                     <button
                         v-for="tab in [
                             { key: 'settings', label: '設定' },
+                            { key: 'llm', label: 'AI 模型' },
                             { key: 'tokens', label: '分享連結管理' },
                         ] as const"
                         :key="tab.key"
@@ -370,6 +472,136 @@ onMounted(() => {
                                 </button>
                             </div>
                         </form>
+                    </template>
+
+                    <!-- ── LLM 模型 Tab ── -->
+                    <template v-else-if="activeTab === 'llm'">
+                        <div class="max-w-3xl space-y-5">
+                            <p
+                                class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                            >
+                                &gt; 各用途的 LLM provider /
+                                model（儲存後即時生效）
+                            </p>
+
+                            <div
+                                v-for="use in LLM_USES"
+                                :key="use.key"
+                                class="space-y-3 rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <span
+                                        class="binary-label text-xs font-bold text-[var(--binary-text)] uppercase"
+                                        >{{ use.label }}</span
+                                    >
+                                    <code
+                                        class="text-[10px] text-[var(--binary-outline)]"
+                                        >{{ use.key }}</code
+                                    >
+                                </div>
+
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <select
+                                        v-model="llmForm[use.key].provider"
+                                        class="binary-input"
+                                        @change="onProviderChange(use.key)"
+                                    >
+                                        <option
+                                            v-for="p in llmProviders"
+                                            :key="p"
+                                            :value="p"
+                                        >
+                                            {{ p }}
+                                        </option>
+                                    </select>
+                                    <select
+                                        v-model="llmForm[use.key].model"
+                                        class="binary-input"
+                                    >
+                                        <option
+                                            v-for="m in modelsFor(
+                                                llmForm[use.key].provider,
+                                            )"
+                                            :key="m"
+                                            :value="m"
+                                        >
+                                            {{ m }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="flex flex-wrap items-center gap-4">
+                                    <button
+                                        type="button"
+                                        class="binary-ghost-button px-3 py-1.5 text-xs"
+                                        :disabled="llmTesting[use.key]"
+                                        @click="testLlm(use.key)"
+                                    >
+                                        {{
+                                            llmTesting[use.key]
+                                                ? '測試中...'
+                                                : '測試'
+                                        }}
+                                    </button>
+                                    <label
+                                        class="flex cursor-pointer items-center gap-2 text-[11px] text-[var(--binary-outline)]"
+                                    >
+                                        <input
+                                            v-model="llmTestSchema[use.key]"
+                                            type="checkbox"
+                                            class="h-3.5 w-3.5 border-0 bg-[var(--binary-surface-highest)] text-[var(--binary-primary-container)] focus:ring-0"
+                                        />
+                                        測 JSON 輸出
+                                    </label>
+                                    <span
+                                        v-if="llmResults[use.key]"
+                                        class="text-xs"
+                                        :class="
+                                            llmResults[use.key].ok
+                                                ? 'text-[var(--binary-primary)]'
+                                                : 'text-red-400'
+                                        "
+                                    >
+                                        <template v-if="llmResults[use.key].ok">
+                                            ✓
+                                            {{
+                                                llmResults[use.key].latency_ms
+                                            }}ms ·
+                                            {{ llmResults[use.key].reply }}
+                                        </template>
+                                        <template v-else>
+                                            ✗ {{ llmResults[use.key].error }}
+                                        </template>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <p
+                                v-if="llmSaveErr"
+                                class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
+                            >
+                                {{ llmSaveErr }}
+                            </p>
+                            <p
+                                v-if="llmSaveMsg"
+                                class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]"
+                            >
+                                {{ llmSaveMsg }}
+                            </p>
+
+                            <div class="flex justify-end">
+                                <button
+                                    class="binary-button"
+                                    :disabled="llmSaving"
+                                    @click="saveLlm"
+                                >
+                                    {{
+                                        llmSaving ? '儲存中...' : '儲存模型設定'
+                                    }}
+                                    <span aria-hidden="true">-></span>
+                                </button>
+                            </div>
+                        </div>
                     </template>
 
                     <!-- ── Share Tokens Tab ── -->

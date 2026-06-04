@@ -16,6 +16,7 @@ use App\Enums\StoryContentRating;
 use App\Enums\StoryGenre;
 use App\Enums\TaskStatus;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -87,6 +88,12 @@ class HandleInertiaRequests extends Middleware
         return match (true) {
             $request->routeIs('admin') => [
                 'shareTokenScopes' => array_column(ShareTokenScope::cases(), 'value'),
+                'llmCatalog'       => array_map(
+                    fn($p) => array_values($p['models'] ?? []),
+                    config('services.llm.providers', []),
+                ),
+                'llmSettings'      => (rescue(fn() => Cache::get('admin_settings'), null)['llm'] ?? null)
+                    ?: config('services.llm.uses', []),
             ],
             $request->routeIs('mcp') => [
                 'taskStatuses' => array_column(TaskStatus::cases(), 'value'),

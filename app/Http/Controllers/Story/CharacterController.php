@@ -5,14 +5,14 @@ namespace App\Http\Controllers\Story;
 use App\Enums\StoryGenre;
 use App\Http\Controllers\Controller;
 use App\Models\Story\Character;
-use App\Services\Story\GeminiCharacterService;
+use App\Services\Story\LlmCharacterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class CharacterController extends Controller
 {
-    public function __construct(private GeminiCharacterService $ai) {}
+    public function __construct(private LlmCharacterService $ai) {}
 
     public function index(): JsonResponse
     {

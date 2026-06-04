@@ -2,54 +2,42 @@
 
 namespace App\Services\Story;
 
-use App\Services\AI\Gemini\GeminiService;
+use App\Services\AI\LlmManager;
 
-class GeminiCharacterService
+class LlmCharacterService
 {
-    private GeminiService $gemini;
-
     private const CHARACTER_SCHEMA = [
-        'responseMimeType' => 'application/json',
-        'responseSchema'   => [
-            'type'       => 'object',
-            'properties' => [
-                'name'       => ['type' => 'string'],
-                'persona'    => ['type' => 'string'],
-                'secret'     => ['type' => 'string', 'nullable' => true],
-                'background' => ['type' => 'string'],
-                'appearance' => [
-                    'type'       => 'object',
-                    'properties' => [
-                        'age'      => ['type' => 'string'],
-                        'hair'     => ['type' => 'string'],
-                        'eyes'     => ['type' => 'string'],
-                        'build'    => ['type' => 'string'],
-                        'features' => ['type' => 'string', 'nullable' => true],
-                    ],
-                    'required' => ['age', 'hair', 'eyes', 'build'],
+        'type'       => 'object',
+        'properties' => [
+            'name'       => ['type' => 'string'],
+            'persona'    => ['type' => 'string'],
+            'secret'     => ['type' => 'string', 'nullable' => true],
+            'background' => ['type' => 'string'],
+            'appearance' => [
+                'type'       => 'object',
+                'properties' => [
+                    'age'      => ['type' => 'string'],
+                    'hair'     => ['type' => 'string'],
+                    'eyes'     => ['type' => 'string'],
+                    'build'    => ['type' => 'string'],
+                    'features' => ['type' => 'string', 'nullable' => true],
                 ],
-                'outfit' => ['type' => 'string'],
+                'required' => ['age', 'hair', 'eyes', 'build'],
             ],
-            'required' => ['name', 'persona', 'background', 'appearance', 'outfit'],
+            'outfit' => ['type' => 'string'],
         ],
+        'required' => ['name', 'persona', 'background', 'appearance', 'outfit'],
     ];
 
     private const IMAGE_PROMPT_SCHEMA = [
-        'responseMimeType' => 'application/json',
-        'responseSchema'   => [
-            'type'       => 'object',
-            'properties' => [
-                'image_prompt' => ['type' => 'string'],
-            ],
-            'required' => ['image_prompt'],
+        'type'       => 'object',
+        'properties' => [
+            'image_prompt' => ['type' => 'string'],
         ],
+        'required' => ['image_prompt'],
     ];
 
-    public function __construct()
-    {
-        $model = (string) config('services.gemini.story_model', config('services.gemini.model', 'gemini-2.5-flash'));
-        $this->gemini = new GeminiService($model);
-    }
+    public function __construct(private LlmManager $llm) {}
 
     /**
      * Generate a full character design from a description (or auto-generate if empty).
@@ -75,7 +63,7 @@ class GeminiCharacterService
             ['role' => 'user', 'text' => $description !== '' ? "描述：{$description}" : '請自由創作一個角色。'],
         ];
 
-        $raw = $this->gemini->generate($systemPrompt, $messages, self::CHARACTER_SCHEMA);
+        $raw = $this->llm->for('character')->generate($systemPrompt, $messages, ['json_schema' => self::CHARACTER_SCHEMA]);
 
         return $this->decode($raw);
     }
@@ -104,7 +92,7 @@ class GeminiCharacterService
             ],
         ];
 
-        $raw = $this->gemini->generate($systemPrompt, $messages, self::CHARACTER_SCHEMA);
+        $raw = $this->llm->for('character')->generate($systemPrompt, $messages, ['json_schema' => self::CHARACTER_SCHEMA]);
 
         return $this->decode($raw);
     }
@@ -130,7 +118,7 @@ class GeminiCharacterService
             ],
         ];
 
-        $raw = $this->gemini->generate($systemPrompt, $messages, self::IMAGE_PROMPT_SCHEMA);
+        $raw = $this->llm->for('character')->generate($systemPrompt, $messages, ['json_schema' => self::IMAGE_PROMPT_SCHEMA]);
 
         $decoded = $this->decode($raw);
 

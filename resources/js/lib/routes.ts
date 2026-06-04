@@ -128,6 +128,7 @@ export const api = {
 
     admin: {
         settings: () => '/api/admin/settings',
+        llmTest: () => '/api/admin/settings/llm/test',
         shareTokens: () => '/api/admin/share-tokens',
         shareTokenDestroy: (id: number) => `/api/admin/share-tokens/${id}`,
     },

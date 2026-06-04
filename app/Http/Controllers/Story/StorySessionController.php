@@ -13,7 +13,7 @@ use App\Models\Story\StoryCharacter;
 use App\Models\Story\StoryItem;
 use App\Models\Story\StorySegment;
 use App\Models\Story\StorySession;
-use App\Services\Story\GeminiStoryService;
+use App\Services\Story\LlmStoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,7 +21,7 @@ use Illuminate\Validation\ValidationException;
 
 class StorySessionController extends Controller
 {
-    public function __construct(private GeminiStoryService $story) {}
+    public function __construct(private LlmStoryService $story) {}
 
     public function index(): JsonResponse
     {

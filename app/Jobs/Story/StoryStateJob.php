@@ -5,7 +5,7 @@ namespace App\Jobs\Story;
 use App\Enums\StorySessionStatus;
 use App\Models\Story\StorySegment;
 use App\Models\Story\StorySession;
-use App\Services\Story\GeminiStoryService;
+use App\Services\Story\LlmStoryService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -27,7 +27,7 @@ class StoryStateJob implements ShouldQueue
         public readonly int $lastCharacterId,
     ) {}
 
-    public function handle(GeminiStoryService $story): void
+    public function handle(LlmStoryService $story): void
     {
         $session = StorySession::with(['items.holder', 'characters'])->find($this->sessionId);
 

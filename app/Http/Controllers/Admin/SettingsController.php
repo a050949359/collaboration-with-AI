@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AI\LlmManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -31,6 +32,9 @@ class SettingsController extends Controller
             'allow_registration' => ['sometimes', 'boolean'],
             'max_login_attempts' => ['sometimes', 'integer', 'min:1', 'max:20'],
             'avatar_size'        => ['sometimes', 'integer', 'in:64,128,256'],
+            'llm'                => ['sometimes', 'array'],
+            'llm.*.provider'     => ['required', 'in:gemini,nvidia,ollama'],
+            'llm.*.model'        => ['required', 'string', 'max:100'],
         ]);
 
         $current = $this->getSettings();
@@ -42,6 +46,50 @@ class SettingsController extends Controller
             'message'  => '設定已更新',
             'settings' => $merged,
         ]);
+    }
+
+    /**
+     * 連線測試：用指定 provider+model 送一個最小請求，回 ok/latency/reply。
+     * 失敗也回 200（這是測試結果，不是 API 錯誤），讓前端內嵌顯示。
+     */
+    public function testLlm(Request $request, LlmManager $llm): JsonResponse
+    {
+        $validated = $request->validate([
+            'provider'    => ['required', 'in:gemini,nvidia,ollama'],
+            'model'       => ['required', 'string', 'max:100'],
+            'with_schema' => ['sometimes', 'boolean'],
+        ]);
+
+        $options = [];
+        if ($request->boolean('with_schema')) {
+            $options['json_schema'] = [
+                'type'       => 'object',
+                'properties' => ['ok' => ['type' => 'boolean']],
+                'required'   => ['ok'],
+            ];
+        }
+
+        $start = microtime(true);
+
+        try {
+            $reply = $llm->driver($validated['provider'], $validated['model'])->generate(
+                '你是連線測試助手，請用一句話簡短回覆。',
+                [['role' => 'user', 'text' => 'ping']],
+                $options,
+            );
+
+            return response()->json([
+                'ok'         => true,
+                'latency_ms' => (int) round((microtime(true) - $start) * 1000),
+                'reply'      => mb_substr($reply, 0, 500),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok'         => false,
+                'latency_ms' => (int) round((microtime(true) - $start) * 1000),
+                'error'      => $e->getMessage(),
+            ]);
+        }
     }
 
     private function getSettings(): array
@@ -62,6 +110,7 @@ class SettingsController extends Controller
             'allow_registration' => true,
             'max_login_attempts' => 5,
             'avatar_size'        => 128,
+            'llm'                => config('services.llm.uses', []),
         ];
     }
 }

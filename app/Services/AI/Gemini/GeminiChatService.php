@@ -3,11 +3,12 @@
 namespace App\Services\AI\Gemini;
 
 use App\Services\AI\AIServiceException;
+use App\Services\AI\Contracts\ChatCompletion;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class GeminiService
+class GeminiChatService implements ChatCompletion
 {
     private string $apiKey;
     private string $defaultModel;
@@ -38,13 +39,7 @@ class GeminiService
         }
     }
 
-    /**
-     * Send a generation request with a system prompt and optional message history.
-     *
-     * @param  array<int, array{role: string, text: string}>  $messages
-     * @param  array<string, mixed>  $generationConfig  e.g. ['responseMimeType' => 'application/json', 'responseSchema' => [...]]
-     */
-    public function generate(string $systemPrompt, array $messages = [], array $generationConfig = []): string
+    public function generate(string $systemPrompt, array $messages = [], array $options = []): string
     {
         if ($this->apiKey === '') {
             throw new AIServiceException('GEMINI_API_KEY is not configured.');
@@ -54,12 +49,13 @@ class GeminiService
 
         foreach ($messages as $turn) {
             $contents[] = [
-                'role'  => $turn['role'],
+                'role'  => $turn['role'] === 'assistant' ? 'model' : $turn['role'],
                 'parts' => [['text' => $turn['text']]],
             ];
         }
 
-        $attempted = [];
+        $generationConfig = $this->buildGenerationConfig($options);
+        $attempted        = [];
 
         foreach ($this->models as $_unused) {
             $model = $this->nextModel();
@@ -76,7 +72,7 @@ class GeminiService
                 ->timeout(180)
                 ->post($this->endpointForModel($model), $body);
 
-            Log::debug('GeminiService response', [
+            Log::debug('GeminiChatService response', [
                 'status'   => $response->status(),
                 'model'    => $model,
                 'endpoint' => $this->endpointForModel($model),
@@ -99,6 +95,32 @@ class GeminiService
         );
     }
 
+    /**
+     * Translate neutral options into Gemini generationConfig.
+     *
+     * @param  array{json_schema?: array<string, mixed>, temperature?: float, max_tokens?: int}  $options
+     * @return array<string, mixed>
+     */
+    private function buildGenerationConfig(array $options): array
+    {
+        $config = [];
+
+        if (isset($options['json_schema']) && is_array($options['json_schema'])) {
+            $config['responseMimeType'] = 'application/json';
+            $config['responseSchema']   = $options['json_schema'];
+        }
+
+        if (isset($options['temperature'])) {
+            $config['temperature'] = (float) $options['temperature'];
+        }
+
+        if (isset($options['max_tokens'])) {
+            $config['maxOutputTokens'] = (int) $options['max_tokens'];
+        }
+
+        return $config;
+    }
+
     private function endpointForModel(string $model): string
     {
         return sprintf(
@@ -109,20 +131,25 @@ class GeminiService
 
     private function nextModel(): string
     {
+        $fallback = $this->models[0] ?? $this->defaultModel;
+
         if (!$this->useRotation) {
-            return $this->models[0] ?? $this->defaultModel;
+            return $fallback;
         }
 
-        $cacheKey = 'gemini_model_rotation_index';
+        // Redis 掛掉時退化成不輪替（用第一個 model），不讓 cache 例外打斷生成。
+        return rescue(function () use ($fallback) {
+            $cacheKey = 'gemini_model_rotation_index';
 
-        if (!Cache::has($cacheKey)) {
-            Cache::forever($cacheKey, 0);
-        }
+            if (!Cache::has($cacheKey)) {
+                Cache::forever($cacheKey, 0);
+            }
 
-        $next  = (int) Cache::increment($cacheKey);
-        $index = ($next - 1) % \count($this->models);
+            $next  = (int) Cache::increment($cacheKey);
+            $index = ($next - 1) % \count($this->models);
 
-        return $this->models[$index] ?? $this->defaultModel;
+            return $this->models[$index] ?? $fallback;
+        }, $fallback);
     }
 
     /** @param mixed $payload */

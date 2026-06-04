@@ -66,6 +66,44 @@ return [
         'story_state_model' => env('GEMINI_STORY_STATE_MODEL', 'gemini-2.5-flash'),
     ],
 
+    /*
+    | LLM 抽象層：多 provider（gemini / nvidia / ollama）。
+    | providers.*.models 供 System 設定頁的 model 下拉用；
+    | uses.* 為各用途的「預設」provider+model，runtime 可由 admin_settings 覆蓋。
+    */
+    'llm' => [
+        'providers' => [
+            'gemini' => [
+                'api_key' => env('GEMINI_API_KEY'),
+                'models'  => array_values(array_filter(array_map('trim', explode(
+                    ',',
+                    (string) env('LLM_GEMINI_MODELS', 'gemini-2.5-flash,gemini-2.5-pro'),
+                )))),
+            ],
+            'nvidia' => [
+                'api_key'  => env('NVIDIA_API_KEY'),
+                'base_url' => env('NVIDIA_BASE_URL', 'https://integrate.api.nvidia.com/v1'),
+                'models'   => array_values(array_filter(array_map('trim', explode(
+                    ',',
+                    (string) env('LLM_NVIDIA_MODELS', 'meta/llama-3.3-70b-instruct,google/gemma-2-27b-it'),
+                )))),
+            ],
+            'ollama' => [
+                'base_url' => env('OLLAMA_HOST', 'http://localhost:11434'),
+                'models'   => array_values(array_filter(array_map('trim', explode(
+                    ',',
+                    (string) env('LLM_OLLAMA_MODELS', 'llama3.1,qwen2.5'),
+                )))),
+            ],
+        ],
+        'uses' => [
+            'story'       => ['provider' => env('LLM_STORY_PROVIDER', 'gemini'),       'model' => env('LLM_STORY_MODEL', 'gemini-2.5-flash')],
+            'story_state' => ['provider' => env('LLM_STORY_STATE_PROVIDER', 'gemini'), 'model' => env('LLM_STORY_STATE_MODEL', 'gemini-2.5-flash')],
+            'character'   => ['provider' => env('LLM_CHARACTER_PROVIDER', 'gemini'),   'model' => env('LLM_CHARACTER_MODEL', 'gemini-2.5-flash')],
+            'chat'        => ['provider' => env('LLM_CHAT_PROVIDER', 'gemini'),        'model' => env('LLM_CHAT_MODEL', 'gemini-2.5-flash')],
+        ],
+    ],
+
     'turnstile' => [
         'secret_key' => env('TURNSTILE_SECRET_KEY'),
     ],
