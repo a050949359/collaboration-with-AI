@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, provide, ref } from 'vue';
+import { computed, onMounted, onUnmounted, provide, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import AuthDrawer from '../components/auth/AuthDrawer.vue';
@@ -179,8 +179,30 @@ function toggleDrawer(tab: 'login' | 'register' | 'profile') {
     }
 }
 
+// Navbar 下拉：受控開關，點外面 / Esc / 選項目皆自動收起
+const openMenu = ref<string | null>(null);
+function toggleMenu(label: string) {
+    openMenu.value = openMenu.value === label ? null : label;
+}
+function closeMenu() {
+    openMenu.value = null;
+}
+const onDocClick = (e: MouseEvent) => {
+    if (!(e.target as HTMLElement).closest('[data-nav-dropdown]')) {
+        openMenu.value = null;
+    }
+};
+const onDocKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+        openMenu.value = null;
+    }
+};
+
 onMounted(() => {
     initTheme();
+
+    document.addEventListener('click', onDocClick);
+    document.addEventListener('keydown', onDocKey);
 
     // OAuth 註冊被擋時 callback 會帶 ?auth_error 跳回首頁，這裡轉成 toast 並清掉 query。
     const params = new URLSearchParams(window.location.search);
@@ -213,6 +235,11 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
         toast.value = null;
     }, 3200);
 }
+
+onUnmounted(() => {
+    document.removeEventListener('click', onDocClick);
+    document.removeEventListener('keydown', onDocKey);
+});
 
 provide('showToast', showToast);
 
@@ -265,14 +292,20 @@ function toggleLocale() {
                             :key="link.label"
                         >
                             <!-- Dropdown -->
-                            <details v-if="link.children" class="relative">
-                                <summary
-                                    class="binary-link flex cursor-pointer list-none items-center gap-1.5 hover:text-[var(--binary-primary)]"
+                            <div
+                                v-if="link.children"
+                                class="relative"
+                                data-nav-dropdown
+                            >
+                                <button
+                                    type="button"
+                                    class="binary-link flex cursor-pointer items-center gap-1.5 hover:text-[var(--binary-primary)]"
                                     :class="
                                         link.active
                                             ? 'text-[var(--binary-primary)]'
                                             : ''
                                     "
+                                    @click="toggleMenu(link.label)"
                                 >
                                     <NavIcon
                                         v-if="link.icon"
@@ -280,7 +313,12 @@ function toggleLocale() {
                                     />
                                     {{ link.label }}
                                     <svg
-                                        class="h-3 w-3 opacity-60"
+                                        class="h-3 w-3 opacity-60 transition-transform"
+                                        :class="
+                                            openMenu === link.label
+                                                ? 'rotate-180'
+                                                : ''
+                                        "
                                         viewBox="0 0 20 20"
                                         fill="currentColor"
                                     >
@@ -290,8 +328,9 @@ function toggleLocale() {
                                             clip-rule="evenodd"
                                         />
                                     </svg>
-                                </summary>
+                                </button>
                                 <div
+                                    v-if="openMenu === link.label"
                                     class="absolute top-full left-0 mt-2 min-w-[140px] rounded-xl bg-[var(--binary-surface-high)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.35)]"
                                 >
                                     <a
@@ -304,6 +343,7 @@ function toggleLocale() {
                                                 ? 'text-[var(--binary-primary)]'
                                                 : ''
                                         "
+                                        @click="closeMenu"
                                     >
                                         <NavIcon
                                             v-if="child.icon"
@@ -312,7 +352,7 @@ function toggleLocale() {
                                         {{ child.label }}
                                     </a>
                                 </div>
-                            </details>
+                            </div>
                             <!-- Flat link -->
                             <a
                                 v-else
