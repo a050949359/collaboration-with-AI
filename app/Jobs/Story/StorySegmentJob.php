@@ -61,7 +61,7 @@ class StorySegmentJob implements ShouldQueue
             characterPersona: $character->persona,
             recentSegments: $recentSegments,
             items: $items,
-            contentRating: $session->content_rating,
+            contentRating: $session->content_rating->value,
             sceneDescription: $sceneDescription,
             needsComplete: $session->needs_complete,
         );
