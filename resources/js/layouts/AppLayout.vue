@@ -419,26 +419,20 @@ function toggleLocale() {
         </nav>
 
         <!-- Toast 通知 -->
-        <transition name="fade">
-            <div
-                v-if="toast"
-                class="fixed top-8 left-1/2 z-[9999] -translate-x-1/2 rounded-2xl px-8 py-4 shadow-xl"
-                :class="
-                    toast.type === 'success'
-                        ? 'bg-[var(--binary-primary)]/90 text-[var(--binary-on-primary-container)]'
-                        : 'bg-[var(--binary-tertiary)]/90 text-[var(--binary-on-primary-container)]'
-                "
-                style="
-                    font-size: 1.1rem;
-                    letter-spacing: -0.5px;
-                    min-width: 240px;
-                    text-align: center;
-                    backdrop-filter: blur(12px);
-                "
-            >
-                {{ toast.message }}
-            </div>
-        </transition>
+        <div
+            class="pointer-events-none fixed top-20 right-0 left-0 z-[9999] flex justify-center"
+        >
+            <transition name="toast-slide">
+                <div
+                    v-if="toast"
+                    class="pointer-events-auto inline-flex items-center gap-2.5 rounded-none border-[0.5px] border-l-[3px] border-[var(--binary-outline-variant)] border-l-[var(--binary-toast-accent)] bg-[var(--binary-surface-dim)] px-[18px] py-2.5 text-[13px] text-[var(--binary-text)] shadow-lg backdrop-blur-md"
+                    style="font-family: var(--font-binary, monospace)"
+                >
+                    <span class="toast-mark shrink-0" aria-hidden="true" />
+                    <span>{{ toast.message }}</span>
+                </div>
+            </transition>
+        </div>
 
         <!-- Page content -->
         <div class="nav-pt">
@@ -449,3 +443,31 @@ function toggleLocale() {
         <AuthDrawer v-model:open="authDrawerOpen" v-model:tab="authDrawerTab" />
     </div>
 </template>
+
+<style scoped>
+/* Toast 前綴符號：由 --binary-toast-mark 帶，依主題切換（emerald '>' / amber '◆'） */
+.toast-mark::before {
+    content: var(--binary-toast-mark, '>');
+    color: var(--binary-toast-accent);
+    font-weight: 700;
+}
+
+/* Toast：從 navbar 下方往下滑入 + 淡入，離場往上收 */
+.toast-slide-enter-from,
+.toast-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-16px);
+}
+
+.toast-slide-enter-active {
+    transition:
+        opacity 0.28s ease,
+        transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.toast-slide-leave-active {
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease-in;
+}
+</style>

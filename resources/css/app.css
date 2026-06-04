@@ -23,6 +23,8 @@
         --binary-primary-fixed: #85e7b0;
         --binary-secondary: #a5d1b4;
         --binary-tertiary: #ffb3b2;
+        --binary-toast-accent: #4874ab;
+        --binary-toast-mark: '>';
         --binary-on-primary-container: #07160e;
         --binary-outline: rgba(165, 209, 180, 0.45);
         --binary-outline-variant: rgba(165, 209, 180, 0.15);
@@ -44,6 +46,8 @@
         --binary-primary-fixed: #ffdbca;
         --binary-secondary: #ddb7ff;
         --binary-tertiary: #ffb4ab;
+        --binary-toast-accent: #ddb7ff;
+        --binary-toast-mark: '◆';
         --binary-on-primary-container: #1a0800;
         --binary-outline: rgba(159, 141, 133, 0.5);
         --binary-outline-variant: rgba(82, 68, 61, 0.4);
