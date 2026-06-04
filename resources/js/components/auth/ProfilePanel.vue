@@ -326,6 +326,15 @@ async function submit() {
         </div>
     </div>
 
+    <!-- 系統管理（admin 限定） -->
+    <a
+        v-if="isAdmin"
+        :href="routes.admin.system()"
+        class="binary-ghost-button mb-6 flex w-full items-center justify-center"
+    >
+        {{ t('layout.admin_system') }}
+    </a>
+
     <!-- Tab bar -->
     <div class="flex border-b border-[var(--binary-outline-variant)]">
         <button

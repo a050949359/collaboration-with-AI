@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 
 import AuthDrawer from '../components/auth/AuthDrawer.vue';
 import MatrixRainBackground from '../components/MatrixRainBackground.vue';
+import NavDrawer from '../components/NavDrawer.vue';
 import NavIcon from '../components/NavIcon.vue';
 import SmokeBackground from '../components/SmokeBackground.vue';
 import { useAuth } from '../composables/useAuth';
@@ -170,12 +171,25 @@ const effectiveUser = computed(() => currentUser.value);
 const authDrawerOpen = ref(false);
 const authDrawerTab = ref<'login' | 'register' | 'profile'>('login');
 
+// 行動版左側導覽抽屜
+const navMenuOpen = ref(false);
+
+// 左右兩個抽屜互斥：開一個就收另一個
+function toggleNavMenu() {
+    navMenuOpen.value = !navMenuOpen.value;
+
+    if (navMenuOpen.value) {
+        authDrawerOpen.value = false;
+    }
+}
+
 function toggleDrawer(tab: 'login' | 'register' | 'profile') {
     if (authDrawerOpen.value && authDrawerTab.value === tab) {
         authDrawerOpen.value = false;
     } else {
         authDrawerTab.value = tab;
         authDrawerOpen.value = true;
+        navMenuOpen.value = false;
     }
 }
 
@@ -267,18 +281,61 @@ function toggleLocale() {
         <!-- Navbar -->
         <nav class="binary-glass fixed top-0 right-0 left-0 z-50">
             <div
-                class="mx-auto flex w-full max-w-screen-2xl items-center justify-between px-6 py-4 md:px-8"
+                class="relative mx-auto flex w-full max-w-screen-2xl items-center justify-between px-6 py-4 md:px-8"
             >
-                <!-- Logo -->
+                <!-- Left: 漢堡（行動版）+ Logo（桌機） -->
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        class="flex items-center rounded-md p-2 text-[var(--binary-text)] transition hover:text-[var(--binary-primary)] md:hidden"
+                        :aria-label="
+                            navMenuOpen
+                                ? 'Close navigation menu'
+                                : 'Open navigation menu'
+                        "
+                        @click="toggleNavMenu"
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                v-if="navMenuOpen"
+                                stroke-linecap="round"
+                                d="M6 6l12 12M18 6L6 18"
+                            />
+                            <path
+                                v-else
+                                stroke-linecap="round"
+                                d="M4 6h16M4 12h16M4 18h16"
+                            />
+                        </svg>
+                    </button>
+                    <Link
+                        :href="routes.home()"
+                        class="binary-display hidden items-center gap-3 text-xl font-black tracking-tight text-[var(--binary-primary)] uppercase md:flex"
+                    >
+                        <div class="nav-glyph">
+                            <div class="layer">
+                                <div class="square outer" />
+                            </div>
+                            <div class="layer"><div class="square" /></div>
+                            <div class="layer">
+                                <div class="square inner" />
+                            </div>
+                        </div>
+                        {{ brandTitle }}
+                    </Link>
+                </div>
+
+                <!-- Center: 站名（行動版限定，絕對置中） -->
                 <Link
                     :href="routes.home()"
-                    class="binary-display flex items-center gap-3 text-xl font-black tracking-tight text-[var(--binary-primary)] uppercase"
+                    class="binary-display absolute left-1/2 -translate-x-1/2 text-base font-black tracking-tight text-[var(--binary-primary)] uppercase md:hidden"
                 >
-                    <div class="nav-glyph">
-                        <div class="layer"><div class="square outer" /></div>
-                        <div class="layer"><div class="square" /></div>
-                        <div class="layer"><div class="square inner" /></div>
-                    </div>
                     {{ brandTitle }}
                 </Link>
 
@@ -397,14 +454,6 @@ function toggleLocale() {
                     </button>
                     <!-- Logged in: avatar button -->
                     <template v-if="effectiveUser">
-                        <!-- Admin link -->
-                        <a
-                            v-if="isAdmin"
-                            :href="routes.admin.system()"
-                            class="binary-label rounded px-2 py-1 text-[10px] font-bold text-[var(--binary-primary)] uppercase transition hover:opacity-70"
-                        >
-                            {{ t('layout.admin_system') }}
-                        </a>
                         <button
                             type="button"
                             class="rounded-full ring-2 ring-transparent transition hover:ring-[var(--binary-primary)]/50 focus:outline-none"
@@ -478,6 +527,12 @@ function toggleLocale() {
         <div class="nav-pt">
             <slot />
         </div>
+
+        <!-- 行動版導覽抽屜（左側滑入） -->
+        <NavDrawer
+            v-model:open="navMenuOpen"
+            :links="navLinks ?? defaultNavLinks"
+        />
 
         <!-- Auth drawer -->
         <AuthDrawer v-model:open="authDrawerOpen" v-model:tab="authDrawerTab" />

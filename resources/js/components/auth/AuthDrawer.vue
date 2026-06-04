@@ -85,7 +85,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
             <div
                 v-if="open"
                 class="fixed top-16 right-0 bottom-0 z-[70] flex"
-                style="width: 440px"
+                style="width: min(440px, 100vw)"
             >
                 <!-- Vertical tab strip -->
                 <div
