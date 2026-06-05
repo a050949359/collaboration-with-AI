@@ -18,9 +18,36 @@ import AppLayout from '@/layouts/AppLayout.vue';
                 <p
                     class="text-sm leading-relaxed text-[var(--binary-text-muted)]"
                 >
-                    這裡是 LineBot 加好友入口頁。QRCode
-                    圖片可稍後補上，目前先提供按鈕入口與互動說明。
+                    加入官方帳號好友即可使用 LineBot
+                    服務。手機點下方按鈕直接加入，電腦可掃描 QR code。
                 </p>
+
+                <!-- 手機：點按鈕喚起 LINE 加好友 -->
+                <a
+                    href="https://line.me/R/ti/p/@569gqteq"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="binary-button mt-8 w-full max-w-xs md:hidden"
+                >
+                    加入好友
+                    <span aria-hidden="true">-></span>
+                </a>
+
+                <!-- 桌機：QR 給其他手機掃 -->
+                <div class="mt-8 hidden md:block">
+                    <img
+                        src="/images/linebot/qr.png"
+                        alt="LINE 加好友 QR code"
+                        width="360"
+                        height="360"
+                        class="w-44 max-w-full rounded-lg bg-white p-2"
+                    />
+                    <p
+                        class="binary-label mt-3 text-xs text-[var(--binary-outline)] uppercase"
+                    >
+                        &gt; scan_to_add_friend
+                    </p>
+                </div>
             </section>
         </main>
     </AppLayout>
