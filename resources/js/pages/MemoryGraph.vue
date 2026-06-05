@@ -580,7 +580,7 @@ onUnmounted(() => simulation?.stop());
         <div class="flex flex-col" style="height: calc(100vh - 4rem)">
             <!-- Header -->
             <div
-                class="flex shrink-0 items-center justify-between border-b border-[var(--binary-outline-variant)] px-6 py-3"
+                class="flex shrink-0 items-center justify-between border-b border-[var(--binary-outline-variant)] px-[18px] py-3 md:px-6"
             >
                 <div class="flex items-center gap-4">
                     <h1 class="text-base font-bold text-[var(--binary-text)]">
@@ -606,7 +606,7 @@ onUnmounted(() => simulation?.stop());
                 <div class="flex items-center gap-4">
                     <div
                         v-if="tab === 'graph'"
-                        class="flex items-center gap-3 text-xs text-[var(--binary-outline)]"
+                        class="hidden items-center gap-3 text-xs text-[var(--binary-outline)] md:flex"
                     >
                         <span
                             v-for="(color, type) in TYPE_COLOR"

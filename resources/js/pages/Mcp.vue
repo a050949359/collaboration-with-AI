@@ -134,15 +134,15 @@ onMounted(fetchTasks);
 <template>
     <Head :title="t('mcp.head_title')" />
     <AppLayout>
-        <div class="mx-auto w-full max-w-screen-2xl px-6 pt-8 pb-16 md:px-8">
+        <div
+            class="mx-auto w-full max-w-screen-2xl px-[18px] pt-8 pb-16 md:px-8"
+        >
             <p
                 class="binary-label mb-2 text-xs font-bold text-[var(--binary-primary)] uppercase"
             >
                 &gt; {{ t('mcp.breadcrumb') }}
             </p>
-            <h1
-                class="binary-display mb-8 text-4xl font-black tracking-tight text-[var(--binary-text)] uppercase md:text-6xl"
-            >
+            <h1 class="binary-page-title mb-8 text-[var(--binary-text)]">
                 TASKS
             </h1>
 
@@ -167,7 +167,7 @@ onMounted(fetchTasks);
                 <div
                     v-for="task in tasks"
                     :key="task.id"
-                    class="overflow-hidden rounded-xl border bg-[var(--binary-surface-container)]"
+                    class="overflow-hidden rounded-none border bg-[var(--binary-surface-container)] md:rounded-xl"
                     :class="
                         task.status === 'done'
                             ? 'border-green-500/20 opacity-70'
