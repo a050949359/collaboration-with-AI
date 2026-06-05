@@ -100,7 +100,7 @@ onMounted(async () => {
 
     <AppLayout>
         <main class="pb-24">
-            <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
+            <section class="binary-section mx-auto max-w-screen-xl">
                 <div
                     v-if="isLoading"
                     class="py-20 text-center text-sm text-[var(--binary-text-muted)]"
@@ -115,10 +115,7 @@ onMounted(async () => {
                     {{ errorMessage }}
                 </p>
 
-                <article
-                    v-else-if="article"
-                    class="binary-card-raised rounded-2xl"
-                >
+                <article v-else-if="article" class="binary-card-raised">
                     <div
                         class="mb-6 flex flex-wrap items-center justify-between gap-3"
                     >

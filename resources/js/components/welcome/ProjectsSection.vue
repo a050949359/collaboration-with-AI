@@ -226,10 +226,7 @@ const projects = computed(() => [
 </script>
 
 <template>
-    <section
-        id="projects"
-        class="bg-[var(--binary-surface)] px-[18px] py-6 md:px-8 md:py-24"
-    >
+    <section id="projects" class="binary-section bg-[var(--binary-surface)]">
         <div class="mx-auto max-w-screen-2xl">
             <div
                 class="mb-8 flex flex-col gap-4 md:mb-16 md:flex-row md:items-baseline md:justify-between"
@@ -250,7 +247,7 @@ const projects = computed(() => [
                 <article
                     v-for="(project, index) in projects"
                     :key="project.id"
-                    class="binary-card flex w-full flex-col gap-6 rounded-none transition-opacity md:items-center md:gap-12 md:rounded-[2rem]"
+                    class="binary-card flex w-full flex-col gap-6 transition-opacity md:items-center md:gap-12"
                     :class="[
                         (index + 1) % 2 === 1
                             ? 'md:flex-row'
@@ -307,14 +304,14 @@ const projects = computed(() => [
                         <img
                             :src="project.image"
                             :alt="`${project.title} preview`"
-                            class="h-full min-h-[280px] w-full rounded-none object-cover md:rounded-[1.5rem]"
+                            class="h-full min-h-[280px] w-full rounded-none object-cover md:rounded-2xl"
                         />
                     </div>
 
                     <!-- Commit log panel -->
                     <div
                         v-else-if="project.commits"
-                        class="binary-label w-full rounded-none bg-[var(--binary-surface-lowest)] p-4 text-[10px] md:w-1/2 md:rounded-[1.5rem] md:p-6 md:text-xs"
+                        class="binary-label w-full rounded-none bg-[var(--binary-surface-lowest)] p-4 text-[10px] md:w-1/2 md:rounded-2xl md:p-6 md:text-xs"
                         style="
                             box-shadow: inset 4px 0 0 0 var(--binary-primary);
                         "
@@ -355,7 +352,7 @@ const projects = computed(() => [
                     <!-- Fallback terminal panel -->
                     <div
                         v-else
-                        class="binary-label w-full rounded-none bg-[var(--binary-surface-lowest)] p-4 text-sm md:w-1/2 md:rounded-[1.5rem] md:p-6"
+                        class="binary-label w-full rounded-none bg-[var(--binary-surface-lowest)] p-4 text-sm md:w-1/2 md:rounded-2xl md:p-6"
                         style="
                             box-shadow: inset 4px 0 0 0 var(--binary-primary);
                         "

@@ -262,7 +262,7 @@
     }
 
     .binary-card {
-        @apply p-3 md:p-10;
+        @apply rounded-none p-3 md:rounded-2xl md:p-10;
         background-color: rgba(24, 36, 29, 0.7);
     }
 
@@ -271,12 +271,17 @@
     }
 
     .binary-card-raised {
-        @apply p-3 md:p-10;
+        @apply rounded-none p-3 md:rounded-2xl md:p-10;
         background-color: rgba(34, 49, 41, 0.7);
     }
 
     [data-theme='amber'] .binary-card-raised {
         background-color: rgba(47, 41, 38, 0.7);
+    }
+
+    /* 內容頁區塊：手機左右18/上下24，桌機左右32/上下48。各頁仍自行設 mx-auto / max-w / grid。 */
+    .binary-section {
+        @apply px-[18px] py-6 md:px-8 md:py-12;
     }
 
     .binary-link {

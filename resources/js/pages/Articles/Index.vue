@@ -106,11 +106,11 @@ onMounted(async () => {
     <AppLayout>
         <main class="pb-24">
             <section
-                class="mx-auto grid max-w-screen-2xl grid-cols-1 gap-12 px-6 py-12 md:grid-cols-12 md:px-8"
+                class="binary-section mx-auto grid max-w-screen-2xl grid-cols-1 gap-8 md:grid-cols-12 md:gap-12"
             >
                 <div class="md:col-span-4">
                     <h1
-                        class="binary-display sticky top-32 text-4xl font-black tracking-tight uppercase md:text-6xl"
+                        class="binary-display text-2xl font-black tracking-tight uppercase md:sticky md:top-32 md:text-6xl"
                     >
                         {{ t('articles.index.title').toUpperCase() }}
                     </h1>
@@ -208,17 +208,17 @@ onMounted(async () => {
                                 >
                             </div>
                             <h2
-                                class="binary-display mb-4 text-3xl leading-tight font-bold uppercase transition-colors group-hover:text-[var(--binary-primary)]"
+                                class="binary-display mb-4 text-xl leading-tight font-bold uppercase transition-colors group-hover:text-[var(--binary-primary)] md:text-3xl"
                             >
                                 {{ titleOf(article) }}
                             </h2>
                             <p
-                                class="mb-6 leading-relaxed text-[var(--binary-text-muted)]"
+                                class="mb-6 text-sm leading-relaxed text-[var(--binary-text-muted)] md:text-base"
                             >
                                 {{ summaryOf(article) }}
                             </p>
                             <div
-                                class="binary-label flex flex-wrap gap-4 text-[10px] text-[var(--binary-outline)] uppercase"
+                                class="binary-label flex flex-wrap gap-4 text-[9px] text-[var(--binary-outline)] uppercase"
                             >
                                 <span v-for="tag in article.tags" :key="tag"
                                     >#{{ tag }}</span
@@ -231,7 +231,7 @@ onMounted(async () => {
                         v-if="
                             isAuthenticated && !isLoading && activeItems.length
                         "
-                        class="mt-8 flex items-center justify-between gap-4"
+                        class="mt-8 flex items-center justify-between gap-3"
                     >
                         <span class="text-xs text-[var(--binary-outline)]">
                             {{
@@ -242,16 +242,16 @@ onMounted(async () => {
                                 })
                             }}
                         </span>
-                        <div class="flex gap-2">
+                        <div class="flex shrink-0">
                             <button
-                                class="binary-ghost-button px-4 py-1.5 text-xs disabled:opacity-30"
+                                class="binary-ghost-button rounded-none px-3 py-1.5 text-xs whitespace-nowrap disabled:opacity-30"
                                 :disabled="currentPage <= 1"
                                 @click="reload(currentPage - 1)"
                             >
                                 {{ t('common.prev_page') }}
                             </button>
                             <button
-                                class="binary-ghost-button px-4 py-1.5 text-xs disabled:opacity-30"
+                                class="binary-ghost-button rounded-none border-l border-[var(--binary-outline-variant)] px-3 py-1.5 text-xs whitespace-nowrap disabled:opacity-30"
                                 :disabled="currentPage >= lastPage"
                                 @click="reload(currentPage + 1)"
                             >

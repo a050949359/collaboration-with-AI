@@ -80,9 +80,7 @@ const categories = [
         </div>
 
         <div class="md:col-span-4 md:h-full">
-            <div
-                class="binary-card-raised h-full rounded-none md:rounded-[1.5rem]"
-            >
+            <div class="binary-card-raised h-full">
                 <div class="mb-4 flex items-center gap-1">
                     <span class="text-sm text-[var(--binary-primary)]"
                         >&gt;_</span

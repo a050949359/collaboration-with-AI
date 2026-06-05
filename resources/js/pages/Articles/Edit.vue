@@ -121,7 +121,7 @@ onMounted(async () => {
 
     <AppLayout>
         <main class="pb-24">
-            <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
+            <section class="binary-section mx-auto max-w-screen-xl">
                 <div
                     v-if="isLoading"
                     class="py-20 text-center text-sm text-[var(--binary-text-muted)]"
@@ -138,7 +138,7 @@ onMounted(async () => {
 
                 <template v-else-if="article">
                     <!-- 標題列 -->
-                    <div class="binary-card-raised mb-6 rounded-2xl">
+                    <div class="binary-card-raised mb-6">
                         <div
                             class="mb-1 flex items-center justify-between gap-3"
                         >
@@ -163,7 +163,7 @@ onMounted(async () => {
                     </div>
 
                     <!-- 編輯表單 -->
-                    <div class="binary-card-raised space-y-6 rounded-2xl">
+                    <div class="binary-card-raised space-y-6">
                         <div>
                             <label
                                 class="binary-label mb-1 block text-[10px] text-[var(--binary-outline)] uppercase"

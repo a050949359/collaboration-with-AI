@@ -15,11 +15,11 @@ defineProps<{
 <template>
     <section
         id="articles"
-        class="mx-auto grid max-w-screen-2xl grid-cols-1 gap-8 px-[18px] py-6 md:grid-cols-12 md:gap-12 md:px-8 md:py-24"
+        class="binary-section mx-auto grid max-w-screen-2xl grid-cols-1 gap-8 md:grid-cols-12 md:gap-12"
     >
         <div class="md:col-span-4">
             <h2
-                class="binary-display sticky top-32 text-2xl font-black tracking-tight uppercase md:text-6xl"
+                class="binary-display text-2xl font-black tracking-tight uppercase md:sticky md:top-32 md:text-6xl"
             >
                 Latest
                 <br />

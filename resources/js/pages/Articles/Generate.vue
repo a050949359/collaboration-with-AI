@@ -250,9 +250,9 @@ onUnmounted(() => stopPolling());
 
     <AppLayout>
         <main class="pb-24">
-            <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
+            <section class="binary-section mx-auto max-w-screen-xl">
                 <!-- 標題列 -->
-                <div class="binary-card-raised mb-6 rounded-2xl">
+                <div class="binary-card-raised mb-6">
                     <div class="mb-1 flex items-center justify-between gap-3">
                         <h1
                             class="binary-display text-3xl font-black tracking-tight uppercase md:text-4xl"
@@ -285,7 +285,7 @@ onUnmounted(() => stopPolling());
                 </div>
 
                 <!-- ── 文章生成區 ─────────────────────── -->
-                <div class="binary-card-raised mb-6 rounded-2xl">
+                <div class="binary-card-raised mb-6">
                     <h2
                         class="binary-label mb-4 text-xs font-bold tracking-widest text-[var(--binary-outline)] uppercase"
                     >
@@ -421,7 +421,7 @@ onUnmounted(() => stopPolling());
                 </div>
 
                 <!-- ── 圖片生成區 ─────────────────────── -->
-                <div class="binary-card-raised mb-6 rounded-2xl">
+                <div class="binary-card-raised mb-6">
                     <h2
                         class="binary-label mb-4 text-xs font-bold tracking-widest text-[var(--binary-outline)] uppercase"
                     >
@@ -507,7 +507,7 @@ onUnmounted(() => stopPolling());
                 </div>
 
                 <!-- ── 內容預覽 ───────────────────────── -->
-                <div class="binary-card-raised rounded-2xl">
+                <div class="binary-card-raised">
                     <h2
                         class="binary-label mb-4 text-xs font-bold tracking-widest text-[var(--binary-outline)] uppercase"
                     >
