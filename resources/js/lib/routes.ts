@@ -39,10 +39,6 @@ export const routes = {
     // Countries
     countries: () => `${WEB_PREFIX}/countries`,
 
-    // City Search
-    citySearch: (countryCode?: string) =>
-        `${WEB_PREFIX}/city-search${countryCode ? `?country=${countryCode}` : ''}`,
-
     // About
     about: () => `${WEB_PREFIX}/about`,
 
