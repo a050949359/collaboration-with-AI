@@ -47,11 +47,10 @@ async function enumerateCams() {
         cameras.value = devices.filter((d) => d.kind === 'videoinput');
 
         if (cameras.value.length) {
-            selectedCam.value = cameras.value[0].deviceId;
-
-            // 手機：偵測到相機後直接啟動，省去手動選擇 + 開始（失敗則 fallback 回手動）
-            if (window.matchMedia('(max-width: 767px)').matches) {
-                startCamera().catch(() => {});
+            // 桌機：預選第一個相機（維持原「選 + 開始」流程）
+            // 手機：留空，走 placeholder + change 直接啟動
+            if (!window.matchMedia('(max-width: 767px)').matches) {
+                selectedCam.value = cameras.value[0].deviceId;
             }
         } else {
             camError.value = '找不到相機裝置';
@@ -192,7 +191,31 @@ onUnmounted(() => {
                 v-if="wasmReady && !started"
                 class="flex w-full max-w-sm flex-col gap-3"
             >
-                <div class="flex items-center gap-4">
+                <!-- 手機：選相機即啟動（placeholder 確保選任一個都觸發、免按開始） -->
+                <select
+                    v-model="selectedCam"
+                    class="w-full rounded-md px-4 py-3 text-sm md:hidden"
+                    style="
+                        background: var(--binary-surface-low);
+                        color: var(--binary-text);
+                        outline: none;
+                    "
+                    @change="startCamera"
+                >
+                    <option value="" disabled>
+                        {{ cameras.length ? '— 選擇相機 —' : '— 無相機 —' }}
+                    </option>
+                    <option
+                        v-for="cam in cameras"
+                        :key="cam.deviceId"
+                        :value="cam.deviceId"
+                    >
+                        {{ cam.label || 'Camera' }}
+                    </option>
+                </select>
+
+                <!-- 桌機：原本的「選相機 + 開始」流程 -->
+                <div class="hidden items-center gap-4 md:flex">
                     <select
                         v-model="selectedCam"
                         class="flex-1 rounded-md px-4 py-3 text-sm"
