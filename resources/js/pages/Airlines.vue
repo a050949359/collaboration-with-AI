@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 interface Airline {
     id: number;
@@ -78,16 +78,14 @@ onMounted(() => fetchAirlines(1));
     <AppLayout>
         <Head :title="t('airlines.title')" />
 
-        <div class="mx-auto max-w-screen-xl px-6 pb-24 md:px-8">
+        <div class="mx-auto max-w-screen-xl px-[18px] pb-24 md:px-8">
             <!-- Header -->
             <div class="mb-10 pt-8">
                 <span
                     class="binary-label mb-2 block text-xs font-bold text-[var(--binary-primary)] uppercase"
                     >&gt; airline_database</span
                 >
-                <h1
-                    class="binary-display text-5xl font-black tracking-tight uppercase md:text-7xl"
-                >
+                <h1 class="binary-page-title">
                     {{ t('airlines.title').toUpperCase() }}
                 </h1>
                 <p class="mt-3 text-sm text-[var(--binary-text-muted)]">
@@ -160,10 +158,24 @@ onMounted(() => fetchAirlines(1));
                             <tr>
                                 <th class="px-4 py-3 text-left">IATA</th>
                                 <th class="px-4 py-3 text-left">ICAO</th>
-                                <th class="px-4 py-3 text-left">
+                                <th
+                                    class="px-4 py-3 text-left"
+                                    :class="
+                                        locale === 'en'
+                                            ? ''
+                                            : 'hidden md:table-cell'
+                                    "
+                                >
                                     {{ t('airlines.col_name_en') }}
                                 </th>
-                                <th class="px-4 py-3 text-left">
+                                <th
+                                    class="px-4 py-3 text-left"
+                                    :class="
+                                        locale === 'zh-tw'
+                                            ? ''
+                                            : 'hidden md:table-cell'
+                                    "
+                                >
                                     {{ t('airlines.col_name_zh') }}
                                 </th>
                                 <th class="px-4 py-3 text-left">
@@ -189,10 +201,24 @@ onMounted(() => fetchAirlines(1));
                                 >
                                     {{ airline.icao ?? '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-[var(--binary-text)]">
+                                <td
+                                    class="px-4 py-3 text-[var(--binary-text)]"
+                                    :class="
+                                        locale === 'en'
+                                            ? ''
+                                            : 'hidden md:table-cell'
+                                    "
+                                >
                                     {{ airline.name_en }}
                                 </td>
-                                <td class="px-4 py-3 text-[var(--binary-text)]">
+                                <td
+                                    class="px-4 py-3 text-[var(--binary-text)]"
+                                    :class="
+                                        locale === 'zh-tw'
+                                            ? ''
+                                            : 'hidden md:table-cell'
+                                    "
+                                >
                                     {{ airline.name_zh_tw ?? '—' }}
                                 </td>
                                 <td

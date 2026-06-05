@@ -52,6 +52,21 @@ interface JobRecord {
 // ── Main tabs ──
 const mainTab = ref<'cities' | 'jobs'>('cities');
 
+// 國家選擇器：平常框內顯示已選國家，聚焦時清空變回搜尋
+const pickerOpen = ref(false);
+
+function onPickerFocus() {
+    pickerOpen.value = true;
+    search.value = '';
+}
+
+// 失焦時延遲關閉，讓清單點擊先觸發
+function onPickerBlur() {
+    setTimeout(() => {
+        pickerOpen.value = false;
+    }, 150);
+}
+
 // ── Countries ──
 const allCountries = ref<Country[]>([]);
 const isLoading = ref(false);
@@ -79,6 +94,13 @@ const selectedCountry = ref<Country | null>(null);
 const cities = ref<City[]>([]);
 const isCityLoading = ref(false);
 const citySubTab = ref<'list' | 'add'>('list');
+
+// 選擇器框內平常顯示的已選國家名
+const selectedCountryName = computed(() =>
+    selectedCountry.value
+        ? (selectedCountry.value.name_zh_tw ?? selectedCountry.value.name_en)
+        : '',
+);
 
 // ── City search ──
 const cityName = ref('');
@@ -262,16 +284,14 @@ onMounted(() => fetchCountries());
     <AppLayout>
         <Head title="Countries" />
 
-        <div class="mx-auto max-w-screen-xl px-6 pb-24 md:px-8">
+        <div class="mx-auto max-w-screen-xl px-[18px] pb-24 md:px-8">
             <!-- Header -->
             <div class="mb-6 pt-8">
                 <span
                     class="binary-label mb-2 block text-xs font-bold text-[var(--binary-primary)] uppercase"
                     >&gt; country_database</span
                 >
-                <h1
-                    class="binary-display text-5xl font-black tracking-tight uppercase md:text-7xl"
-                >
+                <h1 class="binary-page-title">
                     {{ t('countries.title').toUpperCase() }}
                 </h1>
                 <p class="mt-3 text-sm text-[var(--binary-text-muted)]">
@@ -310,21 +330,35 @@ onMounted(() => fetchCountries());
             <!-- ── Tab: cities ── -->
             <div
                 v-if="mainTab === 'cities'"
-                class="flex gap-4"
-                style="height: 640px"
+                class="flex h-[640px] flex-col gap-0 md:flex-row md:gap-4"
             >
-                <!-- Left: country list -->
+                <!-- Left: country picker（手機下拉 / 桌機側欄） -->
                 <div
-                    class="flex w-60 flex-shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--binary-outline-variant)]"
+                    class="relative flex flex-shrink-0 flex-col overflow-visible border border-[var(--binary-outline-variant)] md:w-60 md:overflow-hidden md:rounded-xl"
                 >
+                    <!-- 搜尋框（常駐；手機聚焦即下拉） -->
                     <div
                         class="flex flex-shrink-0 items-center gap-2 border-b border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-4 py-3"
                     >
+                        <!-- 手機：combobox（顯示已選國家、聚焦變搜尋） -->
+                        <input
+                            :value="pickerOpen ? search : selectedCountryName"
+                            type="text"
+                            :placeholder="t('common.search')"
+                            class="min-w-0 flex-1 bg-transparent text-sm text-[var(--binary-text)] outline-none placeholder:text-[var(--binary-outline)] md:hidden"
+                            @input="
+                                search = ($event.target as HTMLInputElement)
+                                    .value
+                            "
+                            @focus="onPickerFocus"
+                            @blur="onPickerBlur"
+                        />
+                        <!-- 桌機：原本的純搜尋輸入（邏輯不變） -->
                         <input
                             v-model="search"
                             type="text"
                             :placeholder="t('common.search')"
-                            class="min-w-0 flex-1 bg-transparent text-sm text-[var(--binary-text)] outline-none placeholder:text-[var(--binary-outline)]"
+                            class="hidden min-w-0 flex-1 bg-transparent text-sm text-[var(--binary-text)] outline-none placeholder:text-[var(--binary-outline)] md:block"
                         />
                         <span
                             v-if="allCountries.length"
@@ -332,44 +366,58 @@ onMounted(() => fetchCountries());
                             >{{ countries.length }}</span
                         >
                     </div>
+
+                    <!-- 清單：桌機常駐；手機聚焦時絕對下拉 -->
                     <div
-                        v-if="isLoading"
-                        class="flex flex-1 items-center justify-center text-xs text-[var(--binary-outline)]"
+                        class="flex-col overflow-hidden md:flex md:flex-1"
+                        :class="
+                            pickerOpen
+                                ? 'absolute inset-x-0 top-full z-20 flex max-h-[55vh] border border-[var(--binary-outline-variant)] bg-[var(--binary-background)] shadow-xl'
+                                : 'hidden md:flex'
+                        "
                     >
-                        {{ t('common.loading') }}
-                    </div>
-                    <div
-                        v-else-if="error"
-                        class="flex flex-1 items-center justify-center text-xs text-red-400"
-                    >
-                        {{ error }}
-                    </div>
-                    <div v-else class="flex-1 overflow-y-auto">
-                        <button
-                            v-for="country in countries"
-                            :key="country.code"
-                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition hover:bg-[var(--binary-surface-container)]"
-                            :class="
-                                selectedCountry?.code === country.code
-                                    ? 'bg-[var(--binary-surface-container)] text-[var(--binary-primary)]'
-                                    : 'text-[var(--binary-text)]'
-                            "
-                            @click="selectCountry(country)"
+                        <div
+                            v-if="isLoading"
+                            class="flex flex-1 items-center justify-center text-xs text-[var(--binary-outline)]"
                         >
-                            <span
-                                class="w-7 flex-shrink-0 font-mono text-xs text-[var(--binary-outline)]"
-                                >{{ country.code }}</span
+                            {{ t('common.loading') }}
+                        </div>
+                        <div
+                            v-else-if="error"
+                            class="flex flex-1 items-center justify-center text-xs text-red-400"
+                        >
+                            {{ error }}
+                        </div>
+                        <div v-else class="flex-1 overflow-y-auto">
+                            <button
+                                v-for="country in countries"
+                                :key="country.code"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition hover:bg-[var(--binary-surface-container)]"
+                                :class="
+                                    selectedCountry?.code === country.code
+                                        ? 'bg-[var(--binary-surface-container)] text-[var(--binary-primary)]'
+                                        : 'text-[var(--binary-text)]'
+                                "
+                                @click="
+                                    selectCountry(country);
+                                    pickerOpen = false;
+                                "
                             >
-                            <span class="truncate">{{
-                                country.name_zh_tw ?? country.name_en
-                            }}</span>
-                        </button>
+                                <span
+                                    class="w-7 flex-shrink-0 font-mono text-xs text-[var(--binary-outline)]"
+                                    >{{ country.code }}</span
+                                >
+                                <span class="truncate">{{
+                                    country.name_zh_tw ?? country.name_en
+                                }}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Right: country detail panel -->
                 <div
-                    class="flex flex-1 flex-col overflow-hidden rounded-xl border border-[var(--binary-outline-variant)]"
+                    class="flex flex-1 flex-col overflow-hidden rounded-none border border-[var(--binary-outline-variant)] md:rounded-xl"
                 >
                     <div
                         v-if="!selectedCountry"
@@ -382,7 +430,9 @@ onMounted(() => fetchCountries());
                         <div
                             class="flex-shrink-0 border-b border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)]"
                         >
-                            <div class="flex items-center gap-3 px-5 py-3">
+                            <div
+                                class="hidden items-center gap-3 px-5 py-3 md:flex"
+                            >
                                 <span
                                     class="font-mono text-xs text-[var(--binary-outline)]"
                                     >{{ selectedCountry.code }}</span
@@ -522,7 +572,7 @@ onMounted(() => fetchCountries());
                                 <div
                                     v-for="c in candidates"
                                     :key="c.qid"
-                                    class="flex items-start justify-between gap-4 rounded-xl border bg-[var(--binary-surface-container)] px-5 py-4"
+                                    class="flex items-start justify-between gap-4 rounded-none border bg-[var(--binary-surface-container)] px-5 py-4 md:rounded-xl"
                                     :class="
                                         c.existing
                                             ? 'border-[var(--binary-outline)]'
@@ -614,7 +664,7 @@ onMounted(() => fetchCountries());
                     <div
                         v-for="job in jobs"
                         :key="job.id"
-                        class="flex items-center gap-4 rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-5 py-3"
+                        class="flex items-center gap-4 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-5 py-3 md:rounded-xl"
                     >
                         <span
                             class="binary-label flex-shrink-0 rounded px-2 py-0.5 text-[10px] uppercase"

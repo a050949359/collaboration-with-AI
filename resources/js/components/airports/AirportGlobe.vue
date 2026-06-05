@@ -535,7 +535,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <section class="binary-card-raised rounded-2xl p-4 md:p-6">
+    <section class="binary-card-raised p-4 md:p-6">
         <div class="mb-4 flex items-center justify-between gap-3">
             <div>
                 <h3

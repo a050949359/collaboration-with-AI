@@ -70,6 +70,19 @@ const typeKeys = computed(() => page.props.airportTypes);
 
 const continentKeys = ['AF', 'AN', 'AS', 'EU', 'NA', 'OC', 'SA'] as const;
 
+// 切換陣列型過濾值（Type / Continent 藥丸按鈕共用）
+function toggleFilter(arr: string[], key: string) {
+    const i = arr.indexOf(key);
+
+    if (i >= 0) {
+        arr.splice(i, 1);
+    } else {
+        arr.push(key);
+    }
+
+    fetchAirports(1);
+}
+
 // ── Airport search ─────────────────────────────────────────
 async function fetchAirports(page = 1) {
     isLoadingList.value = true;
@@ -174,16 +187,14 @@ onMounted(() => fetchAirports());
 
     <AppLayout>
         <main class="pb-24">
-            <div class="mx-auto max-w-screen-2xl px-6 md:px-8">
+            <div class="mx-auto max-w-screen-2xl px-[18px] md:px-8">
                 <!-- Header -->
                 <div class="mb-10 pt-8">
                     <span
                         class="binary-label mb-2 block text-xs font-bold text-[var(--binary-primary)] uppercase"
                         >&gt; airport_database</span
                     >
-                    <h1
-                        class="binary-display text-5xl font-black tracking-tight uppercase md:text-7xl"
-                    >
+                    <h1 class="binary-page-title">
                         {{ t('airports.title').toUpperCase() }}
                     </h1>
                     <p class="mt-3 text-sm text-[var(--binary-text-muted)]">
@@ -263,89 +274,69 @@ onMounted(() => fetchAirports());
                     <!-- Checkbox Filters (auto-apply) -->
                     <div class="mb-4 space-y-3">
                         <!-- Type -->
-                        <div
-                            class="flex flex-wrap items-center gap-x-4 gap-y-2"
-                        >
+                        <div class="flex flex-wrap items-center gap-y-px">
                             <span
-                                class="binary-label w-12 shrink-0 text-[10px] text-[var(--binary-outline)] uppercase"
+                                class="binary-label mr-2 hidden w-12 shrink-0 text-[10px] text-[var(--binary-outline)] uppercase md:block"
                                 >{{ t('airports.col_type') }}</span
                             >
-                            <label
+                            <button
                                 v-for="key in typeKeys"
                                 :key="key"
-                                class="binary-label flex cursor-pointer items-center gap-1.5 text-xs"
+                                type="button"
+                                class="binary-label -ml-px rounded-none border px-2.5 py-1 text-[11px] uppercase transition"
+                                :class="
+                                    filters.types.includes(key)
+                                        ? 'border-[var(--binary-primary)] bg-[var(--binary-primary)]/10 text-[var(--binary-primary)]'
+                                        : 'border-[var(--binary-outline-variant)] text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
+                                "
+                                @click="toggleFilter(filters.types, key)"
                             >
-                                <input
-                                    v-model="filters.types"
-                                    type="checkbox"
-                                    :value="key"
-                                    class="accent-[var(--binary-primary)]"
-                                    @change="fetchAirports(1)"
-                                />
-                                <span
-                                    :class="
-                                        filters.types.includes(key)
-                                            ? 'text-[var(--binary-primary)]'
-                                            : 'text-[var(--binary-outline)]'
-                                    "
-                                >
-                                    {{ t(`airports.types.${key}`) }}
-                                </span>
-                            </label>
+                                {{ t(`airports.types.${key}`) }}
+                            </button>
                         </div>
                         <!-- Continent -->
-                        <div
-                            class="flex flex-wrap items-center gap-x-4 gap-y-2"
-                        >
+                        <div class="flex flex-wrap items-center gap-y-px">
                             <span
-                                class="binary-label w-12 shrink-0 text-[10px] text-[var(--binary-outline)] uppercase"
+                                class="binary-label mr-2 hidden w-12 shrink-0 text-[10px] text-[var(--binary-outline)] uppercase md:block"
                                 >{{ t('airports.col_continent') }}</span
                             >
-                            <label
+                            <button
                                 v-for="key in continentKeys"
                                 :key="key"
-                                class="binary-label flex cursor-pointer items-center gap-1.5 text-xs"
+                                type="button"
+                                class="binary-label -ml-px rounded-none border px-2.5 py-1 text-[11px] uppercase transition"
+                                :class="
+                                    filters.continents.includes(key)
+                                        ? 'border-[var(--binary-primary)] bg-[var(--binary-primary)]/10 text-[var(--binary-primary)]'
+                                        : 'border-[var(--binary-outline-variant)] text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
+                                "
+                                @click="toggleFilter(filters.continents, key)"
                             >
-                                <input
-                                    v-model="filters.continents"
-                                    type="checkbox"
-                                    :value="key"
-                                    class="accent-[var(--binary-primary)]"
-                                    @change="fetchAirports(1)"
-                                />
-                                <span
-                                    :class="
-                                        filters.continents.includes(key)
-                                            ? 'text-[var(--binary-primary)]'
-                                            : 'text-[var(--binary-outline)]'
-                                    "
-                                >
-                                    {{ t(`airports.continents.${key}`) }}
-                                </span>
-                            </label>
+                                {{ t(`airports.continents.${key}`) }}
+                            </button>
                         </div>
                     </div>
 
                     <!-- Search Bar (manual submit) -->
                     <form
-                        class="mb-6 flex items-center gap-2"
+                        class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center"
                         @submit.prevent="fetchAirports(1)"
                     >
                         <input
                             v-model="filters.search"
-                            class="binary-input flex-[3]"
+                            class="binary-input sm:flex-[3]"
                             :placeholder="t('airports.search_placeholder')"
                             type="text"
                         />
                         <input
                             v-model="filters.country"
-                            class="binary-input flex-[3]"
+                            class="binary-input sm:flex-[1]"
                             :placeholder="t('airports.country_placeholder')"
                             maxlength="2"
                             type="text"
                         />
                         <button
-                            class="binary-button ml-4 flex-[1] text-xs whitespace-nowrap"
+                            class="binary-button text-xs whitespace-nowrap sm:ml-2 sm:flex-[1]"
                             type="submit"
                         >
                             {{ t('airports.tab_search') }} →
@@ -410,7 +401,7 @@ onMounted(() => fetchAirports());
                                             {{ t('airports.col_country') }}
                                         </th>
                                         <th
-                                            class="px-4 py-3 text-center text-[var(--binary-outline)] uppercase"
+                                            class="hidden px-4 py-3 text-center text-[var(--binary-outline)] uppercase md:table-cell"
                                         >
                                             {{ t('airports.col_scheduled') }}
                                         </th>
@@ -452,7 +443,9 @@ onMounted(() => fetchAirports());
                                                 airport.location.country ?? '–'
                                             }}
                                         </td>
-                                        <td class="px-4 py-3 text-center">
+                                        <td
+                                            class="hidden px-4 py-3 text-center md:table-cell"
+                                        >
                                             <span
                                                 class="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
                                                 :class="
@@ -531,11 +524,9 @@ onMounted(() => fetchAirports());
                     <template v-else-if="stats">
                         <!-- Summary Cards -->
                         <div class="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-                            <div
-                                class="binary-card-raised rounded-2xl text-center"
-                            >
+                            <div class="binary-card-raised text-center">
                                 <div
-                                    class="binary-display text-4xl font-black text-[var(--binary-primary)]"
+                                    class="binary-display text-3xl font-black text-[var(--binary-primary)] md:text-4xl"
                                 >
                                     {{ stats.total.toLocaleString() }}
                                 </div>
@@ -545,11 +536,9 @@ onMounted(() => fetchAirports());
                                     {{ t('airports.stats.total') }}
                                 </div>
                             </div>
-                            <div
-                                class="binary-card-raised rounded-2xl text-center"
-                            >
+                            <div class="binary-card-raised text-center">
                                 <div
-                                    class="binary-display text-4xl font-black text-[var(--binary-primary)]"
+                                    class="binary-display text-3xl font-black text-[var(--binary-primary)] md:text-4xl"
                                 >
                                     {{
                                         stats.scheduled_service.toLocaleString()
@@ -561,11 +550,9 @@ onMounted(() => fetchAirports());
                                     {{ t('airports.stats.scheduled') }}
                                 </div>
                             </div>
-                            <div
-                                class="binary-card-raised rounded-2xl text-center"
-                            >
+                            <div class="binary-card-raised text-center">
                                 <div
-                                    class="binary-display text-4xl font-black text-[var(--binary-primary)]"
+                                    class="binary-display text-3xl font-black text-[var(--binary-primary)] md:text-4xl"
                                 >
                                     {{ Object.keys(stats.by_continent).length }}
                                 </div>
@@ -575,11 +562,9 @@ onMounted(() => fetchAirports());
                                     {{ t('airports.stats.continents') }}
                                 </div>
                             </div>
-                            <div
-                                class="binary-card-raised rounded-2xl text-center"
-                            >
+                            <div class="binary-card-raised text-center">
                                 <div
-                                    class="binary-display text-4xl font-black text-[var(--binary-primary)]"
+                                    class="binary-display text-3xl font-black text-[var(--binary-primary)] md:text-4xl"
                                 >
                                     {{
                                         Object.keys(stats.top_countries).length
@@ -595,7 +580,7 @@ onMounted(() => fetchAirports());
 
                         <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <!-- By Type -->
-                            <div class="binary-card-raised rounded-2xl">
+                            <div class="binary-card-raised">
                                 <h3
                                     class="binary-label mb-4 text-xs font-bold text-[var(--binary-outline)] uppercase"
                                 >
@@ -640,7 +625,7 @@ onMounted(() => fetchAirports());
                             </div>
 
                             <!-- By Continent -->
-                            <div class="binary-card-raised rounded-2xl">
+                            <div class="binary-card-raised">
                                 <h3
                                     class="binary-label mb-4 text-xs font-bold text-[var(--binary-outline)] uppercase"
                                 >
@@ -675,9 +660,7 @@ onMounted(() => fetchAirports());
                             </div>
 
                             <!-- Top Countries -->
-                            <div
-                                class="binary-card-raised rounded-2xl md:col-span-2"
-                            >
+                            <div class="binary-card-raised md:col-span-2">
                                 <h3
                                     class="binary-label mb-4 text-xs font-bold text-[var(--binary-outline)] uppercase"
                                 >
