@@ -39,21 +39,21 @@ const categories = [
 <template>
     <section
         id="about"
-        class="mx-auto grid max-w-screen-2xl grid-cols-1 gap-8 px-6 py-12 md:grid-cols-12 md:gap-8 md:px-8"
+        class="mx-auto grid max-w-screen-2xl grid-cols-1 gap-6 px-[18px] py-6 md:grid-cols-12 md:gap-8 md:px-8 md:py-12"
         style="min-height: calc(100vh - 4rem)"
     >
         <div
             class="flex min-h-0 flex-col md:col-span-6 md:col-start-2 md:h-full"
         >
             <h1
-                class="binary-display text-5xl leading-[0.9] font-black tracking-tight md:text-8xl"
+                class="binary-display text-3xl leading-[0.9] font-black tracking-tight md:text-8xl"
             >
                 SYSTEM
                 <br />
                 <span class="text-[var(--binary-primary)]">ARCHITECT</span>
             </h1>
             <p
-                class="mt-6 max-w-2xl text-xl leading-relaxed text-[var(--binary-text-muted)] md:text-2xl"
+                class="mt-6 max-w-2xl text-sm leading-relaxed text-[var(--binary-text-muted)] md:text-2xl"
             >
                 一個軟體工程師的開發日誌。與 AI 協同、拿 Laravel
                 打底，思考把已具備的技術變成跑在 server 上展示的東西。不讓 AI
@@ -65,14 +65,14 @@ const categories = [
             </p>
 
             <!-- Knowledge Graph Widget -->
-            <div class="mt-8 flex min-h-0 flex-1 flex-col">
+            <div class="mt-6 flex min-h-0 flex-1 flex-col md:mt-8">
                 <p
                     class="binary-label mb-2 shrink-0 text-[10px] font-bold text-[var(--binary-outline)] uppercase"
                 >
                     &gt; PROJECT_RELATIONS
                 </p>
                 <div
-                    class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-lowest)]"
+                    class="min-h-[60vh] flex-1 overflow-hidden rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-lowest)] md:min-h-0 md:rounded-2xl"
                 >
                     <KnowledgeGraphWidget />
                 </div>
@@ -80,7 +80,9 @@ const categories = [
         </div>
 
         <div class="md:col-span-4 md:h-full">
-            <div class="binary-card-raised h-full rounded-[1.5rem]">
+            <div
+                class="binary-card-raised h-full rounded-none md:rounded-[1.5rem]"
+            >
                 <div class="mb-4 flex items-center gap-1">
                     <span class="text-sm text-[var(--binary-primary)]"
                         >&gt;_</span
@@ -107,7 +109,7 @@ const categories = [
                             <span
                                 v-for="item in cat.items"
                                 :key="item"
-                                class="binary-chip binary-label text-[10px] uppercase"
+                                class="binary-chip binary-label text-[9px] uppercase"
                                 >&gt; {{ item }}</span
                             >
                         </div>

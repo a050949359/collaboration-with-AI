@@ -15,11 +15,11 @@ defineProps<{
 <template>
     <section
         id="articles"
-        class="mx-auto grid max-w-screen-2xl grid-cols-1 gap-12 px-6 py-24 md:grid-cols-12 md:px-8"
+        class="mx-auto grid max-w-screen-2xl grid-cols-1 gap-8 px-[18px] py-6 md:grid-cols-12 md:gap-12 md:px-8 md:py-24"
     >
         <div class="md:col-span-4">
             <h2
-                class="binary-display sticky top-32 text-4xl font-black tracking-tight uppercase md:text-6xl"
+                class="binary-display sticky top-32 text-2xl font-black tracking-tight uppercase md:text-6xl"
             >
                 Latest
                 <br />
@@ -27,7 +27,7 @@ defineProps<{
             </h2>
         </div>
 
-        <div class="space-y-12 md:col-span-8">
+        <div class="space-y-8 md:col-span-8 md:space-y-12">
             <article
                 v-for="article in articles"
                 :key="article.title"
@@ -35,7 +35,7 @@ defineProps<{
             >
                 <div
                     v-if="article.title !== articles[0].title"
-                    class="mb-12 h-px bg-white/8"
+                    class="mb-8 h-px bg-white/8 md:mb-12"
                 />
                 <div class="mb-4 flex items-start justify-between">
                     <span
@@ -49,7 +49,7 @@ defineProps<{
                     >
                 </div>
                 <h3
-                    class="binary-display mb-4 text-3xl leading-tight font-bold uppercase transition-colors group-hover:text-[var(--binary-primary)]"
+                    class="binary-display mb-4 text-xl leading-tight font-bold uppercase transition-colors group-hover:text-[var(--binary-primary)] md:text-3xl"
                 >
                     {{ article.title }}
                 </h3>
@@ -57,7 +57,7 @@ defineProps<{
                     {{ article.description }}
                 </p>
                 <div
-                    class="binary-label flex flex-wrap gap-4 text-[10px] text-[var(--binary-outline)] uppercase"
+                    class="binary-label flex flex-wrap gap-4 text-[9px] text-[var(--binary-outline)] uppercase"
                 >
                     <span v-for="tag in article.tags" :key="tag"
                         >#{{ tag }}</span

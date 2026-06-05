@@ -228,14 +228,14 @@ const projects = computed(() => [
 <template>
     <section
         id="projects"
-        class="bg-[var(--binary-surface)] px-6 py-24 md:px-8"
+        class="bg-[var(--binary-surface)] px-[18px] py-6 md:px-8 md:py-24"
     >
         <div class="mx-auto max-w-screen-2xl">
             <div
-                class="mb-16 flex flex-col gap-4 md:flex-row md:items-baseline md:justify-between"
+                class="mb-8 flex flex-col gap-4 md:mb-16 md:flex-row md:items-baseline md:justify-between"
             >
                 <h2
-                    class="binary-display text-4xl font-black tracking-tight uppercase md:text-6xl"
+                    class="binary-display text-2xl font-black tracking-tight uppercase md:text-6xl"
                 >
                     Featured Projects
                 </h2>
@@ -250,7 +250,7 @@ const projects = computed(() => [
                 <article
                     v-for="(project, index) in projects"
                     :key="project.id"
-                    class="binary-card flex w-full flex-col gap-12 rounded-[2rem] transition-opacity md:items-center"
+                    class="binary-card flex w-full flex-col gap-6 rounded-none transition-opacity md:items-center md:gap-12 md:rounded-[2rem]"
                     :class="[
                         (index + 1) % 2 === 1
                             ? 'md:flex-row'
@@ -266,13 +266,13 @@ const projects = computed(() => [
                             >{{ project.id }} / {{ project.category }}</span
                         >
                         <h3
-                            class="binary-display mb-6 text-3xl font-bold uppercase md:text-5xl"
+                            class="binary-display mb-4 text-xl font-bold uppercase md:mb-6 md:text-5xl"
                         >
                             {{ project.title }}
                         </h3>
                         <ol
                             v-if="Array.isArray(project.description)"
-                            class="mb-8 space-y-3 text-base leading-relaxed text-[var(--binary-text-muted)]"
+                            class="mb-5 space-y-3 text-xs leading-relaxed text-[var(--binary-text-muted)] md:mb-8 md:text-base"
                         >
                             <li
                                 v-for="(item, i) in project.description"
@@ -288,7 +288,7 @@ const projects = computed(() => [
                         </ol>
                         <p
                             v-else
-                            class="mb-8 text-lg leading-relaxed text-[var(--binary-text-muted)]"
+                            class="mb-5 text-xs leading-relaxed text-[var(--binary-text-muted)] md:mb-8 md:text-lg"
                         >
                             {{ project.description }}
                         </p>
@@ -296,7 +296,7 @@ const projects = computed(() => [
                             <span
                                 v-for="tag in project.tags"
                                 :key="`${project.id}-${tag}`"
-                                class="binary-chip binary-label text-[10px] uppercase"
+                                class="binary-chip binary-label text-[9px] uppercase"
                             >
                                 &gt; {{ tag }}
                             </span>
@@ -307,14 +307,14 @@ const projects = computed(() => [
                         <img
                             :src="project.image"
                             :alt="`${project.title} preview`"
-                            class="h-full min-h-[280px] w-full rounded-[1.5rem] object-cover"
+                            class="h-full min-h-[280px] w-full rounded-none object-cover md:rounded-[1.5rem]"
                         />
                     </div>
 
                     <!-- Commit log panel -->
                     <div
                         v-else-if="project.commits"
-                        class="binary-label w-full rounded-[1.5rem] bg-[var(--binary-surface-lowest)] p-6 text-xs md:w-1/2"
+                        class="binary-label w-full rounded-none bg-[var(--binary-surface-lowest)] p-4 text-[10px] md:w-1/2 md:rounded-[1.5rem] md:p-6 md:text-xs"
                         style="
                             box-shadow: inset 4px 0 0 0 var(--binary-primary);
                         "
@@ -328,23 +328,25 @@ const projects = computed(() => [
                         <div
                             v-for="commit in project.commits"
                             :key="commit.hash"
-                            class="mb-3 flex items-start gap-3"
+                            class="mb-3 md:flex md:items-start md:gap-3"
                         >
+                            <div class="flex items-center gap-3 md:contents">
+                                <span
+                                    class="shrink-0 font-mono text-[var(--binary-primary)] opacity-70"
+                                    >{{ commit.hash }}</span
+                                >
+                                <span
+                                    class="shrink-0 text-[var(--binary-outline)]"
+                                    >{{ commit.date }}</span
+                                >
+                            </div>
                             <span
-                                class="shrink-0 font-mono text-[var(--binary-primary)] opacity-70"
-                                >{{ commit.hash }}</span
-                            >
-                            <span
-                                class="shrink-0 text-[var(--binary-outline)]"
-                                >{{ commit.date }}</span
-                            >
-                            <span
-                                class="leading-relaxed text-[var(--binary-text-muted)]"
+                                class="block leading-relaxed break-words text-[var(--binary-text-muted)] md:min-w-0"
                                 >{{ commit.message }}</span
                             >
                             <span
                                 v-if="commit.tag"
-                                class="ml-auto shrink-0 rounded bg-[var(--binary-primary)]/10 px-1.5 py-0.5 text-[9px] text-[var(--binary-primary)] uppercase"
+                                class="mt-1 inline-block shrink-0 rounded bg-[var(--binary-primary)]/10 px-1.5 py-0.5 text-[9px] text-[var(--binary-primary)] uppercase md:mt-0 md:ml-auto"
                                 >{{ commit.tag }}</span
                             >
                         </div>
@@ -353,7 +355,7 @@ const projects = computed(() => [
                     <!-- Fallback terminal panel -->
                     <div
                         v-else
-                        class="binary-label w-full rounded-[1.5rem] bg-[var(--binary-surface-lowest)] p-6 text-sm md:w-1/2"
+                        class="binary-label w-full rounded-none bg-[var(--binary-surface-lowest)] p-4 text-sm md:w-1/2 md:rounded-[1.5rem] md:p-6"
                         style="
                             box-shadow: inset 4px 0 0 0 var(--binary-primary);
                         "

@@ -7,13 +7,15 @@ const githubUrl = 'https://github.com/a050949359/collaboration-with-AI';
 </script>
 
 <template>
-    <section class="bg-[var(--binary-surface-lowest)] px-6 py-24 md:px-8">
+    <section
+        class="bg-[var(--binary-surface-lowest)] px-[18px] py-6 md:px-8 md:py-24"
+    >
         <div class="mx-auto max-w-screen-2xl">
             <div
-                class="mb-12 flex flex-col gap-4 md:flex-row md:items-baseline md:justify-between"
+                class="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-baseline md:justify-between"
             >
                 <h2
-                    class="binary-display text-4xl font-black tracking-tight uppercase md:text-6xl"
+                    class="binary-display text-2xl font-black tracking-tight uppercase md:text-6xl"
                 >
                     Technology Stack
                 </h2>
@@ -28,7 +30,7 @@ const githubUrl = 'https://github.com/a050949359/collaboration-with-AI';
                 <div
                     v-for="[label, value] in stackInfo"
                     :key="label"
-                    class="rounded-2xl bg-[var(--binary-surface)] p-5"
+                    class="rounded-none bg-[var(--binary-surface)] p-4 md:rounded-2xl md:p-5"
                     style="box-shadow: inset 4px 0 0 0 var(--binary-primary)"
                 >
                     <span
@@ -43,7 +45,9 @@ const githubUrl = 'https://github.com/a050949359/collaboration-with-AI';
                 </div>
             </div>
 
-            <div class="mt-20 flex flex-col items-center gap-6 text-center">
+            <div
+                class="mt-10 flex flex-col items-center gap-6 text-center md:mt-20"
+            >
                 <p
                     class="binary-label text-xs tracking-[0.3em] text-[var(--binary-outline)] uppercase"
                 >
@@ -53,7 +57,7 @@ const githubUrl = 'https://github.com/a050949359/collaboration-with-AI';
                     :href="githubUrl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="binary-display inline-flex items-center gap-3 rounded-xl border border-[var(--binary-primary)] px-8 py-4 text-sm font-bold text-[var(--binary-primary)] uppercase transition-colors hover:bg-[var(--binary-primary)] hover:text-[var(--binary-on-primary)]"
+                    class="binary-display inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-xl border border-[var(--binary-primary)] px-4 py-3 text-xs font-bold break-all text-[var(--binary-primary)] uppercase transition-colors hover:bg-[var(--binary-primary)] hover:text-[var(--binary-on-primary)] md:gap-3 md:px-8 md:py-4 md:text-sm"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"

@@ -262,7 +262,7 @@
     }
 
     .binary-card {
-        @apply p-8 md:p-10;
+        @apply p-3 md:p-10;
         background-color: rgba(24, 36, 29, 0.7);
     }
 
@@ -271,7 +271,7 @@
     }
 
     .binary-card-raised {
-        @apply p-8 md:p-10;
+        @apply p-3 md:p-10;
         background-color: rgba(34, 49, 41, 0.7);
     }
 
