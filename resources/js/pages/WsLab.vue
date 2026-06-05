@@ -312,9 +312,9 @@ onUnmounted(() => disconnectWs());
 <template>
     <Head :title="t('ws_lab.head_title')" />
     <AppLayout>
-        <div class="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-8 pb-8">
+        <div class="mx-auto flex max-w-3xl flex-col gap-6 px-[18px] pt-8 pb-8">
             <!-- Header -->
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
                 <span
                     class="font-mono text-sm tracking-widest text-[--binary-primary] uppercase"
                     >ws-lab</span
@@ -377,10 +377,10 @@ onUnmounted(() => disconnectWs());
 
             <!-- Chart card -->
             <div
-                class="rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5"
+                class="rounded-none border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5 md:rounded-lg"
             >
                 <p
-                    class="mb-5 font-mono text-5xl font-bold text-[--binary-primary] tabular-nums"
+                    class="mb-5 font-mono text-4xl font-bold text-[--binary-primary] tabular-nums md:text-5xl"
                 >
                     {{ latestValue ?? '--' }}
                 </p>
@@ -458,7 +458,7 @@ onUnmounted(() => disconnectWs());
 
             <!-- Rooms panel -->
             <div
-                class="flex flex-col gap-3 rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5"
+                class="flex flex-col gap-3 rounded-none border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5 md:rounded-lg"
             >
                 <div class="flex items-center gap-2">
                     <span
@@ -516,7 +516,7 @@ onUnmounted(() => disconnectWs());
 
             <!-- Command panel -->
             <div
-                class="flex flex-col gap-3 rounded-lg border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5"
+                class="flex flex-col gap-3 rounded-none border border-[--binary-outline-variant] bg-[--binary-surface-low] p-5 md:rounded-lg"
             >
                 <span
                     class="font-mono text-xs tracking-widest text-[--binary-text-muted] uppercase"
