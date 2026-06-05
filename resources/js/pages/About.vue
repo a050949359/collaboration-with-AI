@@ -210,14 +210,13 @@ function toggleContextPanel() {
         <!-- Token 輸入擋板（非 admin 且無 token） -->
         <template v-if="!canChat">
             <div
-                class="flex min-h-[60vh] flex-col items-center justify-center bg-[var(--binary-surface)]"
+                class="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center bg-[var(--binary-surface)]"
             >
                 <div
-                    class="w-full max-w-xl px-10 py-12"
+                    class="w-full max-w-xl rounded-none px-6 py-10 md:rounded-2xl md:px-10 md:py-12"
                     style="
                         background: rgba(15, 21, 17, 0.92);
                         backdrop-filter: blur(20px);
-                        border-radius: 2rem;
                         box-shadow: 0 8px 32px 0 rgba(107, 220, 159, 0.1);
                     "
                 >
@@ -268,7 +267,7 @@ function toggleContextPanel() {
         </template>
         <template v-else>
             <main class="pb-24">
-                <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
+                <section class="binary-section mx-auto max-w-screen-xl">
                     <!-- Header -->
                     <div class="mb-8">
                         <span
@@ -276,11 +275,7 @@ function toggleContextPanel() {
                             >&gt; about_me</span
                         >
                         <div class="flex items-end justify-between gap-4">
-                            <h1
-                                class="binary-display text-5xl font-black tracking-tight uppercase md:text-6xl"
-                            >
-                                Ask Me
-                            </h1>
+                            <h1 class="binary-page-title">Ask Me</h1>
                             <button
                                 v-if="isAdmin"
                                 class="binary-ghost-button px-4 py-1.5 text-xs"
@@ -300,7 +295,7 @@ function toggleContextPanel() {
                     <!-- Admin: Context Panel -->
                     <div
                         v-if="isAdmin && showContextPanel"
-                        class="binary-card-raised mb-8 space-y-4 rounded-2xl"
+                        class="binary-card-raised mb-8 space-y-4"
                     >
                         <h2
                             class="binary-label text-xs font-bold tracking-widest text-[var(--binary-outline)] uppercase"
@@ -364,7 +359,7 @@ function toggleContextPanel() {
                         </button>
                     </div>
                     <!-- Chat Box -->
-                    <div class="binary-card-raised rounded-2xl">
+                    <div class="binary-card-raised">
                         <div
                             ref="chatBox"
                             class="mb-4 max-h-[480px] min-h-[200px] space-y-4 overflow-y-auto"

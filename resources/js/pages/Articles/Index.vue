@@ -109,9 +109,7 @@ onMounted(async () => {
                 class="binary-section mx-auto grid max-w-screen-2xl grid-cols-1 gap-8 md:grid-cols-12 md:gap-12"
             >
                 <div class="md:col-span-4">
-                    <h1
-                        class="binary-display text-2xl font-black tracking-tight uppercase md:sticky md:top-32 md:text-6xl"
-                    >
+                    <h1 class="binary-page-title md:sticky md:top-32">
                         {{ t('articles.index.title').toUpperCase() }}
                     </h1>
                     <p class="mt-4 text-sm text-[var(--binary-text-muted)]">

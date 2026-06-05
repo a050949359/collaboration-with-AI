@@ -138,13 +138,11 @@ onMounted(async () => {
 
                 <template v-else-if="article">
                     <!-- 標題列 -->
-                    <div class="binary-card-raised mb-6">
+                    <div class="mb-6">
                         <div
                             class="mb-1 flex items-center justify-between gap-3"
                         >
-                            <h1
-                                class="binary-display text-3xl font-black tracking-tight uppercase md:text-4xl"
-                            >
+                            <h1 class="binary-page-title">
                                 {{ t('articles.edit.title') }}
                             </h1>
                             <div class="flex gap-2">

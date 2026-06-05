@@ -252,11 +252,9 @@ onUnmounted(() => stopPolling());
         <main class="pb-24">
             <section class="binary-section mx-auto max-w-screen-xl">
                 <!-- 標題列 -->
-                <div class="binary-card-raised mb-6">
+                <div class="mb-6">
                     <div class="mb-1 flex items-center justify-between gap-3">
-                        <h1
-                            class="binary-display text-3xl font-black tracking-tight uppercase md:text-4xl"
-                        >
+                        <h1 class="binary-page-title">
                             {{ t('articles.generate.title') }}
                         </h1>
                         <div class="flex gap-2">

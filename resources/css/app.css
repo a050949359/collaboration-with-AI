@@ -140,6 +140,12 @@
         letter-spacing: 0.12em;
     }
 
+    /* 頁面主標題統一字級（手機 3xl、桌機 6xl）。各頁套此 class 取代逐元件字級。 */
+    .binary-page-title {
+        @apply text-3xl font-black tracking-tight uppercase md:text-6xl;
+        letter-spacing: -0.035em;
+    }
+
     .binary-input {
         @apply w-full rounded-md border-0 px-4 py-4 text-sm shadow-none transition outline-none;
         background-color: var(--binary-surface-lowest);
