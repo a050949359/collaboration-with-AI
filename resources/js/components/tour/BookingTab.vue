@@ -314,7 +314,7 @@ watch(
 <template>
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- Tour List -->
-        <div class="binary-card-raised rounded-2xl">
+        <div class="binary-card-raised">
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-sm font-bold tracking-wide uppercase">
                     {{ t('tour_playground.booking.select_tour') }}
@@ -418,7 +418,7 @@ watch(
         </div>
 
         <!-- Booking Form -->
-        <div class="binary-card-raised rounded-2xl">
+        <div class="binary-card-raised">
             <h2 class="mb-4 text-sm font-bold tracking-wide uppercase">
                 {{ t('tour_playground.booking.booking_info') }}
             </h2>

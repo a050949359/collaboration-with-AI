@@ -45,7 +45,7 @@ async function loadRandomPassenger() {
 </script>
 
 <template>
-    <div class="binary-card-raised rounded-2xl">
+    <div class="binary-card-raised">
         <!-- Controls -->
         <div class="mb-4 flex flex-wrap items-center gap-2">
             <button

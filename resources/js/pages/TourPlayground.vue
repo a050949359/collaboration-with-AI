@@ -38,9 +38,9 @@ onMounted(loadStats);
     <Head title="Tour Playground" />
     <AppLayout>
         <main class="pb-24">
-            <section class="mx-auto max-w-screen-xl px-6 py-12 md:px-8">
+            <section class="binary-section mx-auto max-w-screen-xl">
                 <!-- Header -->
-                <div class="binary-card-raised mb-6 rounded-2xl">
+                <div class="binary-card-raised mb-6">
                     <div class="flex flex-wrap items-end justify-between gap-4">
                         <div>
                             <h1
@@ -56,12 +56,12 @@ onMounted(loadStats);
                         </div>
 
                         <!-- Stat Cards -->
-                        <div class="flex gap-3">
+                        <div class="flex flex-wrap gap-3">
                             <template v-if="statsLoading">
                                 <div
                                     v-for="i in 3"
                                     :key="i"
-                                    class="h-16 w-28 animate-pulse rounded-xl bg-[var(--binary-surface-container)]"
+                                    class="h-16 w-28 animate-pulse rounded-none bg-[var(--binary-surface-container)] md:rounded-xl"
                                 />
                             </template>
                             <template v-else-if="stats">
@@ -87,7 +87,7 @@ onMounted(loadStats);
                                         },
                                     ]"
                                     :key="card.label"
-                                    class="min-w-[6.5rem] rounded-xl border border-[var(--binary-outline)]/20 bg-[var(--binary-surface-container)] px-4 py-3 text-center"
+                                    class="min-w-[6.5rem] rounded-none border border-[var(--binary-outline)]/20 bg-[var(--binary-surface-container)] px-4 py-3 text-center md:rounded-xl"
                                 >
                                     <p
                                         class="binary-display text-2xl font-black text-[var(--binary-primary)]"

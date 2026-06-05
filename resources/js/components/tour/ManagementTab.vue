@@ -612,10 +612,7 @@ watch(mgmtTab, (tab) => {
         </div>
 
         <!-- ─── Bookings ─────────────────────────── -->
-        <div
-            v-show="mgmtTab === 'bookings'"
-            class="binary-card-raised rounded-2xl"
-        >
+        <div v-show="mgmtTab === 'bookings'" class="binary-card-raised">
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-sm font-bold tracking-wide uppercase">
                     {{ t('tour_playground.mgmt.bookings_title') }}
@@ -819,7 +816,7 @@ watch(mgmtTab, (tab) => {
 
         <!-- ─── Exports ──────────────────────────── -->
         <div v-show="mgmtTab === 'exports'" class="space-y-4">
-            <div class="binary-card-raised rounded-2xl">
+            <div class="binary-card-raised">
                 <div class="mb-4 flex items-center justify-between">
                     <h2 class="text-sm font-bold tracking-wide uppercase">
                         {{ t('tour_playground.mgmt.exports_title') }}
@@ -890,7 +887,7 @@ watch(mgmtTab, (tab) => {
         <!-- ─── Tours ────────────────────────────── -->
         <div v-show="mgmtTab === 'tours'" class="space-y-4">
             <!-- List -->
-            <div v-if="!showTourForm" class="binary-card-raised rounded-2xl">
+            <div v-if="!showTourForm" class="binary-card-raised">
                 <div class="mb-4 flex items-center justify-between">
                     <h2 class="text-sm font-bold tracking-wide uppercase">
                         {{ t('tour_playground.mgmt.tours_title') }}
@@ -996,7 +993,7 @@ watch(mgmtTab, (tab) => {
             </div>
 
             <!-- Create / Edit Panel -->
-            <div v-if="showTourForm" class="binary-card-raised rounded-2xl">
+            <div v-if="showTourForm" class="binary-card-raised">
                 <div class="mb-4 flex items-center justify-between">
                     <div>
                         <h2 class="text-sm font-bold tracking-wide uppercase">
