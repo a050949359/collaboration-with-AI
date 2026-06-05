@@ -318,7 +318,9 @@ onMounted(() => {
 <template>
     <Head title="系統管理" />
     <AppLayout>
-        <div class="mx-auto w-full max-w-screen-2xl px-6 pt-8 pb-16 md:px-8">
+        <div
+            class="mx-auto w-full max-w-screen-2xl px-[18px] pt-8 pb-16 md:px-8"
+        >
             <!-- Header -->
             <p
                 class="binary-label mb-2 text-xs font-bold text-[var(--binary-primary)] uppercase"
@@ -326,14 +328,14 @@ onMounted(() => {
                 &gt; admin_console
             </p>
             <h1
-                class="binary-display mb-12 text-4xl font-black tracking-tight text-[var(--binary-text)] uppercase md:text-6xl"
+                class="binary-page-title mb-8 text-[var(--binary-text)] md:mb-12"
             >
                 System
             </h1>
 
             <!-- Tab Card -->
             <div
-                class="overflow-hidden rounded-2xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)]"
+                class="overflow-hidden rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] md:rounded-2xl"
             >
                 <!-- Tab Bar -->
                 <div
@@ -346,7 +348,7 @@ onMounted(() => {
                             { key: 'tokens', label: '分享連結管理' },
                         ] as const"
                         :key="tab.key"
-                        class="binary-label px-6 py-3 text-[11px] font-bold tracking-widest uppercase transition-colors"
+                        class="binary-label px-3 py-3 text-[11px] font-bold tracking-widest uppercase transition-colors md:px-6"
                         :class="
                             activeTab === tab.key
                                 ? '-mb-px border-b-2 border-[var(--binary-primary)] text-[var(--binary-primary)]'
@@ -358,7 +360,7 @@ onMounted(() => {
                     </button>
                 </div>
 
-                <div class="px-10 py-6">
+                <div class="px-4 py-6 md:px-10">
                     <!-- ── Settings Tab ── -->
                     <template v-if="activeTab === 'settings'">
                         <div
@@ -487,7 +489,7 @@ onMounted(() => {
                             <div
                                 v-for="use in LLM_USES"
                                 :key="use.key"
-                                class="space-y-3 rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5"
+                                class="space-y-3 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5 md:rounded-xl"
                             >
                                 <div class="flex items-center justify-between">
                                     <span
@@ -709,7 +711,7 @@ onMounted(() => {
                             <div
                                 v-for="token in tokens"
                                 :key="token.id"
-                                class="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] px-5 py-4"
+                                class="flex flex-wrap items-start justify-between gap-4 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] px-5 py-4 md:rounded-xl"
                             >
                                 <div class="min-w-0 flex-1 space-y-1 text-sm">
                                     <div
@@ -771,7 +773,7 @@ onMounted(() => {
                 @click.self="showTokenModal = false"
             >
                 <div
-                    class="w-full max-w-lg rounded-2xl border border-[var(--binary-primary)]/30 bg-[var(--binary-surface)] p-8 shadow-2xl"
+                    class="w-full max-w-lg rounded-none border border-[var(--binary-primary)]/30 bg-[var(--binary-surface)] p-6 shadow-2xl md:rounded-2xl md:p-8"
                 >
                     <h3
                         class="binary-label mb-1 text-xs font-bold tracking-widest text-[var(--binary-primary)] uppercase"
