@@ -48,6 +48,11 @@ async function enumerateCams() {
 
         if (cameras.value.length) {
             selectedCam.value = cameras.value[0].deviceId;
+
+            // 手機：偵測到相機後直接啟動，省去手動選擇 + 開始（失敗則 fallback 回手動）
+            if (window.matchMedia('(max-width: 767px)').matches) {
+                startCamera().catch(() => {});
+            }
         } else {
             camError.value = '找不到相機裝置';
         }
@@ -237,10 +242,10 @@ onUnmounted(() => {
             <!-- 手機：fixed 全螢幕（脫離容器 padding）；桌機：原本的左右排版 -->
             <div
                 v-show="started"
-                class="fixed inset-x-0 top-16 bottom-0 z-30 flex flex-col bg-[var(--binary-background)] md:static md:z-auto md:flex-1 md:flex-row md:items-start md:gap-6 md:bg-transparent"
+                class="fixed inset-x-0 top-16 bottom-0 z-30 bg-[var(--binary-background)] md:static md:z-auto md:flex md:flex-1 md:flex-row md:items-start md:gap-6 md:bg-transparent"
             >
-                <!-- Left: canvas -->
-                <div class="relative min-h-0 flex-1 md:min-w-0">
+                <!-- Left: canvas（手機滿版固定，sheet 覆蓋其上） -->
+                <div class="h-full w-full md:h-auto md:min-w-0 md:flex-1">
                     <canvas
                         ref="canvasRef"
                         class="block h-full w-full object-cover md:h-auto md:rounded-xl md:object-contain"
@@ -255,20 +260,20 @@ onUnmounted(() => {
                     />
                 </div>
 
-                <!-- Right: control panel（手機底部 sheet，可上拉；桌機側欄） -->
+                <!-- Right: control panel（手機底部 overlay sheet；桌機側欄） -->
                 <div
-                    class="flex w-full shrink-0 flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--binary-outline-variant)] p-4 transition-[height] duration-300 md:h-auto md:w-72 md:gap-6 md:overflow-visible md:rounded-xl md:border-t-0 md:p-6"
-                    :class="sheetOpen ? 'h-[62dvh]' : 'h-36'"
+                    class="absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-2xl border-t border-[var(--binary-outline-variant)] transition-[height] duration-300 md:static md:z-auto md:h-auto md:w-72 md:overflow-visible md:rounded-xl md:border-t-0"
+                    :class="sheetOpen ? 'h-[62dvh]' : 'h-10'"
                     style="
                         background: var(--binary-surface);
                         backdrop-filter: blur(20px);
                         -webkit-backdrop-filter: blur(20px);
                     "
                 >
-                    <!-- 手機 sheet handle（點擊上拉/收合） -->
+                    <!-- 手機 sheet handle（收合時只剩此條，點擊展開/收合） -->
                     <button
                         type="button"
-                        class="mx-auto -mt-1 mb-1 flex h-5 w-16 shrink-0 items-center justify-center md:hidden"
+                        class="flex h-10 w-full shrink-0 items-center justify-center md:hidden"
                         :aria-label="sheetOpen ? '收合控制板' : '展開控制板'"
                         @click="sheetOpen = !sheetOpen"
                     >
@@ -276,87 +281,126 @@ onUnmounted(() => {
                             class="h-1.5 w-10 rounded-full bg-[var(--binary-outline)]/50"
                         ></span>
                     </button>
-                    <!-- Algorithm -->
-                    <div class="flex flex-col gap-3">
-                        <span
-                            class="text-xs font-bold tracking-widest uppercase"
-                            style="color: var(--binary-primary)"
-                            >算法</span
-                        >
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                v-for="(alg, i) in [
-                                    'Canny',
-                                    'Laplacian',
-                                    'Sobel',
-                                    'Scharr',
-                                ]"
-                                :key="i"
-                                class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
-                                :style="
-                                    algorithm === i
-                                        ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
-                                        : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
-                                "
-                                @click="algorithm = i"
-                            >
-                                {{ alg }}
-                            </button>
-                        </div>
-                    </div>
 
-                    <!-- Canny params -->
-                    <template v-if="showCannyParams">
-                        <div
-                            class="flex flex-col gap-4 rounded-lg px-4 py-4"
-                            style="background: var(--binary-surface-lowest)"
-                        >
-                            <div class="flex items-center gap-3">
-                                <span
-                                    class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
-                                    style="color: var(--binary-text-muted)"
-                                    >低閾值</span
+                    <!-- 控制項：展開時可捲動；桌機正常顯示 -->
+                    <div
+                        class="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4 md:gap-6 md:overflow-visible md:p-6"
+                    >
+                        <!-- Algorithm -->
+                        <div class="flex flex-col gap-3">
+                            <span
+                                class="text-xs font-bold tracking-widest uppercase"
+                                style="color: var(--binary-primary)"
+                                >算法</span
+                            >
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="(alg, i) in [
+                                        'Canny',
+                                        'Laplacian',
+                                        'Sobel',
+                                        'Scharr',
+                                    ]"
+                                    :key="i"
+                                    class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
+                                    :style="
+                                        algorithm === i
+                                            ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
+                                            : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
+                                    "
+                                    @click="algorithm = i"
                                 >
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="300"
-                                    v-model.number="t1"
-                                    class="flex-1"
-                                    style="accent-color: var(--binary-primary)"
-                                />
-                                <span
-                                    class="w-7 text-right text-xs tabular-nums"
-                                    >{{ t1 }}</span
-                                >
+                                    {{ alg }}
+                                </button>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <span
-                                    class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
-                                    style="color: var(--binary-text-muted)"
-                                    >高閾值</span
-                                >
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="300"
-                                    v-model.number="t2"
-                                    class="flex-1"
-                                    style="accent-color: var(--binary-primary)"
-                                />
-                                <span
-                                    class="w-7 text-right text-xs tabular-nums"
-                                    >{{ t2 }}</span
-                                >
+                        </div>
+
+                        <!-- Canny params -->
+                        <template v-if="showCannyParams">
+                            <div
+                                class="flex flex-col gap-4 rounded-lg px-4 py-4"
+                                style="background: var(--binary-surface-lowest)"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <span
+                                        class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
+                                        style="color: var(--binary-text-muted)"
+                                        >低閾值</span
+                                    >
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="300"
+                                        v-model.number="t1"
+                                        class="flex-1"
+                                        style="
+                                            accent-color: var(--binary-primary);
+                                        "
+                                    />
+                                    <span
+                                        class="w-7 text-right text-xs tabular-nums"
+                                        >{{ t1 }}</span
+                                    >
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span
+                                        class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
+                                        style="color: var(--binary-text-muted)"
+                                        >高閾值</span
+                                    >
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="300"
+                                        v-model.number="t2"
+                                        class="flex-1"
+                                        style="
+                                            accent-color: var(--binary-primary);
+                                        "
+                                    />
+                                    <span
+                                        class="w-7 text-right text-xs tabular-nums"
+                                        >{{ t2 }}</span
+                                    >
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span
+                                        class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
+                                        style="color: var(--binary-text-muted)"
+                                        >孔徑</span
+                                    >
+                                    <select
+                                        v-model.number="aperture"
+                                        class="rounded px-2 py-1 text-xs"
+                                        style="
+                                            background: var(
+                                                --binary-surface-low
+                                            );
+                                            color: var(--binary-text);
+                                            outline: none;
+                                        "
+                                    >
+                                        <option :value="3">3</option>
+                                        <option :value="5">5</option>
+                                        <option :value="7">7</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-3">
+                        </template>
+
+                        <!-- Laplacian / Sobel ksize -->
+                        <template v-if="showKsizeParams">
+                            <div
+                                class="flex items-center gap-3 rounded-lg px-4 py-4"
+                                style="background: var(--binary-surface-lowest)"
+                            >
                                 <span
                                     class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
                                     style="color: var(--binary-text-muted)"
-                                    >孔徑</span
+                                    >核大小</span
                                 >
                                 <select
-                                    v-model.number="aperture"
+                                    v-model.number="algKsize"
                                     class="rounded px-2 py-1 text-xs"
                                     style="
                                         background: var(--binary-surface-low);
@@ -364,119 +408,93 @@ onUnmounted(() => {
                                         outline: none;
                                     "
                                 >
+                                    <option :value="1">1</option>
                                     <option :value="3">3</option>
                                     <option :value="5">5</option>
                                     <option :value="7">7</option>
                                 </select>
                             </div>
-                        </div>
-                    </template>
+                        </template>
 
-                    <!-- Laplacian / Sobel ksize -->
-                    <template v-if="showKsizeParams">
-                        <div
-                            class="flex items-center gap-3 rounded-lg px-4 py-4"
-                            style="background: var(--binary-surface-lowest)"
+                        <!-- Scharr note -->
+                        <p
+                            v-if="showScharrNote"
+                            class="text-xs tracking-wide"
+                            style="color: var(--binary-text-muted)"
                         >
+                            固定 3×3 Scharr 核，無需調整大小
+                        </p>
+
+                        <!-- Blur -->
+                        <div class="flex flex-col gap-3">
                             <span
-                                class="w-14 shrink-0 text-xs font-bold tracking-widest uppercase"
-                                style="color: var(--binary-text-muted)"
-                                >核大小</span
+                                class="text-xs font-bold tracking-widest uppercase"
+                                style="color: var(--binary-primary)"
+                                >預模糊</span
                             >
-                            <select
-                                v-model.number="algKsize"
-                                class="rounded px-2 py-1 text-xs"
-                                style="
-                                    background: var(--binary-surface-low);
-                                    color: var(--binary-text);
-                                    outline: none;
-                                "
+                            <div
+                                class="flex items-center gap-3 rounded-lg px-4 py-4"
+                                style="background: var(--binary-surface-lowest)"
                             >
-                                <option :value="1">1</option>
-                                <option :value="3">3</option>
-                                <option :value="5">5</option>
-                                <option :value="7">7</option>
-                            </select>
+                                <button
+                                    class="shrink-0 rounded-full px-3 py-1 text-xs font-bold tracking-wide transition-all"
+                                    :style="
+                                        blurEnabled
+                                            ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
+                                            : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
+                                    "
+                                    @click="blurEnabled = !blurEnabled"
+                                >
+                                    {{ blurEnabled ? '開' : '關' }}
+                                </button>
+                                <input
+                                    type="range"
+                                    min="3"
+                                    max="21"
+                                    step="2"
+                                    v-model.number="blurKsize"
+                                    :disabled="!blurEnabled"
+                                    class="flex-1 disabled:opacity-30"
+                                    style="accent-color: var(--binary-primary)"
+                                />
+                                <span
+                                    class="w-7 text-right text-xs tabular-nums"
+                                    >{{ blurKsize }}</span
+                                >
+                            </div>
                         </div>
-                    </template>
 
-                    <!-- Scharr note -->
-                    <p
-                        v-if="showScharrNote"
-                        class="text-xs tracking-wide"
-                        style="color: var(--binary-text-muted)"
-                    >
-                        固定 3×3 Scharr 核，無需調整大小
-                    </p>
-
-                    <!-- Blur -->
-                    <div class="flex flex-col gap-3">
-                        <span
-                            class="text-xs font-bold tracking-widest uppercase"
-                            style="color: var(--binary-primary)"
-                            >預模糊</span
-                        >
-                        <div
-                            class="flex items-center gap-3 rounded-lg px-4 py-4"
-                            style="background: var(--binary-surface-lowest)"
-                        >
-                            <button
-                                class="shrink-0 rounded-full px-3 py-1 text-xs font-bold tracking-wide transition-all"
-                                :style="
-                                    blurEnabled
-                                        ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
-                                        : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
-                                "
-                                @click="blurEnabled = !blurEnabled"
+                        <!-- Invert + Overlay -->
+                        <div class="flex flex-col gap-3">
+                            <span
+                                class="text-xs font-bold tracking-widest uppercase"
+                                style="color: var(--binary-primary)"
+                                >輸出</span
                             >
-                                {{ blurEnabled ? '開' : '關' }}
-                            </button>
-                            <input
-                                type="range"
-                                min="3"
-                                max="21"
-                                step="2"
-                                v-model.number="blurKsize"
-                                :disabled="!blurEnabled"
-                                class="flex-1 disabled:opacity-30"
-                                style="accent-color: var(--binary-primary)"
-                            />
-                            <span class="w-7 text-right text-xs tabular-nums">{{
-                                blurKsize
-                            }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Invert + Overlay -->
-                    <div class="flex flex-col gap-3">
-                        <span
-                            class="text-xs font-bold tracking-widest uppercase"
-                            style="color: var(--binary-primary)"
-                            >輸出</span
-                        >
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
-                                :style="
-                                    invert
-                                        ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
-                                        : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
-                                "
-                                @click="invert = !invert"
-                            >
-                                反色
-                            </button>
-                            <button
-                                class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
-                                :style="
-                                    overlay
-                                        ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
-                                        : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
-                                "
-                                @click="overlay = !overlay"
-                            >
-                                疊加原圖
-                            </button>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
+                                    :style="
+                                        invert
+                                            ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
+                                            : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
+                                    "
+                                    @click="invert = !invert"
+                                >
+                                    反色
+                                </button>
+                                <button
+                                    class="rounded-full px-3 py-1.5 text-xs font-bold tracking-wide transition-all"
+                                    :style="
+                                        overlay
+                                            ? 'background:linear-gradient(145deg,var(--binary-primary),var(--binary-primary-container)); color:var(--binary-on-primary-container);'
+                                            : 'background:var(--binary-surface-container); color:var(--binary-text-muted);'
+                                    "
+                                    @click="overlay = !overlay"
+                                >
+                                    疊加原圖
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
