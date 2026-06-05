@@ -152,8 +152,8 @@ onUnmounted(() => {
     <Head :title="t('mini_orch.head_title')" />
     <AppLayout>
         <div
-            class="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 overflow-hidden px-6 pt-4 pb-4 md:px-8"
-            style="height: calc(100vh - 4rem)"
+            class="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 overflow-hidden px-[18px] pt-4 pb-4 md:px-8"
+            style="height: calc(100dvh - 4rem)"
         >
             <!-- Title -->
             <div class="flex shrink-0 flex-col gap-3">
@@ -194,7 +194,7 @@ onUnmounted(() => {
                 <Transition name="slide-down">
                     <div
                         v-if="showRunForm"
-                        class="space-y-3 rounded-lg border border-[--binary-outline] bg-[--binary-surface-low] p-4"
+                        class="space-y-3 rounded-none border border-[--binary-outline] bg-[--binary-surface-low] p-4 md:rounded-lg"
                     >
                         <p class="font-mono text-xs text-[--binary-text-muted]">
                             {{ t('mini_orch.body_label') }}
@@ -278,7 +278,7 @@ onUnmounted(() => {
 
             <!-- iframe -->
             <div
-                class="min-h-0 flex-1 overflow-hidden rounded-lg border border-[--binary-outline-variant]"
+                class="min-h-0 flex-1 overflow-hidden rounded-none border border-[--binary-outline-variant] md:rounded-lg"
             >
                 <iframe
                     ref="iframeRef"
