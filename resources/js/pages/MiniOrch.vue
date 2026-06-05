@@ -168,7 +168,10 @@ onUnmounted(() => {
                             @click="refreshDashboard"
                             :title="t('mini_orch.refresh_title')"
                         >
-                            {{ t('mini_orch.refresh') }}
+                            <span class="md:hidden">↻</span>
+                            <span class="hidden md:inline">{{
+                                t('mini_orch.refresh')
+                            }}</span>
                         </button>
                         <button
                             class="rounded border px-3 py-1.5 font-mono text-xs transition-colors"
@@ -177,16 +180,24 @@ onUnmounted(() => {
                                     ? 'border-[--binary-primary] text-[--binary-primary]'
                                     : 'border-[--binary-outline] text-[--binary-text-muted] hover:border-[--binary-primary] hover:text-[--binary-text]'
                             "
+                            :title="
+                                showRunForm
+                                    ? t('mini_orch.cancel')
+                                    : t('mini_orch.new_run')
+                            "
                             @click="
                                 showRunForm = !showRunForm;
                                 submitError = '';
                             "
                         >
-                            {{
+                            <span class="md:hidden">{{
+                                showRunForm ? '✕' : '＋'
+                            }}</span>
+                            <span class="hidden md:inline">{{
                                 showRunForm
                                     ? t('mini_orch.cancel')
                                     : t('mini_orch.new_run')
-                            }}
+                            }}</span>
                         </button>
                     </div>
                 </div>
