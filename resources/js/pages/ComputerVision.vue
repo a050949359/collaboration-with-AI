@@ -10,6 +10,9 @@ const selectedCam = ref('');
 const started = ref(false);
 const camError = ref('');
 
+// 手機版底部控制 sheet 是否展開
+const sheetOpen = ref(false);
+
 // ── Processing params ────────────────────────────────────
 const algorithm = ref(0); // 0=Canny 1=Laplacian 2=Sobel 3=Scharr
 const t1 = ref(50);
@@ -154,8 +157,8 @@ onUnmounted(() => {
         <div
             class="flex min-h-screen flex-col bg-[var(--binary-background)] px-[18px] pt-8 pb-16 text-[var(--binary-text)] md:px-8"
         >
-            <!-- Header -->
-            <div class="mb-8">
+            <!-- Header（手機隱藏，全螢幕相機體驗） -->
+            <div class="mb-8 hidden md:block">
                 <p
                     class="mb-2 text-xs font-bold tracking-widest uppercase"
                     style="color: var(--binary-primary)"
@@ -231,15 +234,16 @@ onUnmounted(() => {
             </div>
 
             <!-- Left / Right split (always in DOM, shown after start) -->
+            <!-- 手機：fixed 全螢幕（脫離容器 padding）；桌機：原本的左右排版 -->
             <div
                 v-show="started"
-                class="flex flex-1 flex-col gap-4 md:flex-row md:items-start md:gap-6"
+                class="fixed inset-x-0 top-16 bottom-0 z-30 flex flex-col bg-[var(--binary-background)] md:static md:z-auto md:flex-1 md:flex-row md:items-start md:gap-6 md:bg-transparent"
             >
                 <!-- Left: canvas -->
-                <div class="min-w-0 flex-1">
+                <div class="relative min-h-0 flex-1 md:min-w-0">
                     <canvas
                         ref="canvasRef"
-                        class="block w-full rounded-none md:rounded-xl"
+                        class="block h-full w-full object-cover md:h-auto md:rounded-xl md:object-contain"
                         style="
                             box-shadow: 0 0 40px
                                 color-mix(
@@ -251,15 +255,27 @@ onUnmounted(() => {
                     />
                 </div>
 
-                <!-- Right: control panel -->
+                <!-- Right: control panel（手機底部 sheet，可上拉；桌機側欄） -->
                 <div
-                    class="flex w-full flex-col gap-6 rounded-none p-6 md:w-72 md:shrink-0 md:rounded-xl"
+                    class="flex w-full shrink-0 flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-[var(--binary-outline-variant)] p-4 transition-[height] duration-300 md:h-auto md:w-72 md:gap-6 md:overflow-visible md:rounded-xl md:border-t-0 md:p-6"
+                    :class="sheetOpen ? 'h-[62dvh]' : 'h-36'"
                     style="
                         background: var(--binary-surface);
                         backdrop-filter: blur(20px);
                         -webkit-backdrop-filter: blur(20px);
                     "
                 >
+                    <!-- 手機 sheet handle（點擊上拉/收合） -->
+                    <button
+                        type="button"
+                        class="mx-auto -mt-1 mb-1 flex h-5 w-16 shrink-0 items-center justify-center md:hidden"
+                        :aria-label="sheetOpen ? '收合控制板' : '展開控制板'"
+                        @click="sheetOpen = !sheetOpen"
+                    >
+                        <span
+                            class="h-1.5 w-10 rounded-full bg-[var(--binary-outline)]/50"
+                        ></span>
+                    </button>
                     <!-- Algorithm -->
                     <div class="flex flex-col gap-3">
                         <span
