@@ -152,7 +152,7 @@ onUnmounted(() => {
         <Head title="Computer Vision Lab" />
 
         <div
-            class="flex min-h-screen flex-col bg-[var(--binary-background)] px-8 pt-8 pb-16 text-[var(--binary-text)]"
+            class="flex min-h-screen flex-col bg-[var(--binary-background)] px-[18px] pt-8 pb-16 text-[var(--binary-text)] md:px-8"
         >
             <!-- Header -->
             <div class="mb-8">
@@ -163,7 +163,7 @@ onUnmounted(() => {
                     Computer Vision Lab
                 </p>
                 <h2
-                    class="text-4xl font-bold"
+                    class="text-3xl font-bold md:text-4xl"
                     style="font-family: 'Space Grotesk', sans-serif"
                 >
                     邊緣偵測
@@ -231,12 +231,15 @@ onUnmounted(() => {
             </div>
 
             <!-- Left / Right split (always in DOM, shown after start) -->
-            <div v-show="started" class="flex flex-1 items-start gap-6">
+            <div
+                v-show="started"
+                class="flex flex-1 flex-col gap-4 md:flex-row md:items-start md:gap-6"
+            >
                 <!-- Left: canvas -->
                 <div class="min-w-0 flex-1">
                     <canvas
                         ref="canvasRef"
-                        class="block w-full rounded-xl"
+                        class="block w-full rounded-none md:rounded-xl"
                         style="
                             box-shadow: 0 0 40px
                                 color-mix(
@@ -250,7 +253,7 @@ onUnmounted(() => {
 
                 <!-- Right: control panel -->
                 <div
-                    class="flex w-72 shrink-0 flex-col gap-6 rounded-xl p-6"
+                    class="flex w-full flex-col gap-6 rounded-none p-6 md:w-72 md:shrink-0 md:rounded-xl"
                     style="
                         background: var(--binary-surface);
                         backdrop-filter: blur(20px);
