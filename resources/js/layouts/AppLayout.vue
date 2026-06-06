@@ -4,10 +4,10 @@ import { computed, onMounted, onUnmounted, provide, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import AuthDrawer from '../components/auth/AuthDrawer.vue';
+import BlobBackground from '../components/BlobBackground.vue';
 import MatrixRainBackground from '../components/MatrixRainBackground.vue';
 import NavDrawer from '../components/NavDrawer.vue';
 import NavIcon from '../components/NavIcon.vue';
-import SmokeBackground from '../components/SmokeBackground.vue';
 import { useAuth } from '../composables/useAuth';
 import { useTheme } from '../composables/useTheme';
 import { getLocale, setLocale } from '../i18n';
@@ -15,7 +15,6 @@ import { routes } from '../lib/routes';
 
 const currentLocale = ref(getLocale());
 const { t } = useI18n();
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const { theme, initTheme, toggleTheme } = useTheme();
 
 interface NavLink {
@@ -272,7 +271,7 @@ function toggleLocale() {
         <!-- Background -->
         <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
             <MatrixRainBackground v-if="theme === 'emerald'" />
-            <SmokeBackground v-else />
+            <BlobBackground v-else />
             <div class="bg-anim-glow" />
         </div>
 
@@ -431,10 +430,10 @@ function toggleLocale() {
 
                 <!-- Auth Area -->
                 <div class="flex items-center gap-3">
-                    <!-- Theme toggle (disabled) -->
+                    <!-- Theme toggle -->
                     <button
-                        class="binary-label cursor-not-allowed rounded px-2 py-1 text-[10px] font-bold uppercase opacity-30"
-                        disabled
+                        class="binary-label rounded px-2 py-1 text-[10px] font-bold uppercase transition"
+                        @click="toggleTheme"
                     >
                         ◈
                     </button>
