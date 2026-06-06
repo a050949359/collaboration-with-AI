@@ -433,6 +433,9 @@ function toggleLocale() {
                     <!-- Theme toggle -->
                     <button
                         class="binary-label rounded px-2 py-1 text-[10px] font-bold uppercase transition"
+                        :style="{
+                            color: theme === 'emerald' ? '#ffb690' : '#6bdc9f',
+                        }"
                         @click="toggleTheme"
                     >
                         ◈
