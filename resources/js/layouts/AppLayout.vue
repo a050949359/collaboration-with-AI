@@ -15,6 +15,7 @@ import { routes } from '../lib/routes';
 
 const currentLocale = ref(getLocale());
 const { t } = useI18n();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const { theme, initTheme, toggleTheme } = useTheme();
 
 interface NavLink {
@@ -430,18 +431,10 @@ function toggleLocale() {
 
                 <!-- Auth Area -->
                 <div class="flex items-center gap-3">
-                    <!-- Theme toggle -->
+                    <!-- Theme toggle (disabled) -->
                     <button
-                        class="binary-label rounded px-2 py-1 text-[10px] font-bold uppercase transition"
-                        :style="{
-                            color: theme === 'emerald' ? '#ffb690' : '#6bdc9f',
-                        }"
-                        :title="
-                            theme === 'emerald'
-                                ? 'Switch to Amber & Cosmic'
-                                : 'Switch to Emerald Terminal'
-                        "
-                        @click="toggleTheme"
+                        class="binary-label cursor-not-allowed rounded px-2 py-1 text-[10px] font-bold uppercase opacity-30"
+                        disabled
                     >
                         ◈
                     </button>

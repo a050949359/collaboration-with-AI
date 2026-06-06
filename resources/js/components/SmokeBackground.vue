@@ -4,6 +4,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let rafId = 0;
 let resizeHandler: () => void;
+let visibilityHandler: () => void;
 
 const DENSITY = 11.0;
 
@@ -46,6 +47,10 @@ void main(){
 }`;
 
 onMounted(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
+
     const canvas = canvasRef.value;
 
     if (!canvas) {
@@ -117,12 +122,21 @@ onMounted(() => {
 
     loop();
     resizeHandler = resize;
+    visibilityHandler = () => {
+        if (document.hidden) {
+            cancelAnimationFrame(rafId);
+        } else {
+            loop();
+        }
+    };
     window.addEventListener('resize', resizeHandler);
+    document.addEventListener('visibilitychange', visibilityHandler);
 });
 
 onUnmounted(() => {
     cancelAnimationFrame(rafId);
     window.removeEventListener('resize', resizeHandler);
+    document.removeEventListener('visibilitychange', visibilityHandler);
 });
 </script>
 
