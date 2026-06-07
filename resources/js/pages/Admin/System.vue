@@ -311,10 +311,20 @@ function formatDate(d: string | null) {
 
 // ── Micro Host ───────────────────────────────────────────
 
+interface MicroVm {
+    id: number;
+    name: string;
+    type: 'qemu' | 'lxc';
+    status: 'running' | 'stopped' | 'paused' | 'unknown';
+}
+
 interface MicroHostStatus {
     status: 'online' | 'offline';
     host?: string;
     last_seen?: string;
+    error?: string;
+    vms?: MicroVm[];
+    cts?: MicroVm[];
 }
 
 const microHost = ref<MicroHostStatus>({ status: 'offline' });
@@ -811,7 +821,7 @@ onUnmounted(() => {
 
                     <!-- ── Micro Host Tab ── -->
                     <template v-else-if="activeTab === 'micro-host'">
-                        <div class="max-w-xl space-y-6">
+                        <div class="max-w-2xl space-y-6">
                             <p
                                 class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
                             >
@@ -827,13 +837,12 @@ onUnmounted(() => {
                                         : 'border-[var(--binary-outline-variant)]'
                                 "
                             >
-                                <!-- Indicator dot -->
                                 <span
                                     class="inline-block h-3 w-3 shrink-0 rounded-full"
                                     :class="
                                         microHost.status === 'online'
                                             ? 'bg-[var(--binary-primary)] shadow-[0_0_8px_var(--binary-primary)]'
-                                            : 'bg-[var(--binary-outline)]/40'
+                                            : 'bg-red-500/60'
                                     "
                                 />
                                 <div class="min-w-0 flex-1">
@@ -872,6 +881,76 @@ onUnmounted(() => {
                                     {{ microLoading ? '...' : '重整' }}
                                 </button>
                             </div>
+
+                            <!-- VM / CT List -->
+                            <template
+                                v-if="
+                                    microHost.status === 'online' &&
+                                    ((microHost.vms?.length ?? 0) > 0 ||
+                                        (microHost.cts?.length ?? 0) > 0)
+                                "
+                            >
+                                <div
+                                    v-for="group in [
+                                        {
+                                            label: 'VM (QEMU)',
+                                            items: microHost.vms,
+                                        },
+                                        {
+                                            label: 'CT (LXC)',
+                                            items: microHost.cts,
+                                        },
+                                    ]"
+                                    :key="group.label"
+                                >
+                                    <template v-if="group.items?.length">
+                                        <p
+                                            class="binary-label mb-2 text-[10px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                        >
+                                            {{ group.label }}
+                                        </p>
+                                        <div class="space-y-2">
+                                            <div
+                                                v-for="vm in group.items"
+                                                :key="vm.id"
+                                                class="flex items-center gap-3 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-4 py-3 md:rounded-lg"
+                                            >
+                                                <span
+                                                    class="inline-block h-2 w-2 shrink-0 rounded-full"
+                                                    :class="
+                                                        vm.status === 'running'
+                                                            ? 'bg-[var(--binary-primary)]'
+                                                            : 'bg-[var(--binary-outline)]/40'
+                                                    "
+                                                />
+                                                <span
+                                                    class="w-10 shrink-0 text-right font-mono text-[10px] text-[var(--binary-outline)]"
+                                                    >{{ vm.id }}</span
+                                                >
+                                                <span
+                                                    class="min-w-0 flex-1 truncate text-sm text-[var(--binary-text)]"
+                                                    >{{ vm.name }}</span
+                                                >
+                                                <span
+                                                    class="binary-label shrink-0 text-[10px] uppercase"
+                                                    :class="
+                                                        vm.status === 'running'
+                                                            ? 'text-[var(--binary-primary)]'
+                                                            : 'text-[var(--binary-outline)]'
+                                                    "
+                                                    >{{ vm.status }}</span
+                                                >
+                                                <!-- 啟動鍵（暫隱） -->
+                                                <button
+                                                    class="binary-ghost-button hidden shrink-0 px-2 py-1 text-[10px]"
+                                                >
+                                                    start
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>
