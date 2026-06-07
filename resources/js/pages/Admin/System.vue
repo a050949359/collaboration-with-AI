@@ -890,6 +890,12 @@ onUnmounted(() => {
                                         {{ microHost.api_error }}
                                     </p>
                                     <p
+                                        v-if="microHost.error"
+                                        class="mt-0.5 text-xs text-red-400/70"
+                                    >
+                                        {{ microHost.error }}
+                                    </p>
+                                    <p
                                         v-if="microHost.host"
                                         class="mt-0.5 truncate text-xs text-[var(--binary-text-muted)]"
                                     >

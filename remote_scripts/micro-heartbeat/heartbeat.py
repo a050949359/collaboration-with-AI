@@ -27,11 +27,18 @@ except ModuleNotFoundError:
     print("ERROR: 'redis' package not found. Run: pip3 install redis", file=sys.stderr)
     sys.exit(1)
 
+def _get_int_env(key: str, default: int) -> int:
+    try:
+        return int(os.environ.get(key) or default)
+    except ValueError:
+        return default
+
+
 REDIS_HOST = os.environ.get("REDIS_HOST", "")
-REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+REDIS_PORT = _get_int_env("REDIS_PORT", 6379)
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "") or None
 REDIS_KEY = os.environ.get("REDIS_KEY", "micro:online")
-REDIS_TTL = int(os.environ.get("REDIS_TTL", 120))
+REDIS_TTL = _get_int_env("REDIS_TTL", 120)
 PVE_NODE = os.environ.get("PVE_NODE", "pve")
 
 _FORMAT_ERROR = object()  # sentinel: pvesh returned unexpected structure
@@ -52,7 +59,7 @@ def pvesh(path: str):
         )
         if r.returncode != 0:
             print(f"[warn] pvesh {path}: {r.stderr.strip()}", file=sys.stderr)
-            return []
+            return _FORMAT_ERROR
         data = json.loads(r.stdout)
         if not isinstance(data, list):
             print(f"[warn] pvesh {path}: expected list, got {type(data).__name__}", file=sys.stderr)
@@ -63,7 +70,7 @@ def pvesh(path: str):
         return data
     except Exception as e:
         print(f"[warn] pvesh {path} failed: {e}", file=sys.stderr)
-        return []
+        return _FORMAT_ERROR
 
 
 def get_vms() -> tuple[list, bool]:
