@@ -1,0 +1,31 @@
+[Unit]
+Description=Micro Host Heartbeat (Redis TTL writer)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/micro-heartbeat
+
+# ── 必填：改成 ZeroTier 網段內專案主機的 IP ──
+Environment="REDIS_HOST=10.147.20.xxx"
+
+# ── 選填：有密碼才加 ──
+# Environment="REDIS_PASSWORD=yourpassword"
+
+# ── 其他預設值（通常不用動） ──
+Environment="REDIS_PORT=6379"
+Environment="REDIS_KEY=micro:online"
+Environment="REDIS_TTL=90"
+Environment="PVE_NODE=pve"
+Environment="HEARTBEAT_INTERVAL=30"
+
+ExecStart=/usr/bin/python3 /opt/micro-heartbeat/heartbeat.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
