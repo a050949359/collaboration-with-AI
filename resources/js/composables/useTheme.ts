@@ -8,7 +8,7 @@ export const THEME_REGISTRY = {
 
 export type Theme = keyof typeof THEME_REGISTRY;
 
-const themes = Object.keys(THEME_REGISTRY) as Theme[];
+export const themes = Object.keys(THEME_REGISTRY) as Theme[];
 
 const stored =
     typeof localStorage !== 'undefined' ? localStorage.getItem('theme') : null;

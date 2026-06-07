@@ -82,6 +82,7 @@ export function useCardEffectsInk(
             let pts: BrushPt[] = [];
             let p = 0;
             let rafId = 0;
+            let strokeColor = '#000000';
 
             function sizeCanvas() {
                 const r = card.getBoundingClientRect();
@@ -92,6 +93,10 @@ export function useCardEffectsInk(
                 bc!.style.top = '-2px';
                 bc!.style.left = '-2px';
                 pts = buildPath(r.width + 4, r.height + 4);
+                strokeColor =
+                    getComputedStyle(card)
+                        .getPropertyValue('--binary-primary')
+                        .trim() || '#000000';
             }
 
             function drawBrush(progress: number) {
@@ -102,17 +107,21 @@ export function useCardEffectsInk(
                     return;
                 }
 
+                ctx.strokeStyle = strokeColor;
+                ctx.lineCap = 'round';
+
                 for (let i = 1; i < end; i++) {
                     const a = pts[i - 1],
                         b = pts[i];
                     ctx.beginPath();
                     ctx.moveTo(a.x, a.y);
                     ctx.lineTo(b.x, b.y);
-                    ctx.strokeStyle = `rgba(0,0,0,${b.a})`;
+                    ctx.globalAlpha = b.a;
                     ctx.lineWidth = b.w;
-                    ctx.lineCap = 'round';
                     ctx.stroke();
                 }
+
+                ctx.globalAlpha = 1;
             }
 
             function runDraw() {

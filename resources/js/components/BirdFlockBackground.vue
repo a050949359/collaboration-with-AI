@@ -12,7 +12,7 @@
                     <feTurbulence
                         type="fractalNoise"
                         baseFrequency="0.04, 0.65"
-                        numOctaves="4"
+                        numOctaves="2"
                         result="scratchNoise"
                     />
                     <feDisplacementMap

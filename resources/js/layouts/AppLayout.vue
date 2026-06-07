@@ -11,7 +11,7 @@ import MatrixRainBackground from '../components/MatrixRainBackground.vue';
 import NavDrawer from '../components/NavDrawer.vue';
 import NavIcon from '../components/NavIcon.vue';
 import { useAuth } from '../composables/useAuth';
-import { THEME_REGISTRY, useTheme } from '../composables/useTheme';
+import { THEME_REGISTRY, themes, useTheme } from '../composables/useTheme';
 import { getLocale, setLocale } from '../i18n';
 import { routes } from '../lib/routes';
 
@@ -26,9 +26,6 @@ const bgComponents: Record<keyof typeof THEME_REGISTRY, Component> = {
 };
 const currentBg = computed(() => bgComponents[theme.value]);
 const nextThemeColor = computed(() => {
-    const themes = Object.keys(
-        THEME_REGISTRY,
-    ) as (keyof typeof THEME_REGISTRY)[];
     const next = themes[(themes.indexOf(theme.value) + 1) % themes.length];
 
     return THEME_REGISTRY[next].primaryColor;

@@ -18,10 +18,12 @@
         </x-inertia::head>
         <script>
             (function () {
-                var t = localStorage.getItem('theme');
-                if (t === 'amber' || t === 'ink-zen') {
-                    document.documentElement.setAttribute('data-theme', t);
-                }
+                try {
+                    var t = localStorage.getItem('theme');
+                    if (t === 'amber' || t === 'ink-zen') {
+                        document.documentElement.setAttribute('data-theme', t);
+                    }
+                } catch (e) {}
             })();
         </script>
     </head>
