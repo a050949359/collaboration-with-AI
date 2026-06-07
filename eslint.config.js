@@ -79,6 +79,7 @@ export default defineConfigWithVueTs(
         ignores: [
             'vendor',
             'node_modules',
+            'tmp',
             'public',
             'bootstrap/ssr',
             'tailwind.config.js',

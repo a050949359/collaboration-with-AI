@@ -213,12 +213,7 @@ function toggleContextPanel() {
                 class="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center bg-[var(--binary-surface)]"
             >
                 <div
-                    class="w-full max-w-xl rounded-none px-6 py-10 md:rounded-2xl md:px-10 md:py-12"
-                    style="
-                        background: rgba(15, 21, 17, 0.92);
-                        backdrop-filter: blur(20px);
-                        box-shadow: 0 8px 32px 0 rgba(107, 220, 159, 0.1);
-                    "
+                    class="binary-glass w-full max-w-xl rounded-none px-6 py-10 md:rounded-2xl md:px-10 md:py-12"
                 >
                     <h2
                         class="mb-3 text-[2rem] font-bold tracking-tight text-[var(--binary-primary)]"

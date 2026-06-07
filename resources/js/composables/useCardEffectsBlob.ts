@@ -1,6 +1,6 @@
 import { animate } from 'animejs';
 import { nextTick, onMounted, onUnmounted, watch } from 'vue';
-import type { WatchSource } from 'vue';
+import type { Ref, WatchSource } from 'vue';
 
 const SLOW = 2.8;
 const SPEED = 110;
@@ -40,17 +40,46 @@ function buildSegs(w: number, h: number, radius: number): Seg[] {
         // top edge →
         { from: { x: r, y: 0 }, to: { x: w - r, y: 0 }, len: w - 2 * r },
         // top-right arc (−90° → 0°)
-        { cx: w - r, cy: r, r, startAngle: -Math.PI / 2, sweep: Math.PI / 2, len: arc },
+        {
+            cx: w - r,
+            cy: r,
+            r,
+            startAngle: -Math.PI / 2,
+            sweep: Math.PI / 2,
+            len: arc,
+        },
         // right edge ↓ (slowed)
-        { from: { x: w, y: r }, to: { x: w, y: h - r }, len: (h - 2 * r) * SLOW },
+        {
+            from: { x: w, y: r },
+            to: { x: w, y: h - r },
+            len: (h - 2 * r) * SLOW,
+        },
         // bottom-right arc (0° → 90°)
-        { cx: w - r, cy: h - r, r, startAngle: 0, sweep: Math.PI / 2, len: arc },
+        {
+            cx: w - r,
+            cy: h - r,
+            r,
+            startAngle: 0,
+            sweep: Math.PI / 2,
+            len: arc,
+        },
         // bottom edge ←
         { from: { x: w - r, y: h }, to: { x: r, y: h }, len: w - 2 * r },
         // bottom-left arc (90° → 180°)
-        { cx: r, cy: h - r, r, startAngle: Math.PI / 2, sweep: Math.PI / 2, len: arc },
+        {
+            cx: r,
+            cy: h - r,
+            r,
+            startAngle: Math.PI / 2,
+            sweep: Math.PI / 2,
+            len: arc,
+        },
         // left edge ↑ (slowed)
-        { from: { x: 0, y: h - r }, to: { x: 0, y: r }, len: (h - 2 * r) * SLOW },
+        {
+            from: { x: 0, y: h - r },
+            to: { x: 0, y: r },
+            len: (h - 2 * r) * SLOW,
+        },
         // top-left arc (180° → 270°)
         { cx: r, cy: r, r, startAngle: Math.PI, sweep: Math.PI / 2, len: arc },
     ];
@@ -69,7 +98,10 @@ function ptAt(segs: Seg[], d: number, tot: number): Point {
             if (seg.cx !== undefined) {
                 const angle = seg.startAngle! + seg.sweep! * (d / seg.len);
 
-                return { x: seg.cx + seg.r! * Math.cos(angle), y: seg.cy! + seg.r! * Math.sin(angle) };
+                return {
+                    x: seg.cx + seg.r! * Math.cos(angle),
+                    y: seg.cy! + seg.r! * Math.sin(angle),
+                };
             }
 
             const t = d / seg.len;
@@ -129,6 +161,7 @@ function drawHead(
 export function useCardEffectsBlob(
     selector = '.blob-card',
     trigger?: WatchSource,
+    containerRef?: Ref<HTMLElement | null>,
 ) {
     const cleanups: (() => void)[] = [];
 
@@ -136,7 +169,8 @@ export function useCardEffectsBlob(
         cleanups.forEach((fn) => fn());
         cleanups.length = 0;
 
-        document.querySelectorAll<HTMLElement>(selector).forEach((card) => {
+        const root = containerRef?.value ?? document;
+        root.querySelectorAll<HTMLElement>(selector).forEach((card) => {
             const wrap = card.parentElement;
 
             if (!wrap) {
@@ -165,15 +199,26 @@ export function useCardEffectsBlob(
             let lastTs: number | null = null;
             let segs: Seg[] = [];
             let perimeter = 0;
+            let logicalW = 0;
+            let logicalH = 0;
             // A2: track inflight animation so cleanup can revert it
             let floatAnim: ReturnType<typeof animate> | null = null;
 
             function sizeCanvas() {
                 const r = card.getBoundingClientRect();
-                bc!.width = r.width;
-                bc!.height = r.height;
+
+                if (r.width === logicalW && r.height === logicalH) {
+                    return;
+                }
+
+                const dpr = window.devicePixelRatio || 1;
+                logicalW = r.width;
+                logicalH = r.height;
+                bc!.width = r.width * dpr;
+                bc!.height = r.height * dpr;
                 bc!.style.width = r.width + 'px';
                 bc!.style.height = r.height + 'px';
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 const radius =
                     parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0;
                 segs = buildSegs(r.width, r.height, radius);
@@ -181,17 +226,28 @@ export function useCardEffectsBlob(
             }
 
             function draw(d: number) {
-                const w = bc!.width,
-                    h = bc!.height;
-
-                if (!w || !h || !segs.length) {
+                if (!logicalW || !logicalH || !segs.length) {
                     return;
                 }
 
-                ctx.clearRect(0, 0, w, h);
+                ctx.clearRect(0, 0, logicalW, logicalH);
                 const opp = d + perimeter / 2; // F1: use cached perimeter
-                drawHead(ctx, segs, d, perimeter, [220, 110, 40], [105, 12, 150]);
-                drawHead(ctx, segs, opp, perimeter, [120, 20, 165], [220, 110, 40]);
+                drawHead(
+                    ctx,
+                    segs,
+                    d,
+                    perimeter,
+                    [220, 110, 40],
+                    [105, 12, 150],
+                );
+                drawHead(
+                    ctx,
+                    segs,
+                    opp,
+                    perimeter,
+                    [120, 20, 165],
+                    [220, 110, 40],
+                );
             }
 
             function borderLoop(ts: number) {
@@ -224,7 +280,7 @@ export function useCardEffectsBlob(
             function onLeave() {
                 isHover = false;
                 cancelAnimationFrame(raf);
-                ctx.clearRect(0, 0, bc!.width, bc!.height);
+                ctx.clearRect(0, 0, logicalW, logicalH);
                 floatAnim?.revert(); // A2: cancel inflight enter animation
                 floatAnim = animate(card, {
                     translateY: '0px',
@@ -243,7 +299,7 @@ export function useCardEffectsBlob(
                 wrap.removeEventListener('mouseenter', onEnter);
                 wrap.removeEventListener('mouseleave', onLeave);
                 card.style.transform = '';
-                ctx.clearRect(0, 0, bc!.width, bc!.height);
+                ctx.clearRect(0, 0, logicalW, logicalH);
             });
         });
     }

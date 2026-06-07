@@ -1,10 +1,11 @@
 import { animate } from 'animejs';
 import { nextTick, onMounted, onUnmounted, watch } from 'vue';
-import type { WatchSource } from 'vue';
+import type { Ref, WatchSource } from 'vue';
 
 export function useCardEffects(
     selector = '.js-tilt-card',
     trigger?: WatchSource,
+    containerRef?: Ref<HTMLElement | null>,
 ) {
     const cleanups: (() => void)[] = [];
 
@@ -12,7 +13,8 @@ export function useCardEffects(
         cleanups.forEach((fn) => fn());
         cleanups.length = 0;
 
-        document.querySelectorAll<HTMLElement>(selector).forEach((card) => {
+        const root = containerRef?.value ?? document;
+        root.querySelectorAll<HTMLElement>(selector).forEach((card) => {
             const wrap = card.parentElement;
 
             if (!wrap) {
@@ -25,6 +27,7 @@ export function useCardEffects(
             let mx = 0.5,
                 my = 0.5;
             let isHover = false;
+            let rect = card.getBoundingClientRect();
 
             const glow = card.querySelector<HTMLElement>('.glow');
 
@@ -42,6 +45,7 @@ export function useCardEffects(
             }
 
             function onEnter() {
+                rect = card.getBoundingClientRect();
                 isHover = true;
                 loop();
             }
@@ -62,9 +66,8 @@ export function useCardEffects(
             }
 
             function onMove(e: MouseEvent) {
-                const r = card.getBoundingClientRect();
-                mx = (e.clientX - r.left) / r.width;
-                my = (e.clientY - r.top) / r.height;
+                mx = (e.clientX - rect.left) / rect.width;
+                my = (e.clientY - rect.top) / rect.height;
 
                 if (glow) {
                     glow.style.background = `radial-gradient(circle at ${(mx * 100).toFixed(1)}% ${(my * 100).toFixed(1)}%, rgba(0,255,136,0.09) 0%, transparent 60%)`;
