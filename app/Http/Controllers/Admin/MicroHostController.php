@@ -20,8 +20,13 @@ class MicroHostController extends Controller
             return response()->json(['status' => 'offline']);
         }
 
+        $data = json_decode($raw, true);
+        if (! is_array($data)) {
+            return response()->json(['status' => 'offline', 'error' => 'invalid_payload']);
+        }
+
         return response()->json([
-            ...json_decode($raw, true),
+            ...$data,
             'status' => 'online',
         ]);
     }

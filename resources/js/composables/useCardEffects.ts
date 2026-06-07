@@ -66,8 +66,8 @@ export function useCardEffects(
             }
 
             function onMove(e: MouseEvent) {
-                mx = (e.clientX - rect.left) / rect.width;
-                my = (e.clientY - rect.top) / rect.height;
+                mx = (e.clientX - rect.left) / (rect.width || 1);
+                my = (e.clientY - rect.top) / (rect.height || 1);
 
                 if (glow) {
                     glow.style.background = `radial-gradient(circle at ${(mx * 100).toFixed(1)}% ${(my * 100).toFixed(1)}%, rgba(0,255,136,0.09) 0%, transparent 60%)`;

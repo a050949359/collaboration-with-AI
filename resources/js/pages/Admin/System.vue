@@ -338,6 +338,11 @@ async function fetchMicroStatus() {
         const res = await fetch(api.admin.microHostStatus(), {
             credentials: 'include',
         });
+
+        if (!res.ok) {
+            throw new Error('http_error');
+        }
+
         microHost.value = await res.json();
     } catch {
         microHost.value = { status: 'offline' };

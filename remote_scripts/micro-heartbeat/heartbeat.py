@@ -23,6 +23,12 @@ import sys
 import time
 from datetime import datetime, timezone
 
+try:
+    import redis
+except ModuleNotFoundError:
+    print("ERROR: 'redis' package not found. Run: pip3 install redis", file=sys.stderr)
+    sys.exit(1)
+
 REDIS_HOST = os.environ.get("REDIS_HOST", "")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "") or None
@@ -51,28 +57,40 @@ def pvesh(path: str) -> list:
 
 def get_vms() -> list:
     items = pvesh(f"/nodes/{PVE_NODE}/qemu")
-    return [
-        {
-            "id": int(item["vmid"]),
-            "name": item.get("name", f"vm-{item['vmid']}"),
-            "type": "qemu",
-            "status": item.get("status", "unknown"),
-        }
-        for item in items
-    ]
+    result = []
+    for item in items:
+        vmid = item.get("vmid")
+        if vmid is None:
+            continue
+        try:
+            result.append({
+                "id": int(vmid),
+                "name": item.get("name", f"vm-{vmid}"),
+                "type": "qemu",
+                "status": item.get("status", "unknown"),
+            })
+        except (ValueError, TypeError):
+            pass
+    return result
 
 
 def get_cts() -> list:
     items = pvesh(f"/nodes/{PVE_NODE}/lxc")
-    return [
-        {
-            "id": int(item["vmid"]),
-            "name": item.get("name", f"ct-{item['vmid']}"),
-            "type": "lxc",
-            "status": item.get("status", "unknown"),
-        }
-        for item in items
-    ]
+    result = []
+    for item in items:
+        vmid = item.get("vmid")
+        if vmid is None:
+            continue
+        try:
+            result.append({
+                "id": int(vmid),
+                "name": item.get("name", f"ct-{vmid}"),
+                "type": "lxc",
+                "status": item.get("status", "unknown"),
+            })
+        except (ValueError, TypeError):
+            pass
+    return result
 
 
 def make_payload() -> dict:
@@ -85,8 +103,6 @@ def make_payload() -> dict:
 
 
 def connect_redis():
-    import redis
-
     return redis.Redis(
         host=REDIS_HOST,
         port=REDIS_PORT,
