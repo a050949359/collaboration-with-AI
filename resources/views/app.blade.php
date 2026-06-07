@@ -10,14 +10,22 @@
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
 
         @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         <x-inertia::head>
             <title>{{ config('app.name', 'Laravel') }}</title>
         </x-inertia::head>
+        <script>
+            (function () {
+                var t = localStorage.getItem('theme');
+                if (t === 'amber' || t === 'ink-zen') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            })();
+        </script>
     </head>
-    <body class="bg-[#131313] font-sans antialiased text-[#e5e2e1]">
+    <body class="font-sans antialiased">
         <x-inertia::app />
     </body>
 </html>

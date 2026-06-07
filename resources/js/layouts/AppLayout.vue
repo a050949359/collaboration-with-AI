@@ -1,21 +1,38 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, provide, ref } from 'vue';
+import type { Component } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import AuthDrawer from '../components/auth/AuthDrawer.vue';
+import BirdFlockBackground from '../components/BirdFlockBackground.vue';
 import BlobBackground from '../components/BlobBackground.vue';
 import MatrixRainBackground from '../components/MatrixRainBackground.vue';
 import NavDrawer from '../components/NavDrawer.vue';
 import NavIcon from '../components/NavIcon.vue';
 import { useAuth } from '../composables/useAuth';
-import { useTheme } from '../composables/useTheme';
+import { THEME_REGISTRY, useTheme } from '../composables/useTheme';
 import { getLocale, setLocale } from '../i18n';
 import { routes } from '../lib/routes';
 
 const currentLocale = ref(getLocale());
 const { t } = useI18n();
 const { theme, initTheme, toggleTheme } = useTheme();
+
+const bgComponents: Record<keyof typeof THEME_REGISTRY, Component> = {
+    emerald: MatrixRainBackground,
+    amber: BlobBackground,
+    'ink-zen': BirdFlockBackground,
+};
+const currentBg = computed(() => bgComponents[theme.value]);
+const nextThemeColor = computed(() => {
+    const themes = Object.keys(
+        THEME_REGISTRY,
+    ) as (keyof typeof THEME_REGISTRY)[];
+    const next = themes[(themes.indexOf(theme.value) + 1) % themes.length];
+
+    return THEME_REGISTRY[next].primaryColor;
+});
 
 interface NavLink {
     label: string;
@@ -270,8 +287,7 @@ function toggleLocale() {
     >
         <!-- Background -->
         <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-            <MatrixRainBackground v-if="theme === 'emerald'" />
-            <BlobBackground v-else />
+            <component :is="currentBg" />
             <div class="bg-anim-glow" />
         </div>
 
@@ -433,9 +449,7 @@ function toggleLocale() {
                     <!-- Theme toggle -->
                     <button
                         class="binary-label rounded px-2 py-1 text-[10px] font-bold uppercase transition"
-                        :style="{
-                            color: theme === 'emerald' ? '#ffb690' : '#6bdc9f',
-                        }"
+                        :style="{ color: nextThemeColor }"
                         @click="toggleTheme"
                     >
                         ◈

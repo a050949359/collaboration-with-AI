@@ -40,17 +40,46 @@ function buildSegs(w: number, h: number, radius: number): Seg[] {
         // top edge →
         { from: { x: r, y: 0 }, to: { x: w - r, y: 0 }, len: w - 2 * r },
         // top-right arc (−90° → 0°)
-        { cx: w - r, cy: r, r, startAngle: -Math.PI / 2, sweep: Math.PI / 2, len: arc },
+        {
+            cx: w - r,
+            cy: r,
+            r,
+            startAngle: -Math.PI / 2,
+            sweep: Math.PI / 2,
+            len: arc,
+        },
         // right edge ↓ (slowed)
-        { from: { x: w, y: r }, to: { x: w, y: h - r }, len: (h - 2 * r) * SLOW },
+        {
+            from: { x: w, y: r },
+            to: { x: w, y: h - r },
+            len: (h - 2 * r) * SLOW,
+        },
         // bottom-right arc (0° → 90°)
-        { cx: w - r, cy: h - r, r, startAngle: 0, sweep: Math.PI / 2, len: arc },
+        {
+            cx: w - r,
+            cy: h - r,
+            r,
+            startAngle: 0,
+            sweep: Math.PI / 2,
+            len: arc,
+        },
         // bottom edge ←
         { from: { x: w - r, y: h }, to: { x: r, y: h }, len: w - 2 * r },
         // bottom-left arc (90° → 180°)
-        { cx: r, cy: h - r, r, startAngle: Math.PI / 2, sweep: Math.PI / 2, len: arc },
+        {
+            cx: r,
+            cy: h - r,
+            r,
+            startAngle: Math.PI / 2,
+            sweep: Math.PI / 2,
+            len: arc,
+        },
         // left edge ↑ (slowed)
-        { from: { x: 0, y: h - r }, to: { x: 0, y: r }, len: (h - 2 * r) * SLOW },
+        {
+            from: { x: 0, y: h - r },
+            to: { x: 0, y: r },
+            len: (h - 2 * r) * SLOW,
+        },
         // top-left arc (180° → 270°)
         { cx: r, cy: r, r, startAngle: Math.PI, sweep: Math.PI / 2, len: arc },
     ];
@@ -69,7 +98,10 @@ function ptAt(segs: Seg[], d: number, tot: number): Point {
             if (seg.cx !== undefined) {
                 const angle = seg.startAngle! + seg.sweep! * (d / seg.len);
 
-                return { x: seg.cx + seg.r! * Math.cos(angle), y: seg.cy! + seg.r! * Math.sin(angle) };
+                return {
+                    x: seg.cx + seg.r! * Math.cos(angle),
+                    y: seg.cy! + seg.r! * Math.sin(angle),
+                };
             }
 
             const t = d / seg.len;
@@ -190,8 +222,22 @@ export function useCardEffectsBlob(
 
                 ctx.clearRect(0, 0, w, h);
                 const opp = d + perimeter / 2; // F1: use cached perimeter
-                drawHead(ctx, segs, d, perimeter, [220, 110, 40], [105, 12, 150]);
-                drawHead(ctx, segs, opp, perimeter, [120, 20, 165], [220, 110, 40]);
+                drawHead(
+                    ctx,
+                    segs,
+                    d,
+                    perimeter,
+                    [220, 110, 40],
+                    [105, 12, 150],
+                );
+                drawHead(
+                    ctx,
+                    segs,
+                    opp,
+                    perimeter,
+                    [120, 20, 165],
+                    [220, 110, 40],
+                );
             }
 
             function borderLoop(ts: number) {
