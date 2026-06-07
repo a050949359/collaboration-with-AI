@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, watchEffect } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     AdminApiError,
@@ -16,7 +16,7 @@ import type {
 } from '@/lib/admin-api';
 import { api, routes } from '@/lib/routes';
 
-type Tab = 'settings' | 'tokens' | 'llm';
+type Tab = 'settings' | 'tokens' | 'llm' | 'micro-host';
 const activeTab = ref<Tab>('settings');
 
 // ── Settings ─────────────────────────────────────────────
@@ -309,9 +309,65 @@ function formatDate(d: string | null) {
     return new Date(d).toLocaleDateString('zh-TW');
 }
 
+// ── Micro Host ───────────────────────────────────────────
+
+interface MicroVm {
+    id: number;
+    name: string;
+    type: 'qemu' | 'lxc';
+    status: 'running' | 'stopped' | 'paused' | 'unknown';
+}
+
+interface MicroHostStatus {
+    status: 'online' | 'offline';
+    host?: string;
+    last_seen?: string;
+    error?: string;
+    api_error?: string;
+    vms?: MicroVm[];
+    cts?: MicroVm[];
+}
+
+const microHost = ref<MicroHostStatus>({ status: 'offline' });
+const microLoading = ref(false);
+let microPollTimer: ReturnType<typeof setInterval> | null = null;
+
+async function fetchMicroStatus() {
+    if (microLoading.value) {
+        return;
+    }
+
+    microLoading.value = true;
+
+    try {
+        const res = await fetch(api.admin.microHostStatus(), {
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+        });
+
+        if (!res.ok) {
+            throw new Error('http_error');
+        }
+
+        microHost.value = await res.json();
+    } catch {
+        microHost.value = { status: 'offline' };
+    } finally {
+        microLoading.value = false;
+    }
+}
+
 onMounted(() => {
     loadSettings();
     fetchTokens();
+    fetchMicroStatus();
+    microPollTimer = setInterval(fetchMicroStatus, 15_000);
+});
+
+onUnmounted(() => {
+    if (microPollTimer !== null) {
+        clearInterval(microPollTimer);
+    }
 });
 </script>
 
@@ -346,6 +402,7 @@ onMounted(() => {
                             { key: 'settings', label: '設定' },
                             { key: 'llm', label: 'AI 模型' },
                             { key: 'tokens', label: '分享連結管理' },
+                            { key: 'micro-host', label: '微型主機' },
                         ] as const"
                         :key="tab.key"
                         class="binary-label px-3 py-3 text-[11px] font-bold tracking-widest uppercase transition-colors md:px-6"
@@ -356,7 +413,21 @@ onMounted(() => {
                         "
                         @click="activeTab = tab.key"
                     >
-                        {{ tab.label }}
+                        <span class="flex items-center gap-1.5">
+                            {{ tab.label }}
+                            <span
+                                v-if="tab.key === 'micro-host'"
+                                class="inline-block h-1.5 w-1.5 rounded-full"
+                                :class="
+                                    microHost.status === 'online' &&
+                                    microHost.api_error
+                                        ? 'bg-amber-400'
+                                        : microHost.status === 'online'
+                                          ? 'bg-[var(--binary-primary)]'
+                                          : 'bg-red-500'
+                                "
+                            />
+                        </span>
                     </button>
                 </div>
 
@@ -759,6 +830,162 @@ onMounted(() => {
                                     刪除
                                 </button>
                             </div>
+                        </div>
+                    </template>
+
+                    <!-- ── Micro Host Tab ── -->
+                    <template v-else-if="activeTab === 'micro-host'">
+                        <div class="max-w-2xl space-y-6">
+                            <p
+                                class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                            >
+                                &gt; 微型主機狀態（每 15 秒自動更新）
+                            </p>
+
+                            <!-- Status Card -->
+                            <div
+                                class="flex items-center gap-5 rounded-none border bg-[var(--binary-surface-high)] px-6 py-5 md:rounded-xl"
+                                :class="
+                                    microHost.status === 'online'
+                                        ? 'border-[var(--binary-primary)]/40'
+                                        : 'border-[var(--binary-outline-variant)]'
+                                "
+                            >
+                                <span
+                                    class="inline-block h-3 w-3 shrink-0 rounded-full"
+                                    :class="
+                                        microHost.status === 'online' &&
+                                        microHost.api_error
+                                            ? 'bg-amber-400 shadow-[0_0_8px_theme(colors.amber.400)]'
+                                            : microHost.status === 'online'
+                                              ? 'bg-[var(--binary-primary)] shadow-[0_0_8px_var(--binary-primary)]'
+                                              : 'bg-red-500/60'
+                                    "
+                                />
+                                <div class="min-w-0 flex-1">
+                                    <p
+                                        class="text-sm font-semibold"
+                                        :class="
+                                            microHost.status === 'online' &&
+                                            microHost.api_error
+                                                ? 'text-amber-400'
+                                                : microHost.status === 'online'
+                                                  ? 'text-[var(--binary-primary)]'
+                                                  : 'text-[var(--binary-outline)]'
+                                        "
+                                    >
+                                        {{
+                                            microHost.status === 'online' &&
+                                            microHost.api_error
+                                                ? 'API ERROR'
+                                                : microHost.status === 'online'
+                                                  ? 'ONLINE'
+                                                  : 'OFFLINE'
+                                        }}
+                                    </p>
+                                    <p
+                                        v-if="microHost.api_error"
+                                        class="mt-0.5 text-xs text-amber-400/70"
+                                    >
+                                        {{ microHost.api_error }}
+                                    </p>
+                                    <p
+                                        v-if="microHost.error"
+                                        class="mt-0.5 text-xs text-red-400/70"
+                                    >
+                                        {{ microHost.error }}
+                                    </p>
+                                    <p
+                                        v-if="microHost.host"
+                                        class="mt-0.5 truncate text-xs text-[var(--binary-text-muted)]"
+                                    >
+                                        {{ microHost.host }}
+                                    </p>
+                                    <p
+                                        v-if="microHost.last_seen"
+                                        class="mt-0.5 text-xs text-[var(--binary-outline)]"
+                                    >
+                                        last seen：{{ microHost.last_seen }}
+                                    </p>
+                                </div>
+                                <button
+                                    class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs"
+                                    :disabled="microLoading"
+                                    @click="fetchMicroStatus"
+                                >
+                                    {{ microLoading ? '...' : '重整' }}
+                                </button>
+                            </div>
+
+                            <!-- VM / CT List -->
+                            <template
+                                v-if="
+                                    microHost.status === 'online' &&
+                                    ((microHost.vms?.length ?? 0) > 0 ||
+                                        (microHost.cts?.length ?? 0) > 0)
+                                "
+                            >
+                                <div
+                                    v-for="group in [
+                                        {
+                                            label: 'VM (QEMU)',
+                                            items: microHost.vms,
+                                        },
+                                        {
+                                            label: 'CT (LXC)',
+                                            items: microHost.cts,
+                                        },
+                                    ]"
+                                    :key="group.label"
+                                >
+                                    <template v-if="group.items?.length">
+                                        <p
+                                            class="binary-label mb-2 text-[10px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                        >
+                                            {{ group.label }}
+                                        </p>
+                                        <div class="space-y-2">
+                                            <div
+                                                v-for="vm in group.items"
+                                                :key="vm.id"
+                                                class="flex items-center gap-3 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-container)] px-4 py-3 md:rounded-lg"
+                                            >
+                                                <span
+                                                    class="inline-block h-2 w-2 shrink-0 rounded-full"
+                                                    :class="
+                                                        vm.status === 'running'
+                                                            ? 'bg-[var(--binary-primary)]'
+                                                            : 'bg-[var(--binary-outline)]/40'
+                                                    "
+                                                />
+                                                <span
+                                                    class="w-10 shrink-0 text-right font-mono text-[10px] text-[var(--binary-outline)]"
+                                                    >{{ vm.id }}</span
+                                                >
+                                                <span
+                                                    class="min-w-0 flex-1 truncate text-sm text-[var(--binary-text)]"
+                                                    >{{ vm.name }}</span
+                                                >
+                                                <span
+                                                    class="binary-label shrink-0 text-[10px] uppercase"
+                                                    :class="
+                                                        vm.status === 'running'
+                                                            ? 'text-[var(--binary-primary)]'
+                                                            : 'text-[var(--binary-outline)]'
+                                                    "
+                                                    >{{ vm.status }}</span
+                                                >
+                                                <!-- 啟動鍵（暫隱） -->
+                                                <button
+                                                    class="binary-ghost-button hidden shrink-0 px-2 py-1 text-[10px]"
+                                                >
+                                                    start
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>

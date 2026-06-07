@@ -22,6 +22,7 @@ use App\Http\Middleware\EnsureRegistrationOpen;
 use App\Http\Controllers\Auth\SocialAccountController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
+use App\Http\Controllers\Admin\MicroHostController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Aviation\AirportController;
 use App\Http\Controllers\Aviation\AirportStatsController;
@@ -90,6 +91,8 @@ Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('admin')->group(
     Route::get('/settings', [SettingsController::class, 'show']);
     Route::patch('/settings', [SettingsController::class, 'update']);
     Route::post('/settings/llm/test', [SettingsController::class, 'testLlm']);
+
+    Route::get('/micro-host/status', [MicroHostController::class, 'status']);
 });
 
 Route::prefix('v1/articles')->group(function () {
