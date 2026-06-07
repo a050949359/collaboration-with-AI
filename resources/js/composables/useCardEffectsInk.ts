@@ -1,5 +1,5 @@
 import { nextTick, onMounted, onUnmounted, watch } from 'vue';
-import type { WatchSource } from 'vue';
+import type { Ref, WatchSource } from 'vue';
 
 interface BrushPt {
     x: number;
@@ -52,6 +52,7 @@ function buildPath(w: number, h: number): BrushPt[] {
 export function useCardEffectsInk(
     selector = '.ink-card',
     trigger?: WatchSource,
+    containerRef?: Ref<HTMLElement | null>,
 ) {
     const cleanups: (() => void)[] = [];
 
@@ -59,7 +60,8 @@ export function useCardEffectsInk(
         cleanups.forEach((fn) => fn());
         cleanups.length = 0;
 
-        document.querySelectorAll<HTMLElement>(selector).forEach((card) => {
+        const root = containerRef?.value ?? document;
+        root.querySelectorAll<HTMLElement>(selector).forEach((card) => {
             const wrap = card.parentElement;
 
             if (!wrap) {

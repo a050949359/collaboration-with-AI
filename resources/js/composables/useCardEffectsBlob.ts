@@ -1,6 +1,6 @@
 import { animate } from 'animejs';
 import { nextTick, onMounted, onUnmounted, watch } from 'vue';
-import type { WatchSource } from 'vue';
+import type { Ref, WatchSource } from 'vue';
 
 const SLOW = 2.8;
 const SPEED = 110;
@@ -161,6 +161,7 @@ function drawHead(
 export function useCardEffectsBlob(
     selector = '.blob-card',
     trigger?: WatchSource,
+    containerRef?: Ref<HTMLElement | null>,
 ) {
     const cleanups: (() => void)[] = [];
 
@@ -168,7 +169,8 @@ export function useCardEffectsBlob(
         cleanups.forEach((fn) => fn());
         cleanups.length = 0;
 
-        document.querySelectorAll<HTMLElement>(selector).forEach((card) => {
+        const root = containerRef?.value ?? document;
+        root.querySelectorAll<HTMLElement>(selector).forEach((card) => {
             const wrap = card.parentElement;
 
             if (!wrap) {
