@@ -197,15 +197,21 @@ export function useCardEffectsBlob(
             let lastTs: number | null = null;
             let segs: Seg[] = [];
             let perimeter = 0;
+            let logicalW = 0;
+            let logicalH = 0;
             // A2: track inflight animation so cleanup can revert it
             let floatAnim: ReturnType<typeof animate> | null = null;
 
             function sizeCanvas() {
                 const r = card.getBoundingClientRect();
-                bc!.width = r.width;
-                bc!.height = r.height;
+                const dpr = window.devicePixelRatio || 1;
+                logicalW = r.width;
+                logicalH = r.height;
+                bc!.width = r.width * dpr;
+                bc!.height = r.height * dpr;
                 bc!.style.width = r.width + 'px';
                 bc!.style.height = r.height + 'px';
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 const radius =
                     parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0;
                 segs = buildSegs(r.width, r.height, radius);
@@ -213,14 +219,11 @@ export function useCardEffectsBlob(
             }
 
             function draw(d: number) {
-                const w = bc!.width,
-                    h = bc!.height;
-
-                if (!w || !h || !segs.length) {
+                if (!logicalW || !logicalH || !segs.length) {
                     return;
                 }
 
-                ctx.clearRect(0, 0, w, h);
+                ctx.clearRect(0, 0, logicalW, logicalH);
                 const opp = d + perimeter / 2; // F1: use cached perimeter
                 drawHead(
                     ctx,
@@ -270,7 +273,7 @@ export function useCardEffectsBlob(
             function onLeave() {
                 isHover = false;
                 cancelAnimationFrame(raf);
-                ctx.clearRect(0, 0, bc!.width, bc!.height);
+                ctx.clearRect(0, 0, logicalW, logicalH);
                 floatAnim?.revert(); // A2: cancel inflight enter animation
                 floatAnim = animate(card, {
                     translateY: '0px',
@@ -289,7 +292,7 @@ export function useCardEffectsBlob(
                 wrap.removeEventListener('mouseenter', onEnter);
                 wrap.removeEventListener('mouseleave', onLeave);
                 card.style.transform = '';
-                ctx.clearRect(0, 0, bc!.width, bc!.height);
+                ctx.clearRect(0, 0, logicalW, logicalH);
             });
         });
     }
