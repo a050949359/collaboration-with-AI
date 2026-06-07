@@ -80,6 +80,8 @@ def get_vms() -> tuple[list, bool]:
         return [], True
     result = []
     for item in raw:
+        if not isinstance(item, dict):
+            return [], True
         vmid = item.get("vmid")
         if vmid is None:
             continue
@@ -102,6 +104,8 @@ def get_cts() -> tuple[list, bool]:
         return [], True
     result = []
     for item in raw:
+        if not isinstance(item, dict):
+            return [], True
         vmid = item.get("vmid")
         if vmid is None:
             continue
@@ -134,15 +138,19 @@ def main():
     if vm_err or ct_err:
         payload["api_error"] = "unexpected_format"
 
-    r = redis.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        password=REDIS_PASSWORD,
-        socket_connect_timeout=5,
-        socket_timeout=5,
-        decode_responses=True,
-    )
-    r.set(REDIS_KEY, json.dumps(payload), ex=REDIS_TTL)
+    try:
+        r = redis.Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            password=REDIS_PASSWORD,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+            decode_responses=True,
+        )
+        r.set(REDIS_KEY, json.dumps(payload), ex=REDIS_TTL)
+    except redis.RedisError as e:
+        print(f"ERROR: failed to write to Redis: {e}", file=sys.stderr)
+        sys.exit(1)
 
     status = f"[api_error] {payload['api_error']}" if "api_error" in payload else "[ok]"
     print(f"{status} {payload['last_seen']}  vms={len(vms)}  cts={len(cts)}")

@@ -26,8 +26,12 @@ class MicroHostController extends Controller
         }
 
         return response()->json([
-            ...$data,
-            'status' => 'online',
+            'status'    => 'online',
+            'host'      => $data['host'] ?? null,
+            'last_seen' => $data['last_seen'] ?? null,
+            'api_error' => $data['api_error'] ?? null,
+            'vms'       => is_array($data['vms'] ?? null) ? $data['vms'] : [],
+            'cts'       => is_array($data['cts'] ?? null) ? $data['cts'] : [],
         ]);
     }
 }
