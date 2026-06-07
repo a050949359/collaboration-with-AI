@@ -38,60 +38,8 @@
                 </filter>
             </defs>
 
-            <g
-                filter="url(#ink-zen-brush)"
-                fill="none"
-                stroke="#0a0a0a"
-                stroke-linecap="round"
-            >
-                <!-- 鳥 1 主角 -->
-                <g
-                    transform="translate(420,280) scale(-1,1) rotate(-12)"
-                    stroke-width="2.2"
-                    opacity="0.88"
-                >
-                    <path
-                        class="wL"
-                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
-                        style="animation-delay: 0s"
-                    />
-                    <path
-                        class="wR"
-                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
-                        style="animation-delay: 0s"
-                    />
-                    <path
-                        class="wT"
-                        d="M -0.5 0 Q  0.5  2,  1.2  5"
-                        stroke-width="1.5"
-                        style="animation-delay: 0s"
-                    />
-                </g>
-
-                <!-- 鳥 2 -->
-                <g
-                    transform="translate(580,220) scale(-0.75,0.75) rotate(-12)"
-                    stroke-width="2.2"
-                    opacity="0.70"
-                >
-                    <path
-                        class="wL"
-                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
-                        style="animation-delay: -0.2s"
-                    />
-                    <path
-                        class="wR"
-                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
-                        style="animation-delay: -0.2s"
-                    />
-                    <path
-                        class="wT"
-                        d="M -0.5 0 Q  0.5  2,  1.2  5"
-                        stroke-width="1.5"
-                        style="animation-delay: -0.2s"
-                    />
-                </g>
-
+            <!-- 背景鳥群（scale ≤ 0.65，不套水墨濾鏡以節省 GPU） -->
+            <g fill="none" stroke="#0a0a0a" stroke-linecap="round">
                 <!-- 鳥 3 -->
                 <g
                     transform="translate(660,190) scale(-0.55,0.55) rotate(-12)"
@@ -164,30 +112,6 @@
                     />
                 </g>
 
-                <!-- 鳥 6 -->
-                <g
-                    transform="translate(320,300) scale(-0.80,0.80) rotate(-12)"
-                    stroke-width="2.2"
-                    opacity="0.65"
-                >
-                    <path
-                        class="wL"
-                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
-                        style="animation-delay: -0.3s"
-                    />
-                    <path
-                        class="wR"
-                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
-                        style="animation-delay: -0.3s"
-                    />
-                    <path
-                        class="wT"
-                        d="M -0.5 0 Q  0.5  2,  1.2  5"
-                        stroke-width="1.5"
-                        style="animation-delay: -0.3s"
-                    />
-                </g>
-
                 <!-- 鳥 7 -->
                 <g
                     transform="translate(240,260) scale(-0.60,0.60) rotate(-12)"
@@ -236,30 +160,6 @@
                     />
                 </g>
 
-                <!-- 鳥 9 -->
-                <g
-                    transform="translate(500,340) scale(-0.90,0.90) rotate(-12)"
-                    stroke-width="2.2"
-                    opacity="0.75"
-                >
-                    <path
-                        class="wL"
-                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
-                        style="animation-delay: -0.15s"
-                    />
-                    <path
-                        class="wR"
-                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
-                        style="animation-delay: -0.15s"
-                    />
-                    <path
-                        class="wT"
-                        d="M -0.5 0 Q  0.5  2,  1.2  5"
-                        stroke-width="1.5"
-                        style="animation-delay: -0.15s"
-                    />
-                </g>
-
                 <!-- 鳥 10 -->
                 <g
                     transform="translate(620,310) scale(-0.65,0.65) rotate(-12)"
@@ -281,6 +181,110 @@
                         d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -0.7s"
+                    />
+                </g>
+            </g>
+
+            <!-- 前景鳥群（scale ≥ 0.75，套水墨濾鏡強化質感） -->
+            <g
+                filter="url(#ink-zen-brush)"
+                fill="none"
+                stroke="#0a0a0a"
+                stroke-linecap="round"
+            >
+                <!-- 鳥 1 主角 -->
+                <g
+                    transform="translate(420,280) scale(-1,1) rotate(-12)"
+                    stroke-width="2.2"
+                    opacity="0.88"
+                >
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: 0s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: 0s"
+                    />
+                    <path
+                        class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
+                        stroke-width="1.5"
+                        style="animation-delay: 0s"
+                    />
+                </g>
+
+                <!-- 鳥 2 -->
+                <g
+                    transform="translate(580,220) scale(-0.75,0.75) rotate(-12)"
+                    stroke-width="2.2"
+                    opacity="0.70"
+                >
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.2s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.2s"
+                    />
+                    <path
+                        class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
+                        stroke-width="1.5"
+                        style="animation-delay: -0.2s"
+                    />
+                </g>
+
+                <!-- 鳥 6 -->
+                <g
+                    transform="translate(320,300) scale(-0.80,0.80) rotate(-12)"
+                    stroke-width="2.2"
+                    opacity="0.65"
+                >
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.3s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.3s"
+                    />
+                    <path
+                        class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
+                        stroke-width="1.5"
+                        style="animation-delay: -0.3s"
+                    />
+                </g>
+
+                <!-- 鳥 9 -->
+                <g
+                    transform="translate(500,340) scale(-0.90,0.90) rotate(-12)"
+                    stroke-width="2.2"
+                    opacity="0.75"
+                >
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.15s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.15s"
+                    />
+                    <path
+                        class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
+                        stroke-width="1.5"
+                        style="animation-delay: -0.15s"
                     />
                 </g>
             </g>

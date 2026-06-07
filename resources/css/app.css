@@ -363,19 +363,19 @@
         background-color: rgba(36, 30, 28, 0.7);
     }
 
+    [data-theme='amber'] {
+        --binary-accent-card-bg: rgba(36, 30, 28, 0.65);
+    }
+
+    [data-theme='ink-zen'] {
+        --binary-accent-card-bg: rgba(249, 250, 244, 0.75);
+    }
+
     .binary-accent-card {
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        background-color: rgba(24, 36, 29, 0.65);
+        background-color: var(--binary-accent-card-bg, rgba(24, 36, 29, 0.65));
         box-shadow: inset 4px 0 0 0 var(--binary-primary);
-    }
-
-    [data-theme='amber'] .binary-accent-card {
-        background-color: rgba(36, 30, 28, 0.65);
-    }
-
-    [data-theme='ink-zen'] .binary-accent-card {
-        background-color: rgba(249, 250, 244, 0.75);
     }
 
     /* ── ink-zen component overrides ── */

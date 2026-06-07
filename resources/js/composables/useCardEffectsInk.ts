@@ -30,7 +30,7 @@ function buildPath(w: number, h: number): BrushPt[] {
     for (let s = 0; s < 4; s++) {
         const a = corners[s],
             b = corners[s + 1];
-        const steps = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 6.5);
+        const steps = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 10.0);
 
         for (let i = 0; i < steps; i++) {
             const t = i / steps;
@@ -169,7 +169,7 @@ export function useCardEffectsInk(
                     if (t < 1) {
                         rafId = requestAnimationFrame(step);
                     } else {
-                        ctx.clearRect(0, 0, bc!.width, bc!.height);
+                        ctx.clearRect(0, 0, logicalW, logicalH);
                     }
                 }
 
