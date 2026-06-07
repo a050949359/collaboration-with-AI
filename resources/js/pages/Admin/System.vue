@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted, watch, watchEffect } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     AdminApiError,
@@ -336,33 +336,17 @@ async function fetchMicroStatus() {
     }
 }
 
-function startMicroPoll() {
-    fetchMicroStatus();
-    microPollTimer = setInterval(fetchMicroStatus, 15_000);
-}
-
-function stopMicroPoll() {
-    if (microPollTimer !== null) {
-        clearInterval(microPollTimer);
-        microPollTimer = null;
-    }
-}
-
-watch(activeTab, (tab) => {
-    if (tab === 'micro-host') {
-        startMicroPoll();
-    } else {
-        stopMicroPoll();
-    }
-});
-
 onMounted(() => {
     loadSettings();
     fetchTokens();
+    fetchMicroStatus();
+    microPollTimer = setInterval(fetchMicroStatus, 15_000);
 });
 
 onUnmounted(() => {
-    stopMicroPoll();
+    if (microPollTimer !== null) {
+        clearInterval(microPollTimer);
+    }
 });
 </script>
 
@@ -408,7 +392,18 @@ onUnmounted(() => {
                         "
                         @click="activeTab = tab.key"
                     >
-                        {{ tab.label }}
+                        <span class="flex items-center gap-1.5">
+                            {{ tab.label }}
+                            <span
+                                v-if="tab.key === 'micro-host'"
+                                class="inline-block h-1.5 w-1.5 rounded-full"
+                                :class="
+                                    microHost.status === 'online'
+                                        ? 'bg-[var(--binary-primary)]'
+                                        : 'bg-red-500'
+                                "
+                            />
+                        </span>
                     </button>
                 </div>
 
