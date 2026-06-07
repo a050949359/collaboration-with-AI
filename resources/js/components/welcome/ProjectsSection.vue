@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useCardEffects } from '../../composables/useCardEffects';
-import { useCardEffectsBlob } from '../../composables/useCardEffectsBlob';
-import { useTheme } from '../../composables/useTheme';
+import { THEME_REGISTRY, useTheme } from '../../composables/useTheme';
+import { useThemeCardEffect } from '../../composables/useThemeCardEffect';
 
 const { theme } = useTheme();
-useCardEffects('.js-tilt-card', theme);
-useCardEffectsBlob('.blob-card', theme);
+useThemeCardEffect();
 
 interface Commit {
     hash: string;
@@ -259,7 +257,7 @@ const projects = computed(() => [
                     <article
                         class="binary-card relative flex w-full flex-col gap-6 transition-opacity md:items-center md:gap-12"
                         :class="[
-                            theme === 'emerald' ? 'js-tilt-card' : 'blob-card',
+                            THEME_REGISTRY[theme].cardClass,
                             (index + 1) % 2 === 1
                                 ? 'md:flex-row'
                                 : 'md:flex-row-reverse',

@@ -28,8 +28,7 @@ const githubUrl = 'https://github.com/a050949359/collaboration-with-AI';
                 <div
                     v-for="[label, value] in stackInfo"
                     :key="label"
-                    class="rounded-none bg-[var(--binary-surface)] p-4 md:rounded-2xl md:p-5"
-                    style="box-shadow: inset 4px 0 0 0 var(--binary-primary)"
+                    class="binary-accent-card rounded-none p-4 md:rounded-2xl md:p-5"
                 >
                     <span
                         class="binary-label mb-3 block text-[10px] tracking-[0.2em] text-[var(--binary-outline)] uppercase"
