@@ -127,6 +127,7 @@ export const api = {
         llmTest: () => '/api/admin/settings/llm/test',
         shareTokens: () => '/api/admin/share-tokens',
         shareTokenDestroy: (id: number) => `/api/admin/share-tokens/${id}`,
+        microHostStatus: () => '/api/admin/micro-host/status',
     },
 
     articles: {

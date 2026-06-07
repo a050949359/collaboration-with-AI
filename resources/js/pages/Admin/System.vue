@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, watchEffect } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, watchEffect } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     AdminApiError,
@@ -16,7 +16,7 @@ import type {
 } from '@/lib/admin-api';
 import { api, routes } from '@/lib/routes';
 
-type Tab = 'settings' | 'tokens' | 'llm';
+type Tab = 'settings' | 'tokens' | 'llm' | 'micro-host';
 const activeTab = ref<Tab>('settings');
 
 // ── Settings ─────────────────────────────────────────────
@@ -309,9 +309,60 @@ function formatDate(d: string | null) {
     return new Date(d).toLocaleDateString('zh-TW');
 }
 
+// ── Micro Host ───────────────────────────────────────────
+
+interface MicroHostStatus {
+    status: 'online' | 'offline';
+    host?: string;
+    last_seen?: string;
+}
+
+const microHost = ref<MicroHostStatus>({ status: 'offline' });
+const microLoading = ref(false);
+let microPollTimer: ReturnType<typeof setInterval> | null = null;
+
+async function fetchMicroStatus() {
+    microLoading.value = true;
+
+    try {
+        const res = await fetch(api.admin.microHostStatus(), {
+            credentials: 'include',
+        });
+        microHost.value = await res.json();
+    } catch {
+        microHost.value = { status: 'offline' };
+    } finally {
+        microLoading.value = false;
+    }
+}
+
+function startMicroPoll() {
+    fetchMicroStatus();
+    microPollTimer = setInterval(fetchMicroStatus, 15_000);
+}
+
+function stopMicroPoll() {
+    if (microPollTimer !== null) {
+        clearInterval(microPollTimer);
+        microPollTimer = null;
+    }
+}
+
+watch(activeTab, (tab) => {
+    if (tab === 'micro-host') {
+        startMicroPoll();
+    } else {
+        stopMicroPoll();
+    }
+});
+
 onMounted(() => {
     loadSettings();
     fetchTokens();
+});
+
+onUnmounted(() => {
+    stopMicroPoll();
 });
 </script>
 
@@ -346,6 +397,7 @@ onMounted(() => {
                             { key: 'settings', label: '設定' },
                             { key: 'llm', label: 'AI 模型' },
                             { key: 'tokens', label: '分享連結管理' },
+                            { key: 'micro-host', label: '微型主機' },
                         ] as const"
                         :key="tab.key"
                         class="binary-label px-3 py-3 text-[11px] font-bold tracking-widest uppercase transition-colors md:px-6"
@@ -757,6 +809,72 @@ onMounted(() => {
                                     @click="deleteToken(token.id)"
                                 >
                                     刪除
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- ── Micro Host Tab ── -->
+                    <template v-else-if="activeTab === 'micro-host'">
+                        <div class="max-w-xl space-y-6">
+                            <p
+                                class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                            >
+                                &gt; 微型主機狀態（每 15 秒自動更新）
+                            </p>
+
+                            <!-- Status Card -->
+                            <div
+                                class="flex items-center gap-5 rounded-none border bg-[var(--binary-surface-high)] px-6 py-5 md:rounded-xl"
+                                :class="
+                                    microHost.status === 'online'
+                                        ? 'border-[var(--binary-primary)]/40'
+                                        : 'border-[var(--binary-outline-variant)]'
+                                "
+                            >
+                                <!-- Indicator dot -->
+                                <span
+                                    class="inline-block h-3 w-3 shrink-0 rounded-full"
+                                    :class="
+                                        microHost.status === 'online'
+                                            ? 'bg-[var(--binary-primary)] shadow-[0_0_8px_var(--binary-primary)]'
+                                            : 'bg-[var(--binary-outline)]/40'
+                                    "
+                                />
+                                <div class="min-w-0 flex-1">
+                                    <p
+                                        class="text-sm font-semibold"
+                                        :class="
+                                            microHost.status === 'online'
+                                                ? 'text-[var(--binary-primary)]'
+                                                : 'text-[var(--binary-outline)]'
+                                        "
+                                    >
+                                        {{
+                                            microHost.status === 'online'
+                                                ? 'ONLINE'
+                                                : 'OFFLINE'
+                                        }}
+                                    </p>
+                                    <p
+                                        v-if="microHost.host"
+                                        class="mt-0.5 truncate text-xs text-[var(--binary-text-muted)]"
+                                    >
+                                        {{ microHost.host }}
+                                    </p>
+                                    <p
+                                        v-if="microHost.last_seen"
+                                        class="mt-0.5 text-xs text-[var(--binary-outline)]"
+                                    >
+                                        last seen：{{ microHost.last_seen }}
+                                    </p>
+                                </div>
+                                <button
+                                    class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs"
+                                    :disabled="microLoading"
+                                    @click="fetchMicroStatus"
+                                >
+                                    {{ microLoading ? '...' : '重整' }}
                                 </button>
                             </div>
                         </div>
