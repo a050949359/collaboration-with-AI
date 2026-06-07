@@ -82,9 +82,12 @@ export function useCardEffectsInk(
             let pts: BrushPt[] = [];
             let p = 0;
             let rafId = 0;
-            let strokeColor = '#000000';
             let logicalW = 0;
             let logicalH = 0;
+            const strokeColor =
+                getComputedStyle(card)
+                    .getPropertyValue('--binary-primary')
+                    .trim() || '#000000';
 
             function sizeCanvas() {
                 const r = card.getBoundingClientRect();
@@ -99,10 +102,6 @@ export function useCardEffectsInk(
                 bc!.style.left = '-2px';
                 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 pts = buildPath(logicalW, logicalH);
-                strokeColor =
-                    getComputedStyle(card)
-                        .getPropertyValue('--binary-primary')
-                        .trim() || '#000000';
             }
 
             function drawBrush(progress: number) {

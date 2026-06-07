@@ -322,6 +322,7 @@
     inset: 0;
     width: 100%;
     height: 100%;
+    will-change: transform;
 }
 
 @keyframes wingL {

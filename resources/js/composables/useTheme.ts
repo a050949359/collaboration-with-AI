@@ -10,8 +10,13 @@ export type Theme = keyof typeof THEME_REGISTRY;
 
 export const themes = Object.keys(THEME_REGISTRY) as Theme[];
 
-const stored =
-    typeof localStorage !== 'undefined' ? localStorage.getItem('theme') : null;
+const stored = (() => {
+    try {
+        return localStorage.getItem('theme');
+    } catch {
+        return null;
+    }
+})();
 const theme = ref<Theme>(
     themes.includes(stored as Theme) ? (stored as Theme) : 'emerald',
 );
@@ -23,7 +28,13 @@ export function useTheme() {
 
     function toggleTheme() {
         theme.value = themes[(themes.indexOf(theme.value) + 1) % themes.length];
-        localStorage.setItem('theme', theme.value);
+
+        try {
+            localStorage.setItem('theme', theme.value);
+        } catch {
+            // storage blocked — theme still applied in-memory for this session
+        }
+
         document.documentElement.setAttribute('data-theme', theme.value);
     }
 
