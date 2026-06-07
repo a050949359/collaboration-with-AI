@@ -8,7 +8,13 @@
             class="birds-svg"
         >
             <defs>
-                <filter id="brush" x="-30%" y="-30%" width="160%" height="160%">
+                <filter
+                    id="ink-zen-brush"
+                    x="-30%"
+                    y="-30%"
+                    width="160%"
+                    height="160%"
+                >
                     <feTurbulence
                         type="fractalNoise"
                         baseFrequency="0.04, 0.65"
@@ -33,7 +39,7 @@
             </defs>
 
             <g
-                filter="url(#brush)"
+                filter="url(#ink-zen-brush)"
                 fill="none"
                 stroke="#0a0a0a"
                 stroke-linecap="round"

@@ -83,16 +83,22 @@ export function useCardEffectsInk(
             let p = 0;
             let rafId = 0;
             let strokeColor = '#000000';
+            let logicalW = 0;
+            let logicalH = 0;
 
             function sizeCanvas() {
                 const r = card.getBoundingClientRect();
-                bc!.width = r.width + 4;
-                bc!.height = r.height + 4;
-                bc!.style.width = r.width + 4 + 'px';
-                bc!.style.height = r.height + 4 + 'px';
+                const dpr = window.devicePixelRatio || 1;
+                logicalW = r.width + 4;
+                logicalH = r.height + 4;
+                bc!.width = logicalW * dpr;
+                bc!.height = logicalH * dpr;
+                bc!.style.width = logicalW + 'px';
+                bc!.style.height = logicalH + 'px';
                 bc!.style.top = '-2px';
                 bc!.style.left = '-2px';
-                pts = buildPath(r.width + 4, r.height + 4);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                pts = buildPath(logicalW, logicalH);
                 strokeColor =
                     getComputedStyle(card)
                         .getPropertyValue('--binary-primary')
@@ -100,7 +106,7 @@ export function useCardEffectsInk(
             }
 
             function drawBrush(progress: number) {
-                ctx.clearRect(0, 0, bc!.width, bc!.height);
+                ctx.clearRect(0, 0, logicalW, logicalH);
                 const end = Math.floor(progress * pts.length);
 
                 if (end < 2) {
@@ -186,7 +192,7 @@ export function useCardEffectsInk(
                 cancelAnimationFrame(rafId);
                 wrap.removeEventListener('mouseenter', onEnter);
                 wrap.removeEventListener('mouseleave', onLeave);
-                ctx.clearRect(0, 0, bc!.width, bc!.height);
+                ctx.clearRect(0, 0, logicalW, logicalH);
             });
         });
     }

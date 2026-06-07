@@ -20,7 +20,7 @@
             (function () {
                 try {
                     var t = localStorage.getItem('theme');
-                    if (t === 'amber' || t === 'ink-zen') {
+                    if (t && /^[a-z0-9-]+$/.test(t)) {
                         document.documentElement.setAttribute('data-theme', t);
                     }
                 } catch (e) {}
