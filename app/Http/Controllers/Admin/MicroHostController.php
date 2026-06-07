@@ -10,15 +10,19 @@ class MicroHostController extends Controller
 {
     public function status(): JsonResponse
     {
-        $raw = Redis::get(config('micro-host.ttl_key'));
+        try {
+            $raw = Redis::get(config('micro-host.ttl_key'));
+        } catch (\Throwable) {
+            return response()->json(['status' => 'offline', 'error' => 'redis_unavailable']);
+        }
 
         if (! $raw) {
             return response()->json(['status' => 'offline']);
         }
 
-        return response()->json(array_merge(
-            json_decode($raw, true),
-            ['status' => 'online']
-        ));
+        return response()->json([
+            ...json_decode($raw, true),
+            'status' => 'online',
+        ]);
     }
 }
