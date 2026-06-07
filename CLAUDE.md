@@ -115,6 +115,35 @@ resources/js/
 - **前端職責**：i18n 顯示文字（`statusLabels`）和 CSS class（`statusColors`）保留在前端，因為這是純顯示邏輯
 - **新增 enum case 時**：後端加 case → 前端補 label + color，各自職責清楚，不需要重複定義合法值
 
+### 主題系統（Theme Registry）
+
+- **單一來源**：`resources/js/composables/useTheme.ts` 的 `THEME_REGISTRY`
+- 每個主題有兩個欄位：
+  - `cardClass`：hover 效果 canvas 的 CSS class **名稱**（不含 `.`）
+  - `primaryColor`：主題切換按鈕顯示的顏色（hex）
+- `export const themes`：有序陣列，決定切換順序（emerald → amber → ink-zen → ...）
+- 主題值存在 `localStorage`，`app.blade.php` inline script 提前讀取並套用 `data-theme`（防 FOUC），以 regex `/^[a-z0-9-]+$/` 驗證避免 XSS
+
+**新增主題時需同步以下五處：**
+
+| 步驟 | 檔案 | 說明 |
+|------|------|------|
+| 1 | `useTheme.ts` | `THEME_REGISTRY` 加新 key，填 `cardClass` + `primaryColor` |
+| 2 | `app.css` | 加 `[data-theme='xxx']` 區塊，覆蓋所有 `--binary-*` CSS 變數 |
+| 3 | `AppLayout.vue` | `bgComponents` map 加對應背景元件 |
+| 4 | `useCardEffectsXxx.ts` | 實作新 hover 效果 composable |
+| 5 | `useThemeCardEffect.ts` | 呼叫新 composable，selector 用 `` `.${THEME_REGISTRY['xxx'].cardClass}` `` |
+
+> ⚠️ **常見陷阱**：`cardClass` 是 class 名稱（無 `.`），傳入 `querySelectorAll` 前必須加 `.` 前綴，否則會被當成 HTML tag selector，選不到任何元素。
+
+**現有主題一覽：**
+
+| 主題 | `data-theme` | 背景元件 | hover 效果 | 風格 |
+|------|-------------|----------|-----------|------|
+| Emerald | `emerald`（預設） | `MatrixRainBackground` | 3D tilt + glow | 深色，綠色賽博 |
+| Amber | `amber` | `BlobBackground` | 邊框流光 | 深色，橙紫漸層 |
+| Ink Zen | `ink-zen` | `BirdFlockBackground` | 毛筆筆觸 | 淺色，水墨 |
+
 ### Countries.vue 架構
 - mainTab：`cities` | `jobs`
 - cities tab 右側：選國家後顯示城市 grid
@@ -155,9 +184,9 @@ php artisan import:countries           # 寫入 DB
 
 ## 前端主題色規範
 
-新頁面開發時，所有顏色**必須使用下列 CSS 變數**，禁止 hardcode hex/rgba 值。變數在 `resources/css/app.css` 定義，`[data-theme='amber']` 自動覆蓋。
+新頁面開發時，所有顏色**必須使用下列 CSS 變數**，禁止 hardcode hex/rgba 值。變數在 `resources/css/app.css` 定義，`[data-theme='amber']` 與 `[data-theme='ink-zen']` 區塊自動覆蓋。
 
-### 主色系
+### 主色系（Emerald / Amber 深色主題）
 
 | 變數 | Emerald | Amber | 用途 |
 |------|---------|-------|------|
@@ -218,6 +247,31 @@ php artisan import:countries           # 寫入 DB
 - ❌ `bg-[#1d2a22]` → ✅ `bg-[var(--binary-surface-high)]`
 - ❌ `rgba(107,220,159,0.1)` → ✅ `color-mix(in srgb, var(--binary-primary) 10%, transparent)`
 - ✅ 品質色（`#d4af37` 傳奇金）、D3/Canvas 視覺化特定色 → 可保留 hardcode
+
+---
+
+## Git 工作流程
+
+> **禁止直接 push 到 main**，所有變更都需要透過 feature branch + PR 流程。
+
+```bash
+# 1. 從 main 開新分支
+git checkout main && git pull
+git checkout -b feat/xxx   # 或 fix/xxx
+
+# 2. 開發、commit（lint 先過）
+
+# 3. Push 分支（首次自動建立遠端分支）
+git push origin HEAD
+
+# 4. 開 PR
+gh pr create --title "feat(xxx): ..." --body "..."
+
+# 5. PR 合併後，本地同步 main
+git checkout main && git pull
+```
+
+**分支命名慣例：**`feat/`、`fix/`、`refactor/`、`chore/`
 
 ---
 
