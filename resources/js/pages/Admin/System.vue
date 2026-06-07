@@ -323,6 +323,7 @@ interface MicroHostStatus {
     host?: string;
     last_seen?: string;
     error?: string;
+    api_error?: string;
     vms?: MicroVm[];
     cts?: MicroVm[];
 }
@@ -418,9 +419,12 @@ onUnmounted(() => {
                                 v-if="tab.key === 'micro-host'"
                                 class="inline-block h-1.5 w-1.5 rounded-full"
                                 :class="
-                                    microHost.status === 'online'
-                                        ? 'bg-[var(--binary-primary)]'
-                                        : 'bg-red-500'
+                                    microHost.status === 'online' &&
+                                    microHost.api_error
+                                        ? 'bg-amber-400'
+                                        : microHost.status === 'online'
+                                          ? 'bg-[var(--binary-primary)]'
+                                          : 'bg-red-500'
                                 "
                             />
                         </span>
@@ -850,25 +854,40 @@ onUnmounted(() => {
                                 <span
                                     class="inline-block h-3 w-3 shrink-0 rounded-full"
                                     :class="
-                                        microHost.status === 'online'
-                                            ? 'bg-[var(--binary-primary)] shadow-[0_0_8px_var(--binary-primary)]'
-                                            : 'bg-red-500/60'
+                                        microHost.status === 'online' &&
+                                        microHost.api_error
+                                            ? 'bg-amber-400 shadow-[0_0_8px_theme(colors.amber.400)]'
+                                            : microHost.status === 'online'
+                                              ? 'bg-[var(--binary-primary)] shadow-[0_0_8px_var(--binary-primary)]'
+                                              : 'bg-red-500/60'
                                     "
                                 />
                                 <div class="min-w-0 flex-1">
                                     <p
                                         class="text-sm font-semibold"
                                         :class="
-                                            microHost.status === 'online'
-                                                ? 'text-[var(--binary-primary)]'
-                                                : 'text-[var(--binary-outline)]'
+                                            microHost.status === 'online' &&
+                                            microHost.api_error
+                                                ? 'text-amber-400'
+                                                : microHost.status === 'online'
+                                                  ? 'text-[var(--binary-primary)]'
+                                                  : 'text-[var(--binary-outline)]'
                                         "
                                     >
                                         {{
-                                            microHost.status === 'online'
-                                                ? 'ONLINE'
-                                                : 'OFFLINE'
+                                            microHost.status === 'online' &&
+                                            microHost.api_error
+                                                ? 'API ERROR'
+                                                : microHost.status === 'online'
+                                                  ? 'ONLINE'
+                                                  : 'OFFLINE'
                                         }}
+                                    </p>
+                                    <p
+                                        v-if="microHost.api_error"
+                                        class="mt-0.5 text-xs text-amber-400/70"
+                                    >
+                                        {{ microHost.api_error }}
                                     </p>
                                     <p
                                         v-if="microHost.host"

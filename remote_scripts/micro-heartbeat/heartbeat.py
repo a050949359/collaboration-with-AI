@@ -34,8 +34,15 @@ REDIS_KEY = os.environ.get("REDIS_KEY", "micro:online")
 REDIS_TTL = int(os.environ.get("REDIS_TTL", 120))
 PVE_NODE = os.environ.get("PVE_NODE", "pve")
 
+_FORMAT_ERROR = object()  # sentinel: pvesh returned unexpected structure
 
-def pvesh(path: str) -> list:
+
+def pvesh(path: str):
+    """
+    Returns a list of dicts on success.
+    Returns _FORMAT_ERROR if Proxmox response is not a list-of-dicts.
+    Returns [] on command failure or empty result.
+    """
     try:
         r = subprocess.run(
             ["pvesh", "get", path, "--output-format", "json"],
@@ -47,16 +54,25 @@ def pvesh(path: str) -> list:
             print(f"[warn] pvesh {path}: {r.stderr.strip()}", file=sys.stderr)
             return []
         data = json.loads(r.stdout)
-        return data if isinstance(data, list) else []
+        if not isinstance(data, list):
+            print(f"[warn] pvesh {path}: expected list, got {type(data).__name__}", file=sys.stderr)
+            return _FORMAT_ERROR
+        if data and not isinstance(data[0], dict):
+            print(f"[warn] pvesh {path}: expected list of dicts, got list of {type(data[0]).__name__}", file=sys.stderr)
+            return _FORMAT_ERROR
+        return data
     except Exception as e:
         print(f"[warn] pvesh {path} failed: {e}", file=sys.stderr)
         return []
 
 
-def get_vms() -> list:
-    items = pvesh(f"/nodes/{PVE_NODE}/qemu")
+def get_vms() -> tuple[list, bool]:
+    """Returns (vm_list, had_format_error)."""
+    raw = pvesh(f"/nodes/{PVE_NODE}/qemu")
+    if raw is _FORMAT_ERROR:
+        return [], True
     result = []
-    for item in items:
+    for item in raw:
         vmid = item.get("vmid")
         if vmid is None:
             continue
@@ -69,13 +85,16 @@ def get_vms() -> list:
             })
         except (ValueError, TypeError):
             pass
-    return result
+    return result, False
 
 
-def get_cts() -> list:
-    items = pvesh(f"/nodes/{PVE_NODE}/lxc")
+def get_cts() -> tuple[list, bool]:
+    """Returns (ct_list, had_format_error)."""
+    raw = pvesh(f"/nodes/{PVE_NODE}/lxc")
+    if raw is _FORMAT_ERROR:
+        return [], True
     result = []
-    for item in items:
+    for item in raw:
         vmid = item.get("vmid")
         if vmid is None:
             continue
@@ -88,7 +107,7 @@ def get_cts() -> list:
             })
         except (ValueError, TypeError):
             pass
-    return result
+    return result, False
 
 
 def main():
@@ -96,12 +115,17 @@ def main():
         print("ERROR: REDIS_HOST is not set.", file=sys.stderr)
         sys.exit(1)
 
-    payload = {
+    vms, vm_err = get_vms()
+    cts, ct_err = get_cts()
+
+    payload: dict = {
         "host": socket.gethostname(),
         "last_seen": datetime.now(timezone.utc).isoformat(),
-        "vms": get_vms(),
-        "cts": get_cts(),
+        "vms": vms,
+        "cts": cts,
     }
+    if vm_err or ct_err:
+        payload["api_error"] = "unexpected_format"
 
     r = redis.Redis(
         host=REDIS_HOST,
@@ -112,7 +136,9 @@ def main():
         decode_responses=True,
     )
     r.set(REDIS_KEY, json.dumps(payload), ex=REDIS_TTL)
-    print(f"[ok] {payload['last_seen']}  vms={len(payload['vms'])}  cts={len(payload['cts'])}")
+
+    status = f"[api_error] {payload['api_error']}" if "api_error" in payload else "[ok]"
+    print(f"{status} {payload['last_seen']}  vms={len(vms)}  cts={len(cts)}")
 
 
 if __name__ == "__main__":
