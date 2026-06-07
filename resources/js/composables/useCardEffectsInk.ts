@@ -94,8 +94,15 @@ export function useCardEffectsInk(
             function sizeCanvas() {
                 const r = card.getBoundingClientRect();
                 const dpr = window.devicePixelRatio || 1;
-                logicalW = r.width + 4;
-                logicalH = r.height + 4;
+                const newW = r.width + 4;
+                const newH = r.height + 4;
+
+                if (newW === logicalW && newH === logicalH) {
+                    return;
+                }
+
+                logicalW = newW;
+                logicalH = newH;
                 bc!.width = logicalW * dpr;
                 bc!.height = logicalH * dpr;
                 bc!.style.width = logicalW + 'px';

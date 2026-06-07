@@ -206,6 +206,11 @@ export function useCardEffectsBlob(
 
             function sizeCanvas() {
                 const r = card.getBoundingClientRect();
+
+                if (r.width === logicalW && r.height === logicalH) {
+                    return;
+                }
+
                 const dpr = window.devicePixelRatio || 1;
                 logicalW = r.width;
                 logicalH = r.height;

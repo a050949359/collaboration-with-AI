@@ -382,9 +382,21 @@
     animation: wingTail 1.6s cubic-bezier(0.37, 0, 0.63, 1) infinite;
 }
 
-@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+@media (max-width: 768px) {
     .birds-svg g {
         filter: none !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .birds-svg g {
+        filter: none !important;
+    }
+
+    .wL,
+    .wR,
+    .wT {
+        animation: none;
     }
 }
 </style>
