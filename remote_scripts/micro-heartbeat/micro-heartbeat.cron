@@ -1,0 +1,13 @@
+# Micro-host heartbeat crontab — run every minute
+# Install: crontab -e (as root), paste the lines below
+#
+# 把 REDIS_HOST 改成專案主機的 ZeroTier IP
+
+REDIS_HOST=10.147.20.xxx
+REDIS_PORT=6379
+# REDIS_PASSWORD=yourpassword
+REDIS_KEY=micro:online
+REDIS_TTL=120
+PVE_NODE=pve
+
+* * * * * /usr/bin/python3 /opt/micro-heartbeat/heartbeat.py >> /var/log/micro-heartbeat.log 2>&1

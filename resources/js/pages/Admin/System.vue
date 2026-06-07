@@ -332,11 +332,16 @@ const microLoading = ref(false);
 let microPollTimer: ReturnType<typeof setInterval> | null = null;
 
 async function fetchMicroStatus() {
+    if (microLoading.value) {
+        return;
+    }
+
     microLoading.value = true;
 
     try {
         const res = await fetch(api.admin.microHostStatus(), {
             credentials: 'include',
+            headers: { Accept: 'application/json' },
         });
 
         if (!res.ok) {
