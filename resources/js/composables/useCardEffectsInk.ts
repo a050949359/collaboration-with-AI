@@ -30,7 +30,7 @@ function buildPath(w: number, h: number): BrushPt[] {
     for (let s = 0; s < 4; s++) {
         const a = corners[s],
             b = corners[s + 1];
-        const steps = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 3.5);
+        const steps = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 6.5);
 
         for (let i = 0; i < steps; i++) {
             const t = i / steps;
@@ -89,6 +89,8 @@ export function useCardEffectsInk(
                 bc!.height = r.height + 4;
                 bc!.style.width = r.width + 4 + 'px';
                 bc!.style.height = r.height + 4 + 'px';
+                bc!.style.top = '-2px';
+                bc!.style.left = '-2px';
                 pts = buildPath(r.width + 4, r.height + 4);
             }
 
@@ -106,7 +108,7 @@ export function useCardEffectsInk(
                     ctx.beginPath();
                     ctx.moveTo(a.x, a.y);
                     ctx.lineTo(b.x, b.y);
-                    ctx.strokeStyle = `rgba(12,30,65,${b.a})`;
+                    ctx.strokeStyle = `rgba(0,0,0,${b.a})`;
                     ctx.lineWidth = b.w;
                     ctx.lineCap = 'round';
                     ctx.stroke();

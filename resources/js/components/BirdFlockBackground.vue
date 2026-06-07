@@ -44,10 +44,19 @@
                     stroke-width="2.2"
                     opacity="0.88"
                 >
-                    <path class="wL" style="animation-delay: 0s" />
-                    <path class="wR" style="animation-delay: 0s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: 0s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: 0s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: 0s"
                     />
@@ -59,10 +68,19 @@
                     stroke-width="2.2"
                     opacity="0.70"
                 >
-                    <path class="wL" style="animation-delay: -0.2s" />
-                    <path class="wR" style="animation-delay: -0.2s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.2s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.2s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -0.2s"
                     />
@@ -74,10 +92,19 @@
                     stroke-width="2.2"
                     opacity="0.55"
                 >
-                    <path class="wL" style="animation-delay: -0.5s" />
-                    <path class="wR" style="animation-delay: -0.5s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.5s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.5s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -0.5s"
                     />
@@ -89,10 +116,19 @@
                     stroke-width="2.2"
                     opacity="0.42"
                 >
-                    <path class="wL" style="animation-delay: -0.8s" />
-                    <path class="wR" style="animation-delay: -0.8s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.8s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.8s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -0.8s"
                     />
@@ -104,10 +140,19 @@
                     stroke-width="2.2"
                     opacity="0.30"
                 >
-                    <path class="wL" style="animation-delay: -1s" />
-                    <path class="wR" style="animation-delay: -1s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -1s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -1s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -1s"
                     />
@@ -119,10 +164,19 @@
                     stroke-width="2.2"
                     opacity="0.65"
                 >
-                    <path class="wL" style="animation-delay: -0.3s" />
-                    <path class="wR" style="animation-delay: -0.3s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.3s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.3s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -0.3s"
                     />
@@ -134,10 +188,19 @@
                     stroke-width="2.2"
                     opacity="0.50"
                 >
-                    <path class="wL" style="animation-delay: -0.6s" />
-                    <path class="wR" style="animation-delay: -0.6s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.6s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.6s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -0.6s"
                     />
@@ -149,10 +212,19 @@
                     stroke-width="2.2"
                     opacity="0.35"
                 >
-                    <path class="wL" style="animation-delay: -0.9s" />
-                    <path class="wR" style="animation-delay: -0.9s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.9s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.9s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -0.9s"
                     />
@@ -164,10 +236,19 @@
                     stroke-width="2.2"
                     opacity="0.75"
                 >
-                    <path class="wL" style="animation-delay: -0.15s" />
-                    <path class="wR" style="animation-delay: -0.15s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.15s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.15s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -0.15s"
                     />
@@ -179,10 +260,19 @@
                     stroke-width="2.2"
                     opacity="0.52"
                 >
-                    <path class="wL" style="animation-delay: -0.7s" />
-                    <path class="wR" style="animation-delay: -0.7s" />
+                    <path
+                        class="wL"
+                        d="M -24 -18 C -10 -20, -3 -10, 0 0"
+                        style="animation-delay: -0.7s"
+                    />
+                    <path
+                        class="wR"
+                        d="M 0 0 C  5 -17, 14 -17, 27 -14"
+                        style="animation-delay: -0.7s"
+                    />
                     <path
                         class="wT"
+                        d="M -0.5 0 Q  0.5  2,  1.2  5"
                         stroke-width="1.5"
                         style="animation-delay: -0.7s"
                     />
@@ -279,5 +369,11 @@
 
 .wT {
     animation: wingTail 1.6s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+}
+
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+    .birds-svg g {
+        filter: none !important;
+    }
 }
 </style>
