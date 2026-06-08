@@ -16,7 +16,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { nextTick, watch } from 'vue';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
-import { hostOrderIndex } from '../lib/topology';
+import { drawTopology as drawTopologyImpl } from '../lib/topology';
 
 interface Entity {
     id: number;
@@ -241,264 +241,25 @@ function drawGraph(data: GraphData) {
 // ── Topology view ────────────────────────────────────────────────
 
 function drawTopology(data: GraphData) {
-    const svg = select(topoSvgRef.value!);
-    svg.selectAll('*').remove();
-    const W = topoSvgRef.value!.clientWidth || 800;
-    const H = topoSvgRef.value!.clientHeight || 560;
-
-    const PAD = 14;
-    const PROJ_H = 28;
-    const PROJ_W = 150;
-    const BOX_W = PROJ_W + PAD * 2;
-    const ROW_GAP = 80;
-    const HOST_COLOR = '#a78bfa';
-    const PROJ_COLOR = 'var(--binary-primary)';
-    const ZT_COLOR = '#ffb441';
-
-    const hosts = data.entities.filter((e) => e.type === 'host');
-    const projects = data.entities.filter((e) => e.type === 'project');
-    const hostNames = new Set(hosts.map((h) => h.name));
-    const deployedOn = data.relations.filter(
-        (r) => r.relation_type === 'deployed_on',
-    );
-    const hostHostRels = data.relations.filter(
-        (r) => hostNames.has(r.from) && hostNames.has(r.to),
-    );
-    // ZeroTier hub = zerotier 關係匯聚的 to 端，畫成特別色圓圈而非主機方框
-    const ztHubNames = new Set(
-        hostHostRels
-            .filter((r) => r.relation_type === 'zerotier')
-            .map((r) => r.to),
-    );
-    // ZeroTier 成員 = 連到 hub 的主機（zerotier 關係的 from 端）
-    const ztMembers = new Set(
-        hostHostRels
-            .filter(
-                (r) =>
-                    r.relation_type === 'zerotier' && !ztHubNames.has(r.from),
-            )
-            .map((r) => r.from),
-    );
-    // 管理/監控其他主機者也屬第二層（例如 GCP 管 Oracle），被管理者落第三層；
-    // 深層管理鏈刻意壓平成「管理者層／被管理者層」，避免版面過高
-    const managerHosts = new Set(
-        hostHostRels
-            .filter((r) => r.relation_type !== 'zerotier')
-            .map((r) => r.from),
-    );
-
-    // Group projects per host
-    const hostProjects: Record<string, string[]> = {};
-    hosts.forEach((h) => {
-        hostProjects[h.name] = [];
-    });
-    const unhosted: string[] = [];
-    projects.forEach((p) => {
-        const rels = deployedOn.filter((r) => r.from === p.name);
-
-        if (rels.length) {
-            rels.forEach((r) => {
-                if (hostProjects[r.to]) {
-                    hostProjects[r.to].push(p.name);
-                }
-            });
-        } else {
-            unhosted.push(p.name);
-        }
-    });
-
-    // 固定三層：① ZeroTier hub ② ZeroTier 成員或管理者 ③ 其他（被管理／被動部署／未部署）
-    const layerFor = (name: string) =>
-        ztHubNames.has(name)
-            ? 0
-            : ztMembers.has(name) || managerHosts.has(name)
-              ? 1
-              : 2;
-    const layeredRows: string[][] = [[], [], []];
-    hosts.forEach((h) => layeredRows[layerFor(h.name)].push(h.name));
-
-    if (unhosted.length) {
-        layeredRows[2].push('__unhosted__');
+    if (!topoSvgRef.value) {
+        return;
     }
 
-    // 各層內左→右顯示順序（共用設定，見 lib/topology）
-    layeredRows.forEach((row) =>
-        row.sort((a, b) => hostOrderIndex(a) - hostOrderIndex(b)),
-    );
-
-    const rows = layeredRows.filter((r) => r.length);
-
-    const boxH = (hostName: string) => {
-        const items =
-            hostName === '__unhosted__'
-                ? unhosted
-                : (hostProjects[hostName] ?? []);
-
-        return PAD * 2 + Math.max(1, items.length) * (PROJ_H + PAD);
-    };
-    const rowH = (row: string[]) => Math.max(...row.map(boxH));
-
-    const hostBox: Record<
-        string,
-        { x: number; y: number; w: number; h: number }
-    > = {};
-    const projPos: Record<string, { x: number; y: number }> = {};
-
-    const g = svg.append('g');
-    const zoomBehavior = zoom<SVGSVGElement, unknown>()
-        .scaleExtent([0.2, 2])
-        .on('zoom', (e) => g.attr('transform', e.transform));
-    svg.call(zoomBehavior).on('dblclick.zoom', null);
-
-    svg.append('defs')
-        .append('marker')
-        .attr('id', 'ta')
-        .attr('viewBox', '0 -4 8 8')
-        .attr('refX', 8)
-        .attr('refY', 0)
-        .attr('markerWidth', 5)
-        .attr('markerHeight', 5)
-        .attr('orient', 'auto')
-        .append('path')
-        .attr('d', 'M0,-4L8,0L0,4')
-        .attr('fill', HOST_COLOR);
-
-    const totalH =
-        rows.reduce((s, row) => s + rowH(row) + ROW_GAP, 0) - ROW_GAP;
-    let startY = (H - totalH) / 2;
-
-    rows.forEach((row) => {
-        const rh = rowH(row);
-        const rowTotalW = row.length * BOX_W + (row.length - 1) * 40;
-        let bx = (W - rowTotalW) / 2;
-
-        row.forEach((hostName) => {
-            const isUnhosted = hostName === '__unhosted__';
-            const items = isUnhosted
-                ? unhosted
-                : (hostProjects[hostName] ?? []);
-            const bh = boxH(hostName);
-            const by = startY + (rh - bh) / 2;
-
-            hostBox[hostName] = { x: bx, y: by, w: BOX_W, h: bh };
-
-            if (ztHubNames.has(hostName)) {
-                // ZeroTier hub：特別色圓圈（中心對齊方框格，與虛線端點一致）
-                const hcx = bx + BOX_W / 2,
-                    hcy = by + bh / 2;
-                g.append('circle')
-                    .attr('cx', hcx)
-                    .attr('cy', hcy)
-                    .attr('r', 24)
-                    .attr('fill', ZT_COLOR + '22')
-                    .attr('stroke', ZT_COLOR)
-                    .attr('stroke-width', 1.5);
-                g.append('text')
-                    .text(hostName)
-                    .attr('x', hcx)
-                    .attr('y', by - 6)
-                    .attr('text-anchor', 'middle')
-                    .attr('font-size', 10)
-                    .attr('fill', ZT_COLOR);
-                bx += BOX_W + 40;
-
-                return;
-            }
-
-            g.append('rect')
-                .attr('x', bx)
-                .attr('y', by)
-                .attr('width', BOX_W)
-                .attr('height', bh)
-                .attr('rx', 10)
-                .attr('fill', isUnhosted ? 'transparent' : HOST_COLOR + '11')
-                .attr(
-                    'stroke',
-                    isUnhosted ? 'var(--binary-outline-variant)' : HOST_COLOR,
-                )
-                .attr('stroke-width', 1.5)
-                .attr('stroke-dasharray', isUnhosted ? '4,3' : 'none');
-
-            g.append('text')
-                .text(isUnhosted ? '未部署' : hostName)
-                .attr('x', bx + BOX_W / 2)
-                .attr('y', by - 6)
-                .attr('text-anchor', 'middle')
-                .attr('font-size', 10)
-                .attr(
-                    'fill',
-                    isUnhosted ? 'var(--binary-outline)' : HOST_COLOR,
-                );
-
-            items.forEach((name, pi) => {
-                const px = bx + PAD,
-                    py = by + PAD + pi * (PROJ_H + PAD);
-                const cx = px + PROJ_W / 2,
-                    cy = py + PROJ_H / 2;
-                projPos[name] = { x: cx, y: cy };
-                g.append('rect')
-                    .attr('x', px)
-                    .attr('y', py)
-                    .attr('width', PROJ_W)
-                    .attr('height', PROJ_H)
-                    .attr('rx', 5)
-                    .attr('fill', PROJ_COLOR + '18')
-                    .attr('stroke', PROJ_COLOR)
-                    .attr('stroke-width', 1);
-                g.append('text')
-                    .text(name)
-                    .attr('x', cx)
-                    .attr('y', cy)
-                    .attr('text-anchor', 'middle')
-                    .attr('dominant-baseline', 'middle')
-                    .attr('font-size', 9)
-                    .attr('fill', 'var(--binary-text)');
-            });
-
-            bx += BOX_W + 40;
-        });
-
-        startY += rh + ROW_GAP;
-    });
-
-    // Host→Host arrows
-    hostHostRels.forEach((r) => {
-        const s = hostBox[r.from],
-            t = hostBox[r.to];
-
-        if (!s || !t) {
-            return;
-        }
-
-        const isZt = r.relation_type === 'zerotier';
-        // ZeroTier：中心到中心、虛線、無箭頭（對等）；其餘：底→頂的階層箭頭
-        const sx = s.x + s.w / 2,
-            sy = isZt ? s.y + s.h / 2 : s.y + s.h;
-        const tx = t.x + t.w / 2,
-            ty = isZt ? t.y + t.h / 2 : t.y - 6;
-        const line = g
-            .append('line')
-            .attr('x1', sx)
-            .attr('y1', sy)
-            .attr('x2', tx)
-            .attr('y2', ty)
-            .attr('stroke', isZt ? ZT_COLOR : HOST_COLOR)
-            .attr('stroke-width', 1.2)
-            .attr('opacity', 0.6);
-
-        if (isZt) {
-            line.attr('stroke-dasharray', '4,3');
-        } else {
-            line.attr('marker-end', 'url(#ta)');
-        }
-
-        g.append('text')
-            .text(r.relation_type)
-            .attr('x', (sx + tx) / 2 + 4)
-            .attr('y', (sy + ty) / 2)
-            .attr('font-size', 8)
-            .attr('fill', isZt ? ZT_COLOR : HOST_COLOR)
-            .attr('opacity', 0.7);
+    drawTopologyImpl(topoSvgRef.value, data, {
+        fallbackW: 800,
+        fallbackH: 560,
+        pad: 14,
+        projH: 28,
+        projW: 150,
+        rowGap: 80,
+        boxGap: 40,
+        markerId: 'ta',
+        hostRx: 10,
+        projRx: 5,
+        hubR: 24,
+        hostFont: 10,
+        projFont: 9,
+        relFont: 8,
     });
 }
 
