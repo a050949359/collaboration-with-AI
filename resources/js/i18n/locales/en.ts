@@ -479,6 +479,7 @@ export default {
         label_items_sidebar: 'Items',
         no_holder: 'Unassigned',
         label_world_state: 'World State',
+        label_info: 'Info',
         btn_collapse: 'Collapse',
         btn_expand: 'Expand',
         new_char: '+ New Character',
