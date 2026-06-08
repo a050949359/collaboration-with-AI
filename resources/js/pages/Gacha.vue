@@ -5,7 +5,7 @@
         >
             <!-- Right Panel: Physics Chamber -->
             <div
-                class="emerald-glow relative flex w-full flex-col rounded-2xl border border-white/5 bg-[var(--binary-surface)] p-3 lg:order-last lg:flex-[4] lg:p-5"
+                class="emerald-glow relative flex w-full flex-col rounded-none border border-white/5 bg-[var(--binary-surface)] p-3 md:rounded-2xl lg:order-last lg:flex-[4] lg:p-5"
             >
                 <!-- Resonance Chamber -->
                 <div
@@ -139,7 +139,7 @@
 
             <!-- Right Panel -->
             <aside
-                class="emerald-glow flex w-full min-w-0 flex-col gap-6 overflow-auto rounded-3xl border border-white/5 bg-[var(--binary-surface-dim)] p-5 lg:flex-[6] lg:p-6"
+                class="emerald-glow flex w-full min-w-0 flex-col gap-6 overflow-auto rounded-none border border-white/5 bg-[var(--binary-surface-dim)] p-5 md:rounded-3xl lg:flex-[6] lg:p-6"
             >
                 <!-- LOBBY -->
                 <template v-if="mode === 'lobby'">

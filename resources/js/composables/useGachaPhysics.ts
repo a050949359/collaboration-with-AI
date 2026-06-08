@@ -50,6 +50,14 @@ export function useGachaPhysics() {
         const cw = chamberEl.value.clientWidth;
         const ch = chamberEl.value.clientHeight;
 
+        // 版面尚未結算（量到 0 寬高）時，等下一個 frame 再建立，
+        // 確保首次載入時 render 尺寸與牆壁/球座標一致。
+        if (cw === 0 || ch === 0) {
+            requestAnimationFrame(() => initPhysics());
+
+            return;
+        }
+
         engine = Matter.Engine.create();
         engine.gravity.y = physics.gravity;
         render = Matter.Render.create({
@@ -58,6 +66,7 @@ export function useGachaPhysics() {
             options: {
                 width: cw,
                 height: ch,
+                pixelRatio: window.devicePixelRatio || 1,
                 wireframes: false,
                 background: 'transparent',
             },
