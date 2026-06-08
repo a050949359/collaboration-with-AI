@@ -278,6 +278,13 @@ function drawTopology(data: GraphData) {
             )
             .map((r) => r.from),
     );
+    // 管理/監控其他主機者也屬第二層（例如 GCP 管 Oracle），被管理者落第三層；
+    // 深層管理鏈刻意壓平成「管理者層／被管理者層」，避免版面過高
+    const managerHosts = new Set(
+        hostHostRels
+            .filter((r) => r.relation_type !== 'zerotier')
+            .map((r) => r.from),
+    );
 
     // Group projects per host
     const hostProjects: Record<string, string[]> = {};
@@ -299,15 +306,37 @@ function drawTopology(data: GraphData) {
         }
     });
 
-    // 固定三層：① ZeroTier hub ② ZeroTier 成員 ③ 其他（含未部署）
+    // 固定三層：① ZeroTier hub ② ZeroTier 成員或管理者 ③ 其他（被管理／被動部署／未部署）
     const layerFor = (name: string) =>
-        ztHubNames.has(name) ? 0 : ztMembers.has(name) ? 1 : 2;
+        ztHubNames.has(name)
+            ? 0
+            : ztMembers.has(name) || managerHosts.has(name)
+              ? 1
+              : 2;
     const layeredRows: string[][] = [[], [], []];
     hosts.forEach((h) => layeredRows[layerFor(h.name)].push(h.name));
 
     if (unhosted.length) {
         layeredRows[2].push('__unhosted__');
     }
+
+    // 各層內左→右顯示順序；未列出者排最後（例如動態注入的 Proxmox）
+    const HOST_ORDER = [
+        'Desktop',
+        'Laptop',
+        'GCP VM',
+        'LightNode VM',
+        '__unhosted__',
+        'GitHub Pages',
+        'Oracle VM1',
+        'Oracle VM2',
+    ];
+    const orderIdx = (n: string) => {
+        const i = HOST_ORDER.indexOf(n);
+
+        return i === -1 ? HOST_ORDER.length : i;
+    };
+    layeredRows.forEach((row) => row.sort((a, b) => orderIdx(a) - orderIdx(b)));
 
     const rows = layeredRows.filter((r) => r.length);
 
