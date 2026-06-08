@@ -309,7 +309,8 @@ export function drawTopology(
                     .attr('width', projW)
                     .attr('height', projH)
                     .attr('rx', projRx)
-                    .attr('fill', PROJ_COLOR + '18')
+                    .attr('fill', PROJ_COLOR)
+                    .attr('fill-opacity', 0.09)
                     .attr('stroke', PROJ_COLOR)
                     .attr('stroke-width', 1);
                 g.append('text')
@@ -490,7 +491,8 @@ export function drawGraph(
     nodeG
         .append('circle')
         .attr('r', nodeRadius)
-        .attr('fill', (d) => typeColor(d.type) + '22')
+        .attr('fill', (d) => typeColor(d.type))
+        .attr('fill-opacity', 0.13)
         .attr('stroke', (d) => typeColor(d.type))
         .attr('stroke-width', 1.5);
     nodeG
