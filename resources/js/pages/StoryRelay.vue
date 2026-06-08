@@ -126,6 +126,8 @@ const selected = ref<StorySession | null>(null);
 const isLoadingList = ref(false);
 const isLoadingSession = ref(false);
 const error = ref('');
+// 手機：閱讀檢視資訊側欄（倒數/角色/道具/世界狀態）的收合狀態，預設收合
+const showInfo = ref(false);
 
 // Setup flow
 const setupStep = ref<0 | 1 | 2>(0);
@@ -754,7 +756,7 @@ onMounted(() => {
         <Head :title="t('story_relay.head_title')" />
 
         <div
-            class="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-screen-2xl flex-col overflow-hidden px-6 font-mono md:px-8"
+            class="mx-auto flex h-[calc(100dvh-4rem)] w-full max-w-screen-2xl flex-col overflow-hidden px-6 font-mono md:px-8"
         >
             <!-- ── Tab bar ───────────────────────────────────── -->
             <div
@@ -786,7 +788,8 @@ onMounted(() => {
             <div v-if="mainTab === 'story'" class="flex flex-1 overflow-hidden">
                 <!-- Left panel: session list -->
                 <aside
-                    class="flex w-3/12 flex-col border-r border-[var(--binary-outline)]/20 bg-[var(--binary-surface)]"
+                    class="w-full flex-col border-r border-[var(--binary-outline)]/20 bg-[var(--binary-surface)] md:flex md:w-3/12"
+                    :class="panel === 'none' ? 'flex' : 'hidden'"
                 >
                     <div class="border-b border-[var(--binary-outline)]/20 p-4">
                         <button
@@ -837,7 +840,20 @@ onMounted(() => {
                 </aside>
 
                 <!-- Right panel -->
-                <main class="flex w-9/12 flex-col overflow-hidden">
+                <main
+                    class="w-full flex-col overflow-hidden md:w-9/12"
+                    :class="panel === 'none' ? 'hidden md:flex' : 'flex'"
+                >
+                    <!-- 手機：返回列表 -->
+                    <button
+                        v-if="panel !== 'none'"
+                        type="button"
+                        class="binary-label shrink-0 border-b border-[var(--binary-outline)]/20 px-5 py-2.5 text-left text-[10px] tracking-widest text-[var(--binary-text-muted)] uppercase transition hover:text-[var(--binary-text)] md:hidden"
+                        @click="panel = 'none'"
+                    >
+                        {{ t('story_relay.btn_back') }}
+                    </button>
+
                     <!-- Empty state -->
                     <div
                         v-if="panel === 'none'"
@@ -1263,9 +1279,24 @@ onMounted(() => {
                         </div>
 
                         <!-- Content row: segments + info sidebar -->
-                        <div class="flex flex-1 overflow-hidden">
+                        <div
+                            class="flex flex-1 flex-col overflow-hidden md:flex-row"
+                        >
+                            <!-- 手機：資訊側欄收合 toggle -->
+                            <button
+                                type="button"
+                                class="binary-label order-1 shrink-0 border-b border-[var(--binary-outline)]/20 bg-[var(--binary-surface)] px-5 py-2.5 text-left text-[10px] tracking-widest text-[var(--binary-outline)] uppercase md:hidden"
+                                @click="showInfo = !showInfo"
+                            >
+                                {{ t('story_relay.label_info') }}
+                                <span class="float-right">{{
+                                    showInfo ? '▴' : '▾'
+                                }}</span>
+                            </button>
                             <!-- Segments -->
-                            <div class="flex-1 space-y-4 overflow-y-auto p-5">
+                            <div
+                                class="order-3 flex-1 space-y-4 overflow-y-auto p-5 md:order-none"
+                            >
                                 <p
                                     v-if="isLoadingSession"
                                     class="text-center text-xs text-[var(--binary-text-muted)]"
@@ -1331,9 +1362,10 @@ onMounted(() => {
                                 </p>
                             </div>
 
-                            <!-- Info sidebar -->
+                            <!-- Info sidebar（手機頂部收合 / 桌機右側欄） -->
                             <aside
-                                class="flex w-56 shrink-0 flex-col gap-5 overflow-y-auto border-l border-[var(--binary-outline)]/20 bg-[var(--binary-surface)] p-4"
+                                class="order-2 max-h-[45vh] w-full shrink-0 flex-col gap-5 overflow-y-auto border-b border-[var(--binary-outline)]/20 bg-[var(--binary-surface)] p-4 md:order-none md:max-h-none md:w-56 md:border-b-0 md:border-l"
+                                :class="showInfo ? 'flex' : 'hidden md:flex'"
                             >
                                 <div>
                                     <p
@@ -1477,7 +1509,8 @@ onMounted(() => {
             <div v-else class="flex flex-1 overflow-hidden">
                 <!-- Left: character list -->
                 <aside
-                    class="flex w-72 shrink-0 flex-col border-r border-[var(--binary-outline)]/20 bg-[var(--binary-surface)]"
+                    class="w-full shrink-0 flex-col border-r border-[var(--binary-outline)]/20 bg-[var(--binary-surface)] md:flex md:w-72"
+                    :class="charView === 'idle' ? 'flex' : 'hidden'"
                 >
                     <div class="border-b border-[var(--binary-outline)]/20 p-4">
                         <button
@@ -1527,7 +1560,19 @@ onMounted(() => {
                 </aside>
 
                 <!-- Right: editor -->
-                <div class="flex flex-1 flex-col overflow-y-auto">
+                <div
+                    class="w-full flex-1 flex-col overflow-y-auto md:flex"
+                    :class="charView === 'idle' ? 'hidden md:flex' : 'flex'"
+                >
+                    <!-- 手機：返回角色列表 -->
+                    <button
+                        v-if="charView !== 'idle'"
+                        type="button"
+                        class="binary-label sticky top-0 z-10 shrink-0 border-b border-[var(--binary-outline)]/20 bg-[var(--binary-surface)] px-5 py-2.5 text-left text-[10px] tracking-widest text-[var(--binary-text-muted)] uppercase transition hover:text-[var(--binary-text)] md:hidden"
+                        @click="charView = 'idle'"
+                    >
+                        {{ t('story_relay.btn_back') }}
+                    </button>
                     <!-- Idle -->
                     <div
                         v-if="charView === 'idle'"

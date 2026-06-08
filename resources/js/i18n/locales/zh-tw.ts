@@ -474,6 +474,7 @@ export default {
         label_items_sidebar: '道具',
         no_holder: '無人持有',
         label_world_state: '世界狀態',
+        label_info: '資訊',
         btn_collapse: '收起',
         btn_expand: '展開全文',
         new_char: '+ 新角色',
