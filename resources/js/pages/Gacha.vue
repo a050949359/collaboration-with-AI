@@ -572,7 +572,7 @@
                 @click.self="showModal = false"
             >
                 <div
-                    class="glass-panel w-full max-w-md rounded-3xl p-8 text-center shadow-2xl"
+                    class="glass-panel w-full max-w-md rounded-3xl p-6 text-center shadow-2xl md:p-8"
                 >
                     <div
                         class="mb-2 text-[10px] font-bold tracking-[0.4em] text-[var(--binary-primary)]/50"
@@ -580,7 +580,7 @@
                         DECODING COMPLETE
                     </div>
                     <h3
-                        class="mb-6 text-2xl font-medium tracking-tight text-white"
+                        class="mb-6 text-lg font-medium tracking-tight break-words text-white md:text-2xl"
                     >
                         ENTITY_DATA_RECOVERED
                     </h3>
@@ -588,7 +588,7 @@
                         <div
                             v-for="(result, i) in lastResults"
                             :key="i"
-                            class="rounded-xl bg-black/40 p-4 text-left"
+                            class="rounded-xl bg-black/40 p-3 text-left md:p-4"
                             :class="
                                 result.quality.name === 'legendary'
                                     ? 'border border-[#d4af3755]'
@@ -610,7 +610,7 @@
                                 {{ result.quality.code }}
                             </div>
                             <div
-                                class="text-sm font-bold"
+                                class="text-xs font-bold break-all md:text-sm"
                                 :class="{
                                     'gradient-text':
                                         result.quality.name === 'legendary',
