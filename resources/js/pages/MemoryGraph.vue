@@ -252,6 +252,7 @@ function drawTopology(data: GraphData) {
     const ROW_GAP = 80;
     const HOST_COLOR = '#a78bfa';
     const PROJ_COLOR = 'var(--binary-primary)';
+    const ZT_COLOR = '#ffb441';
 
     const hosts = data.entities.filter((e) => e.type === 'host');
     const projects = data.entities.filter((e) => e.type === 'project');
@@ -261,6 +262,14 @@ function drawTopology(data: GraphData) {
     );
     const hostHostRels = data.relations.filter(
         (r) => hostNames.has(r.from) && hostNames.has(r.to),
+    );
+    // ZeroTier 是對等連線，排除在部署階層計算外（仍會畫成虛線）
+    const hierRels = hostHostRels.filter((r) => r.relation_type !== 'zerotier');
+    // ZeroTier hub = zerotier 關係匯聚的 to 端，畫成特別色圓圈而非主機方框
+    const ztHubNames = new Set(
+        hostHostRels
+            .filter((r) => r.relation_type === 'zerotier')
+            .map((r) => r.to),
     );
 
     // Group projects per host
@@ -335,7 +344,7 @@ function drawTopology(data: GraphData) {
             inDeg[n] = 0;
             children[n] = [];
         });
-        hostHostRels
+        hierRels
             .filter((r) => compSet.has(r.from) && compSet.has(r.to))
             .forEach((r) => {
                 inDeg[r.to]++;
@@ -447,6 +456,29 @@ function drawTopology(data: GraphData) {
 
                 hostBox[hostName] = { x: bx, y: by, w: BOX_W, h: bh };
 
+                if (ztHubNames.has(hostName)) {
+                    // ZeroTier hub：特別色圓圈（中心對齊方框格，與虛線端點一致）
+                    const hcx = bx + BOX_W / 2,
+                        hcy = by + bh / 2;
+                    g.append('circle')
+                        .attr('cx', hcx)
+                        .attr('cy', hcy)
+                        .attr('r', 24)
+                        .attr('fill', ZT_COLOR + '22')
+                        .attr('stroke', ZT_COLOR)
+                        .attr('stroke-width', 1.5);
+                    g.append('text')
+                        .text(hostName)
+                        .attr('x', hcx)
+                        .attr('y', by - 6)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', 10)
+                        .attr('fill', ZT_COLOR);
+                    bx += BOX_W + 40;
+
+                    return;
+                }
+
                 g.append('rect')
                     .attr('x', bx)
                     .attr('y', by)
@@ -520,25 +552,34 @@ function drawTopology(data: GraphData) {
             return;
         }
 
+        const isZt = r.relation_type === 'zerotier';
+        // ZeroTier：中心到中心、虛線、無箭頭（對等）；其餘：底→頂的階層箭頭
         const sx = s.x + s.w / 2,
-            sy = s.y + s.h;
+            sy = isZt ? s.y + s.h / 2 : s.y + s.h;
         const tx = t.x + t.w / 2,
-            ty = t.y;
-        g.append('line')
+            ty = isZt ? t.y + t.h / 2 : t.y - 6;
+        const line = g
+            .append('line')
             .attr('x1', sx)
             .attr('y1', sy)
             .attr('x2', tx)
-            .attr('y2', ty - 6)
-            .attr('stroke', HOST_COLOR)
+            .attr('y2', ty)
+            .attr('stroke', isZt ? ZT_COLOR : HOST_COLOR)
             .attr('stroke-width', 1.2)
-            .attr('opacity', 0.6)
-            .attr('marker-end', 'url(#ta)');
+            .attr('opacity', 0.6);
+
+        if (isZt) {
+            line.attr('stroke-dasharray', '4,3');
+        } else {
+            line.attr('marker-end', 'url(#ta)');
+        }
+
         g.append('text')
             .text(r.relation_type)
             .attr('x', (sx + tx) / 2 + 4)
             .attr('y', (sy + ty) / 2)
             .attr('font-size', 8)
-            .attr('fill', HOST_COLOR)
+            .attr('fill', isZt ? ZT_COLOR : HOST_COLOR)
             .attr('opacity', 0.7);
     });
 }
