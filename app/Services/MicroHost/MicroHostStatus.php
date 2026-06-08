@@ -20,7 +20,7 @@ class MicroHostStatus
     public function full(): array
     {
         try {
-            $raw = Redis::get(config('micro-host.ttl_key'));
+            $raw = Redis::connection('raw')->get(config('micro-host.ttl_key'));
         } catch (\Throwable) {
             return ['status' => 'offline', 'error' => 'redis_unavailable'];
         }
