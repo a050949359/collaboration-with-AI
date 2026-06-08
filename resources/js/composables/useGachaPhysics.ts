@@ -30,6 +30,7 @@ export function useGachaPhysics() {
     let render: Matter.Render;
     let runner: Matter.Runner;
     let agitationHandler: (() => void) | undefined;
+    let resizeObserver: ResizeObserver | undefined;
 
     function applyAgitation() {
         Matter.Composite.allBodies(engine.world).forEach((body) => {
@@ -50,10 +51,23 @@ export function useGachaPhysics() {
         const cw = chamberEl.value.clientWidth;
         const ch = chamberEl.value.clientHeight;
 
-        // 版面尚未結算（量到 0 寬高）時，等下一個 frame 再建立，
-        // 確保首次載入時 render 尺寸與牆壁/球座標一致。
+        // 版面尚未結算（量到 0 寬高，例如隱藏 tab / display:none）時，
+        // 用 ResizeObserver 等到真正可見且尺寸 > 0 再建立，避免 rAF 每幀空轉佔滿 CPU。
+        // 一旦量到有效尺寸即 disconnect 收掉，不做後續 resize / 旋轉處理。
         if (cw === 0 || ch === 0) {
-            requestAnimationFrame(() => initPhysics());
+            if (!resizeObserver) {
+                resizeObserver = new ResizeObserver(() => {
+                    const w = chamberEl.value?.clientWidth ?? 0;
+                    const h = chamberEl.value?.clientHeight ?? 0;
+
+                    if (w > 0 && h > 0) {
+                        resizeObserver?.disconnect();
+                        resizeObserver = undefined;
+                        initPhysics();
+                    }
+                });
+                resizeObserver.observe(chamberEl.value);
+            }
 
             return;
         }
@@ -137,6 +151,11 @@ export function useGachaPhysics() {
     }
 
     function cleanup() {
+        if (resizeObserver) {
+            resizeObserver.disconnect();
+            resizeObserver = undefined;
+        }
+
         if (agitationHandler) {
             Matter.Events.off(engine, 'afterUpdate', agitationHandler);
             agitationHandler = undefined;
