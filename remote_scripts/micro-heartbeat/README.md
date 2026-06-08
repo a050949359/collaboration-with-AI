@@ -13,21 +13,27 @@ mkdir -p /opt/micro-heartbeat
 cp heartbeat.py /opt/micro-heartbeat/
 ```
 
-## 3. 設定 systemd service
+## 3. 設定 crontab（每分鐘執行一次）
 
-編輯 `micro-heartbeat.service`，把 `REDIS_HOST` 改成專案主機的 ZeroTier IP：
+`heartbeat.py` 是 one-shot 腳本（跑完即退），由 crontab 每分鐘觸發一次。
+
+先編輯 `micro-heartbeat.cron`，把 `REDIS_HOST` 改成專案主機的 ZeroTier IP：
 
 ```
-Environment="REDIS_HOST=10.147.20.xxx"
+REDIS_HOST=10.147.20.xxx
 ```
 
-然後安裝：
+然後以 root 安裝（把內容貼進 crontab）：
 
 ```bash
-cp micro-heartbeat.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now micro-heartbeat
-systemctl status micro-heartbeat
+crontab -e   # 以 root 執行，貼上 micro-heartbeat.cron 的內容
+```
+
+確認已安裝：
+
+```bash
+crontab -l
+tail -f /var/log/micro-heartbeat.log   # 觀察每分鐘輸出
 ```
 
 ## 4. 開放專案主機 Redis port
