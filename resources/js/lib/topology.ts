@@ -1,6 +1,18 @@
 // 拓樸圖共用設定與繪製（KnowledgeGraphWidget 與 MemoryGraph 共用）
 
-import { select, zoom, zoomIdentity } from 'd3';
+import {
+    drag,
+    forceCenter,
+    forceLink,
+    forceManyBody,
+    forceSimulation,
+    forceX,
+    forceY,
+    select,
+    zoom,
+    zoomIdentity,
+} from 'd3';
+import type { Simulation } from 'd3';
 
 export interface Entity {
     id: number;
@@ -16,6 +28,27 @@ export interface Relation {
 export interface GraphData {
     entities: Entity[];
     relations: Relation[];
+}
+interface GraphNode extends Entity {
+    x?: number;
+    y?: number;
+    fx?: number | null;
+    fy?: number | null;
+}
+interface GraphLink {
+    source: GraphNode;
+    target: GraphNode;
+    relation_types: string[];
+}
+
+/** entity type → 顏色（知識圖譜節點配色，MemoryGraph 圖例也用）。 */
+export const TYPE_COLOR: Record<string, string> = {
+    project: 'var(--binary-primary)',
+    host: '#a78bfa',
+    service: '#22d3ee',
+};
+export function typeColor(t: string) {
+    return TYPE_COLOR[t] ?? 'var(--binary-outline)';
 }
 
 /**
@@ -334,4 +367,211 @@ export function drawTopology(
     });
 
     svg.call(zoomBehavior.transform, zoomIdentity);
+}
+
+/** 知識圖譜（力導向圖）各視圖的尺寸／力場差異。 */
+export interface GraphOpts {
+    fallbackW: number;
+    fallbackH: number;
+    markerId: string;
+    markerSize: number;
+    arrowFill: string;
+    linkStrokeWidth: number;
+    linkOpacity: number;
+    relFont: number;
+    relOpacity: number;
+    nodeRadiusBase: number;
+    nodeRadiusMul: number;
+    nodeFont: number;
+    nodeDy: number;
+    linkDistanceBase: number;
+    linkDistancePerRel: number;
+    chargeStrength: number;
+    forceStrength: number;
+    edgeGap: number;
+}
+
+/**
+ * 繪製知識圖譜力導向圖（過濾掉 host 節點，host 由拓樸圖負責）。
+ * 回傳建立的 simulation 供呼叫端保存（以便 stop）；無節點時回傳 null。
+ */
+export function drawGraph(
+    svgEl: SVGSVGElement,
+    data: GraphData,
+    opts: GraphOpts,
+): Simulation<GraphNode, undefined> | null {
+    const nodes: GraphNode[] = data.entities
+        .filter((e) => e.type !== 'host')
+        .map((e) => ({ ...e }));
+
+    if (!nodes.length) {
+        return null;
+    }
+
+    const nodeMap = Object.fromEntries(nodes.map((n) => [n.name, n]));
+    const linkMap = new Map<string, GraphLink>();
+    data.relations
+        .filter(
+            (r) =>
+                nodeMap[r.from] &&
+                nodeMap[r.to] &&
+                r.relation_type !== 'deployed_on',
+        )
+        .forEach((r) => {
+            const key = `${r.from}→${r.to}`;
+
+            if (linkMap.has(key)) {
+                linkMap.get(key)!.relation_types.push(r.relation_type);
+            } else {
+                linkMap.set(key, {
+                    source: nodeMap[r.from],
+                    target: nodeMap[r.to],
+                    relation_types: [r.relation_type],
+                });
+            }
+        });
+    const links: GraphLink[] = [...linkMap.values()];
+
+    const svg = select(svgEl);
+    svg.selectAll('*').remove();
+    const W = svgEl.clientWidth || opts.fallbackW;
+    const H = svgEl.clientHeight || opts.fallbackH;
+    const g = svg.append('g');
+
+    const zoomBehavior = zoom<SVGSVGElement, unknown>()
+        .scaleExtent([0.3, 3])
+        .on('zoom', (e) => g.attr('transform', e.transform));
+    svg.call(zoomBehavior).on('dblclick.zoom', null);
+
+    svg.append('defs')
+        .append('marker')
+        .attr('id', opts.markerId)
+        .attr('viewBox', '0 -4 8 8')
+        .attr('refX', 8)
+        .attr('refY', 0)
+        .attr('markerWidth', opts.markerSize)
+        .attr('markerHeight', opts.markerSize)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-4L8,0L0,4')
+        .attr('fill', opts.arrowFill);
+
+    const linkG = g.append('g').selectAll('g').data(links).join('g');
+    const linkLine = linkG
+        .append('line')
+        .attr('stroke', 'var(--binary-outline-variant)')
+        .attr('stroke-width', opts.linkStrokeWidth)
+        .attr('opacity', opts.linkOpacity)
+        .attr('marker-end', `url(#${opts.markerId})`);
+
+    linkG.each(function (d) {
+        d.relation_types.forEach((rt, i) => {
+            select(this)
+                .append('text')
+                .attr('class', `rl rl-${i}`)
+                .text(rt)
+                .attr('font-size', opts.relFont)
+                .attr('fill', 'var(--binary-outline)')
+                .attr('text-anchor', 'middle')
+                .attr('dominant-baseline', 'middle')
+                .attr('opacity', opts.relOpacity);
+        });
+    });
+
+    const nodeRadius = (d: GraphNode) =>
+        opts.nodeRadiusBase + d.observation_count * opts.nodeRadiusMul;
+    const nodeG = g
+        .append('g')
+        .selectAll<SVGGElement, unknown>('g')
+        .data(nodes)
+        .join('g')
+        .style('cursor', 'grab');
+
+    nodeG
+        .append('circle')
+        .attr('r', nodeRadius)
+        .attr('fill', (d) => typeColor(d.type) + '22')
+        .attr('stroke', (d) => typeColor(d.type))
+        .attr('stroke-width', 1.5);
+    nodeG
+        .append('text')
+        .text((d) => d.name)
+        .attr('font-size', opts.nodeFont)
+        .attr('fill', 'var(--binary-text)')
+        .attr('text-anchor', 'middle')
+        .attr('dy', opts.nodeDy);
+
+    const sim = forceSimulation<GraphNode>(nodes)
+        .force(
+            'link',
+            forceLink<GraphNode, GraphLink>(links)
+                .distance(
+                    (d) =>
+                        nodeRadius(d.source as GraphNode) +
+                        nodeRadius(d.target as GraphNode) +
+                        opts.linkDistanceBase +
+                        d.relation_types.length * opts.linkDistancePerRel,
+                )
+                .strength(0.4),
+        )
+        .force('charge', forceManyBody().strength(opts.chargeStrength))
+        .force('center', forceCenter(W / 2, H / 2))
+        .force('x', forceX(W / 2).strength(opts.forceStrength))
+        .force('y', forceY(H / 2).strength(opts.forceStrength))
+        .on('tick', () => {
+            linkLine.each(function (d) {
+                const s = d.source as GraphNode,
+                    t = d.target as GraphNode;
+                const dx = t.x! - s.x!,
+                    dy = t.y! - s.y!;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const r = nodeRadius(t) + opts.edgeGap;
+                select(this)
+                    .attr('x1', s.x!)
+                    .attr('y1', s.y!)
+                    .attr('x2', t.x! - (dx / dist) * r)
+                    .attr('y2', t.y! - (dy / dist) * r);
+            });
+            linkG.each(function (d) {
+                const s = d.source as GraphNode,
+                    t = d.target as GraphNode;
+                const n = d.relation_types.length;
+                select(this)
+                    .selectAll<SVGTextElement, string>('text.rl')
+                    .each(function (_, i) {
+                        const frac = (i + 1) / (n + 1);
+                        select(this)
+                            .attr('x', s.x! + (t.x! - s.x!) * frac)
+                            .attr('y', s.y! + (t.y! - s.y!) * frac);
+                    });
+            });
+            nodeG.attr('transform', (d) => `translate(${d.x},${d.y})`);
+        });
+
+    const dragBehavior = drag<SVGGElement, GraphNode>()
+        .on('start', (e, d) => {
+            if (!e.active) {
+                sim.alphaTarget(0.3).restart();
+            }
+
+            d.fx = d.x;
+            d.fy = d.y;
+        })
+        .on('drag', (e, d) => {
+            d.fx = e.x;
+            d.fy = e.y;
+        })
+        .on('end', (e, d) => {
+            if (!e.active) {
+                sim.alphaTarget(0);
+            }
+
+            d.fx = null;
+            d.fy = null;
+        });
+    nodeG.call(dragBehavior);
+
+    svg.call(zoomBehavior.transform, zoomIdentity);
+
+    return sim;
 }
