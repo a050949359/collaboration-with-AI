@@ -16,6 +16,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { nextTick, watch } from 'vue';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
+import { hostOrderIndex } from '../lib/topology';
 
 interface Entity {
     id: number;
@@ -320,23 +321,10 @@ function drawTopology(data: GraphData) {
         layeredRows[2].push('__unhosted__');
     }
 
-    // 各層內左→右顯示順序；未列出者排最後（例如動態注入的 Proxmox）
-    const HOST_ORDER = [
-        'Desktop',
-        'Laptop',
-        'GCP VM',
-        'LightNode VM',
-        '__unhosted__',
-        'GitHub Pages',
-        'Oracle VM1',
-        'Oracle VM2',
-    ];
-    const orderIdx = (n: string) => {
-        const i = HOST_ORDER.indexOf(n);
-
-        return i === -1 ? HOST_ORDER.length : i;
-    };
-    layeredRows.forEach((row) => row.sort((a, b) => orderIdx(a) - orderIdx(b)));
+    // 各層內左→右顯示順序（共用設定，見 lib/topology）
+    layeredRows.forEach((row) =>
+        row.sort((a, b) => hostOrderIndex(a) - hostOrderIndex(b)),
+    );
 
     const rows = layeredRows.filter((r) => r.length);
 
