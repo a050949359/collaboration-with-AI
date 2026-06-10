@@ -93,7 +93,14 @@ export const api = {
     },
 
     mcp: () => '/api/mcp',
-    memoryGraph: () => '/api/memory/graph',
+    memory: {
+        graph: () => '/api/memory/graph',
+        geo: () => '/api/memory/observations/geo',
+        typed: (entityId: number) => `/api/memory/entities/${entityId}/typed`,
+        observationStore: () => '/api/memory/observations',
+        observationUpdate: (id: number) => `/api/memory/observations/${id}`,
+        observationDestroy: (id: number) => `/api/memory/observations/${id}`,
+    },
 
     tasks: {
         index: () => '/api/v1/tasks',
