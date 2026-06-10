@@ -19,6 +19,9 @@ class McpObservation extends Model
 
     protected $fillable = ['entity_id', 'content', 'type'];
 
+    /** 新實例即帶預設 type，確保 create 後記憶體與 DB 一致（回傳 JSON 含 type）。 */
+    protected $attributes = ['type' => self::TYPE_DEFAULT];
+
     public function entity(): BelongsTo
     {
         return $this->belongsTo(McpEntity::class, 'entity_id');
