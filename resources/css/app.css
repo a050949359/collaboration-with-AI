@@ -139,7 +139,9 @@
 
 @layer components {
     .binary-page {
-        @apply relative min-h-screen overflow-hidden bg-transparent;
+        /* overflow-x-clip（非 hidden）：擋水平溢出但不建立 scroll container，
+           才不會破壞子層 position: sticky（首頁 Projects scrollytelling 需要） */
+        @apply relative min-h-screen overflow-x-clip bg-transparent;
     }
 
     .binary-grid {

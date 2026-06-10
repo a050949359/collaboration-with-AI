@@ -68,12 +68,6 @@ const defaultNavLinks = computed((): NavLink[] => {
                 path.replace(/\/$/, '') === routes.home().replace(/\/$/, ''),
         },
         {
-            label: t('articles.nav.articles'),
-            href: routes.articles.index(),
-            icon: 'articles',
-            active: path.startsWith(routes.articles.index()),
-        },
-        {
             label: t('articles.nav.aviation'),
             icon: 'aviation',
             active: aviationActive,
@@ -99,42 +93,65 @@ const defaultNavLinks = computed((): NavLink[] => {
             ],
         },
         {
-            label: t('articles.nav.about'),
-            href: routes.about(),
-            icon: 'about',
-            active: path.startsWith(routes.about()),
-        },
-        {
-            label: 'LineBot',
-            href: routes.linebot(),
-            icon: 'linebot',
-            active: path.startsWith(routes.linebot()),
-        },
-        {
-            label: 'Lab',
-            icon: 'lab',
+            label: 'CV',
+            icon: 'cv',
             active:
-                path.startsWith(routes.tourPlayground()) ||
-                path.startsWith(routes.miniOrch()) ||
-                path.startsWith(routes.wsLab()) ||
-                path.startsWith(routes.gacha()) ||
                 path.startsWith(routes.computerVision()) ||
-                path.startsWith(routes.mcp()) ||
-                path.startsWith(routes.memory()) ||
+                path.startsWith(routes.gesture()),
+            children: [
+                {
+                    label: '邊緣偵測',
+                    href: routes.computerVision(),
+                    icon: 'edge',
+                    active: path.startsWith(routes.computerVision()),
+                },
+                {
+                    label: '手勢辨識',
+                    href: routes.gesture(),
+                    icon: 'gesture',
+                    active: path.startsWith(routes.gesture()),
+                },
+            ],
+        },
+        {
+            label: 'AI',
+            icon: 'ai',
+            active:
+                path.startsWith(routes.articles.index()) ||
+                path.startsWith(routes.about()) ||
                 (isAdmin.value && path.startsWith(routes.storyRelay())),
             children: [
                 {
-                    label: 'Tour',
-                    href: routes.tourPlayground(),
-                    icon: 'tour',
-                    active: path.startsWith(routes.tourPlayground()),
+                    label: t('articles.nav.articles'),
+                    href: routes.articles.index(),
+                    icon: 'articles',
+                    active: path.startsWith(routes.articles.index()),
                 },
                 {
-                    label: 'mini-orch',
-                    href: routes.miniOrch(),
-                    icon: 'orch',
-                    active: path.startsWith(routes.miniOrch()),
+                    label: t('articles.nav.about'),
+                    href: routes.about(),
+                    icon: 'about',
+                    active: path.startsWith(routes.about()),
                 },
+                ...(isAdmin.value
+                    ? [
+                          {
+                              label: 'Story',
+                              href: routes.storyRelay(),
+                              icon: 'story',
+                              active: path.startsWith(routes.storyRelay()),
+                          },
+                      ]
+                    : []),
+            ],
+        },
+        {
+            label: 'WS',
+            icon: 'ws',
+            active:
+                path.startsWith(routes.wsLab()) ||
+                path.startsWith(routes.gacha()),
+            children: [
                 {
                     label: 'ws-lab',
                     href: routes.wsLab(),
@@ -147,17 +164,20 @@ const defaultNavLinks = computed((): NavLink[] => {
                     icon: 'gacha',
                     active: path.startsWith(routes.gacha()),
                 },
+            ],
+        },
+        {
+            label: 'MCP',
+            icon: 'tools',
+            active:
+                path.startsWith(routes.task()) ||
+                path.startsWith(routes.memory()),
+            children: [
                 {
-                    label: 'CV',
-                    href: routes.computerVision(),
-                    icon: 'cv',
-                    active: path.startsWith(routes.computerVision()),
-                },
-                {
-                    label: 'MCP',
-                    href: routes.mcp(),
+                    label: 'Task',
+                    href: routes.task(),
                     icon: 'mcp',
-                    active: path.startsWith(routes.mcp()),
+                    active: path.startsWith(routes.task()),
                 },
                 {
                     label: 'Memory',
@@ -165,16 +185,34 @@ const defaultNavLinks = computed((): NavLink[] => {
                     icon: 'memory',
                     active: path.startsWith(routes.memory()),
                 },
-                ...(isAdmin.value
-                    ? [
-                          {
-                              label: 'Story',
-                              href: routes.storyRelay(),
-                              icon: 'story',
-                              active: path.startsWith(routes.storyRelay()),
-                          },
-                      ]
-                    : []),
+            ],
+        },
+        {
+            label: 'Apps',
+            icon: 'apps',
+            active:
+                path.startsWith(routes.tourPlayground()) ||
+                path.startsWith(routes.linebot()) ||
+                path.startsWith(routes.miniOrch()),
+            children: [
+                {
+                    label: 'Tour',
+                    href: routes.tourPlayground(),
+                    icon: 'tour',
+                    active: path.startsWith(routes.tourPlayground()),
+                },
+                {
+                    label: 'LineBot',
+                    href: routes.linebot(),
+                    icon: 'linebot',
+                    active: path.startsWith(routes.linebot()),
+                },
+                {
+                    label: 'mini-orch',
+                    href: routes.miniOrch(),
+                    icon: 'orch',
+                    active: path.startsWith(routes.miniOrch()),
+                },
             ],
         },
     ];

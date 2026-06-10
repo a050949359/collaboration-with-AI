@@ -7,7 +7,9 @@ const githubUrl = 'https://github.com/a050949359/collaboration-with-AI';
 </script>
 
 <template>
-    <section class="binary-section bg-[var(--binary-surface-lowest)]">
+    <section
+        class="binary-section flex min-h-[calc(100vh-4rem)] flex-col justify-center bg-[var(--binary-surface-lowest)]"
+    >
         <div class="mx-auto max-w-screen-2xl">
             <div
                 class="mb-8 flex flex-col gap-4 md:mb-12 md:flex-row md:items-baseline md:justify-between"

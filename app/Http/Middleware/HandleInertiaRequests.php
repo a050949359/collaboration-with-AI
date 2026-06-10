@@ -95,7 +95,7 @@ class HandleInertiaRequests extends Middleware
                 ),
                 'llmSettings'      => AppSettings::get('llm') ?: config('services.llm.uses', []),
             ],
-            $request->routeIs('mcp') => [
+            $request->routeIs('task') => [
                 'taskStatuses' => array_column(TaskStatus::cases(), 'value'),
             ],
             $request->routeIs('story-relay') => [

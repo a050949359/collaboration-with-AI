@@ -58,6 +58,9 @@ resources/js/
     Countries.vue   # 城市模組主頁（含選國家 + 城市列表 + 新增城市子頁籤）
     TourPlayground.vue
     CitySearch.vue
+    ComputerVision.vue       # CV→邊緣偵測（WASM，資產在 public/lab/cv/edge.*）
+    GestureRecognition.vue   # CV→手勢辨識（MediaPipe TFLite WASM；模型未到，目前 gated）
+    Task.vue                 # MCP task 管理 UI（原 Mcp.vue，route /app/task）
   layouts/
     AppLayout.vue   # 主 layout（Navbar、Matrix Rain 動畫、Toast）
     AuthShell.vue   # 登入/註冊 layout（左右兩欄，max-w-5xl）
@@ -87,6 +90,18 @@ resources/js/
 - **所有 URL 只在 `resources/js/lib/routes.ts` 定義**
 - 前端元件用 `routes.*` 取頁面路由、`api.*` 取 API 路由
 - 禁止在 Vue 元件中硬編碼路徑字串
+
+### 導覽結構（Navbar）
+- 頂層：`Home · 航空▾ · CV▾ · AI▾ · WS▾ · MCP▾ · Apps▾`（定義在 `AppLayout.vue` 的 `defaultNavLinks`）
+- 群組與成員：
+  - **CV**：邊緣偵測（`computer-vision`）、手勢辨識（`gesture`）
+  - **AI**：文章、About（Ask Me 問答）、Story（admin only）
+  - **WS**（WebSocket 縮寫）：ws-lab、Gacha
+  - **MCP**：Task（任務 UI，route `task`；原 `mcp`）、Memory（知識圖譜）
+  - **Apps**：Tour、LineBot、mini-orch
+- 手機版由 `NavDrawer.vue` 吃**同一份** `defaultNavLinks` 渲染（項目有 `children` 即摺疊 accordion），改 nav 只需動 `defaultNavLinks`
+- 圖示集中在 `NavIcon.vue`，以 `name` 字串 switch；**新增群組/頁面要補對應 icon**（無對應 name 不會報錯但顯示空白）
+- ⚠️ `MCP` 群只是導覽分類；真正的 MCP server endpoint 是 `api.mcp`（`/api/mcp/*`），與 web 的 `task` route 無關
 
 ### Auth 流程
 - 登入/註冊：前端以 RSA-OAEP（SHA-1）加密 password 再送出

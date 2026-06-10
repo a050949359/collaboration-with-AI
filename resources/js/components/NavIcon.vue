@@ -370,29 +370,6 @@ defineProps<{ name: string; size?: number }>();
             </g>
         </template>
 
-        <!-- lab (dropdown group icon) -->
-        <template v-else-if="name === 'lab'">
-            <path
-                class="stroke-default"
-                d="M12 4 V14 L6 24 a1 1 0 0 0 0.9 1.5 H25.1 a1 1 0 0 0 0.9 -1.5 L20 14 V4"
-                stroke-width="1.5"
-                stroke-linejoin="round"
-                stroke-linecap="round"
-            />
-            <line
-                class="stroke-default"
-                x1="10"
-                y1="4"
-                x2="22"
-                y2="4"
-                stroke-width="1.5"
-                stroke-linecap="round"
-            />
-            <circle class="fill-default anim-led-1" cx="12" cy="20" r="1.4" />
-            <circle class="fill-default anim-led-2" cx="17" cy="22" r="1.4" />
-            <circle class="fill-default anim-led-3" cx="22" cy="20" r="1.4" />
-        </template>
-
         <!-- story (open book) -->
         <template v-else-if="name === 'story'">
             <path
@@ -654,6 +631,193 @@ defineProps<{ name: string; size?: number }>();
                 x2="21"
                 y2="19"
                 stroke-width="1.2"
+            />
+        </template>
+
+        <!-- edge (edge detection — framed contour) -->
+        <template v-else-if="name === 'edge'">
+            <rect
+                class="stroke-default"
+                x="5"
+                y="5"
+                width="22"
+                height="22"
+                rx="3"
+                stroke-width="1.5"
+            />
+            <path
+                class="stroke-default anim-cv-iris"
+                d="M9 22 L14 12 L18 18 L23 9"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+            />
+            <line
+                class="stroke-default"
+                x1="9"
+                y1="11"
+                x2="12.5"
+                y2="11"
+                stroke-width="1.2"
+                stroke-linecap="round"
+                opacity="0.45"
+            />
+        </template>
+
+        <!-- gesture (open hand) -->
+        <template v-else-if="name === 'gesture'">
+            <line
+                class="stroke-default"
+                x1="11"
+                y1="15"
+                x2="11"
+                y2="9"
+                stroke-width="1.5"
+                stroke-linecap="round"
+            />
+            <line
+                class="stroke-default"
+                x1="15"
+                y1="14"
+                x2="15"
+                y2="6"
+                stroke-width="1.5"
+                stroke-linecap="round"
+            />
+            <line
+                class="stroke-default"
+                x1="19"
+                y1="14"
+                x2="19"
+                y2="6.5"
+                stroke-width="1.5"
+                stroke-linecap="round"
+            />
+            <line
+                class="stroke-default"
+                x1="22.5"
+                y1="15"
+                x2="22.5"
+                y2="9"
+                stroke-width="1.5"
+                stroke-linecap="round"
+            />
+            <path
+                class="stroke-default"
+                d="M11 15 V13 a1.7 1.7 0 0 0 -3.4 0.3 L7.7 19 a8 8 0 0 0 8 8 a8 8 0 0 0 8 -8 V14"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                fill="none"
+            />
+        </template>
+
+        <!-- ai (group — sparkle) -->
+        <template v-else-if="name === 'ai'">
+            <path
+                class="stroke-default"
+                d="M16 5 L18 13 L26 16 L18 19 L16 27 L14 19 L6 16 L14 13 Z"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+            />
+            <circle
+                class="fill-default anim-radar-blip"
+                cx="24"
+                cy="8"
+                r="1.3"
+            />
+            <circle class="fill-default" cx="8" cy="24" r="1" opacity="0.7" />
+        </template>
+
+        <!-- ws (group — broadcast waves) -->
+        <template v-else-if="name === 'ws'">
+            <circle class="fill-default" cx="16" cy="23" r="2" />
+            <path
+                class="stroke-default"
+                d="M10 18 a8.5 8.5 0 0 1 12 0"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                fill="none"
+            />
+            <path
+                class="stroke-default"
+                d="M6.5 14 a13.5 13.5 0 0 1 19 0"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                fill="none"
+                opacity="0.55"
+            />
+        </template>
+
+        <!-- tools (group — gear) -->
+        <template v-else-if="name === 'tools'">
+            <circle
+                class="stroke-default"
+                cx="16"
+                cy="16"
+                r="5.5"
+                stroke-width="1.5"
+            />
+            <circle
+                class="stroke-default"
+                cx="16"
+                cy="16"
+                r="2.2"
+                stroke-width="1.5"
+            />
+            <g
+                class="stroke-default anim-gear-rot"
+                stroke-width="1.5"
+                stroke-linecap="round"
+            >
+                <line x1="16" y1="4" x2="16" y2="8" />
+                <line x1="16" y1="24" x2="16" y2="28" />
+                <line x1="4" y1="16" x2="8" y2="16" />
+                <line x1="24" y1="16" x2="28" y2="16" />
+                <line x1="7.8" y1="7.8" x2="10.5" y2="10.5" />
+                <line x1="21.5" y1="21.5" x2="24.2" y2="24.2" />
+                <line x1="24.2" y1="7.8" x2="21.5" y2="10.5" />
+                <line x1="10.5" y1="21.5" x2="7.8" y2="24.2" />
+            </g>
+        </template>
+
+        <!-- apps (group — 2x2 grid) -->
+        <template v-else-if="name === 'apps'">
+            <rect
+                class="stroke-default"
+                x="6"
+                y="6"
+                width="8"
+                height="8"
+                rx="2"
+                stroke-width="1.5"
+            />
+            <rect
+                class="stroke-default"
+                x="18"
+                y="6"
+                width="8"
+                height="8"
+                rx="2"
+                stroke-width="1.5"
+            />
+            <rect
+                class="stroke-default"
+                x="6"
+                y="18"
+                width="8"
+                height="8"
+                rx="2"
+                stroke-width="1.5"
+            />
+            <rect
+                class="stroke-default"
+                x="18"
+                y="18"
+                width="8"
+                height="8"
+                rx="2"
+                stroke-width="1.5"
             />
         </template>
     </svg>

@@ -218,9 +218,9 @@ export default {
         name_update_failed: '更新失敗',
         password_updated: '密碼已成功更新',
     },
-    mcp: {
-        head_title: 'MCP Tasks',
-        breadcrumb: 'MCP',
+    task: {
+        head_title: '任務',
+        breadcrumb: 'Task',
         status_todo: '待辦',
         status_in_progress: '進行中',
         status_done: '完成',

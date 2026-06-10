@@ -223,9 +223,9 @@ export default {
         name_update_failed: 'Update failed',
         password_updated: 'Password updated successfully',
     },
-    mcp: {
-        head_title: 'MCP Tasks',
-        breadcrumb: 'MCP',
+    task: {
+        head_title: 'Task',
+        breadcrumb: 'Task',
         status_todo: 'Todo',
         status_in_progress: 'In Progress',
         status_done: 'Done',
