@@ -246,7 +246,12 @@ func resolveEndpoint(suffix string) (string, string, error) {
 	}
 	for _, s := range cfg.Servers {
 		if strings.HasSuffix(strings.TrimRight(s.URL, "/"), "/"+suffix) {
-			return s.URL, strings.TrimPrefix(s.Headers["Authorization"], "Bearer "), nil
+			auth := s.Headers["Authorization"]
+			if auth == "" {
+				auth = s.Headers["authorization"] // header key 大小寫相容
+			}
+
+			return s.URL, strings.TrimPrefix(auth, "Bearer "), nil
 		}
 	}
 	return "", "", fmt.Errorf("%s 內找不到 /%s server", path, suffix)
@@ -351,17 +356,19 @@ func extractJSON(body []byte) []byte {
 
 // ── 小工具 ───────────────────────────────────────────────────
 
+// 只認最前或最後位置的旗標，避免誤刪內容中間剛好等於 --json 的參數
 func extractFlag(args []string, flagName string) (bool, []string) {
-	found := false
-	rest := make([]string, 0, len(args))
-	for _, a := range args {
-		if a == flagName {
-			found = true
-			continue
-		}
-		rest = append(rest, a)
+	if len(args) == 0 {
+		return false, args
 	}
-	return found, rest
+	if args[0] == flagName {
+		return true, args[1:]
+	}
+	if args[len(args)-1] == flagName {
+		return true, args[:len(args)-1]
+	}
+
+	return false, args
 }
 
 func need(rest []string, n int, sig string) {
