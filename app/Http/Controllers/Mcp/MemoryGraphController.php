@@ -12,17 +12,17 @@ class MemoryGraphController extends Controller
 {
     public function index(MicroHostStatus $microHost): JsonResponse
     {
-        $entities = McpEntity::withCount('observations')->get()->map(fn($e) => [
-            'id'                => $e->id,
-            'name'              => $e->name,
-            'type'              => $e->type,
+        $entities = McpEntity::withCount(['observations' => fn ($q) => $q->ofDefaultType()])->get()->map(fn ($e) => [
+            'id' => $e->id,
+            'name' => $e->name,
+            'type' => $e->type,
             'observation_count' => $e->observations_count,
         ]);
 
-        $relations = McpRelation::with('from', 'to')->get()->map(fn($r) => [
-            'from'          => $r->from->name,
+        $relations = McpRelation::with('from', 'to')->get()->map(fn ($r) => [
+            'from' => $r->from->name,
             'relation_type' => $r->relation_type,
-            'to'            => $r->to->name,
+            'to' => $r->to->name,
         ]);
 
         // 微型主機在線時動態塞入該主機節點（payload 自帶 host name，離線就不塞）。
@@ -31,12 +31,12 @@ class MemoryGraphController extends Controller
         if (
             $micro['status'] === 'online'
             && ! empty($micro['host'])
-            && ! $entities->contains(fn($e) => $e['name'] === $micro['host'])
+            && ! $entities->contains(fn ($e) => $e['name'] === $micro['host'])
         ) {
             $entities->push([
-                'id'                => -1,
-                'name'              => $micro['host'],
-                'type'              => 'host',
+                'id' => -1,
+                'name' => $micro['host'],
+                'type' => 'host',
                 'observation_count' => 0,
             ]);
         }
