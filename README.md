@@ -294,3 +294,18 @@ POST /api/gacha/rooms/{room}/draw
 | `create_relation` | 建立有向關係（from → relation_type → to），相同三元組不重複 |
 | `delete_relation` | 刪除指定有向關係 |
 
+### 本機 CLI（memctl / taskctl）
+
+`cmd/memctl`、`cmd/taskctl` 是上述兩個 MCP server 的精簡 Go CLI client，供本機直接操作（取代冗長 curl，亦免 native MCP 連線常駐）。token / URL 自動從 `.vscode/mcp.json` 讀取。
+
+```bash
+# binary 為 gitignore，clone 後需先以 Go 編譯一次
+cd cmd/memctl  && go build -o memctl  .
+cd cmd/taskctl && go build -o taskctl .
+
+./memctl graph linebot        # 讀知識圖譜
+./taskctl ls --status todo    # 列任務
+```
+
+詳細指令與語意見各自 `--help`。
+

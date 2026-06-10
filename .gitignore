@@ -34,3 +34,5 @@ check_results.txt
 /cmd/ws-lab/go.sum
 /cmd/ws-lab/ws-lab
 /tmp/
+/cmd/memctl/memctl
+/cmd/taskctl/taskctl
