@@ -48,7 +48,9 @@ class MemoryObservationController extends Controller
 
         $obs = DB::transaction(function () use ($data, $type) {
             // 鎖父 entity 列：序列化同一 entity 的併發寫入，count→insert 才原子（防超過 maxCount）
-            McpEntity::whereKey($data['entity_id'])->lockForUpdate()->first();
+            // exists 驗證後、取得鎖前 entity 可能被併發刪除 → null 檢查
+            $entity = McpEntity::whereKey($data['entity_id'])->lockForUpdate()->first();
+            abort_if(! $entity, 404, 'Entity not found');
             $this->assertWithinMax($data['entity_id'], $type, null);
 
             return McpObservation::create($data);
@@ -70,7 +72,8 @@ class MemoryObservationController extends Controller
         DB::transaction(function () use ($data, $observation) {
             // 改 type 才需鎖：序列化同一 entity 的併發寫入後再檢查新 type 的 maxCount
             if (isset($data['type']) && $data['type'] !== $observation->type->value) {
-                McpEntity::whereKey($observation->entity_id)->lockForUpdate()->first();
+                $entity = McpEntity::whereKey($observation->entity_id)->lockForUpdate()->first();
+                abort_if(! $entity, 404, 'Entity not found');
                 $this->assertWithinMax($observation->entity_id, ObservationType::from($data['type']), $observation->id);
             }
 
