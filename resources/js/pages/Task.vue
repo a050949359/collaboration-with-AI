@@ -58,14 +58,51 @@ const statusColors: Record<TaskStatus, string> = {
     done: 'text-green-400 border-green-500/30',
 };
 
-const counts = computed(() =>
-    Object.fromEntries(
-        taskStatuses.value.map((s) => [
-            s,
-            tasks.value.filter((t) => t.status === s).length,
-        ]),
-    ),
-);
+type FilterKey = TaskStatus | 'all' | 'no_items';
+
+const activeFilter = ref<FilterKey>('all');
+
+interface FilterTab {
+    key: FilterKey;
+    label: string;
+    count: number;
+    activeClass: string;
+}
+
+const filterTabs = computed<FilterTab[]>(() => [
+    {
+        key: 'all',
+        label: t('task.filter_all'),
+        count: tasks.value.length,
+        activeClass:
+            'text-[var(--binary-primary)] border-[var(--binary-primary)]/60',
+    },
+    ...taskStatuses.value.map((s) => ({
+        key: s as FilterKey,
+        label: statusLabels.value[s],
+        count: tasks.value.filter((t) => t.status === s).length,
+        activeClass: statusColors[s],
+    })),
+    {
+        key: 'no_items' as FilterKey,
+        label: t('task.filter_no_items'),
+        count: tasks.value.filter((t) => t.items.length === 0).length,
+        activeClass:
+            'text-[var(--binary-secondary)] border-[var(--binary-secondary)]/40',
+    },
+]);
+
+const filteredTasks = computed(() => {
+    if (activeFilter.value === 'all') {
+        return tasks.value;
+    }
+
+    if (activeFilter.value === 'no_items') {
+        return tasks.value.filter((t) => t.items.length === 0);
+    }
+
+    return tasks.value.filter((t) => t.status === activeFilter.value);
+});
 
 async function fetchTasks() {
     loading.value = true;
@@ -146,17 +183,22 @@ onMounted(fetchTasks);
                 TASKS
             </h1>
 
-            <!-- 狀態統計 -->
-            <div class="mb-8 flex flex-wrap gap-4">
-                <div
-                    v-for="(count, status) in counts"
-                    :key="status"
-                    class="flex items-center gap-2 rounded-lg border px-4 py-2 text-xs font-bold tracking-wider uppercase"
-                    :class="statusColors[status as TaskStatus]"
+            <!-- Filter tabs -->
+            <div class="mb-8 flex flex-wrap gap-2">
+                <button
+                    v-for="tab in filterTabs"
+                    :key="tab.key"
+                    class="flex items-center gap-2 rounded-lg border px-4 py-2 text-xs font-bold tracking-wider uppercase transition-colors"
+                    :class="
+                        activeFilter === tab.key
+                            ? tab.activeClass
+                            : 'border-[var(--binary-outline-variant)] text-[var(--binary-text-muted)] hover:border-[var(--binary-outline)]/50 hover:text-[var(--binary-text)]'
+                    "
+                    @click="activeFilter = tab.key"
                 >
-                    <span>{{ statusLabels[status as TaskStatus] }}</span>
-                    <span class="text-lg font-black">{{ count }}</span>
-                </div>
+                    <span>{{ tab.label }}</span>
+                    <span class="text-lg font-black">{{ tab.count }}</span>
+                </button>
             </div>
 
             <!-- Task 清單 -->
@@ -165,7 +207,7 @@ onMounted(fetchTasks);
             </div>
             <div v-else class="space-y-3">
                 <div
-                    v-for="task in tasks"
+                    v-for="task in filteredTasks"
                     :key="task.id"
                     class="overflow-hidden rounded-none border bg-[var(--binary-surface-container)] md:rounded-xl"
                     :class="
