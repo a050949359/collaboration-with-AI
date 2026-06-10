@@ -47,14 +47,27 @@
 - 全球 84,000+ 機場（含地球儀視覺化）、850+ 航空公司
 - 200+ 國家 / 城市（Wikidata 整合，使用者 UI 搜尋新增）
 
-### Lab
-- **MCP（Model Context Protocol）**：JSON-RPC 2.0 endpoint，供 AI assistant（Claude Desktop 等）以 API Key 呼叫；以任務管理（Task CRUD + 子項目）為操作目標，共 8 個工具
-- **ws-lab**：Go WebSocket server 管理介面，多房間架構，含即時串流（生產環境需 nginx 將 `/ws-lab` proxy 到 Go binary，本地開發無 nginx 時 WebSocket 無法連線）
-- **Computer Vision**：WASM 邊緣偵測（OpenCV）
-- **mini-orch**：輕量壓測 / 任務排程觀測介面
-- **故事接龍**：多角色 LLM 輪流推進，含世界狀態、道具系統、定時排程
-- **Gacha 抽卡**：多人房間同步，WebSocket 廣播動畫（Laravel Reverb）
-- **旅遊 Playground**：旅客、行程、訂單、PDF 匯出（Queue Worker 示範）
+### 互動模組
+
+站內導覽依性質分為 **CV / AI / WS / MCP / Apps** 幾組（外加航空資料查詢，見上）：
+
+- **CV（Computer Vision）**
+  - 邊緣偵測：WASM（OpenCV）即時邊緣偵測，可切 Canny / Laplacian / Sobel / Scharr
+  - 手勢辨識：MediaPipe TFLite WASM 手部關鍵點 + 手勢分類（模型部署中）
+- **AI**
+  - 文章：AI 產生（Gemini / Vertex Imagen）、編輯、分類、標籤（見上）
+  - Ask Me：個人技術問答（About 頁）
+  - 故事接龍：多角色 LLM 輪流推進，含世界狀態、道具系統、定時排程
+- **WS（WebSocket）**
+  - ws-lab：Go WebSocket server 管理介面，多房間架構 + 即時串流（生產環境需 nginx 將 `/ws-lab` proxy 到 Go binary，本地無 nginx 時無法連線）
+  - Gacha 抽卡：多人房間同步，WebSocket 廣播動畫（Laravel Reverb）
+- **MCP**
+  - Task：站內任務管理 UI（對應自製 MCP task server，Task CRUD + 子項目，共 8 工具）
+  - Memory：知識圖譜（對應 MCP memory server，Admin，共 8 工具）
+- **Apps**
+  - 旅遊 Playground：旅客、行程、訂單、PDF 匯出（Queue Worker 示範）
+  - LineBot：LINE Webhook
+  - mini-orch：輕量壓測 / 任務排程觀測介面
 
 ---
 

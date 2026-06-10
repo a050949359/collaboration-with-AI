@@ -57,14 +57,15 @@ export const routes = {
     // Gacha
     gacha: () => `${WEB_PREFIX}/gacha`,
 
-    // MCP Tasks
-    mcp: () => `${WEB_PREFIX}/mcp`,
+    // Task（MCP task UI；MCP server endpoint 見 api.mcp）
+    task: () => `${WEB_PREFIX}/task`,
 
     // Memory Graph
     memory: () => `${WEB_PREFIX}/memory`,
 
-    // Computer Vision Lab
-    computerVision: () => `${WEB_PREFIX}/computer-vision`,
+    // Computer Vision Lab（CV 下拉群組）
+    computerVision: () => `${WEB_PREFIX}/computer-vision`, // 邊緣偵測
+    gesture: () => `${WEB_PREFIX}/gesture`, // 手勢辨識
 
     // Story Relay
     storyRelay: () => `${WEB_PREFIX}/story-relay`,

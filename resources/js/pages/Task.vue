@@ -47,9 +47,9 @@ const editForm = ref({
 });
 
 const statusLabels = computed<Record<TaskStatus, string>>(() => ({
-    todo: t('mcp.status_todo'),
-    in_progress: t('mcp.status_in_progress'),
-    done: t('mcp.status_done'),
+    todo: t('task.status_todo'),
+    in_progress: t('task.status_in_progress'),
+    done: t('task.status_done'),
 }));
 
 const statusColors: Record<TaskStatus, string> = {
@@ -132,7 +132,7 @@ onMounted(fetchTasks);
 </script>
 
 <template>
-    <Head :title="t('mcp.head_title')" />
+    <Head :title="t('task.head_title')" />
     <AppLayout>
         <div
             class="mx-auto w-full max-w-screen-2xl px-[18px] pt-8 pb-16 md:px-8"
@@ -140,7 +140,7 @@ onMounted(fetchTasks);
             <p
                 class="binary-label mb-2 text-xs font-bold text-[var(--binary-primary)] uppercase"
             >
-                &gt; {{ t('mcp.breadcrumb') }}
+                &gt; {{ t('task.breadcrumb') }}
             </p>
             <h1 class="binary-page-title mb-8 text-[var(--binary-text)]">
                 TASKS
@@ -214,13 +214,13 @@ onMounted(fetchTasks);
                                     class="text-xs text-[var(--binary-primary)] hover:opacity-80"
                                     @click.stop="saveEdit(task)"
                                 >
-                                    {{ t('mcp.btn_save') }}
+                                    {{ t('task.btn_save') }}
                                 </button>
                                 <button
                                     class="text-xs text-[var(--binary-outline)] hover:text-[var(--binary-text)]"
                                     @click.stop="editingId = null"
                                 >
-                                    {{ t('mcp.btn_cancel') }}
+                                    {{ t('task.btn_cancel') }}
                                 </button>
                             </div>
                         </template>
@@ -268,7 +268,7 @@ onMounted(fetchTasks);
                             <textarea
                                 v-model="editForm.description"
                                 class="binary-input h-16 w-full resize-none text-xs"
-                                :placeholder="t('mcp.placeholder_desc')"
+                                :placeholder="t('task.placeholder_desc')"
                             />
                         </template>
                         <p
@@ -325,7 +325,7 @@ onMounted(fetchTasks);
                 v-if="!loading && tasks.length === 0"
                 class="mt-6 text-xs text-[var(--binary-outline)]"
             >
-                {{ t('mcp.empty') }}
+                {{ t('task.empty') }}
             </p>
         </div>
     </AppLayout>

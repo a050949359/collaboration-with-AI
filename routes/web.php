@@ -33,9 +33,10 @@ Route::prefix('app')->group(function () {
     Route::get('/mini-orch', [MiniOrchController::class, 'page'])->name('mini-orch');
     Route::inertia('/ws-lab', 'WsLab')->name('ws-lab');
     Route::inertia('/gacha', 'Gacha')->name('gacha');
-    Route::inertia('/mcp', 'Mcp')->name('mcp');
+    Route::inertia('/task', 'Task')->name('task');
     Route::inertia('/memory', 'MemoryGraph')->name('memory');
     Route::inertia('/computer-vision', 'ComputerVision')->name('computer-vision');
+    Route::inertia('/gesture', 'GestureRecognition')->name('gesture');
     Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
         Route::inertia('/story-relay', 'StoryRelay')->name('story-relay');
     });
