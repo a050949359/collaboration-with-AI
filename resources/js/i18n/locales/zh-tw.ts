@@ -228,6 +228,8 @@ export default {
         btn_save: '儲存',
         btn_cancel: '取消',
         empty: '目前沒有任務。',
+        filter_all: '全部',
+        filter_no_items: '待規劃',
     },
     home: {
         stack: {

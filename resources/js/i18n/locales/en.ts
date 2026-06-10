@@ -233,6 +233,8 @@ export default {
         btn_save: 'Save',
         btn_cancel: 'Cancel',
         empty: 'No tasks yet.',
+        filter_all: 'All',
+        filter_no_items: 'Unplanned',
     },
     home: {
         stack: {
