@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Mcp;
 
+use App\Enums\ObservationType;
 use App\Http\Controllers\Controller;
 use App\Models\Mcp\McpEntity;
+use App\Models\Mcp\McpObservation;
 use App\Models\Mcp\McpRelation;
 use App\Services\MicroHost\MicroHostStatus;
 use Illuminate\Http\JsonResponse;
@@ -42,5 +44,20 @@ class MemoryGraphController extends Controller
         }
 
         return response()->json(compact('entities', 'relations'));
+    }
+
+    /** 公開：回傳所有 geo 觀察（entity 名稱/type + 座標），供 globe 視圖繪點。 */
+    public function geo(): JsonResponse
+    {
+        $points = McpObservation::with('entity:id,name,type')
+            ->ofType(ObservationType::Geo)
+            ->get()
+            ->map(fn ($o) => [
+                'entity' => $o->entity?->name,
+                'type' => $o->entity?->type,
+                'content' => $o->content,
+            ]);
+
+        return response()->json($points);
     }
 }
