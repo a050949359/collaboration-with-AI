@@ -19,7 +19,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('entity_id')->constrained('mcp_entities')->cascadeOnDelete();
             $table->text('content');
+            // typed observation：預設 desc（純文字描述）；geo/ip 等結構化資料用其他 type
+            $table->string('type', 32)->default('desc');
             $table->timestamps();
+
+            $table->index(['entity_id', 'type']);
         });
 
         Schema::create('mcp_relations', function (Blueprint $table) {
