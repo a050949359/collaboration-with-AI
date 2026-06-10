@@ -4,8 +4,11 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ArticlesSection from '../components/welcome/ArticlesSection.vue';
 import HeroSection from '../components/welcome/HeroSection.vue';
+import ProjectsScrolly from '../components/welcome/ProjectsScrolly.vue';
 import ProjectsSection from '../components/welcome/ProjectsSection.vue';
 import StackContactSection from '../components/welcome/StackContactSection.vue';
+import { galleryProjects } from '../data/projects';
+import type { Project } from '../data/projects';
 import AppLayout from '../layouts/AppLayout.vue';
 
 interface ArticlePreview {
@@ -22,7 +25,7 @@ defineProps<{
 
 const { t } = useI18n();
 
-const featuredProjects = [
+const featuredProjects: Project[] = [
     {
         id: '01',
         category: 'AI_COLLAB_DEV',
@@ -82,16 +85,10 @@ const featuredProjects = [
             { hash: '1df037d', date: '2026-04-21', message: 'init' },
         ],
     },
-    {
-        id: '02',
-        category: 'AI_CONTENT',
-        title: 'AI Article Studio',
-        description:
-            'Article 模組支援草稿建立、AI 文章/封面生成、Queue 非同步處理與狀態輪詢，並整合權限控管、速率限制、標籤回填；圖片寫入失敗時可自動 fallback 到 /tmp 避免流程中斷。',
-        tags: ['Laravel', 'Inertia', 'Vertex AI', 'Queue'],
-        image: '/images/projects/project02.webp',
-    },
 ];
+
+// 桌機 scrollytelling 用完整清單（featured 01 + gallery 02–11）
+const allProjects: Project[] = [...featuredProjects, ...galleryProjects];
 
 const stackInfo = computed<[string, string][]>(() => [
     [
@@ -112,7 +109,11 @@ const stackInfo = computed<[string, string][]>(() => [
     <AppLayout>
         <main>
             <HeroSection />
-            <ProjectsSection :featured-projects="featuredProjects" />
+            <ProjectsScrolly :projects="allProjects" class="hidden md:block" />
+            <ProjectsSection
+                :featured-projects="featuredProjects"
+                class="md:hidden"
+            />
             <ArticlesSection :articles="latestArticles" />
             <StackContactSection :stack-info="stackInfo" />
         </main>

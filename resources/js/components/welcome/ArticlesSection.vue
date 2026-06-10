@@ -15,7 +15,7 @@ defineProps<{
 <template>
     <section
         id="articles"
-        class="binary-section mx-auto grid max-w-screen-2xl grid-cols-1 gap-8 md:grid-cols-12 md:gap-12"
+        class="binary-section mx-auto grid min-h-[calc(100vh-4rem)] max-w-screen-2xl grid-cols-1 content-center gap-8 md:grid-cols-12 md:gap-12"
     >
         <div class="md:col-span-4">
             <h2

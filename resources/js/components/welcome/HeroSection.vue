@@ -55,12 +55,12 @@ const categories = [
             <p
                 class="mt-6 max-w-2xl text-sm leading-relaxed text-[var(--binary-text-muted)] md:text-2xl"
             >
-                一個軟體工程師的開發日誌。與 AI 協同、拿 Laravel
-                打底，思考把已具備的技術變成跑在 server 上展示的東西。不讓 AI
-                全包，而是知道哪裡該放手、哪裡要自己來。
+                這是我的技術展示站——把原本就會的技術，透過與 AI
+                協作快速上線、補齊細節，做成能在線上實際點開操作的 demo。AI
+                負責加速，架構與取捨由我決定。
                 <span
                     class="binary-label ml-1 text-xs text-[var(--binary-outline)]"
-                    >by LLM</span
+                    >by LLM &amp; ohya</span
                 >
             </p>
 
