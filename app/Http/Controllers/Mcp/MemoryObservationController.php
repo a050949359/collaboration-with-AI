@@ -8,6 +8,7 @@ use App\Models\Mcp\McpEntity;
 use App\Models\Mcp\McpObservation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -44,9 +45,14 @@ class MemoryObservationController extends Controller
         ]);
 
         $type = ObservationType::from($data['type']);
-        $this->assertWithinMax($data['entity_id'], $type, null);
 
-        $obs = McpObservation::create($data);
+        $obs = DB::transaction(function () use ($data, $type) {
+            // 鎖父 entity 列：序列化同一 entity 的併發寫入，count→insert 才原子（防超過 maxCount）
+            McpEntity::whereKey($data['entity_id'])->lockForUpdate()->first();
+            $this->assertWithinMax($data['entity_id'], $type, null);
+
+            return McpObservation::create($data);
+        });
 
         return response()->json(['id' => $obs->id], 201);
     }
@@ -61,11 +67,15 @@ class MemoryObservationController extends Controller
             'content' => ['sometimes', 'string'],
         ]);
 
-        if (isset($data['type']) && $data['type'] !== $observation->type->value) {
-            $this->assertWithinMax($observation->entity_id, ObservationType::from($data['type']), $observation->id);
-        }
+        DB::transaction(function () use ($data, $observation) {
+            // 改 type 才需鎖：序列化同一 entity 的併發寫入後再檢查新 type 的 maxCount
+            if (isset($data['type']) && $data['type'] !== $observation->type->value) {
+                McpEntity::whereKey($observation->entity_id)->lockForUpdate()->first();
+                $this->assertWithinMax($observation->entity_id, ObservationType::from($data['type']), $observation->id);
+            }
 
-        $observation->fill($data)->save();
+            $observation->fill($data)->save();
+        });
 
         return response()->json(['id' => $observation->id]);
     }
