@@ -27,6 +27,7 @@ class McpObservation extends Model
     /** 只取預設（desc）觀察——現有 REST 與 MCP 工具一律走此範圍。 */
     public function scopeOfDefaultType(Builder $query): Builder
     {
-        return $query->where('type', self::TYPE_DEFAULT);
+        // 加表前綴：mcp_entities 也有 type 欄，關聯/子查詢時避免欄位模糊
+        return $query->where($this->qualifyColumn('type'), self::TYPE_DEFAULT);
     }
 }

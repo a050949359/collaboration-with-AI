@@ -176,9 +176,12 @@ class MemoryMcpService implements McpToolServiceInterface
         }
 
         $entities = McpEntity::with(['observations' => fn ($q) => $q->ofDefaultType()])
-            ->where('name', 'like', "%{$query}%")
-            ->orWhere('type', 'like', "%{$query}%")
-            ->orWhereHas('observations', fn ($q) => $q->ofDefaultType()->where('content', 'like', "%{$query}%"))
+            ->where(function ($q) use ($query) {
+                // OR 條件包進巢狀 closure，避免日後加 where/全域 scope 時運算子優先級拆錯分組
+                $q->where('name', 'like', "%{$query}%")
+                    ->orWhere('type', 'like', "%{$query}%")
+                    ->orWhereHas('observations', fn ($sub) => $sub->ofDefaultType()->where('content', 'like', "%{$query}%"));
+            })
             ->get()
             ->map(fn ($e) => [
                 'name' => $e->name,
