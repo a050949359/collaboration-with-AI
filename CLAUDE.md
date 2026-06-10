@@ -327,7 +327,13 @@ npm run lint:check   # ESLint + Prettier check（不寫入）
 打上述兩個 MCP server 的精簡 Go CLI client，取代冗長 curl、也免 native MCP 連線常駐（省 token）。token / URL 自動讀 `.vscode/mcp.json`。
 
 > ⚠️ binary 為 **gitignore**（同 `cmd/ws-lab` 慣例），clone 後沒有執行檔，**需先用 Go 編譯**：
-> `cd cmd/memctl && go build -o memctl .`（`taskctl` 同理）。指令與語意見各自 `--help`。
+> `cd cmd/memctl && go build -o memctl .`（`taskctl` 同理）。
+
+**確認用法：直接執行 binary（不帶參數）即印出完整說明，不需要讀 source code：**
+```bash
+cmd/taskctl/taskctl     # 印 usage
+cmd/memctl/memctl       # 印 usage
+```
 
 ### 跨專案知識圖譜
 知識圖譜用於記錄**跨機器、跨專案**的持久性知識（entity/relation/observation）。
