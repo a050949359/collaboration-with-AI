@@ -5,12 +5,13 @@ namespace App\Http\Middleware;
 use App\Enums\AirportType;
 use App\Enums\ApiKeyScope;
 use App\Enums\ArticleAspectRatio;
-use App\Enums\CabinClass;
-use App\Enums\PassengerFilter;
-use App\Enums\RoomType;
 use App\Enums\ArticleLanguage;
 use App\Enums\ArticleStyle;
 use App\Enums\ArticleTopic;
+use App\Enums\CabinClass;
+use App\Enums\ObservationType;
+use App\Enums\PassengerFilter;
+use App\Enums\RoomType;
 use App\Enums\ShareTokenScope;
 use App\Enums\StoryContentRating;
 use App\Enums\StoryGenre;
@@ -65,13 +66,13 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'allowRegistration' => AppSettings::bool('allow_registration', true),
             'auth' => [
-                'user'     => $request->user('sanctum'),
+                'user' => $request->user('sanctum'),
                 'is_admin' => $request->user('sanctum')?->isAdmin() ?? false,
             ],
             'apiKeyScopes' => $request->user('sanctum')
                 ? array_values(array_filter(
-                    array_map(fn($s) => ['value' => $s->value, 'adminOnly' => $s->adminOnly()], ApiKeyScope::cases()),
-                    fn($s) => !$s['adminOnly'] || $request->user('sanctum')->isAdmin()
+                    array_map(fn ($s) => ['value' => $s->value, 'adminOnly' => $s->adminOnly()], ApiKeyScope::cases()),
+                    fn ($s) => ! $s['adminOnly'] || $request->user('sanctum')->isAdmin()
                 ))
                 : [],
             ...$this->pageProps($request),
@@ -89,17 +90,17 @@ class HandleInertiaRequests extends Middleware
         return match (true) {
             $request->routeIs('admin') => [
                 'shareTokenScopes' => array_column(ShareTokenScope::cases(), 'value'),
-                'llmCatalog'       => array_map(
-                    fn($p) => array_values($p['models'] ?? []),
+                'llmCatalog' => array_map(
+                    fn ($p) => array_values($p['models'] ?? []),
                     config('services.llm.providers', []),
                 ),
-                'llmSettings'      => AppSettings::get('llm') ?: config('services.llm.uses', []),
+                'llmSettings' => AppSettings::get('llm') ?: config('services.llm.uses', []),
             ],
             $request->routeIs('task') => [
                 'taskStatuses' => array_column(TaskStatus::cases(), 'value'),
             ],
             $request->routeIs('story-relay') => [
-                'storyGenres'   => array_column(StoryGenre::cases(), 'value'),
+                'storyGenres' => array_column(StoryGenre::cases(), 'value'),
                 'contentRatings' => array_column(StoryContentRating::cases(), 'value'),
             ],
             $request->routeIs('airports') => [
@@ -107,14 +108,21 @@ class HandleInertiaRequests extends Middleware
             ],
             $request->routeIs('tour-playground') => [
                 'passengerFilters' => array_column(PassengerFilter::cases(), 'value'),
-                'cabinClasses'     => array_column(CabinClass::cases(), 'value'),
-                'roomTypes'        => array_column(RoomType::cases(), 'value'),
+                'cabinClasses' => array_column(CabinClass::cases(), 'value'),
+                'roomTypes' => array_column(RoomType::cases(), 'value'),
             ],
             $request->routeIs('articles.generate.new') => [
                 'articleAspectRatios' => array_column(ArticleAspectRatio::cases(), 'value'),
-                'articleTopics'       => array_column(ArticleTopic::cases(), 'value'),
-                'articleLanguages'    => array_column(ArticleLanguage::cases(), 'value'),
-                'articleStyles'       => array_column(ArticleStyle::cases(), 'value'),
+                'articleTopics' => array_column(ArticleTopic::cases(), 'value'),
+                'articleLanguages' => array_column(ArticleLanguage::cases(), 'value'),
+                'articleStyles' => array_column(ArticleStyle::cases(), 'value'),
+            ],
+            $request->routeIs('memory') => [
+                // 可編輯的 typed（非 desc）類型 + 各自上限，供節點編輯面板 type 下拉
+                'observationTypes' => array_values(array_map(
+                    fn ($t) => ['value' => $t->value, 'maxCount' => $t->maxCount()],
+                    array_filter(ObservationType::cases(), fn ($t) => $t !== ObservationType::Desc),
+                )),
             ],
             default => [],
         };

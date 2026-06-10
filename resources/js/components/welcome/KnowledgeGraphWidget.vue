@@ -88,7 +88,7 @@ watch(tab, async () => {
 
 onMounted(async () => {
     try {
-        const res = await fetch(api.memoryGraph());
+        const res = await fetch(api.memory.graph());
         cachedData = await res.json();
         loading.value = false;
         await nextTick();

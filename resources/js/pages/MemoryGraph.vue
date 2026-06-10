@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import MemoryGlobe from '../components/memory/MemoryGlobe.vue';
+import MemoryNodePanel from '../components/memory/MemoryNodePanel.vue';
+import { useAuth } from '../composables/useAuth';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
 import type { GraphData } from '../lib/topology';
@@ -10,11 +13,25 @@ import {
     drawTopology as drawTopologyImpl,
 } from '../lib/topology';
 
-const tab = ref<'graph' | 'topology'>('graph');
+const tab = ref<'graph' | 'topology' | 'globe'>('graph');
 const svgRef = ref<SVGSVGElement | null>(null);
 const topoSvgRef = ref<SVGSVGElement | null>(null);
 const loading = ref(true);
+const geoPoints = ref<{ entity: string; content: string }[]>([]);
+const relations = ref<{ from: string; relation_type: string; to: string }[]>(
+    [],
+);
+const selectedHost = ref<string | null>(null);
+const entities = ref<{ id: number; name: string; type: string }[]>([]);
 let graphData: GraphData = { entities: [], relations: [] };
+
+const { isAdmin } = useAuth();
+const selectedEntityId = computed(
+    () => entities.value.find((e) => e.name === selectedHost.value)?.id ?? null,
+);
+// 所有 host（含尚無 geo 者）：供 admin 從清單選取填座標，解決「無 pin 點不到」
+const hosts = computed(() => entities.value.filter((e) => e.type === 'host'));
+const geoSet = computed(() => new Set(geoPoints.value.map((p) => p.entity)));
 
 let simulation: ReturnType<typeof drawGraphImpl> = null;
 
@@ -78,16 +95,36 @@ function drawTopology(data: GraphData) {
 
 async function fetchAndRender() {
     loading.value = true;
-    const res = await fetch(api.memoryGraph());
-    graphData = await res.json();
+    const [graphRes, geoRes] = await Promise.all([
+        fetch(api.memory.graph()),
+        fetch(api.memory.geo()),
+    ]);
+    graphData = await graphRes.json();
+    geoPoints.value = await geoRes.json();
+    relations.value = graphData.relations;
+    entities.value = graphData.entities;
     loading.value = false;
     await nextTick();
 
     if (tab.value === 'graph') {
         drawGraph(graphData);
-    } else {
+    } else if (tab.value === 'topology') {
         drawTopology(graphData);
     }
+}
+
+async function refreshGeo() {
+    const res = await fetch(api.memory.geo());
+    geoPoints.value = await res.json();
+}
+
+function onHostClick(entity: string) {
+    // 編輯面板僅 admin；非 admin 點 host 不開啟
+    if (!isAdmin.value) {
+        return;
+    }
+
+    selectedHost.value = entity;
 }
 
 watch(tab, async () => {
@@ -96,7 +133,7 @@ watch(tab, async () => {
 
     if (tab.value === 'graph') {
         drawGraph(graphData);
-    } else {
+    } else if (tab.value === 'topology') {
         drawTopology(graphData);
     }
 });
@@ -120,7 +157,7 @@ onUnmounted(() => simulation?.stop());
                     <!-- Tabs -->
                     <div class="flex gap-1">
                         <button
-                            v-for="t in ['graph', 'topology'] as const"
+                            v-for="t in ['graph', 'topology', 'globe'] as const"
                             :key="t"
                             class="rounded px-3 py-1 text-xs transition-colors"
                             :class="
@@ -130,7 +167,13 @@ onUnmounted(() => simulation?.stop());
                             "
                             @click="tab = t"
                         >
-                            {{ t === 'graph' ? 'Graph' : 'Topology' }}
+                            {{
+                                {
+                                    graph: 'Graph',
+                                    topology: 'Topology',
+                                    globe: 'Globe',
+                                }[t]
+                            }}
                         </button>
                     </div>
                 </div>
@@ -180,6 +223,61 @@ onUnmounted(() => simulation?.stop());
                     載入中…
                 </div>
                 <svg ref="topoSvgRef" class="h-full w-full" />
+            </div>
+
+            <!-- Globe -->
+            <div
+                v-show="tab === 'globe'"
+                class="relative min-h-0 flex-1 p-3 md:p-4"
+            >
+                <MemoryGlobe
+                    :points="geoPoints"
+                    :relations="relations"
+                    @host-click="onHostClick"
+                />
+                <!-- host 清單（admin）：含尚無 geo 者，點選即可開面板新增座標 -->
+                <div
+                    v-if="isAdmin && hosts.length"
+                    class="binary-glass absolute top-6 left-6 z-10 max-h-[80%] w-44 overflow-y-auto rounded-xl border border-[var(--binary-outline-variant)] p-2"
+                >
+                    <p
+                        class="binary-label px-2 py-1 text-[10px] text-[var(--binary-outline)] uppercase"
+                    >
+                        Hosts
+                    </p>
+                    <button
+                        v-for="h in hosts"
+                        :key="h.id"
+                        class="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs text-[var(--binary-text)] transition-colors hover:bg-[var(--binary-primary)]/10"
+                        :class="
+                            selectedHost === h.name
+                                ? 'bg-[var(--binary-primary)]/10'
+                                : ''
+                        "
+                        @click="onHostClick(h.name)"
+                    >
+                        <span
+                            class="h-2 w-2 shrink-0 rounded-full border border-[var(--binary-primary)]"
+                            :style="
+                                geoSet.has(h.name)
+                                    ? 'background: var(--binary-primary)'
+                                    : ''
+                            "
+                        ></span>
+                        <span class="truncate">{{ h.name }}</span>
+                    </button>
+                </div>
+                <div
+                    v-if="selectedHost && selectedEntityId !== null"
+                    class="absolute top-6 right-6 z-10"
+                >
+                    <MemoryNodePanel
+                        :entity-id="selectedEntityId"
+                        :entity-name="selectedHost"
+                        @close="selectedHost = null"
+                        @changed="refreshGeo"
+                    />
+                </div>
             </div>
         </div>
     </AppLayout>
