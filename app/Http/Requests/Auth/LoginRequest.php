@@ -26,7 +26,7 @@ class LoginRequest extends FormRequest
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
             'remember' => ['sometimes', 'boolean'],
-            'device_id' => ['sometimes', 'nullable', 'regex:/^([0-9a-f]{16}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/'],
+            'device_id' => ['sometimes', 'nullable', 'regex:/^([0-9a-f]{16}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i'],
             'device_name' => ['sometimes', 'nullable', 'string', 'max:128'],
             'cf_turnstile_response' => [app()->isLocal() ? 'nullable' : 'required', 'string'],
         ];

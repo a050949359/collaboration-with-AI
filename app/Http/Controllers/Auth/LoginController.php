@@ -52,8 +52,8 @@ class LoginController extends Controller
         $user->locked_until = null;
         $user->save();
 
-        $deviceId   = $request->input('device_id');
-        $deviceName = $request->input('device_name');
+        $deviceId   = $request->validated('device_id');
+        $deviceName = $request->validated('device_name');
 
         // 3. 刪除同裝置的舊 Token（web 以 name='web' 定位，mobile 以 device_id 定位）
         if ($deviceId) {
@@ -80,7 +80,10 @@ class LoginController extends Controller
     {
         // 1. 驗證使用者是否已登入
         if (Auth::check()) {
-            Auth::user()->currentAccessToken()->delete();
+            $token = Auth::user()->currentAccessToken();
+            if ($token instanceof \App\Models\PersonalAccessToken) {
+                $token->delete();
+            }
 
             return response()->json(['message' => '登出成功'])
                 ->withoutCookie('auth_token');
