@@ -15,72 +15,16 @@
 
 ## 目錄結構要點
 
-### 後端
+> Controllers／Models／pages 等清單會頻繁增減，**一律看 repo**，不在此列舉（列了會 drift）。
+> 這裡只留少數穩定、且「看 code 不易察覺」的架構指標：
 
-```
-app/
-  Http/
-    Controllers/
-      Auth/           # 登入、註冊、Google OAuth、信箱驗證
-      Admin/          # 後台設定
-      Article/        # 文章 CRUD、AI 產生
-      Aviation/       # 機場、航空公司、國家、城市
-      Travel/         # 旅遊資料（行程、旅客、訂單、匯出）
-      Line/           # LINE Bot webhook
-      AvatarController.php  # 頭像產生（Multiavatar 函式庫）
-    Middleware/
-      DecryptPasswordFields.php  # RSA-OAEP 解密 password 欄位
-      AuthTokenFromCookie.php
-      EnsureAdmin.php
-      HandleInertiaRequests.php  # 共享 props（user、name）+ pageProps() 依路由注入 enum 值
-    Requests/         # Form Request 驗證
-  Models/
-    User.php          # avatar() Attribute 在 $appends
-    Aviation/         # Airport、Airline、Country、City
-    Travel/           # Tour、Booking、Passenger 等
-  Support/
-    AvatarGenerator.php  # defaultFor() 產生頭像 URL
-  Events/Gacha/       # WebSocket 廣播事件
-routes/
-  web.php    # 全部掛在 prefix('app') 下，Inertia pages
-  api.php    # REST API（/api/...）
-```
-
-### 前端
-
-```
-resources/js/
-  pages/            # Inertia pages（對應路由）
-    Auth/           # Login.vue、Register.vue、VerifyResult.vue
-    Articles/       # Index.vue、Show.vue、Edit.vue、Generate.vue
-    Airports.vue
-    Airlines.vue
-    Countries.vue   # 城市模組主頁（含選國家 + 城市列表 + 新增城市子頁籤）
-    TourPlayground.vue
-    CitySearch.vue
-    ComputerVision.vue       # CV→邊緣偵測（WASM，資產在 public/lab/cv/edge.*）
-    GestureRecognition.vue   # CV→手勢辨識（MediaPipe TFLite WASM；模型未到，目前 gated）
-    Task.vue                 # MCP task 管理 UI（原 Mcp.vue，route /app/task）
-  layouts/
-    AppLayout.vue   # 主 layout（Navbar、Matrix Rain 動畫、Toast）
-    AuthShell.vue   # 登入/註冊 layout（左右兩欄，max-w-5xl）
-  lib/
-    routes.ts       # ★ 所有 URL 唯一定義處（routes.* + api.*）
-    auth-api.ts     # login/register/logout wrapper，使用 api.auth.*
-    crypto.ts       # RSA-OAEP 加密（Web Crypto API）
-    admin-api.ts
-    articles-api.ts
-  composables/
-    useAuth.ts      # user、isAdmin computed（from Inertia shared props）
-  components/
-    NavIcon.vue
-    airports/AirportGlobe.vue  # D3 地球儀
-    welcome/        # 首頁各 section
-  i18n/locales/zh-tw.ts、en.ts
-  types/
-    auth.ts         # User type
-    index.ts        # 共用 types
-```
+- **URL 唯一來源**：`resources/js/lib/routes.ts`（`routes.*` 頁面 + `api.*` API）。元件一律從這拿，禁止硬編碼路徑。
+- **前端 API wrapper**：`lib/auth-api.ts`（用 `api.auth.*`、無 CSRF）、`lib/crypto.ts`（password 走 RSA-OAEP 加密）。
+- **關鍵 Middleware**：`DecryptPasswordFields`（解密 password 欄位）、`HandleInertiaRequests`（注入 Inertia 共享 props + `pageProps()` 依路由給 enum values）。
+- **頭像**：`Support/AvatarGenerator::defaultFor()` 回傳 URL；`User::avatar()` 列在 `$appends`，前端 `user.avatar` 直接可用。
+- **路由分檔**：`routes/web.php` 全掛 `prefix('app')`（Inertia pages）；`routes/api.php` 為 REST（`/api/...`）。
+- `composables/useAuth.ts` 提供 `user`、`isAdmin`（來自 Inertia shared props）。
+- `layouts/`：`AppLayout.vue`（主框架：Navbar、Matrix Rain、Toast）、`AuthShell.vue`（登入/註冊）。
 
 ---
 
@@ -199,69 +143,19 @@ php artisan import:countries           # 寫入 DB
 
 ## 前端主題色規範
 
-新頁面開發時，所有顏色**必須使用下列 CSS 變數**，禁止 hardcode hex/rgba 值。變數在 `resources/css/app.css` 定義，`[data-theme='amber']` 與 `[data-theme='ink-zen']` 區塊自動覆蓋。
+新頁面所有顏色**必須用 `--binary-*` CSS 變數，禁止 hardcode hex/rgba**。變數定義在 `resources/css/app.css`，`[data-theme='amber']`／`[data-theme='ink-zen']` 區塊自動覆蓋（**確切 hex 要用就查 app.css**，不在此列）。挑變數看語意，別記顏色值：
 
-### 主色系（Emerald / Amber 深色主題）
+- **強調色**：`--binary-primary`（主強調／連結／icon／active）、`--binary-primary-container`（按鈕漸變深端）、`--binary-primary-fixed`（較淡版）、`--binary-secondary`（次強調、`.text-gradient-primary` 終點）、`--binary-tertiary`（錯誤/警告字）、`--binary-on-primary-container`（主色按鈕上的字）
+- **文字色**：`--binary-text`（內文）、`--binary-text-muted`（次要）、`--binary-outline`（標籤/placeholder/border）、`--binary-outline-variant`（極細 border/分隔線）
+- **背景面板**（多為 0.7 透明）：`--binary-background`（頁面底，solid）；面板層級由淺至深 `--binary-surface`／`-dim`／`-low`／`-lowest`／`-high`／`-highest`（一般面板/sidebar/select/input/按鈕card/hover）；`--binary-surface-container`（0.3，inactive 極淡容器）
 
-| 變數 | Emerald | Amber | 用途 |
-|------|---------|-------|------|
-| `--binary-primary` | `#6bdc9f` | `#ffb690` | 主要強調色、連結、icon、active 狀態 |
-| `--binary-primary-container` | `#2ca46d` | `#7a4527` | 按鈕漸變深色端、次要強調 |
-| `--binary-primary-fixed` | `#85e7b0` | `#ffdbca` | 較淡版主色 |
-| `--binary-secondary` | `#a5d1b4` | `#ddb7ff` | 次要強調（`.text-gradient-primary` 終點色）|
-| `--binary-tertiary` | `#ffb3b2` | `#ffb4ab` | 錯誤/警告提示文字 |
-| `--binary-on-primary-container` | `#07160e` | `#1a0800` | 主色按鈕上的文字色 |
+**常用 class**：`binary-button`（主色漸變鈕）、`binary-ghost-button`（ghost 鈕）、`binary-glass`（含 backdrop-filter 玻璃面板）、`text-gradient-primary`（primary→secondary 漸層字，雙主題自動切）；帶透明度用 Tailwind v4 語法 `text-[var(--binary-primary)]/60`。
 
-### 文字色
-
-| 變數 | 用途 |
-|------|------|
-| `--binary-text` | 主要內文 |
-| `--binary-text-muted` | 次要說明文字 |
-| `--binary-outline` | 標籤、placeholder、border（帶透明度）|
-| `--binary-outline-variant` | 極細 border、分隔線 |
-
-### 背景與面板
-
-| 變數 | 透明度 | 用途 |
-|------|--------|------|
-| `--binary-background` | solid | 頁面底色（solid 版） |
-| `--binary-surface-dim` | 0.7 | 最暗面板（aside sidebar 等） |
-| `--binary-surface` | 0.7 | 一般面板 |
-| `--binary-surface-lowest` | 0.7 | 最深 input/section 背景 |
-| `--binary-surface-low` | 0.7 | select/dropdown 背景 |
-| `--binary-surface-container` | 0.3 | 極淡容器（inactive 狀態）|
-| `--binary-surface-high` | 0.7 | 按鈕、card 背景 |
-| `--binary-surface-highest` | 0.7 | toggle track inactive、hover 深一層 |
-
-### 常用 CSS class
-
-```html
-<!-- 主色文字 -->
-<span class="text-[var(--binary-primary)]" />
-
-<!-- 帶透明度（Tailwind v4 支援） -->
-<span class="text-[var(--binary-primary)]/60" />
-
-<!-- 主色漸變按鈕 -->
-<button class="binary-button" />
-
-<!-- Glass 面板（含 backdrop-filter） -->
-<div class="binary-glass" />
-
-<!-- 文字漸變（primary → secondary，雙主題自動切換） -->
-<h1 class="text-gradient-primary" />
-
-<!-- Ghost 按鈕 -->
-<button class="binary-ghost-button" />
-```
-
-### 禁止事項
-
-- ❌ `style="color: #6bdc9f"` → ✅ `style="color: var(--binary-primary)"`
+**禁止 / 例外**：
+- ❌ `style="color:#6bdc9f"` → ✅ `var(--binary-primary)`
 - ❌ `bg-[#1d2a22]` → ✅ `bg-[var(--binary-surface-high)]`
 - ❌ `rgba(107,220,159,0.1)` → ✅ `color-mix(in srgb, var(--binary-primary) 10%, transparent)`
-- ✅ 品質色（`#d4af37` 傳奇金）、D3/Canvas 視覺化特定色 → 可保留 hardcode
+- ✅ 可保留 hardcode 的例外：品質金 `#d4af37`、D3/Canvas 視覺化特定色
 
 ---
 
@@ -287,6 +181,23 @@ git checkout main && git pull
 ```
 
 **分支命名慣例：**`feat/`、`fix/`、`refactor/`、`chore/`
+
+---
+
+## PR 開完後：Antigravity Code Review（agy）
+
+> push + 開 PR 後，可呼叫 Antigravity CLI（`agy`）對該 PR 做自動 code review，結果以 PR comment 發回 GitHub。
+
+- **工具**：`scripts/agy-review.sh <PR_NUMBER> [model]`（預設模型 `Gemini 3.1 Pro (High)`）
+- **工作流程**：`gh pr create` 拿到 PR 號 → **背景** 跑 `scripts/agy-review.sh <PR>`（fire-and-forget，**不需等待/觀察執行完畢**）→ 腳本自己會把 comment 貼到 GitHub 並回查 sentinel，報 PASS/FAIL + comment URL（log 寫在暫存檔，事後可撈）
+- review **準則內嵌在腳本的 prompt**，刻意**不放進這份 CLAUDE.md**：CLAUDE.md 是給 Claude 看的、且含「叫 agy review」這種 meta 指令，若讓 agy 讀會自我指涉混淆。**agy 不讀 CLAUDE.md。**
+- **三層權限防護**（讓 agy 安全地只做 review、碰不到 repo 檔）：
+  1. agy `settings.json` 只放行 `command(gh)` → headless 不需 `--dangerously-skip-permissions`
+  2. agy 在空目錄 `~/antigravity`（`AGY_WORKDIR`）啟動 → 非互動模式啟動時取得的「資料夾讀寫權限」只落在這個可丟棄空目錄，碰不到 repo
+  3. 所有 gh 指令帶 `-R <owner/repo>` → 不在 repo 目錄裡也能操作正確 repo
+- **前置需求**：
+  - agy 已登入；`~/.gemini/antigravity-cli/settings.json` 含 `{"permissions":{"allow":["command(gh)"]}}`
+  - gh token 需 **Pull requests: Read and write**（否則 `gh pr comment` 的 `addComment` 會被 GitHub 擋）
 
 ---
 
