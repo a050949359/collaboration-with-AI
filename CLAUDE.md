@@ -295,7 +295,7 @@ git checkout main && git pull
 > push + 開 PR 後，可呼叫 Antigravity CLI（`agy`）對該 PR 做自動 code review，結果以 PR comment 發回 GitHub。
 
 - **工具**：`scripts/agy-review.sh <PR_NUMBER> [model]`（預設模型 `Gemini 3.1 Pro (High)`）
-- **工作流程**：`gh pr create` 拿到 PR 號 → 背景跑 `scripts/agy-review.sh <PR>` → 腳本會回查 sentinel comment，報 PASS/FAIL + comment URL
+- **工作流程**：`gh pr create` 拿到 PR 號 → **背景** 跑 `scripts/agy-review.sh <PR>`（fire-and-forget，**不需等待/觀察執行完畢**）→ 腳本自己會把 comment 貼到 GitHub 並回查 sentinel，報 PASS/FAIL + comment URL（log 寫在暫存檔，事後可撈）
 - review **準則內嵌在腳本的 prompt**，刻意**不放進這份 CLAUDE.md**：CLAUDE.md 是給 Claude 看的、且含「叫 agy review」這種 meta 指令，若讓 agy 讀會自我指涉混淆。**agy 不讀 CLAUDE.md。**
 - **三層權限防護**（讓 agy 安全地只做 review、碰不到 repo 檔）：
   1. agy `settings.json` 只放行 `command(gh)` → headless 不需 `--dangerously-skip-permissions`
