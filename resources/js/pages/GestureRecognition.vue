@@ -513,6 +513,31 @@ onUnmounted(() => {
                 v-show="started"
                 class="fixed inset-x-0 top-16 bottom-0 z-30 bg-[var(--binary-background)] md:static md:z-auto md:flex md:flex-1 md:flex-row md:items-start md:gap-6 md:bg-transparent"
             >
+                <!-- 手機辨識結果浮層（右下角，sheet 收合時可見） -->
+                <div
+                    v-if="handPresent"
+                    class="absolute right-4 bottom-12 z-20 flex flex-col items-center gap-0.5 md:hidden"
+                >
+                    <div
+                        class="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl shadow-lg transition-opacity duration-150"
+                        :class="
+                            currentGesture >= 1 ? 'opacity-100' : 'opacity-35'
+                        "
+                        style="
+                            background: var(--binary-surface);
+                            backdrop-filter: blur(12px);
+                            -webkit-backdrop-filter: blur(12px);
+                            border: 1px solid var(--binary-outline-variant);
+                        "
+                    >
+                        {{
+                            currentGesture >= 1
+                                ? GESTURES[currentGesture].emoji
+                                : '❓'
+                        }}
+                    </div>
+                </div>
+
                 <!-- Canvas（CSS 鏡像，骨架以原始座標畫，鏡像由 CSS 處理） -->
                 <div class="h-full w-full md:h-auto md:w-[480px] md:shrink-0">
                     <canvas
