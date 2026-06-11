@@ -52,25 +52,35 @@ class LoginController extends Controller
         $user->locked_until = null;
         $user->save();
 
-        // 3. 刪除舊的 Token (選配：確保同一時間只有一個裝置登入)
-        $user->tokens()->delete();
+        $deviceId   = $request->input('device_id');
+        $deviceName = $request->input('device_name');
 
-        // 4. 建立新 Token
-        $token = $user->createToken('auth_token')->plainTextToken;
-        $minutes = $remember ? 60 * 24 * 7 : 0;
+        // 3. 刪除同裝置的舊 Token（web 以 name='web' 定位，mobile 以 device_id 定位）
+        if ($deviceId) {
+            $user->tokens()->where('device_id', $deviceId)->delete();
+        } else {
+            $user->tokens()->where('name', 'web')->whereNull('device_id')->delete();
+        }
+
+        // 4. 建立新 Token（90 天有效期）
+        $tokenName = $deviceName ?? ($deviceId ? 'mobile' : 'web');
+        $plainText = $user->createToken($tokenName, deviceId: $deviceId)->plainTextToken;
+        $minutes   = $remember ? 60 * 24 * 7 : 0;
 
         return response()->json([
-            'message' => '登入成功',
-            'user' => $user,
-            'redirect' => route('home'),
-        ])->cookie('auth_token', $token, $minutes, '/', null, app()->isProduction(), true, false, 'Lax');
+            'message'      => '登入成功',
+            'user'         => $user,
+            'access_token' => $plainText,
+            'token_type'   => 'Bearer',
+            'redirect'     => route('home'),
+        ])->cookie('auth_token', $plainText, $minutes, '/', null, app()->isProduction(), true, false, 'Lax');
     }
 
     public function logout(): JsonResponse
     {
         // 1. 驗證使用者是否已登入
         if (Auth::check()) {
-            Auth::user()->tokens()->delete();
+            Auth::user()->currentAccessToken()->delete();
 
             return response()->json(['message' => '登出成功'])
                 ->withoutCookie('auth_token');

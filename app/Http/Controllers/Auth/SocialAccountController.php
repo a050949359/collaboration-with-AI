@@ -62,7 +62,8 @@ class SocialAccountController extends Controller
                 ]
             );
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $user->tokens()->where('name', 'web')->whereNull('device_id')->delete();
+            $token = $user->createToken('web')->plainTextToken;
 
             $frontendUrl = config('services.social_auth.frontend_url');
             $redirectPath = config('services.social_auth.redirect_path', '/login');

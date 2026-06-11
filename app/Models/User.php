@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use DateTimeInterface;
 use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\NewAccessToken;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -76,6 +78,21 @@ class User extends Authenticatable implements MustVerifyEmail
                 return AvatarGenerator::defaultFor($this->name, $this->email, $this->getKey());
             },
         );
+    }
+
+    public function createToken(string $name, array $abilities = ['*'], ?DateTimeInterface $expiresAt = null, ?string $deviceId = null): NewAccessToken
+    {
+        $plainTextToken = $this->generateTokenString();
+
+        $token = $this->tokens()->create([
+            'name'       => $name,
+            'token'      => hash('sha256', $plainTextToken),
+            'abilities'  => $abilities,
+            'expires_at' => $expiresAt ?? now()->addDays(90),
+            'device_id'  => $deviceId,
+        ]);
+
+        return new NewAccessToken($token, $token->getKey().'|'.$plainTextToken);
     }
 
     public function sendPasswordResetNotification($token): void
