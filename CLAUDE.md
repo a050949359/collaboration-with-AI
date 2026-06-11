@@ -290,6 +290,23 @@ git checkout main && git pull
 
 ---
 
+## PR 開完後：Antigravity Code Review（agy）
+
+> push + 開 PR 後，可呼叫 Antigravity CLI（`agy`）對該 PR 做自動 code review，結果以 PR comment 發回 GitHub。
+
+- **工具**：`scripts/agy-review.sh <PR_NUMBER> [model]`（預設模型 `Gemini 3.1 Pro (High)`）
+- **工作流程**：`gh pr create` 拿到 PR 號 → 背景跑 `scripts/agy-review.sh <PR>` → 腳本會回查 sentinel comment，報 PASS/FAIL + comment URL
+- review **準則內嵌在腳本的 prompt**，刻意**不放進這份 CLAUDE.md**：CLAUDE.md 是給 Claude 看的、且含「叫 agy review」這種 meta 指令，若讓 agy 讀會自我指涉混淆。**agy 不讀 CLAUDE.md。**
+- **三層權限防護**（讓 agy 安全地只做 review、碰不到 repo 檔）：
+  1. agy `settings.json` 只放行 `command(gh)` → headless 不需 `--dangerously-skip-permissions`
+  2. agy 在空目錄 `~/antigravity`（`AGY_WORKDIR`）啟動 → 非互動模式啟動時取得的「資料夾讀寫權限」只落在這個可丟棄空目錄，碰不到 repo
+  3. 所有 gh 指令帶 `-R <owner/repo>` → 不在 repo 目錄裡也能操作正確 repo
+- **前置需求**：
+  - agy 已登入；`~/.gemini/antigravity-cli/settings.json` 含 `{"permissions":{"allow":["command(gh)"]}}`
+  - gh token 需 **Pull requests: Read and write**（否則 `gh pr comment` 的 `addComment` 會被 GitHub 擋）
+
+---
+
 ## 前端 Commit 規範
 
 **凡涉及前端檔案（`resources/js/`、`resources/css/`）的 commit，提交前必須執行：**
