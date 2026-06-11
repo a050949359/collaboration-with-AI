@@ -43,6 +43,10 @@ if [[ -z "$PR" ]]; then
   echo "usage: $0 <PR_NUMBER> [model]" >&2
   exit 2
 fi
+if ! [[ "$PR" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: PR 號需為純數字，收到：'$PR'" >&2
+  exit 2
+fi
 
 # --- preflight：確認必要指令存在（缺了就 fail-fast，不要中途才報模糊錯）--------
 for cmd in gh agy git; do
@@ -61,12 +65,13 @@ else
   echo "WARN: 找不到 timeout/gtimeout，agy 無外層硬上限（仍有 --print-timeout）" >&2
 fi
 
-# --- 解析 repo slug（本腳本在 repo 內，從它的位置推回 repo 根再讀 remote）-------
-# 這樣即使從空目錄 AGY_WORKDIR 呼叫，也能算出 owner/repo 給 gh -R 用。
-# 末端 || true：避免 git 失敗時因 set -e + pipefail 在賦值處就退出，讓下方 if 友善報錯可達。
+# --- 解析 repo slug（owner/repo）---------------------------------------------
+# 本腳本在 repo 內，從它的位置推回 repo 根，用 gh repo view 解析出 owner/repo，
+# 這樣即使從空目錄 AGY_WORKDIR 呼叫，也能算出 slug 給所有 gh -R 用。
+# 用 gh repo view（而非手解 remote URL）較穩，能正確處理各種 remote 格式。
+# 末端 || true：避免失敗時因 set -e 在賦值處就退出，讓下方 if 友善報錯可達。
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO_SLUG="$(git -C "$REPO_DIR" remote get-url origin 2>/dev/null \
-  | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##' || true)"
+REPO_SLUG="$( ( cd "$REPO_DIR" && gh repo view --json nameWithOwner -q .nameWithOwner ) 2>/dev/null || true )"
 if [[ -z "$REPO_SLUG" ]]; then
   echo "ERROR: 無法從 $REPO_DIR 解析 GitHub repo slug" >&2
   exit 1
