@@ -18,14 +18,18 @@ class RegistController extends Controller
             'password' => $validated['password'],
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $deviceId  = $validated['device_id'] ?? null;
+        $tokenName = $validated['device_name'] ?? ($deviceId ? 'mobile' : 'web');
+        $plainText = $user->createToken($tokenName, deviceId: $deviceId)->plainTextToken;
 
         $user->sendEmailVerificationNotification();
 
         return response()->json([
-            'message' => '註冊成功',
-            'user' => $user,
-            'redirect' => route('home'),
-        ], 201)->cookie('auth_token', $token, 0, '/', null, app()->isProduction(), true, false, 'Lax');
+            'message'      => '註冊成功',
+            'user'         => $user,
+            'access_token' => $plainText,
+            'token_type'   => 'Bearer',
+            'redirect'     => route('home'),
+        ], 201)->cookie('auth_token', $plainText, 0, '/', null, app()->isProduction(), true, false, 'Lax');
     }
 }

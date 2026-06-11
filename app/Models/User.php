@@ -2,20 +2,22 @@
 
 namespace App\Models;
 
+use DateTimeInterface;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
-use Illuminate\Support\Facades\URL;
 use App\Support\AvatarGenerator;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\URL;
+use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\NewAccessToken;
 
 #[Fillable(['name', 'email', 'password', 'role'])]
 #[Hidden(['password', 'remember_token'])]
@@ -76,6 +78,21 @@ class User extends Authenticatable implements MustVerifyEmail
                 return AvatarGenerator::defaultFor($this->name, $this->email, $this->getKey());
             },
         );
+    }
+
+    public function createToken(string $name, array $abilities = ['*'], ?DateTimeInterface $expiresAt = null, ?string $deviceId = null): NewAccessToken
+    {
+        $plainTextToken = $this->generateTokenString();
+
+        $token = $this->tokens()->create([
+            'name'       => $name,
+            'token'      => hash('sha256', $plainTextToken),
+            'abilities'  => $abilities,
+            'expires_at' => $expiresAt ?? now()->addDays(90),
+            'device_id'  => $deviceId,
+        ]);
+
+        return new NewAccessToken($token, $token->getKey().'|'.$plainTextToken);
     }
 
     public function sendPasswordResetNotification($token): void
