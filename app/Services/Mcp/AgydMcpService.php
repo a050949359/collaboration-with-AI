@@ -82,8 +82,8 @@ class AgydMcpService implements McpToolServiceInterface
     private function bgStatus(mixed $id, array $args): JsonResponse
     {
         $taskId = $args['task_id'] ?? '';
-        if (empty($taskId)) {
-            return $this->text($id, 'task_id is required', true);
+        if (empty($taskId) || ! preg_match('/^[a-zA-Z0-9_-]+$/', $taskId)) {
+            return $this->text($id, 'invalid or missing task_id', true);
         }
 
         $resp = $this->daemon()->get("/status/{$taskId}");
@@ -98,8 +98,8 @@ class AgydMcpService implements McpToolServiceInterface
     private function bgLog(mixed $id, array $args): JsonResponse
     {
         $taskId = $args['task_id'] ?? '';
-        if (empty($taskId)) {
-            return $this->text($id, 'task_id is required', true);
+        if (empty($taskId) || ! preg_match('/^[a-zA-Z0-9_-]+$/', $taskId)) {
+            return $this->text($id, 'invalid or missing task_id', true);
         }
 
         $resp = $this->daemon()->get("/log/{$taskId}");

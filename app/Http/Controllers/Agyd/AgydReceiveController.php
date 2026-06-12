@@ -37,6 +37,7 @@ class AgydReceiveController extends Controller
             return response()->json(['error' => 'invalid zip'], 422);
         }
 
+        $totalUncompressed = 0;
         for ($i = 0; $i < $za->numFiles; $i++) {
             $entry = $za->getNameIndex($i);
 
@@ -44,6 +45,9 @@ class AgydReceiveController extends Controller
                 $za->close();
                 return response()->json(['error' => 'invalid zip entries'], 422);
             }
+
+            $stat               = $za->statIndex($i);
+            $totalUncompressed += $stat['size'] ?? 0;
 
             // 目錄項目（結尾 /）跳過副檔名檢查
             if (str_ends_with($entry, '/')) {
@@ -57,9 +61,9 @@ class AgydReceiveController extends Controller
             }
         }
 
-        // 磁碟空間檢查：剩餘需 > max(zip×3, min_free_mb)
+        // 磁碟空間檢查：剩餘需 > max(實際解壓大小, min_free_mb)
         $minFreeBytes = config('agyd.min_free_mb') * 1024 * 1024;
-        $required     = max($zip->getSize() * 3, $minFreeBytes);
+        $required     = max($totalUncompressed, $minFreeBytes);
         $freeBytes    = disk_free_space(Storage::disk('public')->path(''));
 
         if ($freeBytes !== false && $freeBytes < $required) {
@@ -78,10 +82,10 @@ class AgydReceiveController extends Controller
         }
         $za->close();
 
-        // 唯讀權限（縱深防禦，防意外覆蓋）
-        chmod($absPath, 0555);
+        // 唯讀權限（縱深防禦）：目錄保持 0755（deleteDirectory 需要寫入），檔案鎖為 0444
+        chmod($absPath, 0755);
         foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($absPath, \FilesystemIterator::SKIP_DOTS)) as $file) {
-            chmod($file->getPathname(), $file->isDir() ? 0555 : 0444);
+            chmod($file->getPathname(), $file->isDir() ? 0755 : 0444);
         }
 
         return response()->json([
