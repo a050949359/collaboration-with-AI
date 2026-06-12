@@ -122,6 +122,10 @@
 | `VITE_API_BASE_URL` | 跨域部署時設定，通常留空 |
 | `GOOGLE_CLIENT_ID/SECRET` | Google OAuth |
 | `GEMINI_API_KEY` | AI 文章產生 |
+| `AGYD_URL` | agyd daemon 的 ZeroTier 內網 HTTP URL（含 port）|
+| `AGYD_SECRET` | daemon 與 Laravel 共享 Bearer token（hash_equals 驗證）|
+| `AGYD_STORAGE_PATH` | ZIP 解壓根目錄（相對 storage/app/public），預設 `agy` |
+| `AGYD_MIN_FREE_MB` | 解壓前最低剩餘磁碟空間（MB），預設 `10240`（10 GB）|
 
 ---
 
@@ -228,22 +232,34 @@ npm run lint:check   # ESLint + Prettier check（不寫入）
 
 ---
 
-## MCP Memory 使用規範
+## MCP Server 使用規範
 
 ### Endpoints
 - `POST /api/mcp/task` — Task 工具（需要 `task:mcp` scope key，任何登入者可自行建立）
 - `POST /api/mcp/memory` — 知識圖譜工具（需要 admin 建立的 `memory:mcp` scope key，讀寫皆同）
+- `POST /api/mcp/agyd` — agyd daemon 工具（需要 admin 建立的 `agyd:mcp` scope key）
 
-### 本機 CLI（cmd/memctl、cmd/taskctl）
-打上述兩個 MCP server 的精簡 Go CLI client，取代冗長 curl、也免 native MCP 連線常駐（省 token）。token / URL 自動讀 `.vscode/mcp.json`。
+### agyd daemon 系統
+**架構**：Claude → Laravel MCP（`/api/mcp/agyd`）→ ZeroTier → Go HTTP daemon（本地微型主機）
+
+daemon 完成工作後 ZIP 靜態產出，POST 回 `POST /api/agyd/upload/{task_id}`，
+解壓到 `storage/app/public/agy/{task_id}/`（副檔名白名單：html/css/js/json/map/圖片/字體）。
+
+**5 個 MCP 工具**：`bg_run_prompt`、`bg_run_script`、`bg_list_scripts`、`bg_status`、`bg_log`
+
+**Heartbeat**：daemon 定期寫 Redis key（ZeroTier 直連），Laravel 讀 key 判斷在線狀態（`agyd:heartbeat`）。
+
+### 本機 CLI（cmd/memctl、cmd/taskctl、cmd/agydctl）
+打上述 MCP server 的精簡 Go CLI client，取代冗長 curl、也免 native MCP 連線常駐（省 token）。token / URL 自動讀 `.vscode/mcp.json`。
 
 > ⚠️ binary 為 **gitignore**（同 `cmd/ws-lab` 慣例），clone 後沒有執行檔，**需先用 Go 編譯**：
-> `cd cmd/memctl && go build -o memctl .`（`taskctl` 同理）。
+> `cd cmd/memctl && go build -o memctl .`（`taskctl`、`agydctl` 同理）。
 
 **確認用法：直接執行 binary（不帶參數）即印出完整說明，不需要讀 source code：**
 ```bash
 cmd/taskctl/taskctl     # 印 usage
 cmd/memctl/memctl       # 印 usage
+cmd/agydctl/agydctl     # 印 usage
 ```
 
 ### 跨專案知識圖譜
@@ -275,6 +291,10 @@ cmd/memctl/memctl       # 印 usage
     "collab-memory": {
       "url": "https://your-domain.com/api/mcp/memory",
       "headers": { "Authorization": "Bearer <memory-mcp-key>" }
+    },
+    "collab-agyd": {
+      "url": "https://your-domain.com/api/mcp/agyd",
+      "headers": { "Authorization": "Bearer <agyd-mcp-key>" }
     }
   }
 }

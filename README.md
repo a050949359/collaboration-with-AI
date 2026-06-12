@@ -64,6 +64,7 @@
 - **MCP**
   - Task：站內任務管理 UI（對應自製 MCP task server，Task CRUD + 子項目，共 8 工具）
   - Memory：知識圖譜（對應 MCP memory server，Admin，共 8 工具）
+  - agyd daemon：透過 MCP 呼叫本地微型主機上的 Go HTTP daemon（`/api/mcp/agyd`），支援 agy prompt 執行、預定義 script、ZIP 產出推回 VPS
 - **Apps**
   - 旅遊 Playground：旅客、行程、訂單、PDF 匯出（Queue Worker 示範）
   - LineBot：LINE Webhook
@@ -91,6 +92,7 @@
    | `VITE_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | [Cloudflare Turnstile](https://dash.cloudflare.com/) | 機器人驗證（本地可設 `VITE_TURNSTILE_ENABLED=false`） |
    | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/) | LLM 對話 |
    | `GCP_PROJECT_ID` / `VERTEX_APPLICATION_CREDENTIALS` | Google Cloud → Service Account | AI 圖片產生（Vertex） |
+   | `AGYD_URL` / `AGYD_SECRET` | agyd daemon ZeroTier URL + 共享 secret | agyd daemon 整合（選填）|
 
 3. 產生 RSA 金鑰（用於登入／註冊密碼加密傳輸, 需確認檔案權限）：
    ```bash
