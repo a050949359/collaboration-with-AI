@@ -49,6 +49,16 @@ class AgydReceiveController extends Controller
             $stat               = $za->statIndex($i);
             $totalUncompressed += $stat['size'] ?? 0;
 
+            // 拒絕 symlink（Unix ZIP：external_attr 高 16 bits = Unix mode，0120000 = S_IFLNK）
+            $opsys = 0;
+            $attr  = 0;
+            if ($za->getExternalAttributesIndex($i, $opsys, $attr)) {
+                if ($opsys === \ZipArchive::OPSYS_UNIX && (($attr >> 16) & 0170000) === 0120000) {
+                    $za->close();
+                    return response()->json(['error' => 'symbolic links are not allowed'], 422);
+                }
+            }
+
             // 目錄項目（結尾 /）跳過副檔名檢查
             if (str_ends_with($entry, '/')) {
                 continue;
