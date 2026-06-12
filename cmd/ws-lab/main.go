@@ -146,7 +146,7 @@ func (r *Room) shouldShutdown() bool {
 		return false
 	}
 	// streaming 中但所有 client 均已離線超過 heartbeatTimeout → 允許 shutdown
-	return !r.streaming.Load() || r.clientCount.Load() == 0
+	return !r.streaming.Load() || r.clientCount.Load() <= 0
 }
 
 func (r *Room) broadcastBytes(msg []byte) {
