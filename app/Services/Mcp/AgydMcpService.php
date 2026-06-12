@@ -16,12 +16,16 @@ class AgydMcpService implements McpToolServiceInterface
 
     public function call(string $name, array $args, mixed $id): JsonResponse
     {
-        return match ($name) {
-            'bg_run'    => $this->bgRun($id, $args),
-            'bg_status' => $this->bgStatus($id, $args),
-            'bg_log'    => $this->bgLog($id, $args),
-            default     => $this->text($id, "Unknown tool: $name", true),
-        };
+        try {
+            return match ($name) {
+                'bg_run'    => $this->bgRun($id, $args),
+                'bg_status' => $this->bgStatus($id, $args),
+                'bg_log'    => $this->bgLog($id, $args),
+                default     => $this->text($id, "Unknown tool: $name", true),
+            };
+        } catch (\Throwable $e) {
+            return $this->text($id, 'daemon connection error: ' . $e->getMessage(), true);
+        }
     }
 
     // ── Tool implementations ──────────────────────────────────────

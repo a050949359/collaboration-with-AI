@@ -16,7 +16,7 @@ class AgydReceiveController extends Controller
         }
 
         $secret = config('agyd.secret');
-        if (empty($secret) || $request->bearerToken() !== $secret) {
+        if (empty($secret) || ! hash_equals($secret, $request->bearerToken() ?? '')) {
             return response()->json(['error' => 'unauthorized'], 401);
         }
 
@@ -33,13 +33,22 @@ class AgydReceiveController extends Controller
             return response()->json(['error' => 'invalid zip'], 422);
         }
 
+        for ($i = 0; $i < $za->numFiles; $i++) {
+            $entry = $za->getNameIndex($i);
+            if (str_contains($entry, '..') || str_starts_with($entry, '/') || str_starts_with($entry, '\\')) {
+                $za->close();
+                return response()->json(['error' => 'invalid zip entries'], 422);
+            }
+        }
+
         $absPath = Storage::disk('public')->path($dest);
+        Storage::disk('public')->makeDirectory($dest);
         $za->extractTo($absPath);
         $za->close();
 
         return response()->json([
             'task_id' => $taskId,
-            'path'    => 'storage/' . $dest,
+            'path'    => "storage/{$dest}",
         ]);
     }
 }
