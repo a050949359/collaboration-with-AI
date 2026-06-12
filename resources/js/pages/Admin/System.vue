@@ -395,6 +395,33 @@ const newCardName = ref('');
 const newCardRarity = ref<GachaCard['rarity']>('common');
 const newCardWeight = ref(100);
 const cardSaving = ref(false);
+const newCardImageFile = ref<File | null>(null);
+const newCardImagePreview = ref('');
+const cardDragOver = ref(false);
+
+function onCardImageDrop(e: DragEvent) {
+    cardDragOver.value = false;
+    const file = e.dataTransfer?.files[0];
+
+    if (file?.type.startsWith('image/')) {
+        newCardImageFile.value = file;
+        newCardImagePreview.value = URL.createObjectURL(file);
+    }
+}
+
+function onCardImageChange(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+
+    if (file) {
+        newCardImageFile.value = file;
+        newCardImagePreview.value = URL.createObjectURL(file);
+    }
+}
+
+function clearCardImage() {
+    newCardImageFile.value = null;
+    newCardImagePreview.value = '';
+}
 
 const newDeckName = ref('');
 const newDeckCardIds = ref<number[]>([]);
@@ -1073,6 +1100,55 @@ onUnmounted(stopMicroPolling);
                                             class="binary-input w-24"
                                         />
                                     </div>
+                                    <!-- 圖片上傳（UI 預留，尚未接後端） -->
+                                    <div
+                                        class="relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors"
+                                        :class="
+                                            cardDragOver
+                                                ? 'border-[var(--binary-primary)] bg-[var(--binary-primary)]/5'
+                                                : 'border-[var(--binary-outline-variant)] hover:border-[var(--binary-outline)]'
+                                        "
+                                        style="min-height: 96px"
+                                        @dragover.prevent="cardDragOver = true"
+                                        @dragleave="cardDragOver = false"
+                                        @drop.prevent="onCardImageDrop"
+                                        @click="
+                                            (
+                                                $refs.cardImageInput as HTMLInputElement
+                                            )?.click()
+                                        "
+                                    >
+                                        <input
+                                            ref="cardImageInput"
+                                            type="file"
+                                            accept="image/*"
+                                            class="hidden"
+                                            @change="onCardImageChange"
+                                        />
+                                        <template v-if="newCardImagePreview">
+                                            <img
+                                                :src="newCardImagePreview"
+                                                class="h-20 w-20 rounded-md object-cover"
+                                            />
+                                            <button
+                                                class="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-[10px] text-white hover:bg-red-500/70"
+                                                @click.stop="clearCardImage"
+                                            >
+                                                ✕
+                                            </button>
+                                        </template>
+                                        <template v-else>
+                                            <span
+                                                class="text-[11px] text-[var(--binary-outline)]"
+                                                >拖曳或點擊上傳圖片</span
+                                            >
+                                            <span
+                                                class="text-[10px] text-[var(--binary-outline)]/50"
+                                                >（尚未接後端）</span
+                                            >
+                                        </template>
+                                    </div>
+
                                     <div class="flex justify-end">
                                         <button
                                             class="binary-button"
