@@ -268,7 +268,7 @@ Route::post('/mcp/memory', [MemoryMcpController::class, 'handle'])->middleware([
 Route::post('/mcp/agyd', [AgydMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:agyd:mcp']);
 
 // agyd daemon callback（接收 ZIP，以 AGYD_SECRET 驗證）
-Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload']);
+Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->middleware('throttle:10,1');
 
 // Memory graph REST（公開）
 Route::get('/memory/graph', [MemoryGraphController::class, 'index']);
