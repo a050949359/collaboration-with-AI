@@ -668,6 +668,59 @@
                         class="mb-6 w-full border-b border-[var(--binary-outline-variant)] bg-transparent pb-1 text-sm text-[var(--binary-primary)] transition-colors outline-none placeholder:text-[var(--binary-primary)]/30 focus:border-[var(--binary-primary)]"
                         @keyup.enter="submitCreateModal"
                     />
+                    <!-- Deck selection -->
+                    <template v-if="allDecks.length > 0">
+                        <div
+                            class="mb-2 text-[10px] font-bold tracking-[0.3em] text-[var(--binary-primary)]/50"
+                        >
+                            選擇卡組（可選）
+                        </div>
+                        <div class="mb-6 flex flex-col gap-1">
+                            <label
+                                class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-[var(--binary-surface-high)]"
+                                :class="{
+                                    'bg-[var(--binary-surface-high)]':
+                                        selectedDeckId === null,
+                                }"
+                            >
+                                <input
+                                    type="radio"
+                                    v-model="selectedDeckId"
+                                    :value="null"
+                                    class="accent-[var(--binary-primary)]"
+                                />
+                                <span
+                                    class="text-xs text-[var(--binary-text-muted)]"
+                                    >不使用卡組（預設抽獎）</span
+                                >
+                            </label>
+                            <label
+                                v-for="deck in allDecks"
+                                :key="deck.id"
+                                class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-[var(--binary-surface-high)]"
+                                :class="{
+                                    'bg-[var(--binary-surface-high)]':
+                                        selectedDeckId === deck.id,
+                                }"
+                            >
+                                <input
+                                    type="radio"
+                                    v-model="selectedDeckId"
+                                    :value="deck.id"
+                                    class="accent-[var(--binary-primary)]"
+                                />
+                                <span
+                                    class="flex-1 text-xs text-[var(--binary-text)]"
+                                    >{{ deck.name }}</span
+                                >
+                                <span
+                                    class="text-[10px] text-[var(--binary-text-muted)]"
+                                    >{{ deck.cards?.length ?? 0 }} 張</span
+                                >
+                            </label>
+                        </div>
+                    </template>
+
                     <button
                         :disabled="!createName.trim()"
                         class="btn-gradient w-full rounded-xl py-3 text-xs font-bold tracking-widest text-[var(--binary-on-primary-container)] uppercase transition-all hover:brightness-110 disabled:opacity-40"
@@ -781,6 +834,8 @@ const {
     resetAllDraws,
     startSync,
     fetchRooms,
+    allDecks,
+    selectedDeckId,
 } = useGachaRoom(user, runAnimation);
 </script>
 

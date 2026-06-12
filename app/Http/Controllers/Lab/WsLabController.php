@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Lab;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -94,6 +95,12 @@ class WsLabController extends Controller
         if ($pid === null) {
             return response()->json(['message' => 'start failed: process did not write PID'], 500);
         }
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('gacha_draws')->truncate();
+        DB::table('gacha_players')->truncate();
+        DB::table('gacha_rooms')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         return response()->json([
             'message' => 'started',

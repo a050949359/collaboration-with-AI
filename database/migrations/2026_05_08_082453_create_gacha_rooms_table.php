@@ -20,6 +20,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('min_level')->default(1)->comment('最低等級限制');
             $table->enum('type', ['user', 'admin'])->default('user')->comment('user=玩家建立 admin=系統建立');
             $table->foreignId('owner_id')->nullable()->constrained('users')->nullOnDelete()->comment('User room 建立者');
+            $table->foreignId('deck_id')->nullable()->constrained('gacha_decks')->nullOnDelete()->comment('使用的卡組');
             $table->timestamps();
         });
     }

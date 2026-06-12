@@ -8,7 +8,7 @@ class GachaRoom extends Model
 {
     protected $fillable = [
         'code', 'room_name', 'status', 'max_players', 'min_level',
-        'type', 'owner_id',
+        'type', 'owner_id', 'deck_id',
     ];
 
     public function players()
@@ -16,9 +16,9 @@ class GachaRoom extends Model
         return $this->hasMany(GachaPlayer::class, 'room_id');
     }
 
-    public function cards()
+    public function deck()
     {
-        return $this->belongsToMany(GachaCard::class, 'gacha_room_cards', 'room_id', 'card_id');
+        return $this->belongsTo(GachaDeck::class, 'deck_id');
     }
 
     public function draws()

@@ -57,6 +57,31 @@ export function useGachaRoom(
     let statusTimer: ReturnType<typeof setInterval> | null = null;
     let welcomeTimer: ReturnType<typeof setTimeout> | null = null;
 
+    // ── Decks ──────────────────────────────────────────────────────────────
+    interface GachaCard {
+        id: number;
+        name: string;
+        rarity: 'common' | 'rare' | 'epic' | 'legendary';
+        weight: number;
+    }
+    interface GachaDeck {
+        id: number;
+        name: string;
+        cards: GachaCard[];
+    }
+    const allDecks = ref<GachaDeck[]>([]);
+    const selectedDeckId = ref<number | null>(null);
+
+    async function fetchDecks() {
+        const res = await fetch(api.gacha.decks(), {
+            credentials: 'include',
+        }).catch(() => null);
+
+        if (res?.ok) {
+            allDecks.value = await res.json();
+        }
+    }
+
     // ── Create modal ───────────────────────────────────────────────────────
     const showCreateModal = ref(false);
     const createName = ref('');
@@ -364,6 +389,8 @@ export function useGachaRoom(
 
     function openCreateModal() {
         createName.value = user.value?.name ?? '';
+        selectedDeckId.value = null;
+        fetchDecks();
         showCreateModal.value = true;
     }
 
@@ -385,7 +412,12 @@ export function useGachaRoom(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ player_name: name }),
+            body: JSON.stringify({
+                player_name: name,
+                ...(selectedDeckId.value !== null && {
+                    deck_id: selectedDeckId.value,
+                }),
+            }),
         }).catch(() => null);
 
         if (!res?.ok) {
@@ -717,5 +749,7 @@ export function useGachaRoom(
         resetAllDraws,
         startSync,
         fetchRooms,
+        allDecks,
+        selectedDeckId,
     };
 }

@@ -28,6 +28,8 @@ use App\Http\Controllers\Aviation\CityPreviewController;
 use App\Http\Controllers\Aviation\CitySearchController;
 use App\Http\Controllers\Aviation\CountryController;
 use App\Http\Controllers\Aviation\NearbyAirportController;
+use App\Http\Controllers\Gacha\GachaCardController;
+use App\Http\Controllers\Gacha\GachaDeckController;
 use App\Http\Controllers\Gacha\GachaRoomController;
 use App\Http\Controllers\Lab\WsLabController;
 use App\Http\Controllers\Agyd\AgydReceiveController;
@@ -251,6 +253,18 @@ Route::prefix('v1/story')->middleware('throttle:30,1')->group(function () {
     Route::get('/sessions/{session}', [StorySessionController::class, 'show']);
     Route::patch('/sessions/{session}/status', [StorySessionController::class, 'updateStatus']);
     Route::post('/sessions/{session}/player-turn', [StorySessionController::class, 'playerTurn']);
+});
+
+Route::prefix('v1/gacha')->middleware('throttle:30,1')->group(function () {
+    Route::get('cards', [GachaCardController::class, 'index']);
+    Route::get('decks', [GachaDeckController::class, 'index']);
+});
+Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('v1/gacha')->group(function () {
+    Route::post('cards', [GachaCardController::class, 'store']);
+    Route::delete('cards/{card}', [GachaCardController::class, 'destroy']);
+    Route::post('decks', [GachaDeckController::class, 'store']);
+    Route::put('decks/{deck}', [GachaDeckController::class, 'update']);
+    Route::delete('decks/{deck}', [GachaDeckController::class, 'destroy']);
 });
 
 Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () {

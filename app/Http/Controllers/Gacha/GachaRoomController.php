@@ -41,6 +41,7 @@ class GachaRoomController extends Controller
         $request->validate([
             'room_name'   => 'nullable|string|max:50',
             'player_name' => 'nullable|string|max:30',
+            'deck_id'     => 'nullable|integer|exists:gacha_decks,id',
         ]);
 
         $code       = strtoupper(Str::random(6));
@@ -50,6 +51,7 @@ class GachaRoomController extends Controller
             'code'      => $code,
             'room_name' => $request->room_name ?? ($playerName . "'s Room"),
             'owner_id'  => auth()->id(),
+            'deck_id'   => $request->input('deck_id'),
             'type'      => 'user',
         ]);
 
@@ -131,7 +133,8 @@ class GachaRoomController extends Controller
             return response()->json(['message' => 'draws not open'], 403);
         }
 
-        $room = GachaRoom::where('code', $code)
+        $room = GachaRoom::with('deck.cards')
+            ->where('code', $code)
             ->where('status', '!=', 'finished')
             ->firstOrFail();
 
@@ -144,12 +147,13 @@ class GachaRoomController extends Controller
         }
 
         $count   = $request->boolean('is_ten_pull') ? 10 : 1;
-        $results = $this->generateResults($count);
+        $results = $this->generateResults($count, $room);
 
         foreach ($results as $result) {
             GachaDraw::create([
                 'room_id'   => $room->id,
                 'player_id' => $player->id,
+                'card_id'   => $result['card']['id'] ?? null,
                 'result'    => $result,
             ]);
         }
@@ -190,13 +194,68 @@ class GachaRoomController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    private function generateResults(int $count): array
+    private const RARITY_COLORS = [
+        'common'    => '#a5d1b4',
+        'rare'      => '#00f2ff',
+        'epic'      => '#a855f7',
+        'legendary' => '#ffb3b2',
+    ];
+
+    private function generateResults(int $count, GachaRoom $room): array
+    {
+        $cards = $room->deck?->cards ?? collect();
+
+        if ($cards->isNotEmpty()) {
+            return $this->drawFromCards($count, $cards);
+        }
+
+        return $this->drawFromFallback($count);
+    }
+
+    private function drawFromCards(int $count, \Illuminate\Support\Collection $cards): array
+    {
+        $totalWeight = $cards->sum('weight');
+        $results     = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $roll       = random_int(1, max(1, $totalWeight));
+            $cumulative = 0;
+            $selected   = $cards->first();
+            foreach ($cards as $card) {
+                $cumulative += $card->weight;
+                if ($roll <= $cumulative) {
+                    $selected = $card;
+                    break;
+                }
+            }
+
+            $rarity  = $selected->rarity;
+            $color   = self::RARITY_COLORS[$rarity] ?? '#ffffff';
+            $results[] = [
+                'quality' => [
+                    'name'  => $rarity,
+                    'color' => $color,
+                    'code'  => strtoupper($rarity) . '_ENTITY',
+                ],
+                'code' => 'V-SYNC_' . str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
+                'card' => [
+                    'id'        => $selected->id,
+                    'name'      => $selected->name,
+                    'image_url' => $selected->image_url,
+                ],
+            ];
+        }
+
+        return $results;
+    }
+
+    private function drawFromFallback(int $count): array
     {
         $tiers = [
-            ['name' => 'common',    'color' => '#a5d1b4', 'code' => 'COMMON_ENTITY',    'weight' => 60],
-            ['name' => 'rare',      'color' => '#00f2ff', 'code' => 'RARE_ENTITY',      'weight' => 25],
-            ['name' => 'epic',      'color' => '#a855f7', 'code' => 'EPIC_ENTITY',      'weight' => 12],
-            ['name' => 'legendary', 'color' => '#ffb3b2', 'code' => 'LEGENDARY_ENTITY', 'weight' => 3],
+            ['name' => 'common',    'color' => self::RARITY_COLORS['common'],    'code' => 'COMMON_ENTITY',    'weight' => 60],
+            ['name' => 'rare',      'color' => self::RARITY_COLORS['rare'],      'code' => 'RARE_ENTITY',      'weight' => 25],
+            ['name' => 'epic',      'color' => self::RARITY_COLORS['epic'],      'code' => 'EPIC_ENTITY',      'weight' => 12],
+            ['name' => 'legendary', 'color' => self::RARITY_COLORS['legendary'], 'code' => 'LEGENDARY_ENTITY', 'weight' => 3],
         ];
 
         $totalWeight = array_sum(array_column($tiers, 'weight'));
