@@ -36,3 +36,4 @@ check_results.txt
 /tmp/
 /cmd/memctl/memctl
 /cmd/taskctl/taskctl
+/cmd/agydctl/agydctl
