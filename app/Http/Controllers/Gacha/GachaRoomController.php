@@ -194,13 +194,6 @@ class GachaRoomController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    private const RARITY_COLORS = [
-        'common'    => '#a5d1b4',
-        'rare'      => '#00f2ff',
-        'epic'      => '#a855f7',
-        'legendary' => '#ffb3b2',
-    ];
-
     private function generateResults(int $count, GachaRoom $room): array
     {
         $cards = $room->deck?->cards ?? collect();
@@ -229,13 +222,10 @@ class GachaRoomController extends Controller
                 }
             }
 
-            $rarity  = $selected->rarity;
-            $color   = self::RARITY_COLORS[$rarity] ?? '#ffffff';
             $results[] = [
                 'quality' => [
-                    'name'  => $rarity,
-                    'color' => $color,
-                    'code'  => strtoupper($rarity) . '_ENTITY',
+                    'name' => $selected->rarity,
+                    'code' => strtoupper($selected->rarity) . '_ENTITY',
                 ],
                 'code' => 'V-SYNC_' . str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
                 'card' => [
@@ -252,10 +242,10 @@ class GachaRoomController extends Controller
     private function drawFromFallback(int $count): array
     {
         $tiers = [
-            ['name' => 'common',    'color' => self::RARITY_COLORS['common'],    'code' => 'COMMON_ENTITY',    'weight' => 60],
-            ['name' => 'rare',      'color' => self::RARITY_COLORS['rare'],      'code' => 'RARE_ENTITY',      'weight' => 25],
-            ['name' => 'epic',      'color' => self::RARITY_COLORS['epic'],      'code' => 'EPIC_ENTITY',      'weight' => 12],
-            ['name' => 'legendary', 'color' => self::RARITY_COLORS['legendary'], 'code' => 'LEGENDARY_ENTITY', 'weight' => 3],
+            ['name' => 'common',    'code' => 'COMMON_ENTITY',    'weight' => 60],
+            ['name' => 'rare',      'code' => 'RARE_ENTITY',      'weight' => 25],
+            ['name' => 'epic',      'code' => 'EPIC_ENTITY',      'weight' => 12],
+            ['name' => 'legendary', 'code' => 'LEGENDARY_ENTITY', 'weight' => 3],
         ];
 
         $totalWeight = array_sum(array_column($tiers, 'weight'));
@@ -274,9 +264,8 @@ class GachaRoomController extends Controller
             }
             $results[] = [
                 'quality' => [
-                    'name'  => $selected['name'],
-                    'color' => $selected['color'],
-                    'code'  => $selected['code'],
+                    'name' => $selected['name'],
+                    'code' => $selected['code'],
                 ],
                 'code' => 'V-SYNC_' . str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
             ];

@@ -6,7 +6,6 @@ import { api } from '@/lib/routes';
 export interface QualityTier {
     code: string;
     name: string;
-    color: string;
 }
 export interface DrawResult {
     quality: QualityTier;
@@ -24,10 +23,10 @@ export type DrawEvent = { player: string; results: DrawResult[]; ts: string };
 export type Mode = 'standalone' | 'lobby' | 'in-room';
 
 export const QUALITY_TIERS: QualityTier[] = [
-    { code: 'COMMON_ENTITY', name: 'common', color: '#a5d1b4' },
-    { code: 'RARE_ENTITY', name: 'rare', color: '#00f2ff' },
-    { code: 'EPIC_ENTITY', name: 'epic', color: '#a855f7' },
-    { code: 'LEGENDARY_ENTITY', name: 'legendary', color: '#ffb3b2' },
+    { code: 'COMMON_ENTITY', name: 'common' },
+    { code: 'RARE_ENTITY', name: 'rare' },
+    { code: 'EPIC_ENTITY', name: 'epic' },
+    { code: 'LEGENDARY_ENTITY', name: 'legendary' },
 ];
 
 export function useGachaRoom(
@@ -534,7 +533,9 @@ export function useGachaRoom(
 
     function showResults(results: DrawResult[]) {
         lastResults.value = results;
-        extractionDots.value = results.map((r) => ({ color: r.quality.color }));
+        extractionDots.value = results.map((r) => ({
+            color: `var(--rarity-${r.quality.name})`,
+        }));
         setTimeout(() => {
             showModal.value = true;
             syncing.value = false;

@@ -387,13 +387,6 @@ interface GachaDeck {
     cards: { id: number; name: string; rarity: string; weight: number }[];
 }
 
-const RARITY_COLORS: Record<string, string> = {
-    common: '#a5d1b4',
-    rare: '#00f2ff',
-    epic: '#a855f7',
-    legendary: '#ffb3b2',
-};
-
 const gachaCards = ref<GachaCard[]>([]);
 const gachaDecks = ref<GachaDeck[]>([]);
 const gachaLoading = ref(false);
@@ -1025,9 +1018,7 @@ onUnmounted(stopMicroPolling);
                                         <span
                                             class="text-[10px] font-bold uppercase"
                                             :style="{
-                                                color: RARITY_COLORS[
-                                                    card.rarity
-                                                ],
+                                                color: `var(--rarity-${card.rarity})`,
                                             }"
                                             >{{ card.rarity }}</span
                                         >
@@ -1147,13 +1138,8 @@ onUnmounted(stopMicroPolling);
                                                 :key="c.id"
                                                 class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
                                                 :style="{
-                                                    color: RARITY_COLORS[
-                                                        c.rarity
-                                                    ],
-                                                    borderColor:
-                                                        RARITY_COLORS[
-                                                            c.rarity
-                                                        ] + '40',
+                                                    color: `var(--rarity-${c.rarity})`,
+                                                    borderColor: `color-mix(in srgb, var(--rarity-${c.rarity}) 25%, transparent)`,
                                                     borderWidth: '1px',
                                                     borderStyle: 'solid',
                                                 }"
@@ -1206,9 +1192,7 @@ onUnmounted(stopMicroPolling);
                                             <span
                                                 class="text-[10px] font-bold uppercase"
                                                 :style="{
-                                                    color: RARITY_COLORS[
-                                                        card.rarity
-                                                    ],
+                                                    color: `var(--rarity-${card.rarity})`,
                                                 }"
                                                 >{{ card.rarity }}</span
                                             >

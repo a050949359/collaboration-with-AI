@@ -429,8 +429,8 @@
                                         :key="j"
                                         class="rounded border px-1.5 py-0.5 text-[9px] font-bold"
                                         :style="{
-                                            color: r.quality.color,
-                                            borderColor: r.quality.color + '55',
+                                            color: `var(--rarity-${r.quality.name})`,
+                                            borderColor: `color-mix(in srgb, var(--rarity-${r.quality.name}) 33%, transparent)`,
                                         }"
                                         >{{
                                             r.quality.code.split('_')[0]
@@ -603,7 +603,9 @@
                                 }"
                                 :style="
                                     result.quality.name !== 'legendary'
-                                        ? { color: result.quality.color + 'aa' }
+                                        ? {
+                                              color: `color-mix(in srgb, var(--rarity-${result.quality.name}) 67%, transparent)`,
+                                          }
                                         : {}
                                 "
                             >
@@ -617,7 +619,9 @@
                                 }"
                                 :style="
                                     result.quality.name !== 'legendary'
-                                        ? { color: result.quality.color }
+                                        ? {
+                                              color: `var(--rarity-${result.quality.name})`,
+                                          }
                                         : {}
                                 "
                             >
