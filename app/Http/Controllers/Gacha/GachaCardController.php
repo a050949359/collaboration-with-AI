@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Gacha;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Gacha\StoreGachaCardRequest;
 use App\Models\Gacha\GachaCard;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class GachaCardController extends Controller
 {
@@ -19,15 +18,9 @@ class GachaCardController extends Controller
     }
 
     // POST /api/v1/gacha/cards  (admin)
-    public function store(Request $request): JsonResponse
+    public function store(StoreGachaCardRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name'   => 'required|string|max:50',
-            'rarity' => ['required', Rule::in(['common', 'rare', 'epic', 'legendary'])],
-            'weight' => 'required|integer|min:1|max:9999',
-        ]);
-
-        $card = GachaCard::create($data);
+        $card = GachaCard::create($request->validated());
 
         return response()->json($card, 201);
     }

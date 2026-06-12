@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Gacha;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Gacha\DrawGachaRequest;
+use App\Http\Requests\Gacha\JoinGachaRoomRequest;
+use App\Http\Requests\Gacha\StoreGachaRoomRequest;
 use App\Models\Gacha\GachaDraw;
 use App\Models\Gacha\GachaPlayer;
 use App\Models\Gacha\GachaRoom;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -36,14 +38,8 @@ class GachaRoomController extends Controller
     }
 
     // POST /api/v1/gacha/rooms
-    public function store(Request $request): JsonResponse
+    public function store(StoreGachaRoomRequest $request): JsonResponse
     {
-        $request->validate([
-            'room_name'   => 'nullable|string|max:50',
-            'player_name' => 'nullable|string|max:30',
-            'deck_id'     => 'nullable|integer|exists:gacha_decks,id',
-        ]);
-
         $code       = strtoupper(Str::random(6));
         $playerName = $request->player_name ?? auth()->user()->name;
 
@@ -89,10 +85,8 @@ class GachaRoomController extends Controller
     }
 
     // POST /api/v1/gacha/rooms/{code}/join
-    public function join(Request $request, string $code): JsonResponse
+    public function join(JoinGachaRoomRequest $request, string $code): JsonResponse
     {
-        $request->validate(['name' => 'required|string|max:30']);
-
         $room = GachaRoom::where('code', $code)
             ->where('status', '!=', 'finished')
             ->firstOrFail();
@@ -120,15 +114,8 @@ class GachaRoomController extends Controller
     }
 
     // POST /api/v1/gacha/rooms/{code}/draw
-    public function draw(Request $request, string $code): JsonResponse
+    public function draw(DrawGachaRequest $request, string $code): JsonResponse
     {
-        $request->validate([
-            'player_id'      => 'required|integer',
-            'is_ten_pull'    => 'boolean',
-            'can_draw'       => 'boolean',
-            'draws_per_user' => 'integer|min:0',
-        ]);
-
         if (!$request->boolean('can_draw', true)) {
             return response()->json(['message' => 'draws not open'], 403);
         }
