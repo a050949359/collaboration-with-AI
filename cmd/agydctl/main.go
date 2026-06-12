@@ -155,7 +155,7 @@ type statusResult struct {
 	TaskID     string  `json:"task_id"`
 	Label      string  `json:"label"`
 	Status     string  `json:"status"`      // running | done | failed
-	StartedAt  string  `json:"started_at"`  // RFC 3339
+	StartedAt  *string `json:"started_at"`  // RFC 3339；nil 代表尚未開始（queued）
 	FinishedAt *string `json:"finished_at"` // nil 代表尚未結束
 	ExitCode   *int    `json:"exit_code"`   // nil 代表尚未結束；0 = 成功
 }
@@ -198,8 +198,8 @@ func printStatus(text string) {
 		fmt.Printf("label   : %s\n", s.Label)
 	}
 	fmt.Printf("status  : %s\n", s.Status)
-	if s.StartedAt != "" {
-		fmt.Printf("started : %s\n", s.StartedAt)
+	if s.StartedAt != nil {
+		fmt.Printf("started : %s\n", *s.StartedAt)
 	}
 	if s.FinishedAt != nil {
 		fmt.Printf("finished: %s\n", *s.FinishedAt)
