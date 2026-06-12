@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Http;
 
 class AgydMcpService implements McpToolServiceInterface
 {
+    /** @var string[] */
     private const TOOLS = ['bg_run_prompt', 'bg_run_script', 'bg_list_scripts', 'bg_status', 'bg_log'];
 
     public function canHandle(string $name): bool
@@ -82,7 +83,7 @@ class AgydMcpService implements McpToolServiceInterface
     private function bgStatus(mixed $id, array $args): JsonResponse
     {
         $taskId = $args['task_id'] ?? '';
-        if (empty($taskId) || ! preg_match('/^[a-zA-Z0-9_-]+$/', $taskId)) {
+        if (! \is_string($taskId) || empty($taskId) || ! preg_match('/^[a-zA-Z0-9_-]+$/', $taskId)) {
             return $this->text($id, 'invalid or missing task_id', true);
         }
 
@@ -98,7 +99,7 @@ class AgydMcpService implements McpToolServiceInterface
     private function bgLog(mixed $id, array $args): JsonResponse
     {
         $taskId = $args['task_id'] ?? '';
-        if (empty($taskId) || ! preg_match('/^[a-zA-Z0-9_-]+$/', $taskId)) {
+        if (! \is_string($taskId) || empty($taskId) || ! preg_match('/^[a-zA-Z0-9_-]+$/', $taskId)) {
             return $this->text($id, 'invalid or missing task_id', true);
         }
 

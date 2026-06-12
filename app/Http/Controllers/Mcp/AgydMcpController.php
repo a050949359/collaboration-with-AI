@@ -17,7 +17,7 @@ class AgydMcpController extends Controller
         $method = $body['method'] ?? '';
         $id     = $body['id'] ?? null;
         $params = $body['params'] ?? [];
-        if (! is_array($params)) {
+        if (! \is_array($params)) {
             $params = [];
         }
 
@@ -25,8 +25,8 @@ class AgydMcpController extends Controller
             'initialize'  => $this->initialize($id),
             'tools/list'  => $this->ok($id, ['tools' => $this->service->toolSchemas()]),
             'tools/call'  => $this->service->call(
-                                $params['name'] ?? '',
-                                $params['arguments'] ?? [],
+                                \is_string($params['name'] ?? null) ? $params['name'] : '',
+                                \is_array($params['arguments'] ?? null) ? $params['arguments'] : [],
                                 $id,
                             ),
             default       => $this->error($id, -32601, 'Method not found'),
