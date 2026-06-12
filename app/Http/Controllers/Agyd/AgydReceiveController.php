@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class AgydReceiveController extends Controller
 {
+    /** @var string[] */
     private const ALLOWED_EXTENSIONS = [
         'html', 'css', 'js', 'json', 'map',
         'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'webp',
@@ -50,10 +51,20 @@ class AgydReceiveController extends Controller
             }
 
             $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
-            if (! in_array($ext, self::ALLOWED_EXTENSIONS, true)) {
+            if (! \in_array($ext, self::ALLOWED_EXTENSIONS, true)) {
                 $za->close();
                 return response()->json(['error' => "disallowed file type: .{$ext}"], 422);
             }
+        }
+
+        // 磁碟空間檢查：剩餘需 > max(zip×3, min_free_mb)
+        $minFreeBytes = config('agyd.min_free_mb') * 1024 * 1024;
+        $required     = max($zip->getSize() * 3, $minFreeBytes);
+        $freeBytes    = disk_free_space(Storage::disk('public')->path(''));
+
+        if ($freeBytes !== false && $freeBytes < $required) {
+            $za->close();
+            return response()->json(['error' => 'insufficient disk space'], 507);
         }
 
         // 清掉舊的再解壓，避免殘留
