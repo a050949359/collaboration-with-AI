@@ -377,7 +377,7 @@ function stopMicroPolling() {
 interface GachaCard {
     id: number;
     name: string;
-    rarity: 'common' | 'rare' | 'epic' | 'legendary';
+    rarity: string;
     weight: number;
 }
 
