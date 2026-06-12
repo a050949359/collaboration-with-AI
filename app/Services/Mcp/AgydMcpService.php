@@ -5,6 +5,21 @@ namespace App\Services\Mcp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Http;
 
+/**
+ * agyd daemon MCP service
+ *
+ * 架構：Claude → Laravel MCP endpoint（/api/mcp/agyd）→ ZeroTier → Go HTTP daemon（本地微型主機）
+ *
+ * Daemon HTTP API（由 Go daemon 實作，Laravel 作為 proxy 轉發）：
+ *   POST /run           { prompt, label }        → { task_id, label, status }
+ *   POST /run-script    { name, label }           → { task_id, label, status }
+ *   GET  /scripts                                → [{ name, description }, ...]
+ *   GET  /status/{id}                            → { task_id, label, status, started_at, finished_at, exit_code }
+ *   GET  /log/{id}                               → { task_id, log }
+ *
+ * 工作完成後 daemon 會 ZIP 靜態產出並 POST 回 /api/agyd/upload/{task_id}（AgydReceiveController）。
+ * 認證：AGYD_SECRET via Bearer token（hash_equals，timing-safe）。
+ */
 class AgydMcpService implements McpToolServiceInterface
 {
     /** @var string[] */

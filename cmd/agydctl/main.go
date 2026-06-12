@@ -2,7 +2,30 @@
 // 目的同 taskctl / memctl：省去 native MCP 的 context 常駐 schema 與冗長 curl。
 // token / url 自動從 .vscode/mcp.json 讀，或用 MCP_TOKEN/MCP_BASE_URL 環境變數覆寫。
 //
-// 用法：
+// # 架構
+//
+//	agydctl → POST /api/mcp/agyd（Laravel, JSON-RPC 2.0）
+//	              → ZeroTier 內網 → Go HTTP daemon（本地微型主機）
+//
+// daemon 工作完成後會 ZIP 靜態產出，POST 回 /api/agyd/upload/{task_id}，
+// 解壓後放在 storage/app/public/agy/{task_id}/。
+//
+// # 設定
+//
+// 優先序：MCP_TOKEN 環境變數 > .vscode/mcp.json（往上層目錄找）
+//
+// .vscode/mcp.json 格式（server key 任意，以 URL suffix 比對）：
+//
+//	{
+//	  "servers": {
+//	    "collab-agyd": {
+//	      "url": "https://ohya.vip/api/mcp/agyd",
+//	      "headers": { "Authorization": "Bearer <agyd:mcp scope key>" }
+//	    }
+//	  }
+//	}
+//
+// # 用法
 //
 //	agydctl run-prompt [--label l] <prompt...>   在本地微型主機上提交 agy 工作（非同步）
 //	agydctl run-script [--label l] <name>        執行 daemon 預定義 script（非同步）
@@ -10,6 +33,24 @@
 //	agydctl status <task_id>                     查詢工作狀態（running/done/failed）
 //	agydctl log <task_id>                        取得工作 stdout/stderr 輸出
 //	  （任意位置加 --json 印原始 JSON）
+//
+// # 典型流程
+//
+//	$ agydctl run-prompt --label build-cv "建一個展示頁，放在 /dist"
+//	task_id : abc-123
+//	label   : build-cv
+//	status  : queued
+//
+//	$ agydctl status abc-123
+//	task_id : abc-123
+//	status  : done
+//	started : 2026-06-12T10:00:00Z
+//	finished: 2026-06-12T10:02:30Z
+//	exit    : 0
+//
+//	$ agydctl log abc-123
+//	[agy] Starting task...
+//	...
 package main
 
 import (
@@ -98,30 +139,37 @@ func main() {
 }
 
 // ── 輸出格式（agyd 專屬）─────────────────────────────────────
+//
+// 以下 struct 對應 Go daemon HTTP API 的回傳格式；
+// daemon 實作時需保持 JSON key 一致（snake_case）。
 
+// POST /run、POST /run-script 的回傳
 type runResult struct {
-	TaskID string `json:"task_id"`
-	Label  string `json:"label"`
-	Status string `json:"status"`
+	TaskID string `json:"task_id"` // 唯一工作 ID，用於後續 status/log 查詢
+	Label  string `json:"label"`   // 工作標籤，方便辨識
+	Status string `json:"status"`  // 初始狀態，通常為 "queued"
 }
 
+// GET /status/{task_id} 的回傳
 type statusResult struct {
 	TaskID     string  `json:"task_id"`
 	Label      string  `json:"label"`
-	Status     string  `json:"status"`
-	StartedAt  string  `json:"started_at"`
-	FinishedAt *string `json:"finished_at"`
-	ExitCode   *int    `json:"exit_code"`
+	Status     string  `json:"status"`      // running | done | failed
+	StartedAt  *string `json:"started_at"`  // RFC 3339；nil 代表尚未開始（queued）
+	FinishedAt *string `json:"finished_at"` // nil 代表尚未結束
+	ExitCode   *int    `json:"exit_code"`   // nil 代表尚未結束；0 = 成功
 }
 
+// GET /log/{task_id} 的回傳
 type logResult struct {
 	TaskID string `json:"task_id"`
-	Log    string `json:"log"`
+	Log    string `json:"log"` // stdout + stderr 合併的完整輸出
 }
 
+// GET /scripts 的單筆項目
 type scriptEntry struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string `json:"name"`        // script 識別名稱，傳給 run-script
+	Description string `json:"description"` // 人類可讀說明（選填）
 }
 
 func printRunResult(text string) {
@@ -150,8 +198,8 @@ func printStatus(text string) {
 		fmt.Printf("label   : %s\n", s.Label)
 	}
 	fmt.Printf("status  : %s\n", s.Status)
-	if s.StartedAt != "" {
-		fmt.Printf("started : %s\n", s.StartedAt)
+	if s.StartedAt != nil {
+		fmt.Printf("started : %s\n", *s.StartedAt)
 	}
 	if s.FinishedAt != nil {
 		fmt.Printf("finished: %s\n", *s.FinishedAt)
