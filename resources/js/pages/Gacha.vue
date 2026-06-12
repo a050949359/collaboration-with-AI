@@ -625,7 +625,7 @@
                                         : {}
                                 "
                             >
-                                {{ result.code }}
+                                {{ result.card?.name ?? result.code }}
                             </div>
                         </div>
                     </div>

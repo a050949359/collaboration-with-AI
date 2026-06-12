@@ -7,9 +7,15 @@ export interface QualityTier {
     code: string;
     name: string;
 }
+export interface DrawResultCard {
+    id: number;
+    name: string;
+    image_url: string | null;
+}
 export interface DrawResult {
     quality: QualityTier;
     code: string;
+    card?: DrawResultCard;
 }
 export interface RoomListItem {
     id: number;
