@@ -11,6 +11,7 @@ use App\Http\Controllers\Article\ArticleCommentController;
 use App\Http\Controllers\Article\ArticleEditController;
 use App\Http\Controllers\Article\ArticleGenerationController;
 use App\Http\Controllers\Auth\ChangePasswordController;
+use App\Http\Controllers\Auth\DeviceController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
@@ -29,9 +30,11 @@ use App\Http\Controllers\Aviation\CountryController;
 use App\Http\Controllers\Aviation\NearbyAirportController;
 use App\Http\Controllers\Gacha\GachaRoomController;
 use App\Http\Controllers\Lab\WsLabController;
+use App\Http\Controllers\Agyd\AgydReceiveController;
 use App\Http\Controllers\Line\LineAboutTokenController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
+use App\Http\Controllers\Mcp\AgydMcpController;
 use App\Http\Controllers\Mcp\MemoryMcpController;
 use App\Http\Controllers\Mcp\TaskMcpController;
 use App\Http\Controllers\MiniOrch\MiniOrchController;
@@ -72,6 +75,8 @@ Route::group(['prefix' => 'auth'], function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [LoginController::class, 'logout']);
         Route::get('/me', [LoginController::class, 'me']);
+        Route::get('/devices', [DeviceController::class, 'index']);
+        Route::delete('/devices/{id}', [DeviceController::class, 'destroy']);
         Route::post('/change-password', [ChangePasswordController::class, 'change'])->middleware(DecryptPasswordFields::class);
         Route::patch('/name', [ProfileController::class, 'updateName']);
 
@@ -260,6 +265,10 @@ Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () 
 // MCP JSON-RPC endpoint
 Route::post('/mcp/task', [TaskMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:task:mcp']);
 Route::post('/mcp/memory', [MemoryMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:memory:mcp']);
+Route::post('/mcp/agyd', [AgydMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:agyd:mcp']);
+
+// agyd daemon callback（接收 ZIP，以 AGYD_SECRET 驗證）
+Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->middleware('throttle:10,1');
 
 // Memory graph REST（公開）
 Route::get('/memory/graph', [MemoryGraphController::class, 'index']);

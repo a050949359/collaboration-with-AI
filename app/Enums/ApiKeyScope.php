@@ -6,12 +6,13 @@ enum ApiKeyScope: string
 {
     case TaskMcp   = 'task:mcp';
     case MemoryMcp = 'memory:mcp';
+    case AgydMcp   = 'agyd:mcp';
 
     public function adminOnly(): bool
     {
         return match ($this) {
-            self::MemoryMcp => true,
-            default         => false,
+            self::MemoryMcp, self::AgydMcp => true,
+            default                        => false,
         };
     }
 
