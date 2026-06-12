@@ -141,11 +141,12 @@ func newRoom(id string, roomType RoomType, hostName string) *Room {
 func (r *Room) touch() { r.lastActivity.Store(time.Now().UnixNano()) }
 
 func (r *Room) shouldShutdown() bool {
-	if r.streaming.Load() {
+	last := time.Unix(0, r.lastActivity.Load())
+	if time.Since(last) <= heartbeatTimeout {
 		return false
 	}
-	last := time.Unix(0, r.lastActivity.Load())
-	return time.Since(last) > heartbeatTimeout
+	// streaming 中但所有 client 均已離線超過 heartbeatTimeout → 允許 shutdown
+	return !r.streaming.Load() || r.clientCount.Load() <= 0
 }
 
 func (r *Room) broadcastBytes(msg []byte) {
