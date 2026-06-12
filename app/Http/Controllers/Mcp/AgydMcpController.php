@@ -17,6 +17,9 @@ class AgydMcpController extends Controller
         $method = $body['method'] ?? '';
         $id     = $body['id'] ?? null;
         $params = $body['params'] ?? [];
+        if (! is_array($params)) {
+            $params = [];
+        }
 
         return match ($method) {
             'initialize'  => $this->initialize($id),

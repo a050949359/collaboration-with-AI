@@ -72,7 +72,10 @@ class AgydReceiveController extends Controller
 
         $absPath = Storage::disk('public')->path($dest);
         Storage::disk('public')->makeDirectory($dest);
-        $za->extractTo($absPath);
+        if ($za->extractTo($absPath) !== true) {
+            $za->close();
+            return response()->json(['error' => 'failed to extract zip'], 500);
+        }
         $za->close();
 
         // 唯讀權限（縱深防禦，防意外覆蓋）
