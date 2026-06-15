@@ -11,6 +11,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,24 @@ import (
 
 	chromem "github.com/philippgille/chromem-go"
 )
+
+// strMap 容忍 PHP json_encode 空陣列：`[]` / `null` / 缺值都當成空 map。
+// （PHP 空 array 會被編成 JSON `[]`，無法直接 unmarshal 進 map[string]string）
+type strMap map[string]string
+
+func (m *strMap) UnmarshalJSON(b []byte) error {
+	t := bytes.TrimSpace(b)
+	if len(t) == 0 || bytes.Equal(t, []byte("null")) || bytes.Equal(t, []byte("[]")) {
+		*m = nil
+		return nil
+	}
+	var mm map[string]string
+	if err := json.Unmarshal(b, &mm); err != nil {
+		return err
+	}
+	*m = mm
+	return nil
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -60,10 +79,10 @@ func main() {
 // ── 子命令 ──────────────────────────────────────────────────────────────
 
 type docInput struct {
-	ID        string            `json:"id"`
-	Content   string            `json:"content"`
-	Embedding []float32         `json:"embedding"`
-	Metadata  map[string]string `json:"metadata"`
+	ID        string    `json:"id"`
+	Content   string    `json:"content"`
+	Embedding []float32 `json:"embedding"`
+	Metadata  strMap    `json:"metadata"`
 }
 
 func cmdUpsert(dbPath, collName string) error {
@@ -106,9 +125,10 @@ func cmdUpsert(dbPath, collName string) error {
 
 func cmdQuery(dbPath, collName string) error {
 	var in struct {
-		Embedding []float32         `json:"embedding"`
-		TopK      int               `json:"top_k"`
-		Where     map[string]string `json:"where"`
+		Embedding []float32 `json:"embedding"`
+		TopK      int       `json:"top_k"`
+		Where     strMap    `json:"where"`          // metadata 精確過濾
+		WhereDoc  strMap    `json:"where_document"` // 內容過濾：{"$contains":"..."} / {"$not_contains":"..."}
 	}
 	if err := readJSON(&in); err != nil {
 		return err
@@ -134,7 +154,7 @@ func cmdQuery(dbPath, collName string) error {
 		in.TopK = count
 	}
 
-	res, err := col.QueryEmbedding(context.Background(), in.Embedding, in.TopK, in.Where, nil)
+	res, err := col.QueryEmbedding(context.Background(), in.Embedding, in.TopK, in.Where, in.WhereDoc)
 	if err != nil {
 		return err
 	}
@@ -174,21 +194,22 @@ func cmdStats(dbPath, collName string) error {
 
 func cmdDelete(dbPath, collName string) error {
 	var in struct {
-		IDs   []string          `json:"ids"`
-		Where map[string]string `json:"where"`
+		IDs      []string `json:"ids"`
+		Where    strMap   `json:"where"`
+		WhereDoc strMap   `json:"where_document"`
 	}
 	if err := readJSON(&in); err != nil {
 		return err
 	}
-	if len(in.IDs) == 0 && len(in.Where) == 0 {
-		return errors.New("delete 需提供 ids 或 where")
+	if len(in.IDs) == 0 && len(in.Where) == 0 && len(in.WhereDoc) == 0 {
+		return errors.New("delete 需提供 ids / where / where_document 其一")
 	}
 
 	col, err := openCollection(dbPath, collName)
 	if err != nil {
 		return err
 	}
-	if err := col.Delete(context.Background(), in.Where, nil, in.IDs...); err != nil {
+	if err := col.Delete(context.Background(), in.Where, in.WhereDoc, in.IDs...); err != nil {
 		return err
 	}
 	return outputJSON(map[string]any{"ok": true, "total": col.Count()})
@@ -254,10 +275,12 @@ func usage() {
 
 commands:
   upsert   存/更新文件   stdin: {"documents":[{"id","content","embedding":[...],"metadata":{}}]}
-  query    向量檢索       stdin: {"embedding":[...],"top_k":5,"where":{}}
+  query    向量檢索       stdin: {"embedding":[...],"top_k":5,"where":{},"where_document":{"$contains":"..."}}
   stats    統計           （無 stdin）
-  delete   刪除           stdin: {"ids":[...]} 或 {"where":{}}
+  delete   刪除           stdin: {"ids":[...]} / {"where":{}} / {"where_document":{"$contains":"..."}}
   reset    清空 collection（無 stdin）
+
+過濾器：where = metadata 精確比對；where_document = 內容子字串（$contains / $not_contains）。
 
 flags:
   --db <dir>           持久化 DB 目錄（或環境變數 RAGCTL_DB）
