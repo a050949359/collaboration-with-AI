@@ -87,17 +87,30 @@ read -r -d '' PROMPT <<PROMPT_EOF || true
   gh -R ${REPO_SLUG} pr diff ${PR}
 只 review diff 新增的那幾行，不 review 既有程式碼。
 
+## 證據綁定（最重要，務必遵守 —— 防止「腦補」出不存在的漏洞）
+資安誤報（假漏洞）與漏報一樣有害。你只能根據**實際看到的文字**提出發現：
+1. **每條發現都必須引用 diff 中真實存在的那一行**（在發現裡用 \`> 原文\` 貼出來）。
+   引不出原文 = 你在猜，這條不准寫。
+2. **檔名與行號必須與 diff 完全一致**：檔名照 \`+++ b/<path>\` 完整路徑，不可縮寫或省略目錄層級；
+   行號照 \`@@\` hunk header 推算。
+3. **不要假設 diff 以外的程式內容**：不可宣稱某段驗證「缺失」或某變數「未過濾」，除非 diff 顯示了
+   相關上下文。資安結論常需要看完整資料流 ——
+     (a) 需要看完整檔案才能確認資料流時，用 gh 抓 PR head 的真實內容查證
+         （單一 gh 指令、回傳原始內容、不需 base64，符合權限）：
+         gh api "repos/${REPO_SLUG}/contents/<path>?ref=<headRefName>" -H "Accept: application/vnd.github.raw"
+     (b) 若不查證，就標記為「需人工確認」，**不可寫成肯定的漏洞**。
+
 ## 第二步：依下列資安面向逐項審查
 
 ### 📁 檔案處理
 - **路徑穿越（Path Traversal）**：user input 進入 file path / URL path 前是否驗證？
-- **Zip Slip**：ZIP 解壓前是否逐項檢查 entry 路徑不含 `..` / 絕對路徑？
+- **Zip Slip**：ZIP 解壓前是否逐項檢查 entry 路徑不含 \`..\` / 絕對路徑？
 - **Zip Bomb**：是否用實際解壓大小（statIndex size）而非壓縮檔大小估算？
 - **檔案類型**：upload 是否用 whitelist 驗副檔名（優於 blacklist）？
 - **公開目錄 RCE**：上傳/解壓到 public 目錄的內容是否可能被 web server 執行（.php/.phtml/.htaccess）？
 
 ### 🔐 認證與授權
-- **Timing Attack**：secret / token 比對是否使用 `hash_equals()` 或 constant-time compare？
+- **Timing Attack**：secret / token 比對是否使用 \`hash_equals()\` 或 constant-time compare？
 - **IDOR**：存取資源前是否確認 ownership（不只靠 ID 存在性）？
 - **缺少 middleware**：新路由是否掛上必要的 auth middleware？
 - **SSRF**：user input 是否可能影響對外 HTTP 請求的 URL / host？
@@ -109,8 +122,8 @@ read -r -d '' PROMPT <<PROMPT_EOF || true
 - **XSS**：HTML 輸出是否正確 escape？JS inline data 是否安全序列化？
 
 ### 🏗️ PHP / Laravel 特有
-- **Mass Assignment**：新 Model 是否有 `$fillable` 或 `$guarded`？
-- **型別混淆（Type Juggling）**：是否用 `==` 比對 hash / token（應用 `===` 或 `hash_equals`）？
+- **Mass Assignment**：新 Model 是否有 \`\$fillable\` 或 \`\$guarded\`？
+- **型別混淆（Type Juggling）**：是否用 \`==\` 比對 hash / token（應用 \`===\` 或 \`hash_equals\`）？
 - **設定外洩**：config / .env 中的 secret 是否有可能在 response / log 中洩漏？
 
 ### ⚡ 資源與可靠性
@@ -121,7 +134,8 @@ read -r -d '' PROMPT <<PROMPT_EOF || true
 ## 第三步：輸出格式
 用**繁體中文**，markdown，結構如下：
 - 開頭一行：總結 + 整體資安風險等級（低/中/高）。
-- 依上述分類列出發現：每條格式為 \`檔案:行號\` + 問題描述 + 為什麼有風險 + 建議修法，要引用 diff 具體說明。
+- 依上述分類列出發現：每條格式為 \`完整檔名:行號\` + **引用的 diff 原文（\`> ...\`）** + 問題描述 +
+  為什麼有風險 + 建議修法。沒有原文可引用的發現一律不寫；無法從 diff 確認、又未查證的，標「需人工確認」。
 - 某分類無問題就寫「無」。
 - **不要重複列慣例或正確性問題**（那是另一支 review 的職責）。
 - 務實精簡，整體控制在 300 行內。

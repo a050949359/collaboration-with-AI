@@ -1,3 +1,5 @@
+import { api } from '@/lib/routes';
+
 let cachedKey: CryptoKey | null = null;
 
 async function loadPublicKey(): Promise<CryptoKey | null> {
@@ -6,7 +8,7 @@ async function loadPublicKey(): Promise<CryptoKey | null> {
     }
 
     try {
-        const res = await fetch('/api/auth/key');
+        const res = await fetch(api.auth.key());
         const { key } = await res.json();
 
         if (!key) {

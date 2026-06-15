@@ -18,6 +18,7 @@ import * as topojson from 'topojson-client';
 import type { Topology } from 'topojson-specification';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { api } from '@/lib/routes';
 
 interface AirportItem {
     name: string;
@@ -368,7 +369,7 @@ async function searchCountryAirports(alpha2: string) {
             country: alpha2,
             per_page: '1000',
         });
-        const res = await fetch(`/api/v1/airports?${params}`, {
+        const res = await fetch(`${api.airports.index()}?${params}`, {
             headers: { Accept: 'application/json' },
         });
         const json = await res.json();

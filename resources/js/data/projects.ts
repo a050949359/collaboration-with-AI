@@ -177,7 +177,6 @@ export const galleryProjects: Project[] = [
         ],
         status: 'online',
         image: '/images/projects/project09.webp',
-        link: '/app/computer-vision',
     },
     {
         id: '10',
@@ -198,7 +197,6 @@ export const galleryProjects: Project[] = [
         ],
         status: 'in_dev',
         image: '/images/projects/project10.webp',
-        link: '/app/task',
     },
     {
         id: '11',
@@ -219,6 +217,5 @@ export const galleryProjects: Project[] = [
         ],
         status: 'in_dev',
         image: '/images/projects/project11.webp',
-        link: '/app/memory',
     },
 ];

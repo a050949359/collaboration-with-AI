@@ -205,7 +205,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
                         </button>
                         <a
                             class="binary-ghost-button flex w-full items-center justify-center gap-3"
-                            href="/api/auth/google/redirect"
+                            :href="api.auth.googleRedirect()"
                         >
                             <!-- Google G -->
                             <svg

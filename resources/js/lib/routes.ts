@@ -84,6 +84,7 @@ export const api = {
         register: () => '/api/auth/register',
         logout: () => '/api/auth/logout',
         me: () => '/api/auth/me',
+        key: () => '/api/auth/key',
         googleRedirect: () => '/api/auth/google/redirect',
         resendVerification: () => '/api/auth/email/verification-notification',
         forgotPassword: () => '/api/auth/forgot-password',
@@ -162,6 +163,7 @@ export const api = {
 
     about: {
         ask: () => '/api/about/ask',
+        context: () => '/api/about/context',
     },
 
     airports: {

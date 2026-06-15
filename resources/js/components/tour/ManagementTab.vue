@@ -355,7 +355,7 @@ async function searchAirports(q: string): Promise<Airport[]> {
     }
 
     const res = await fetch(
-        `/api/v1/airports?search=${encodeURIComponent(q)}&limit=8`,
+        `${api.airports.index()}?search=${encodeURIComponent(q)}&limit=8`,
         { headers: { Accept: 'application/json' } },
     );
 
