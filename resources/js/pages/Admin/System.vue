@@ -404,6 +404,10 @@ function onCardImageDrop(e: DragEvent) {
     const file = e.dataTransfer?.files[0];
 
     if (file?.type.startsWith('image/')) {
+        if (newCardImagePreview.value) {
+            URL.revokeObjectURL(newCardImagePreview.value);
+        }
+
         newCardImageFile.value = file;
         newCardImagePreview.value = URL.createObjectURL(file);
     }
@@ -413,12 +417,20 @@ function onCardImageChange(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
 
     if (file) {
+        if (newCardImagePreview.value) {
+            URL.revokeObjectURL(newCardImagePreview.value);
+        }
+
         newCardImageFile.value = file;
         newCardImagePreview.value = URL.createObjectURL(file);
     }
 }
 
 function clearCardImage() {
+    if (newCardImagePreview.value) {
+        URL.revokeObjectURL(newCardImagePreview.value);
+    }
+
     newCardImageFile.value = null;
     newCardImagePreview.value = '';
 }
@@ -476,9 +488,14 @@ async function createCard() {
     gachaCards.value.push(await res.json());
     newCardName.value = '';
     newCardWeight.value = 100;
+    clearCardImage();
 }
 
 async function deleteCard(id: number) {
+    if (!confirm('確定刪除此卡牌？相關卡組也會移除此卡牌。')) {
+        return;
+    }
+
     const res = await fetch(api.gacha.cardDestroy(id), {
         method: 'DELETE',
         credentials: 'include',
