@@ -7,6 +7,7 @@ use App\Http\Requests\Gacha\StoreGachaDeckRequest;
 use App\Http\Requests\Gacha\UpdateGachaDeckRequest;
 use App\Models\Gacha\GachaDeck;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class GachaDeckController extends Controller
 {
@@ -21,11 +22,15 @@ class GachaDeckController extends Controller
     // POST /api/v1/gacha/decks  (admin)
     public function store(StoreGachaDeckRequest $request): JsonResponse
     {
-        $deck = GachaDeck::create(['name' => $request->input('name')]);
+        $deck = DB::transaction(function () use ($request) {
+            $deck = GachaDeck::create(['name' => $request->input('name')]);
 
-        if ($request->filled('card_ids')) {
-            $deck->cards()->attach($request->input('card_ids'));
-        }
+            if ($request->filled('card_ids')) {
+                $deck->cards()->attach($request->input('card_ids'));
+            }
+
+            return $deck;
+        });
 
         return response()->json($deck->load('cards:id,name,rarity,weight'), 201);
     }
@@ -33,13 +38,15 @@ class GachaDeckController extends Controller
     // PUT /api/v1/gacha/decks/{deck}  (admin) — 更新名稱 + 卡牌
     public function update(UpdateGachaDeckRequest $request, GachaDeck $deck): JsonResponse
     {
-        if ($request->has('name')) {
-            $deck->update(['name' => $request->input('name')]);
-        }
+        DB::transaction(function () use ($request, $deck) {
+            if ($request->has('name')) {
+                $deck->update(['name' => $request->input('name')]);
+            }
 
-        if ($request->has('card_ids')) {
-            $deck->cards()->sync($request->input('card_ids', []));
-        }
+            if ($request->has('card_ids')) {
+                $deck->cards()->sync($request->input('card_ids', []));
+            }
+        });
 
         return response()->json($deck->load('cards:id,name,rarity,weight'));
     }
