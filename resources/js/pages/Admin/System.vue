@@ -391,6 +391,18 @@ const gachaCards = ref<GachaCard[]>([]);
 const gachaDecks = ref<GachaDeck[]>([]);
 const gachaLoading = ref(false);
 
+// 合法稀有度值由後端（GachaRarity enum）經 pageProps 注入；前端只負責顯示文字。
+const gachaRarities = computed<string[]>(
+    () => (page.props.gachaRarities as string[]) ?? [],
+);
+const rarityLabels: Record<string, string> = {
+    common: 'Common',
+    rare: 'Rare',
+    epic: 'Epic',
+    legendary: 'Legendary',
+};
+const rarityLabel = (r: string) => rarityLabels[r] ?? r;
+
 const newCardName = ref('');
 const newCardRarity = ref<GachaCard['rarity']>('common');
 const newCardWeight = ref(100);
@@ -1064,7 +1076,9 @@ onUnmounted(stopMicroPolling);
                                             :style="{
                                                 color: `var(--rarity-${card.rarity})`,
                                             }"
-                                            >{{ card.rarity }}</span
+                                            >{{
+                                                rarityLabel(card.rarity)
+                                            }}</span
                                         >
                                         <span
                                             class="w-10 text-right text-[10px] text-[var(--binary-text-muted)]"
@@ -1099,13 +1113,12 @@ onUnmounted(stopMicroPolling);
                                             v-model="newCardRarity"
                                             class="binary-input flex-1"
                                         >
-                                            <option value="common">
-                                                Common
-                                            </option>
-                                            <option value="rare">Rare</option>
-                                            <option value="epic">Epic</option>
-                                            <option value="legendary">
-                                                Legendary
+                                            <option
+                                                v-for="r in gachaRarities"
+                                                :key="r"
+                                                :value="r"
+                                            >
+                                                {{ rarityLabel(r) }}
                                             </option>
                                         </select>
                                         <input
@@ -1287,7 +1300,9 @@ onUnmounted(stopMicroPolling);
                                                 :style="{
                                                     color: `var(--rarity-${card.rarity})`,
                                                 }"
-                                                >{{ card.rarity }}</span
+                                                >{{
+                                                    rarityLabel(card.rarity)
+                                                }}</span
                                             >
                                         </label>
                                     </div>

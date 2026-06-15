@@ -238,10 +238,11 @@ class GachaRoomController extends Controller
                 }
             }
 
+            $rarity = $selected->rarity->value;
             $results[] = [
                 'quality' => [
-                    'name' => $selected->rarity,
-                    'code' => strtoupper($selected->rarity).'_ENTITY',
+                    'name' => $rarity,
+                    'code' => strtoupper($rarity).'_ENTITY',
                 ],
                 'code' => 'V-SYNC_'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
                 'card' => [
