@@ -17,7 +17,7 @@ class GeminiEmbeddingService implements TextEmbedding
     public function __construct(?string $fixedModel = null)
     {
         $this->apiKey = (string) config('services.gemini.api_key', '');
-        $this->model = $fixedModel ?? (string) config('services.gemini.embedding_model', 'gemini-embedding-2');
+        $this->model = $fixedModel ?? (string) config('services.gemini.embedding_model', 'gemini-embedding-001');
         $this->dimensions = (int) config('services.gemini.embedding_dimensions', 768);
     }
 
