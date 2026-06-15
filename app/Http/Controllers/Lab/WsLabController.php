@@ -79,6 +79,13 @@ class WsLabController extends Controller
             return response()->json(['message' => 'already running', 'pid' => $this->readPid()]);
         }
 
+        // 啟動即清空 gacha 資料（測試房間用，不長期保留）。在啟動 Go 行程「之前」清，
+        // 萬一清理拋例外也只是回 500，不會留下已啟動卻無法管理的孤兒行程。
+        // 依外鍵依賴順序 delete，免關 FK 檢查，MySQL / SQLite 皆相容。
+        DB::table('gacha_draws')->delete();
+        DB::table('gacha_players')->delete();
+        DB::table('gacha_rooms')->delete();
+
         $cmd = sprintf(
             '%s --ws-addr=%s --mgmt-addr=%s --pid-file=%s --log-file=%s --allowed-origins=%s > /dev/null 2>&1 &',
             escapeshellarg($this->binaryPath),
@@ -104,12 +111,6 @@ class WsLabController extends Controller
         if ($pid === null) {
             return response()->json(['message' => 'start failed: process did not write PID'], 500);
         }
-
-        // 啟動即清空 gacha 資料（測試房間用，不長期保留）。
-        // 依外鍵依賴順序 delete，免關 FK 檢查，MySQL / SQLite 皆相容。
-        DB::table('gacha_draws')->delete();
-        DB::table('gacha_players')->delete();
-        DB::table('gacha_rooms')->delete();
 
         return response()->json([
             'message' => 'started',

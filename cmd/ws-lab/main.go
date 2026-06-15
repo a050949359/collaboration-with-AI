@@ -151,18 +151,25 @@ func (r *Room) MachineState() map[string]string {
 	if r.roomType != RoomTypeGacha {
 		return nil
 	}
+	// 單一 timer 涵蓋整個操作（送 request + 等回應），上限 2 秒；
+	// defer Stop 即時釋放，避免 time.After 在到期前殘留 timer。
+	timer := time.NewTimer(2 * time.Second)
+	defer timer.Stop()
+
 	resp := make(chan map[string]string, 1)
 	select {
 	case r.stateReq <- stateReq{resp: resp}:
 	case <-r.shutdown:
 		return nil
-	case <-time.After(2 * time.Second):
+	case <-timer.C:
 		return nil
 	}
 	select {
 	case s := <-resp:
 		return s
-	case <-time.After(2 * time.Second):
+	case <-r.shutdown:
+		return nil
+	case <-timer.C:
 		return nil
 	}
 }
