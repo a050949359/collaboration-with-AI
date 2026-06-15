@@ -576,11 +576,10 @@ export function useGachaRoom(
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
+                // 機台狀態（can_draw / draws_per_user / is_ten_pull）由後端向
+                // ws server 查 host 設定的 machine_state，這裡只需帶 player_id。
                 body: JSON.stringify({
                     player_id: currentPlayer.value!.id,
-                    is_ten_pull: isTenPull.value,
-                    can_draw: canDraw.value,
-                    draws_per_user: drawsPerUser.value,
                 }),
             });
 

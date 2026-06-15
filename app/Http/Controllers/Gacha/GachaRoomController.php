@@ -10,6 +10,7 @@ use App\Models\Gacha\GachaDraw;
 use App\Models\Gacha\GachaPlayer;
 use App\Models\Gacha\GachaRoom;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -28,7 +29,7 @@ class GachaRoomController extends Controller
             $res = Http::timeout(2)->get("http://{$this->mgmtAddr}/rooms");
             if ($res->ok()) {
                 $goRoomIds = collect($res->json())->pluck('id')->flip();
-                $rooms = $rooms->filter(fn($r) => isset($goRoomIds[$r->code]))->values();
+                $rooms = $rooms->filter(fn ($r) => isset($goRoomIds[$r->code]))->values();
             }
         } catch (\Throwable) {
             // Go server unreachable, return DB rooms as-is
@@ -40,27 +41,27 @@ class GachaRoomController extends Controller
     // POST /api/v1/gacha/rooms
     public function store(StoreGachaRoomRequest $request): JsonResponse
     {
-        $code       = strtoupper(Str::random(6));
+        $code = strtoupper(Str::random(6));
         $playerName = $request->player_name ?? auth()->user()->name;
 
         $room = GachaRoom::create([
-            'code'      => $code,
-            'room_name' => $request->room_name ?? ($playerName . "'s Room"),
-            'owner_id'  => auth()->id(),
-            'deck_id'   => $request->input('deck_id'),
-            'type'      => 'user',
+            'code' => $code,
+            'room_name' => $request->room_name ?? ($playerName."'s Room"),
+            'owner_id' => auth()->id(),
+            'deck_id' => $request->input('deck_id'),
+            'type' => 'user',
         ]);
 
         $player = GachaPlayer::create([
             'room_id' => $room->id,
-            'name'    => $playerName,
+            'name' => $playerName,
             'is_host' => true,
         ]);
 
         try {
             Http::timeout(3)->post("http://{$this->mgmtAddr}/rooms", [
-                'id'        => $code,
-                'type'      => 'gacha',
+                'id' => $code,
+                'type' => 'gacha',
                 'host_name' => auth()->user()->name,
             ]);
         } catch (\Throwable) {
@@ -102,8 +103,8 @@ class GachaRoomController extends Controller
 
         try {
             Http::timeout(3)->post("http://{$this->mgmtAddr}/rooms", [
-                'id'        => $code,
-                'type'      => 'gacha',
+                'id' => $code,
+                'type' => 'gacha',
                 'host_name' => $room->players()->where('is_host', true)->value('name') ?? '',
             ]);
         } catch (\Throwable) {
@@ -116,7 +117,13 @@ class GachaRoomController extends Controller
     // POST /api/v1/gacha/rooms/{code}/draw
     public function draw(DrawGachaRequest $request, string $code): JsonResponse
     {
-        if (!$request->boolean('can_draw', true)) {
+        // 機台狀態以 host 設定的 ws machine_state 為準，不信任 client。
+        $state = $this->fetchMachineState($code);
+        $canDraw = ($state['can_draw'] ?? 'true') !== 'false';
+        $drawsPerUser = (int) ($state['draws_per_user'] ?? 0);
+        $isTenPull = ($state['is_ten_pull'] ?? 'false') === 'true';
+
+        if (! $canDraw) {
             return response()->json(['message' => 'draws not open'], 403);
         }
 
@@ -129,19 +136,19 @@ class GachaRoomController extends Controller
             ->where('room_id', $room->id)
             ->firstOrFail();
 
-        if (!$player->hasDrawsRemaining($request->integer('draws_per_user', 0))) {
+        if (! $player->hasDrawsRemaining($drawsPerUser)) {
             return response()->json(['message' => 'draws exhausted'], 403);
         }
 
-        $count   = $request->boolean('is_ten_pull') ? 10 : 1;
+        $count = $isTenPull ? 10 : 1;
         $results = $this->generateResults($count, $room);
 
         foreach ($results as $result) {
             GachaDraw::create([
-                'room_id'   => $room->id,
+                'room_id' => $room->id,
                 'player_id' => $player->id,
-                'card_id'   => $result['card']['id'] ?? null,
-                'result'    => $result,
+                'card_id' => $result['card']['id'] ?? null,
+                'result' => $result,
             ]);
         }
 
@@ -149,10 +156,10 @@ class GachaRoomController extends Controller
 
         try {
             Http::timeout(3)->post("http://{$this->mgmtAddr}/rooms/{$code}/broadcast", [
-                'type'    => 'draw_result',
-                'player'  => $player->name,
+                'type' => 'draw_result',
+                'player' => $player->name,
                 'results' => $results,
-                'ts'      => now()->toIso8601String(),
+                'ts' => now()->toIso8601String(),
             ]);
         } catch (\Throwable) {
             // ws server not running, draw still recorded
@@ -176,9 +183,31 @@ class GachaRoomController extends Controller
             Http::timeout(3)->post("http://{$this->mgmtAddr}/rooms/{$code}/broadcast", [
                 'type' => 'draws_reset',
             ]);
-        } catch (\Throwable) {}
+        } catch (\Throwable) {
+        }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * 向 ws server 查詢 host 設定的 machine_state（can_draw / draws_per_user /
+     * is_ten_pull 等，皆為字串）。ws server 無法連線或房間未設定時回傳空陣列，
+     * 由呼叫端套用安全預設值。
+     *
+     * @return array<string, string>
+     */
+    private function fetchMachineState(string $code): array
+    {
+        try {
+            $res = Http::timeout(2)->get("http://{$this->mgmtAddr}/rooms/{$code}");
+            if ($res->ok()) {
+                return $res->json('machine_state') ?? [];
+            }
+        } catch (\Throwable) {
+            // ws server unreachable — fall back to safe defaults
+        }
+
+        return [];
     }
 
     private function generateResults(int $count, GachaRoom $room): array
@@ -192,15 +221,15 @@ class GachaRoomController extends Controller
         return $this->drawFromFallback($count);
     }
 
-    private function drawFromCards(int $count, \Illuminate\Support\Collection $cards): array
+    private function drawFromCards(int $count, Collection $cards): array
     {
         $totalWeight = $cards->sum('weight');
-        $results     = [];
+        $results = [];
 
         for ($i = 0; $i < $count; $i++) {
-            $roll       = random_int(1, max(1, $totalWeight));
+            $roll = random_int(1, max(1, $totalWeight));
             $cumulative = 0;
-            $selected   = $cards->first();
+            $selected = $cards->first();
             foreach ($cards as $card) {
                 $cumulative += $card->weight;
                 if ($roll <= $cumulative) {
@@ -212,12 +241,12 @@ class GachaRoomController extends Controller
             $results[] = [
                 'quality' => [
                     'name' => $selected->rarity,
-                    'code' => strtoupper($selected->rarity) . '_ENTITY',
+                    'code' => strtoupper($selected->rarity).'_ENTITY',
                 ],
-                'code' => 'V-SYNC_' . str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
+                'code' => 'V-SYNC_'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
                 'card' => [
-                    'id'        => $selected->id,
-                    'name'      => $selected->name,
+                    'id' => $selected->id,
+                    'name' => $selected->name,
                     'image_url' => $selected->image_url,
                 ],
             ];
@@ -236,12 +265,12 @@ class GachaRoomController extends Controller
         ];
 
         $totalWeight = array_sum(array_column($tiers, 'weight'));
-        $results     = [];
+        $results = [];
 
         for ($i = 0; $i < $count; $i++) {
-            $roll       = random_int(1, $totalWeight);
+            $roll = random_int(1, $totalWeight);
             $cumulative = 0;
-            $selected   = $tiers[0];
+            $selected = $tiers[0];
             foreach ($tiers as $tier) {
                 $cumulative += $tier['weight'];
                 if ($roll <= $cumulative) {
@@ -254,7 +283,7 @@ class GachaRoomController extends Controller
                     'name' => $selected['name'],
                     'code' => $selected['code'],
                 ],
-                'code' => 'V-SYNC_' . str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
+                'code' => 'V-SYNC_'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
             ];
         }
 

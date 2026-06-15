@@ -114,6 +114,7 @@ type Room struct {
 	incoming     chan incomingMsg
 	broadcastExt chan []byte
 	authDone     chan authResult
+	stateReq     chan stateReq
 	shutdown     chan struct{}
 	clientCount  atomic.Int64
 	streaming    atomic.Bool
@@ -132,6 +133,7 @@ func newRoom(id string, roomType RoomType, hostName string) *Room {
 		incoming:     make(chan incomingMsg, 64),
 		broadcastExt: make(chan []byte, 8),
 		authDone:     make(chan authResult, 16),
+		stateReq:     make(chan stateReq, 4),
 		shutdown:     make(chan struct{}),
 	}
 	r.lastActivity.Store(time.Now().UnixNano())
@@ -139,6 +141,26 @@ func newRoom(id string, roomType RoomType, hostName string) *Room {
 }
 
 func (r *Room) touch() { r.lastActivity.Store(time.Now().UnixNano()) }
+
+// MachineState returns a copy of the room's last host-set machine_state,
+// read safely via the room goroutine (no direct map access from outside).
+// Returns nil if unset, the room is shutting down, or the request times out.
+func (r *Room) MachineState() map[string]string {
+	resp := make(chan map[string]string, 1)
+	select {
+	case r.stateReq <- stateReq{resp: resp}:
+	case <-r.shutdown:
+		return nil
+	case <-time.After(2 * time.Second):
+		return nil
+	}
+	select {
+	case s := <-resp:
+		return s
+	case <-time.After(2 * time.Second):
+		return nil
+	}
+}
 
 func (r *Room) shouldShutdown() bool {
 	if r.streaming.Load() {
@@ -177,6 +199,10 @@ type findReq struct {
 
 type listReq struct {
 	resp chan []RoomInfo
+}
+
+type stateReq struct {
+	resp chan map[string]string
 }
 
 type RoomManager struct {
@@ -298,6 +324,15 @@ func (r *Room) runGacha(manager *RoomManager) {
 			}
 		case msg := <-r.incoming:
 			r.handleGacha(msg)
+		case req := <-r.stateReq:
+			var cp map[string]string
+			if r.machineState != nil {
+				cp = make(map[string]string, len(r.machineState))
+				for k, v := range r.machineState {
+					cp[k] = v
+				}
+			}
+			req.resp <- cp
 		case res := <-r.authDone:
 			if res.name != "" && res.c.userName == "" {
 				res.c.userName = res.name
@@ -711,6 +746,21 @@ func main() {
 			default:
 				http.Error(w, `{"error":"broadcast buffer full"}`, http.StatusServiceUnavailable)
 			}
+			return
+		}
+
+		// GET /rooms/{id} → 單一房間狀態（含 host 設定的 machine_state）
+		if r.Method == http.MethodGet {
+			room := manager.Get(path)
+			if room == nil {
+				http.Error(w, `{"error":"room not found"}`, http.StatusNotFound)
+				return
+			}
+			json.NewEncoder(w).Encode(map[string]any{
+				"id":            room.id,
+				"type":          room.roomType,
+				"machine_state": room.MachineState(),
+			})
 			return
 		}
 
