@@ -64,6 +64,12 @@ return [
         ))),
         'story_model'       => env('GEMINI_STORY_MODEL', 'gemini-2.5-flash'),
         'story_state_model' => env('GEMINI_STORY_STATE_MODEL', 'gemini-2.5-flash'),
+
+        // RAG embedding（Google AI Studio）。gemini-embedding-2：最新、多模態、Matryoshka
+        // （128–3072 維），文字與圖片共用此模型 → 同一向量空間，可跨模態檢索。
+        // 用 outputDimensionality 降到 768 省儲存。文字與多模態共用同一 model 確保空間一致。
+        'embedding_model'      => env('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-2'),
+        'embedding_dimensions' => env('GEMINI_EMBEDDING_DIMENSIONS', 768),
     ],
 
     /*

@@ -37,3 +37,4 @@ check_results.txt
 /cmd/memctl/memctl
 /cmd/taskctl/taskctl
 /cmd/agydctl/agydctl
+/cmd/ragctl/ragctl
