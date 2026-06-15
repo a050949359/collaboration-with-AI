@@ -16,7 +16,7 @@ import type {
 } from '@/lib/admin-api';
 import { api, routes } from '@/lib/routes';
 
-type Tab = 'settings' | 'tokens' | 'llm' | 'micro-host';
+type Tab = 'settings' | 'tokens' | 'llm' | 'micro-host' | 'gacha';
 const activeTab = ref<Tab>('settings');
 
 // ── Settings ─────────────────────────────────────────────
@@ -372,12 +372,214 @@ function stopMicroPolling() {
     }
 }
 
+// ── Gacha 卡牌 / 卡組管理 ─────────────────────────────────
+
+interface GachaCard {
+    id: number;
+    name: string;
+    rarity: string;
+    weight: number;
+}
+
+interface GachaDeck {
+    id: number;
+    name: string;
+    cards: { id: number; name: string; rarity: string; weight: number }[];
+}
+
+const gachaCards = ref<GachaCard[]>([]);
+const gachaDecks = ref<GachaDeck[]>([]);
+const gachaLoading = ref(false);
+
+// 合法稀有度值由後端（GachaRarity enum）經 pageProps 注入；前端只負責顯示文字。
+const gachaRarities = computed<string[]>(
+    () => (page.props.gachaRarities as string[]) ?? [],
+);
+const rarityLabels: Record<string, string> = {
+    common: 'Common',
+    rare: 'Rare',
+    epic: 'Epic',
+    legendary: 'Legendary',
+};
+const rarityLabel = (r: string) => rarityLabels[r] ?? r;
+
+const newCardName = ref('');
+const newCardRarity = ref<GachaCard['rarity']>('common');
+const newCardWeight = ref(100);
+const cardSaving = ref(false);
+const newCardImageFile = ref<File | null>(null);
+const newCardImagePreview = ref('');
+const cardDragOver = ref(false);
+
+function onCardImageDrop(e: DragEvent) {
+    cardDragOver.value = false;
+    const file = e.dataTransfer?.files[0];
+
+    if (file?.type.startsWith('image/')) {
+        if (newCardImagePreview.value) {
+            URL.revokeObjectURL(newCardImagePreview.value);
+        }
+
+        newCardImageFile.value = file;
+        newCardImagePreview.value = URL.createObjectURL(file);
+    }
+}
+
+function onCardImageChange(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+
+    if (file) {
+        if (newCardImagePreview.value) {
+            URL.revokeObjectURL(newCardImagePreview.value);
+        }
+
+        newCardImageFile.value = file;
+        newCardImagePreview.value = URL.createObjectURL(file);
+    }
+}
+
+function clearCardImage() {
+    if (newCardImagePreview.value) {
+        URL.revokeObjectURL(newCardImagePreview.value);
+    }
+
+    newCardImageFile.value = null;
+    newCardImagePreview.value = '';
+}
+
+const newDeckName = ref('');
+const newDeckCardIds = ref<number[]>([]);
+const deckSaving = ref(false);
+
+async function fetchGachaData() {
+    if (gachaLoading.value) {
+        return;
+    }
+
+    gachaLoading.value = true;
+
+    const [cardsRes, decksRes] = await Promise.all([
+        fetch(api.gacha.cards(), { credentials: 'include' }).catch(() => null),
+        fetch(api.gacha.decks(), { credentials: 'include' }).catch(() => null),
+    ]);
+
+    if (cardsRes?.ok) {
+        gachaCards.value = await cardsRes.json();
+    }
+
+    if (decksRes?.ok) {
+        gachaDecks.value = await decksRes.json();
+    }
+
+    gachaLoading.value = false;
+}
+
+async function createCard() {
+    if (!newCardName.value.trim() || cardSaving.value) {
+        return;
+    }
+
+    cardSaving.value = true;
+
+    const res = await fetch(api.gacha.cardStore(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+            name: newCardName.value.trim(),
+            rarity: newCardRarity.value,
+            weight: newCardWeight.value,
+        }),
+    }).catch(() => null);
+    cardSaving.value = false;
+
+    if (!res?.ok) {
+        return;
+    }
+
+    gachaCards.value.push(await res.json());
+    newCardName.value = '';
+    newCardWeight.value = 100;
+    clearCardImage();
+}
+
+async function deleteCard(id: number) {
+    if (!confirm('確定刪除此卡牌？相關卡組也會移除此卡牌。')) {
+        return;
+    }
+
+    const res = await fetch(api.gacha.cardDestroy(id), {
+        method: 'DELETE',
+        credentials: 'include',
+    }).catch(() => null);
+
+    if (res?.ok) {
+        gachaCards.value = gachaCards.value.filter((c) => c.id !== id);
+    }
+}
+
+async function createDeck() {
+    if (!newDeckName.value.trim() || deckSaving.value) {
+        return;
+    }
+
+    deckSaving.value = true;
+
+    const res = await fetch(api.gacha.deckStore(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+            name: newDeckName.value.trim(),
+            card_ids: newDeckCardIds.value,
+        }),
+    }).catch(() => null);
+    deckSaving.value = false;
+
+    if (!res?.ok) {
+        return;
+    }
+
+    gachaDecks.value.push(await res.json());
+    newDeckName.value = '';
+    newDeckCardIds.value = [];
+}
+
+async function deleteDeck(id: number) {
+    if (!confirm('確定刪除此卡組？')) {
+        return;
+    }
+
+    const res = await fetch(api.gacha.deckDestroy(id), {
+        method: 'DELETE',
+        credentials: 'include',
+    }).catch(() => null);
+
+    if (res?.ok) {
+        gachaDecks.value = gachaDecks.value.filter((d) => d.id !== id);
+    }
+}
+
+function toggleNewDeckCard(id: number) {
+    const idx = newDeckCardIds.value.indexOf(id);
+
+    if (idx === -1) {
+        newDeckCardIds.value.push(id);
+    } else {
+        newDeckCardIds.value.splice(idx, 1);
+    }
+}
+
 // 只在「微型主機」tab 開啟時輪詢，離開即停止
 watch(activeTab, (tab) => {
     if (tab === 'micro-host') {
         startMicroPolling();
     } else {
         stopMicroPolling();
+    }
+
+    if (tab === 'gacha') {
+        fetchGachaData();
     }
 });
 
@@ -421,6 +623,7 @@ onUnmounted(stopMicroPolling);
                             { key: 'llm', label: 'AI 模型' },
                             { key: 'tokens', label: '分享連結管理' },
                             { key: 'micro-host', label: '微型主機' },
+                            { key: 'gacha', label: 'Gacha' },
                         ] as const"
                         :key="tab.key"
                         class="binary-label px-3 py-3 text-[11px] font-bold tracking-widest uppercase transition-colors md:px-6"
@@ -833,6 +1036,299 @@ onUnmounted(stopMicroPolling);
                                 >
                                     刪除
                                 </button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- ── Gacha Tab ── -->
+                    <template v-else-if="activeTab === 'gacha'">
+                        <div
+                            v-if="gachaLoading"
+                            class="py-12 text-center text-sm text-[var(--binary-text-muted)]"
+                        >
+                            載入中...
+                        </div>
+                        <div v-else class="grid gap-10 md:grid-cols-2">
+                            <!-- 卡牌管理 -->
+                            <div>
+                                <h2
+                                    class="binary-label mb-4 text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                >
+                                    &gt; 卡牌管理
+                                </h2>
+
+                                <!-- 卡牌列表 -->
+                                <div
+                                    v-if="gachaCards.length > 0"
+                                    class="mb-4 flex max-h-72 flex-col gap-1 overflow-y-auto"
+                                >
+                                    <div
+                                        v-for="card in gachaCards"
+                                        :key="card.id"
+                                        class="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-[var(--binary-surface-high)]"
+                                    >
+                                        <span
+                                            class="flex-1 text-xs text-[var(--binary-text)]"
+                                            >{{ card.name }}</span
+                                        >
+                                        <span
+                                            class="text-[10px] font-bold uppercase"
+                                            :style="{
+                                                color: `var(--rarity-${card.rarity})`,
+                                            }"
+                                            >{{
+                                                rarityLabel(card.rarity)
+                                            }}</span
+                                        >
+                                        <span
+                                            class="w-10 text-right text-[10px] text-[var(--binary-text-muted)]"
+                                            >×{{ card.weight }}</span
+                                        >
+                                        <button
+                                            class="ml-1 text-[10px] text-[var(--binary-tertiary)]/60 transition-colors hover:text-[var(--binary-tertiary)]"
+                                            @click="deleteCard(card.id)"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                                <p
+                                    v-else
+                                    class="mb-4 text-xs text-[var(--binary-text-muted)]"
+                                >
+                                    尚無卡牌
+                                </p>
+
+                                <!-- 新增卡牌 -->
+                                <div class="space-y-3">
+                                    <input
+                                        v-model="newCardName"
+                                        type="text"
+                                        maxlength="50"
+                                        placeholder="卡牌名稱"
+                                        class="binary-input w-full"
+                                    />
+                                    <div class="flex gap-2">
+                                        <select
+                                            v-model="newCardRarity"
+                                            class="binary-input flex-1"
+                                        >
+                                            <option
+                                                v-for="r in gachaRarities"
+                                                :key="r"
+                                                :value="r"
+                                            >
+                                                {{ rarityLabel(r) }}
+                                            </option>
+                                        </select>
+                                        <input
+                                            v-model.number="newCardWeight"
+                                            type="number"
+                                            min="1"
+                                            max="9999"
+                                            placeholder="權重"
+                                            class="binary-input w-24"
+                                        />
+                                    </div>
+                                    <!-- 圖片上傳（UI 預留，尚未接後端） -->
+                                    <div
+                                        class="relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors"
+                                        :class="
+                                            cardDragOver
+                                                ? 'border-[var(--binary-primary)] bg-[var(--binary-primary)]/5'
+                                                : 'border-[var(--binary-outline-variant)] hover:border-[var(--binary-outline)]'
+                                        "
+                                        style="min-height: 96px"
+                                        @dragover.prevent="cardDragOver = true"
+                                        @dragleave="cardDragOver = false"
+                                        @drop.prevent="onCardImageDrop"
+                                        @click="
+                                            (
+                                                $refs.cardImageInput as HTMLInputElement
+                                            )?.click()
+                                        "
+                                    >
+                                        <input
+                                            ref="cardImageInput"
+                                            type="file"
+                                            accept="image/*"
+                                            class="hidden"
+                                            @change="onCardImageChange"
+                                        />
+                                        <template v-if="newCardImagePreview">
+                                            <img
+                                                :src="newCardImagePreview"
+                                                class="h-20 w-20 rounded-md object-cover"
+                                            />
+                                            <button
+                                                class="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-[10px] text-white hover:bg-red-500/70"
+                                                @click.stop="clearCardImage"
+                                            >
+                                                ✕
+                                            </button>
+                                        </template>
+                                        <template v-else>
+                                            <span
+                                                class="text-[11px] text-[var(--binary-outline)]"
+                                                >拖曳或點擊上傳圖片</span
+                                            >
+                                            <span
+                                                class="text-[10px] text-[var(--binary-outline)]/50"
+                                                >（尚未接後端）</span
+                                            >
+                                        </template>
+                                    </div>
+
+                                    <div class="flex justify-end">
+                                        <button
+                                            class="binary-button"
+                                            :disabled="
+                                                !newCardName.trim() ||
+                                                cardSaving
+                                            "
+                                            @click="createCard"
+                                        >
+                                            {{
+                                                cardSaving
+                                                    ? '新增中...'
+                                                    : '新增卡牌'
+                                            }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 卡組管理 -->
+                            <div>
+                                <h2
+                                    class="binary-label mb-4 text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                >
+                                    &gt; 卡組管理
+                                </h2>
+
+                                <!-- 卡組列表 -->
+                                <div
+                                    v-if="gachaDecks.length > 0"
+                                    class="mb-4 flex flex-col gap-2"
+                                >
+                                    <div
+                                        v-for="deck in gachaDecks"
+                                        :key="deck.id"
+                                        class="rounded-lg border border-[var(--binary-outline-variant)] px-4 py-3"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="flex-1 text-sm font-medium text-[var(--binary-text)]"
+                                                >{{ deck.name }}</span
+                                            >
+                                            <span
+                                                class="text-[10px] text-[var(--binary-text-muted)]"
+                                                >{{
+                                                    deck.cards?.length ?? 0
+                                                }}
+                                                張</span
+                                            >
+                                            <button
+                                                class="text-[10px] text-[var(--binary-tertiary)]/60 transition-colors hover:text-[var(--binary-tertiary)]"
+                                                @click="deleteDeck(deck.id)"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                        <div
+                                            v-if="deck.cards?.length"
+                                            class="mt-1.5 flex flex-wrap gap-1"
+                                        >
+                                            <span
+                                                v-for="c in deck.cards"
+                                                :key="c.id"
+                                                class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                                                :style="{
+                                                    color: `var(--rarity-${c.rarity})`,
+                                                    borderColor: `color-mix(in srgb, var(--rarity-${c.rarity}) 25%, transparent)`,
+                                                    borderWidth: '1px',
+                                                    borderStyle: 'solid',
+                                                }"
+                                                >{{ c.name }}</span
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                                <p
+                                    v-else
+                                    class="mb-4 text-xs text-[var(--binary-text-muted)]"
+                                >
+                                    尚無卡組
+                                </p>
+
+                                <!-- 新增卡組 -->
+                                <div class="space-y-3">
+                                    <input
+                                        v-model="newDeckName"
+                                        type="text"
+                                        maxlength="50"
+                                        placeholder="卡組名稱"
+                                        class="binary-input w-full"
+                                    />
+                                    <div
+                                        v-if="gachaCards.length > 0"
+                                        class="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--binary-outline-variant)] p-2"
+                                    >
+                                        <label
+                                            v-for="card in gachaCards"
+                                            :key="card.id"
+                                            class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-[var(--binary-surface-high)]"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                class="accent-[var(--binary-primary)]"
+                                                :checked="
+                                                    newDeckCardIds.includes(
+                                                        card.id,
+                                                    )
+                                                "
+                                                @change="
+                                                    toggleNewDeckCard(card.id)
+                                                "
+                                            />
+                                            <span
+                                                class="flex-1 text-xs text-[var(--binary-text)]"
+                                                >{{ card.name }}</span
+                                            >
+                                            <span
+                                                class="text-[10px] font-bold uppercase"
+                                                :style="{
+                                                    color: `var(--rarity-${card.rarity})`,
+                                                }"
+                                                >{{
+                                                    rarityLabel(card.rarity)
+                                                }}</span
+                                            >
+                                        </label>
+                                    </div>
+                                    <p
+                                        v-else
+                                        class="text-[11px] text-[var(--binary-text-muted)]"
+                                    >
+                                        請先新增卡牌再建立卡組
+                                    </p>
+                                    <div class="flex justify-end">
+                                        <button
+                                            class="binary-button"
+                                            :disabled="
+                                                !newDeckName.trim() ||
+                                                deckSaving
+                                            "
+                                            @click="createDeck"
+                                        >
+                                            {{
+                                                deckSaving
+                                                    ? '建立中...'
+                                                    : '建立卡組'
+                                            }}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </template>

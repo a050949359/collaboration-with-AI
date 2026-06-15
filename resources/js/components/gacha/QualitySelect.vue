@@ -48,7 +48,7 @@ const selectedTier = computed(() =>
                 :class="modelValue === 'legendary' ? 'dot-legendary' : ''"
                 :style="
                     modelValue !== 'legendary'
-                        ? { background: selectedTier?.color }
+                        ? { background: `var(--rarity-${selectedTier?.name})` }
                         : {}
                 "
             />
@@ -57,7 +57,7 @@ const selectedTier = computed(() =>
                 :class="modelValue === 'legendary' ? 'gradient-text' : ''"
                 :style="
                     modelValue !== 'legendary'
-                        ? { color: selectedTier?.color }
+                        ? { color: `var(--rarity-${selectedTier?.name})` }
                         : {}
                 "
                 >{{ t(`gacha.quality_${modelValue}`) }}</span
@@ -97,7 +97,7 @@ const selectedTier = computed(() =>
                         "
                         :style="
                             tier.name !== 'legendary'
-                                ? { background: tier.color }
+                                ? { background: `var(--rarity-${tier.name})` }
                                 : {}
                         "
                     />
@@ -107,7 +107,7 @@ const selectedTier = computed(() =>
                         "
                         :style="
                             tier.name !== 'legendary'
-                                ? { color: tier.color }
+                                ? { color: `var(--rarity-${tier.name})` }
                                 : {}
                         "
                         >{{ t(`gacha.quality_${tier.name}`) }}</span

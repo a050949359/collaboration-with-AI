@@ -10,6 +10,12 @@
 
 @layer base {
     :root {
+        /* Gacha rarity — 固定色，不跟主題走 */
+        --rarity-common: #a5d1b4;
+        --rarity-rare: #00f2ff;
+        --rarity-epic: #a855f7;
+        --rarity-legendary: #ffb3b2;
+
         --binary-background: #0b100d;
         --binary-surface-dim: rgba(10, 15, 12, 0.7);
         --binary-surface: rgba(15, 21, 17, 0.7);

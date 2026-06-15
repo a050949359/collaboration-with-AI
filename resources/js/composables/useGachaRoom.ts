@@ -6,11 +6,16 @@ import { api } from '@/lib/routes';
 export interface QualityTier {
     code: string;
     name: string;
-    color: string;
+}
+export interface DrawResultCard {
+    id: number;
+    name: string;
+    image_url: string | null;
 }
 export interface DrawResult {
     quality: QualityTier;
     code: string;
+    card?: DrawResultCard;
 }
 export interface RoomListItem {
     id: number;
@@ -24,10 +29,10 @@ export type DrawEvent = { player: string; results: DrawResult[]; ts: string };
 export type Mode = 'standalone' | 'lobby' | 'in-room';
 
 export const QUALITY_TIERS: QualityTier[] = [
-    { code: 'COMMON_ENTITY', name: 'common', color: '#a5d1b4' },
-    { code: 'RARE_ENTITY', name: 'rare', color: '#00f2ff' },
-    { code: 'EPIC_ENTITY', name: 'epic', color: '#a855f7' },
-    { code: 'LEGENDARY_ENTITY', name: 'legendary', color: '#ffb3b2' },
+    { code: 'COMMON_ENTITY', name: 'common' },
+    { code: 'RARE_ENTITY', name: 'rare' },
+    { code: 'EPIC_ENTITY', name: 'epic' },
+    { code: 'LEGENDARY_ENTITY', name: 'legendary' },
 ];
 
 export function useGachaRoom(
@@ -56,6 +61,31 @@ export function useGachaRoom(
     let hbTimer: ReturnType<typeof setInterval> | null = null;
     let statusTimer: ReturnType<typeof setInterval> | null = null;
     let welcomeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // ── Decks ──────────────────────────────────────────────────────────────
+    interface GachaCard {
+        id: number;
+        name: string;
+        rarity: string;
+        weight: number;
+    }
+    interface GachaDeck {
+        id: number;
+        name: string;
+        cards: GachaCard[];
+    }
+    const allDecks = ref<GachaDeck[]>([]);
+    const selectedDeckId = ref<number | null>(null);
+
+    async function fetchDecks() {
+        const res = await fetch(api.gacha.decks(), {
+            credentials: 'include',
+        }).catch(() => null);
+
+        if (res?.ok) {
+            allDecks.value = await res.json();
+        }
+    }
 
     // ── Create modal ───────────────────────────────────────────────────────
     const showCreateModal = ref(false);
@@ -364,6 +394,8 @@ export function useGachaRoom(
 
     function openCreateModal() {
         createName.value = user.value?.name ?? '';
+        selectedDeckId.value = null;
+        fetchDecks();
         showCreateModal.value = true;
     }
 
@@ -385,7 +417,12 @@ export function useGachaRoom(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ player_name: name }),
+            body: JSON.stringify({
+                player_name: name,
+                ...(selectedDeckId.value !== null && {
+                    deck_id: selectedDeckId.value,
+                }),
+            }),
         }).catch(() => null);
 
         if (!res?.ok) {
@@ -502,7 +539,9 @@ export function useGachaRoom(
 
     function showResults(results: DrawResult[]) {
         lastResults.value = results;
-        extractionDots.value = results.map((r) => ({ color: r.quality.color }));
+        extractionDots.value = results.map((r) => ({
+            color: `var(--rarity-${r.quality.name})`,
+        }));
         setTimeout(() => {
             showModal.value = true;
             syncing.value = false;
@@ -537,11 +576,10 @@ export function useGachaRoom(
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
+                // 機台狀態（can_draw / draws_per_user / is_ten_pull）由後端向
+                // ws server 查 host 設定的 machine_state，這裡只需帶 player_id。
                 body: JSON.stringify({
                     player_id: currentPlayer.value!.id,
-                    is_ten_pull: isTenPull.value,
-                    can_draw: canDraw.value,
-                    draws_per_user: drawsPerUser.value,
                 }),
             });
 
@@ -717,5 +755,7 @@ export function useGachaRoom(
         resetAllDraws,
         startSync,
         fetchRooms,
+        allDecks,
+        selectedDeckId,
     };
 }

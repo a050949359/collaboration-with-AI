@@ -222,6 +222,13 @@ export const api = {
         join: (code: string) => `/api/v1/gacha/rooms/${code}/join`,
         draw: (code: string) => `/api/v1/gacha/rooms/${code}/draw`,
         resetDraws: (code: string) => `/api/v1/gacha/rooms/${code}/reset-draws`,
+        cards: () => '/api/v1/gacha/cards',
+        cardStore: () => '/api/v1/gacha/cards',
+        cardDestroy: (id: number) => `/api/v1/gacha/cards/${id}`,
+        decks: () => '/api/v1/gacha/decks',
+        deckStore: () => '/api/v1/gacha/decks',
+        deckUpdate: (id: number) => `/api/v1/gacha/decks/${id}`,
+        deckDestroy: (id: number) => `/api/v1/gacha/decks/${id}`,
     },
 
     story: {

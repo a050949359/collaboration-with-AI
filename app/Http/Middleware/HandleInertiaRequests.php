@@ -9,6 +9,7 @@ use App\Enums\ArticleLanguage;
 use App\Enums\ArticleStyle;
 use App\Enums\ArticleTopic;
 use App\Enums\CabinClass;
+use App\Enums\GachaRarity;
 use App\Enums\ObservationType;
 use App\Enums\PassengerFilter;
 use App\Enums\RoomType;
@@ -95,6 +96,7 @@ class HandleInertiaRequests extends Middleware
                     config('services.llm.providers', []),
                 ),
                 'llmSettings' => AppSettings::get('llm') ?: config('services.llm.uses', []),
+                'gachaRarities' => array_column(GachaRarity::cases(), 'value'),
             ],
             $request->routeIs('task') => [
                 'taskStatuses' => array_column(TaskStatus::cases(), 'value'),

@@ -1,0 +1,65 @@
+<?php
+
+namespace App\Http\Controllers\Gacha;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Gacha\StoreGachaDeckRequest;
+use App\Http\Requests\Gacha\UpdateGachaDeckRequest;
+use App\Models\Gacha\GachaDeck;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+
+class GachaDeckController extends Controller
+{
+    // GET /api/v1/gacha/decks
+    public function index(): JsonResponse
+    {
+        $decks = GachaDeck::with('cards:id,name,rarity,weight')->get(['id', 'name']);
+
+        return response()->json($decks);
+    }
+
+    // POST /api/v1/gacha/decks  (admin)
+    public function store(StoreGachaDeckRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        $deck = DB::transaction(function () use ($validated) {
+            $deck = GachaDeck::create(['name' => $validated['name']]);
+
+            if (!empty($validated['card_ids'])) {
+                $deck->cards()->attach($validated['card_ids']);
+            }
+
+            return $deck;
+        });
+
+        return response()->json($deck->load('cards:id,name,rarity,weight'), 201);
+    }
+
+    // PUT /api/v1/gacha/decks/{deck}  (admin) — 更新名稱 + 卡牌
+    public function update(UpdateGachaDeckRequest $request, GachaDeck $deck): JsonResponse
+    {
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($validated, $deck) {
+            if (\array_key_exists('name', $validated)) {
+                $deck->update(['name' => $validated['name']]);
+            }
+
+            if (\array_key_exists('card_ids', $validated)) {
+                $deck->cards()->sync($validated['card_ids'] ?? []);
+            }
+        });
+
+        return response()->json($deck->load('cards:id,name,rarity,weight'));
+    }
+
+    // DELETE /api/v1/gacha/decks/{deck}  (admin)
+    public function destroy(GachaDeck $deck): JsonResponse
+    {
+        $deck->delete();
+
+        return response()->json(['ok' => true]);
+    }
+}

@@ -6,23 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('gacha_room_cards', function (Blueprint $table) {
-            $table->foreignId('room_id')->constrained('gacha_rooms')->cascadeOnDelete();
+        Schema::create('gacha_deck_cards', function (Blueprint $table) {
+            $table->foreignId('deck_id')->constrained('gacha_decks')->cascadeOnDelete();
             $table->foreignId('card_id')->constrained('gacha_cards')->cascadeOnDelete();
-            $table->primary(['room_id', 'card_id']);
+            $table->primary(['deck_id', 'card_id']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('gacha_room_cards');
+        Schema::dropIfExists('gacha_deck_cards');
     }
 };

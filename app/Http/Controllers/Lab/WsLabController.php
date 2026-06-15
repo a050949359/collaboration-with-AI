@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Lab;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -11,42 +12,49 @@ use Illuminate\Support\Str;
 class WsLabController extends Controller
 {
     private string $binaryPath;
+
     private string $pidFile;
+
     private string $logFilePath;
+
     private string $wsAddr;
+
     private string $mgmtAddr;
+
     private string $allowedOrigins;
 
     public function __construct()
     {
-        $this->binaryPath     = storage_path('app/ws-lab');
-        $this->pidFile        = storage_path('app/ws-lab.pid');
-        $this->logFilePath    = storage_path('app/ws-lab.log');
-        $this->wsAddr         = config('services.ws.ws_addr',   '127.0.0.1:9001');
-        $this->mgmtAddr       = config('services.ws.mgmt_addr', '127.0.0.1:9002');
+        $this->binaryPath = storage_path('app/ws-lab');
+        $this->pidFile = storage_path('app/ws-lab.pid');
+        $this->logFilePath = storage_path('app/ws-lab.log');
+        $this->wsAddr = config('services.ws.ws_addr', '127.0.0.1:9001');
+        $this->mgmtAddr = config('services.ws.mgmt_addr', '127.0.0.1:9002');
         $this->allowedOrigins = config('services.ws.allowed_origins', 'localhost:*');
     }
 
     public function authToken(): JsonResponse
     {
         $token = Str::random(40);
-        $r = new \Redis();
+        $r = new \Redis;
         $r->connect(
             config('database.redis.default.host', '127.0.0.1'),
             (int) config('database.redis.default.port', 6379),
         );
-        $r->setex('ws-lab-auth:' . $token, 60, auth()->user()->name);
+        $r->setex('ws-lab-auth:'.$token, 60, auth()->user()->name);
         $r->close();
+
         return response()->json(['token' => $token]);
     }
 
     public function rooms(): JsonResponse
     {
-        if (!$this->isRunning()) {
+        if (! $this->isRunning()) {
             return response()->json([]);
         }
         try {
             $res = Http::timeout(2)->get("http://{$this->mgmtAddr}/rooms");
+
             return response()->json($res->json() ?? []);
         } catch (\Throwable) {
             return response()->json([]);
@@ -57,13 +65,13 @@ class WsLabController extends Controller
     {
         return response()->json([
             'running' => $this->isRunning(),
-            'pid'     => $this->readPid(),
+            'pid' => $this->readPid(),
         ]);
     }
 
     public function start(): JsonResponse
     {
-        if (!file_exists($this->binaryPath)) {
+        if (! file_exists($this->binaryPath)) {
             return response()->json(['message' => 'ws-lab binary not found. Run: go build -o storage/app/ws-lab ./cmd/ws-lab'], 503);
         }
 
@@ -88,23 +96,31 @@ class WsLabController extends Controller
         for ($i = 0; $i < 10; $i++) {
             usleep(300_000);
             $pid = $this->readPid();
-            if ($pid !== null) break;
+            if ($pid !== null) {
+                break;
+            }
         }
 
         if ($pid === null) {
             return response()->json(['message' => 'start failed: process did not write PID'], 500);
         }
 
+        // 啟動即清空 gacha 資料（測試房間用，不長期保留）。
+        // 依外鍵依賴順序 delete，免關 FK 檢查，MySQL / SQLite 皆相容。
+        DB::table('gacha_draws')->delete();
+        DB::table('gacha_players')->delete();
+        DB::table('gacha_rooms')->delete();
+
         return response()->json([
             'message' => 'started',
-            'pid'     => $pid,
+            'pid' => $pid,
             'ws_addr' => $this->wsAddr,
         ]);
     }
 
     public function stop(): JsonResponse
     {
-        if (!$this->isRunning()) {
+        if (! $this->isRunning()) {
             return response()->json(['message' => 'not running']);
         }
 
@@ -123,7 +139,7 @@ class WsLabController extends Controller
 
     public function streamStart(): JsonResponse
     {
-        if (!$this->isRunning()) {
+        if (! $this->isRunning()) {
             return response()->json(['message' => 'ws-lab not running'], 503);
         }
 
@@ -138,7 +154,7 @@ class WsLabController extends Controller
 
     public function streamStop(): JsonResponse
     {
-        if (!$this->isRunning()) {
+        if (! $this->isRunning()) {
             return response()->json(['ok' => true]);
         }
 
@@ -158,15 +174,17 @@ class WsLabController extends Controller
             return false;
         }
         exec("kill -0 {$pid} 2>/dev/null", $out, $code);
+
         return $code === 0;
     }
 
     private function readPid(): ?int
     {
-        if (!file_exists($this->pidFile)) {
+        if (! file_exists($this->pidFile)) {
             return null;
         }
         $pid = (int) trim((string) file_get_contents($this->pidFile));
+
         return $pid > 0 ? $pid : null;
     }
 }
