@@ -152,55 +152,59 @@ func cmdQuery(dbPath, collName string) error {
 		in.TopK = 5
 	}
 
-	col, err := openCollection(dbPath, collName)
-	if err != nil {
-		return err
-	}
+	return withReadLock(dbPath, func() error {
+		col, err := openCollection(dbPath, collName)
+		if err != nil {
+			return err
+		}
 
-	count := col.Count()
-	if count == 0 {
-		return outputJSON(map[string]any{"results": []any{}})
-	}
-	// chromem-go 要求 nResults <= 文件數，否則報錯
-	if in.TopK > count {
-		in.TopK = count
-	}
+		count := col.Count()
+		if count == 0 {
+			return outputJSON(map[string]any{"results": []any{}})
+		}
+		// chromem-go 要求 nResults <= 文件數，否則報錯
+		if in.TopK > count {
+			in.TopK = count
+		}
 
-	res, err := col.QueryEmbedding(context.Background(), in.Embedding, in.TopK, in.Where, in.WhereDoc)
-	if err != nil {
-		return err
-	}
+		res, err := col.QueryEmbedding(context.Background(), in.Embedding, in.TopK, in.Where, in.WhereDoc)
+		if err != nil {
+			return err
+		}
 
-	out := make([]map[string]any, 0, len(res))
-	for _, r := range res {
-		out = append(out, map[string]any{
-			"id":         r.ID,
-			"content":    r.Content,
-			"similarity": r.Similarity,
-			"metadata":   r.Metadata,
-		})
-	}
-	return outputJSON(map[string]any{"results": out})
+		out := make([]map[string]any, 0, len(res))
+		for _, r := range res {
+			out = append(out, map[string]any{
+				"id":         r.ID,
+				"content":    r.Content,
+				"similarity": r.Similarity,
+				"metadata":   r.Metadata,
+			})
+		}
+		return outputJSON(map[string]any{"results": out})
+	})
 }
 
 func cmdStats(dbPath, collName string) error {
-	db, err := chromem.NewPersistentDB(dbPath, false)
-	if err != nil {
-		return err
-	}
-	all := map[string]int{}
-	for name, c := range db.ListCollections() {
-		all[name] = c.Count()
-	}
-	col := db.GetCollection(collName, byoEmbed)
-	count := 0
-	if col != nil {
-		count = col.Count()
-	}
-	return outputJSON(map[string]any{
-		"collection":  collName,
-		"count":       count,
-		"collections": all,
+	return withReadLock(dbPath, func() error {
+		db, err := chromem.NewPersistentDB(dbPath, false)
+		if err != nil {
+			return err
+		}
+		all := map[string]int{}
+		for name, c := range db.ListCollections() {
+			all[name] = c.Count()
+		}
+		col := db.GetCollection(collName, byoEmbed)
+		count := 0
+		if col != nil {
+			count = col.Count()
+		}
+		return outputJSON(map[string]any{
+			"collection":  collName,
+			"count":       count,
+			"collections": all,
+		})
 	})
 }
 
@@ -250,10 +254,20 @@ func byoEmbed(_ context.Context, _ string) ([]float32, error) {
 	return nil, errors.New("ragctl: embedding 由呼叫端提供，不應呼叫 embedding func")
 }
 
-// withWriteLock 對寫入命令（upsert/delete/reset）加排他檔案鎖，避免並行寫入
-// 互相覆蓋（chromem-go 是整庫載入記憶體、寫回磁碟，無內建並行保護）。
-// 讀取命令（query/stats）不需要。
+// chromem-go 用 os.Create 就地覆寫檔案（非原子），且無內建並行保護。
+// 因此用 flock 讀寫鎖：
+//   - 寫入（upsert/delete/reset）取排他鎖 LOCK_EX
+//   - 讀取（query/stats）取共享鎖 LOCK_SH —— 避免在寫入途中讀到半殘檔導致 gob 解碼崩潰
+// 多個讀取可並行；寫入則與所有讀寫互斥。
 func withWriteLock(dbPath string, fn func() error) error {
+	return withLock(dbPath, syscall.LOCK_EX, fn)
+}
+
+func withReadLock(dbPath string, fn func() error) error {
+	return withLock(dbPath, syscall.LOCK_SH, fn)
+}
+
+func withLock(dbPath string, how int, fn func() error) error {
 	lockPath := dbPath + ".lock"
 	if err := os.MkdirAll(filepath.Dir(lockPath), 0o755); err != nil {
 		return err
@@ -263,7 +277,7 @@ func withWriteLock(dbPath string, fn func() error) error {
 		return err
 	}
 	defer f.Close()
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+	if err := syscall.Flock(int(f.Fd()), how); err != nil {
 		return err
 	}
 	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
