@@ -162,7 +162,7 @@ async function loadContext() {
     isLoadingContext.value = true;
 
     try {
-        const res = await fetch('/api/about/context', {
+        const res = await fetch(api.about.context(), {
             credentials: 'include',
             headers: { Accept: 'application/json' },
         });
@@ -178,7 +178,7 @@ async function saveContext() {
     contextMessage.value = '';
 
     try {
-        const res = await fetch('/api/about/context', {
+        const res = await fetch(api.about.context(), {
             method: 'PUT',
             credentials: 'include',
             headers: {

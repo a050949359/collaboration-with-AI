@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { routes } from '@/lib/routes';
+import { api, routes } from '@/lib/routes';
 
 // 直接從 query string 取得 status
 const status =
@@ -41,7 +41,7 @@ const info = statusMap[status as keyof typeof statusMap] ?? statusMap.error;
 
 // 驗證成功時自動登出（確保 session 清除）
 if (status === 'success') {
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    fetch(api.auth.logout(), { method: 'POST', credentials: 'include' });
 }
 </script>
 

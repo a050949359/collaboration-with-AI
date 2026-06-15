@@ -4,6 +4,7 @@ import { ref, reactive, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AirportGlobe from '../components/airports/AirportGlobe.vue';
 import AppLayout from '../layouts/AppLayout.vue';
+import { api } from '../lib/routes';
 
 const { t } = useI18n();
 const page = usePage<{ airportTypes: string[] }>();
@@ -108,7 +109,7 @@ async function fetchAirports(page = 1) {
     filters.continents.forEach((c) => params.append('continent[]', c));
 
     try {
-        const res = await fetch(`/api/v1/airports?${params}`, {
+        const res = await fetch(`${api.airports.index()}?${params}`, {
             credentials: 'include',
             headers: { Accept: 'application/json' },
         });
@@ -138,7 +139,7 @@ async function fetchStats() {
     statsError.value = '';
 
     try {
-        const res = await fetch('/api/v1/airports/stats', {
+        const res = await fetch(api.airports.stats(), {
             credentials: 'include',
             headers: { Accept: 'application/json' },
         });
