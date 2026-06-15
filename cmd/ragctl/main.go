@@ -18,6 +18,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"syscall"
 
 	chromem "github.com/philippgille/chromem-go"
 )
@@ -32,9 +34,18 @@ func (m *strMap) UnmarshalJSON(b []byte) error {
 		*m = nil
 		return nil
 	}
-	var mm map[string]string
-	if err := json.Unmarshal(b, &mm); err != nil {
+	// 先收成 any 再轉字串：容忍 PHP 傳數字/布林 metadata（如 {"page":12}），
+	// chromem-go 的 metadata 是 map[string]string，全部 stringify。
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
+	}
+	mm := make(map[string]string, len(raw))
+	for k, v := range raw {
+		if v == nil {
+			continue
+		}
+		mm[k] = fmt.Sprintf("%v", v)
 	}
 	*m = mm
 	return nil
@@ -96,11 +107,6 @@ func cmdUpsert(dbPath, collName string) error {
 		return outputJSON(map[string]any{"ok": true, "count": 0})
 	}
 
-	col, err := openCollection(dbPath, collName)
-	if err != nil {
-		return err
-	}
-
 	docs := make([]chromem.Document, 0, len(in.Documents))
 	for _, d := range in.Documents {
 		if d.ID == "" {
@@ -117,10 +123,16 @@ func cmdUpsert(dbPath, collName string) error {
 		})
 	}
 
-	if err := col.AddDocuments(context.Background(), docs, 1); err != nil {
-		return err
-	}
-	return outputJSON(map[string]any{"ok": true, "count": len(docs), "total": col.Count()})
+	return withWriteLock(dbPath, func() error {
+		col, err := openCollection(dbPath, collName)
+		if err != nil {
+			return err
+		}
+		if err := col.AddDocuments(context.Background(), docs, 1); err != nil {
+			return err
+		}
+		return outputJSON(map[string]any{"ok": true, "count": len(docs), "total": col.Count()})
+	})
 }
 
 func cmdQuery(dbPath, collName string) error {
@@ -205,25 +217,29 @@ func cmdDelete(dbPath, collName string) error {
 		return errors.New("delete 需提供 ids / where / where_document 其一")
 	}
 
-	col, err := openCollection(dbPath, collName)
-	if err != nil {
-		return err
-	}
-	if err := col.Delete(context.Background(), in.Where, in.WhereDoc, in.IDs...); err != nil {
-		return err
-	}
-	return outputJSON(map[string]any{"ok": true, "total": col.Count()})
+	return withWriteLock(dbPath, func() error {
+		col, err := openCollection(dbPath, collName)
+		if err != nil {
+			return err
+		}
+		if err := col.Delete(context.Background(), in.Where, in.WhereDoc, in.IDs...); err != nil {
+			return err
+		}
+		return outputJSON(map[string]any{"ok": true, "total": col.Count()})
+	})
 }
 
 func cmdReset(dbPath, collName string) error {
-	db, err := chromem.NewPersistentDB(dbPath, false)
-	if err != nil {
-		return err
-	}
-	if err := db.DeleteCollection(collName); err != nil {
-		return err
-	}
-	return outputJSON(map[string]any{"ok": true})
+	return withWriteLock(dbPath, func() error {
+		db, err := chromem.NewPersistentDB(dbPath, false)
+		if err != nil {
+			return err
+		}
+		if err := db.DeleteCollection(collName); err != nil {
+			return err
+		}
+		return outputJSON(map[string]any{"ok": true})
+	})
 }
 
 // ── 共用 ────────────────────────────────────────────────────────────────
@@ -232,6 +248,27 @@ func cmdReset(dbPath, collName string) error {
 // 漏帶 embedding，直接報錯而非偷打外部 API。
 func byoEmbed(_ context.Context, _ string) ([]float32, error) {
 	return nil, errors.New("ragctl: embedding 由呼叫端提供，不應呼叫 embedding func")
+}
+
+// withWriteLock 對寫入命令（upsert/delete/reset）加排他檔案鎖，避免並行寫入
+// 互相覆蓋（chromem-go 是整庫載入記憶體、寫回磁碟，無內建並行保護）。
+// 讀取命令（query/stats）不需要。
+func withWriteLock(dbPath string, fn func() error) error {
+	lockPath := dbPath + ".lock"
+	if err := os.MkdirAll(filepath.Dir(lockPath), 0o755); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return err
+	}
+	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
+
+	return fn()
 }
 
 func openCollection(dbPath, collName string) (*chromem.Collection, error) {
