@@ -39,17 +39,36 @@ cmd/ragctl/ragctl
 **讀 Drive 的授權靠「在 Drive 分享資料夾給 SA email」，不在 GCP IAM 給角色。**
 
 ### 2-1. 建立 SA 並啟用 Drive API
+**Console：**
 1. GCP Console → **API 與服務 → 程式庫** → 搜「Google Drive API」→ **啟用**
 2. **IAM 與管理 → 服務帳戶 → 建立服務帳戶**（例：`rag-drive`）
    - 不需指派任何 IAM 角色（Drive 權限走分享，不走 IAM）
 
+**或用 gcloud：**
+```bash
+PROJECT_ID=<你的專案 ID>
+
+# 啟用 Drive API
+gcloud services enable drive.googleapis.com --project="$PROJECT_ID"
+
+# 建立 SA（不需給任何 IAM 角色）
+gcloud iam service-accounts create rag-drive \
+  --display-name="RAG Drive Reader" --project="$PROJECT_ID"
+```
+
 ### 2-2. 產 JSON 金鑰
-1. 點進該 SA → **金鑰** 分頁 → **新增金鑰 → 建立新的金鑰 → JSON**
-2. 下載的金鑰檔放到：
-   ```
-   storage/app/rag-drive-sa.json
-   ```
-   （`storage/app/.gitignore` 的 `*` 規則會自動忽略，不會 commit）
+**Console：** 點進該 SA → **金鑰** 分頁 → **新增金鑰 → 建立新的金鑰 → JSON**，下載。
+
+**或用 gcloud（直接輸出到目標路徑）：**
+```bash
+gcloud iam service-accounts keys create storage/app/rag-drive-sa.json \
+  --iam-account="rag-drive@${PROJECT_ID}.iam.gserviceaccount.com"
+```
+
+金鑰檔放到（`storage/app/.gitignore` 的 `*` 規則會自動忽略，不會 commit）：
+```
+storage/app/rag-drive-sa.json
+```
 
 > 若建立金鑰被擋，可能是組織政策 `iam.disableServiceAccountKeyCreation`，需在組織層解除。
 
@@ -68,14 +87,20 @@ GEMINI_API_KEY=<你的 key>
 
 # RAG：Drive 來源
 RAG_DRIVE_FOLDER_ID=<步驟 2-3 取得的資料夾 ID>
-# SA 金鑰路徑（預設 storage/app/rag-drive-sa.json，通常不用設）
-RAG_DRIVE_CREDENTIALS_PATH=
+RAG_DRIVE_CREDENTIALS_PATH=        # SA 金鑰路徑，留空用預設 storage/app/rag-drive-sa.json
+
+# RAG：embedding 模型（皆可留空用預設）
+GEMINI_EMBEDDING_MODEL=            # 預設 gemini-embedding-001；多模態改 gemini-embedding-2
+GEMINI_EMBEDDING_DIMENSIONS=       # 預設 768
+
+# RAG：ragctl（皆可留空用預設）
+RAGCTL_BIN=                        # 預設 base_path(cmd/ragctl/ragctl)
+RAGCTL_DB=                         # 預設 storage_path(app/rag_db)
 ```
 
-embedding 模型在 `config/services.php` 的 `gemini.embedding_model`：
+embedding 模型（`config/services.php` 的 `gemini.embedding_model`，或上面 env 覆寫）：
 - 預設 `gemini-embedding-001`（純文字、支援 task_type、768 維）
-- 要多模態（文字+圖片同向量空間、可跨模態檢索）改 `gemini-embedding-2`，
-  可用 `GEMINI_EMBEDDING_MODEL` 覆寫
+- 要多模態（文字+圖片同向量空間、可跨模態檢索）改 `gemini-embedding-2`
 
 > ⚠️ embedding 模型決定向量空間，**不同模型/維度的向量不可比**。換模型需重新 embed
 > 整個語料（collection 命名會帶模型+維度區分，避免混入）。
