@@ -2,9 +2,9 @@
 import { Head, usePage } from '@inertiajs/vue3';
 import { ref, reactive, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { api } from '@/lib/routes';
 import AirportGlobe from '../components/airports/AirportGlobe.vue';
 import AppLayout from '../layouts/AppLayout.vue';
-import { api } from '../lib/routes';
 
 const { t } = useI18n();
 const page = usePage<{ airportTypes: string[] }>();

@@ -18,7 +18,7 @@ import * as topojson from 'topojson-client';
 import type { Topology } from 'topojson-specification';
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { api } from '../../lib/routes';
+import { api } from '@/lib/routes';
 
 interface AirportItem {
     name: string;
