@@ -146,6 +146,11 @@ func (r *Room) touch() { r.lastActivity.Store(time.Now().UnixNano()) }
 // read safely via the room goroutine (no direct map access from outside).
 // Returns nil if unset, the room is shutting down, or the request times out.
 func (r *Room) MachineState() map[string]string {
+	// 只有 gacha 房的 goroutine 會處理 stateReq；global 房不處理，
+	// 直接短路回 nil，避免送進無人接收的 channel 而卡到逾時。
+	if r.roomType != RoomTypeGacha {
+		return nil
+	}
 	resp := make(chan map[string]string, 1)
 	select {
 	case r.stateReq <- stateReq{resp: resp}:
