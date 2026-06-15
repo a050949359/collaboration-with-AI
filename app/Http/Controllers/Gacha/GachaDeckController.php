@@ -22,11 +22,13 @@ class GachaDeckController extends Controller
     // POST /api/v1/gacha/decks  (admin)
     public function store(StoreGachaDeckRequest $request): JsonResponse
     {
-        $deck = DB::transaction(function () use ($request) {
-            $deck = GachaDeck::create(['name' => $request->input('name')]);
+        $validated = $request->validated();
 
-            if ($request->filled('card_ids')) {
-                $deck->cards()->attach($request->input('card_ids'));
+        $deck = DB::transaction(function () use ($validated) {
+            $deck = GachaDeck::create(['name' => $validated['name']]);
+
+            if (!empty($validated['card_ids'])) {
+                $deck->cards()->attach($validated['card_ids']);
             }
 
             return $deck;
@@ -38,13 +40,15 @@ class GachaDeckController extends Controller
     // PUT /api/v1/gacha/decks/{deck}  (admin) — 更新名稱 + 卡牌
     public function update(UpdateGachaDeckRequest $request, GachaDeck $deck): JsonResponse
     {
-        DB::transaction(function () use ($request, $deck) {
-            if ($request->has('name')) {
-                $deck->update(['name' => $request->input('name')]);
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($validated, $deck) {
+            if (\array_key_exists('name', $validated)) {
+                $deck->update(['name' => $validated['name']]);
             }
 
-            if ($request->has('card_ids')) {
-                $deck->cards()->sync($request->input('card_ids', []));
+            if (\array_key_exists('card_ids', $validated)) {
+                $deck->cards()->sync($validated['card_ids'] ?? []);
             }
         });
 
