@@ -16,7 +16,13 @@ use Illuminate\Support\Str;
 
 class GachaRoomController extends Controller
 {
-    private string $mgmtAddr = '127.0.0.1:9002';
+    private string $mgmtAddr;
+
+    public function __construct()
+    {
+        // 與 WsLabController 一致，吃 WS_MGMT_ADDR；預設同機 9002。
+        $this->mgmtAddr = config('services.ws.mgmt_addr', '127.0.0.1:9002');
+    }
 
     // GET /api/v1/gacha/rooms
     public function index(): JsonResponse

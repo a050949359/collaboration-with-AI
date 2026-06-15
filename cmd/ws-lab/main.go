@@ -162,6 +162,8 @@ func (r *Room) MachineState() map[string]string {
 	select {
 	case s := <-resp:
 		return s
+	case <-r.shutdown:
+		return nil
 	case <-time.After(2 * time.Second):
 		return nil
 	}
