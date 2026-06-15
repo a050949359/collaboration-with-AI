@@ -10,6 +10,22 @@ class GcpAccessTokenProvider
 
     private int $tokenExpiresAt = 0;
 
+    private ?string $credentialsPath;
+
+    private string $scope;
+
+    /**
+     * @param  string|null  $credentialsPath  SA 金鑰路徑；null 時用 Vertex 的設定（向下相容）
+     * @param  string  $scope  OAuth scope；預設 cloud-platform（Vertex 原行為）
+     */
+    public function __construct(
+        ?string $credentialsPath = null,
+        string $scope = 'https://www.googleapis.com/auth/cloud-platform',
+    ) {
+        $this->credentialsPath = $credentialsPath;
+        $this->scope = $scope;
+    }
+
     public function getToken(): string
     {
         if ($this->token && now()->getTimestamp() < ($this->tokenExpiresAt - 60)) {
@@ -27,7 +43,7 @@ class GcpAccessTokenProvider
                 'assertion' => $jwt,
             ]);
 
-        if (!$response->ok()) {
+        if (! $response->ok()) {
             throw new AIServiceException('Failed to fetch GCP access token.');
         }
 
@@ -35,7 +51,7 @@ class GcpAccessTokenProvider
         $accessToken = is_array($payload) ? ($payload['access_token'] ?? null) : null;
         $expiresIn = is_array($payload) ? (int) ($payload['expires_in'] ?? 0) : 0;
 
-        if (!is_string($accessToken) || $accessToken === '') {
+        if (! is_string($accessToken) || $accessToken === '') {
             throw new AIServiceException('GCP access token is missing from token response.');
         }
 
@@ -50,19 +66,19 @@ class GcpAccessTokenProvider
      */
     private function readCredentials(): array
     {
-        $path = config('services.vertex_ai.credentials_path');
+        $path = $this->credentialsPath ?? config('services.vertex_ai.credentials_path');
 
-        if (!is_string($path) || $path === '' || !is_file($path)) {
+        if (! is_string($path) || $path === '' || ! is_file($path)) {
             throw new AIServiceException('GCP_APPLICATION_CREDENTIALS path is invalid.');
         }
 
         $decoded = json_decode((string) file_get_contents($path), true);
 
-        if (!is_array($decoded)) {
+        if (! is_array($decoded)) {
             throw new AIServiceException('GCP credential JSON is invalid.');
         }
 
-        if (!isset($decoded['client_email'], $decoded['private_key'])) {
+        if (! isset($decoded['client_email'], $decoded['private_key'])) {
             throw new AIServiceException('GCP credential JSON must include client_email and private_key.');
         }
 
@@ -70,7 +86,7 @@ class GcpAccessTokenProvider
     }
 
     /**
-     * @param array<string, mixed> $credentials
+     * @param  array<string, mixed>  $credentials
      */
     private function buildJwtAssertion(array $credentials, string $audience): string
     {
@@ -80,7 +96,7 @@ class GcpAccessTokenProvider
             'iss' => $credentials['client_email'],
             'sub' => $credentials['client_email'],
             'aud' => $audience,
-            'scope' => 'https://www.googleapis.com/auth/cloud-platform',
+            'scope' => $this->scope,
             'iat' => $issuedAt,
             'exp' => $issuedAt + 3600,
         ];
@@ -100,9 +116,8 @@ class GcpAccessTokenProvider
         }
 
         $ok = openssl_sign($signingInput, $signature, $privateKey, OPENSSL_ALGO_SHA256);
-        openssl_free_key($privateKey);
 
-        if (!$ok) {
+        if (! $ok) {
             throw new AIServiceException('Failed to sign GCP JWT assertion.');
         }
 
