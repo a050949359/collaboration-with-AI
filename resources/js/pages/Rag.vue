@@ -559,28 +559,39 @@ onMounted(() => {
                 </span>
                 <h1 class="binary-page-title">RAG 知識庫</h1>
                 <p class="mt-3 text-sm text-[var(--binary-text-muted)]">
-                    選 Drive 檔 → 選知識庫 → 互動切塊/測試 → 落庫檢索
+                    {{
+                        view === 'wizard'
+                            ? '選 Drive 檔 → 選知識庫 → 互動切塊/測試 → 落庫檢索'
+                            : '檢視各知識庫的文件、塊數與向量同步狀態'
+                    }}
                 </p>
             </div>
 
-            <!-- 視圖切換 -->
-            <div class="mb-5 flex items-center gap-4">
+            <!-- 視圖切換（切換 content：總覽 / 精靈）-->
+            <div
+                class="mb-5 flex items-center gap-6 border-b border-[var(--binary-outline-variant)]"
+            >
                 <button
-                    class="binary-label text-[10px] uppercase"
+                    class="binary-label border-b-2 pb-2.5 text-[10px] uppercase transition"
                     :class="
                         view === 'dashboard'
-                            ? 'text-[var(--binary-primary)]'
-                            : 'text-[var(--binary-outline)]'
+                            ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                            : 'border-transparent text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
                     "
                     @click="backToDashboard"
                 >
                     總覽
                 </button>
                 <button
-                    class="binary-button ml-auto px-4 py-1.5 text-xs whitespace-nowrap"
+                    class="binary-label border-b-2 pb-2.5 text-[10px] uppercase transition"
+                    :class="
+                        view === 'wizard'
+                            ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                            : 'border-transparent text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
+                    "
                     @click="enterWizard"
                 >
-                    ＋ 新增/編輯文件
+                    新增 / 編輯
                 </button>
             </div>
 
