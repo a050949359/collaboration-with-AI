@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Rag;
 
+use App\Enums\Rag\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Rag\KnowledgeBase;
 use App\Services\Rag\DriveReader;
@@ -23,14 +24,18 @@ class KnowledgeBaseController extends Controller
     public function index(): JsonResponse
     {
         $kbs = KnowledgeBase::where('user_id', Auth::id())
-            ->withCount('documents')
+            ->withCount([
+                'documents as committed_count' => fn ($q) => $q->where('status', DocumentStatus::Committed->value),
+                'documents as draft_count' => fn ($q) => $q->whereIn('status', [DocumentStatus::Draft->value, DocumentStatus::Dirty->value]),
+            ])
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (KnowledgeBase $kb) => [
                 'id' => $kb->id,
                 'name' => $kb->name,
                 'collection' => $kb->collectionName(),
-                'documents_count' => $kb->documents_count,
+                'committed_count' => $kb->committed_count,
+                'draft_count' => $kb->draft_count,
             ]);
 
         return response()->json(['data' => $kbs]);

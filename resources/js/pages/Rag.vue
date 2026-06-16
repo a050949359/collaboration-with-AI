@@ -20,7 +20,8 @@ interface Kb {
     id: number;
     name: string;
     collection: string;
-    documents_count: number;
+    committed_count: number;
+    draft_count: number;
 }
 interface Chunk {
     index: number;
@@ -370,11 +371,54 @@ onMounted(() => {
             <!-- Step 2: knowledge base -->
             <div v-else-if="step === 'kb'" class="space-y-4">
                 <div class="text-sm text-[var(--binary-text-muted)]">
-                    檔案:<span class="text-[var(--binary-text)]">{{
+                    檔案：<span class="text-[var(--binary-text)]">{{
                         selectedFile?.name
                     }}</span>
                 </div>
 
+                <!-- 既有庫（在上） -->
+                <div class="space-y-2">
+                    <div
+                        class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                    >
+                        既有知識庫
+                    </div>
+                    <p
+                        v-if="!kbs.length"
+                        class="text-sm text-[var(--binary-outline)]"
+                    >
+                        還沒有知識庫，先在下方建立一個。
+                    </p>
+                    <button
+                        v-for="kb in kbs"
+                        :key="kb.id"
+                        class="binary-glass flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition hover:border-[var(--binary-primary)]"
+                        :disabled="busy"
+                        @click="chooseKb(kb)"
+                    >
+                        <div class="min-w-0">
+                            <div class="text-sm text-[var(--binary-text)]">
+                                {{ kb.name }}
+                            </div>
+                            <div
+                                class="binary-label text-[10px] text-[var(--binary-outline)]"
+                            >
+                                模型 {{ kb.collection.split('__')[1] }}
+                            </div>
+                        </div>
+                        <span
+                            class="binary-label shrink-0 text-[10px] text-[var(--binary-outline)]"
+                        >
+                            {{ kb.committed_count }} 已落庫<template
+                                v-if="kb.draft_count"
+                            >
+                                · {{ kb.draft_count }} 草稿</template
+                            >
+                        </span>
+                    </button>
+                </div>
+
+                <!-- 建立新庫（在下） -->
                 <div class="binary-glass rounded-xl p-4">
                     <div
                         class="binary-label mb-2 text-[10px] text-[var(--binary-outline)] uppercase"
@@ -384,48 +428,18 @@ onMounted(() => {
                     <div class="flex gap-2">
                         <input
                             v-model="newKbName"
-                            class="binary-input flex-1"
-                            placeholder="知識庫名稱(如:技術手冊)"
+                            class="binary-input min-w-0 flex-1"
+                            placeholder="知識庫名稱（如：技術手冊）"
                             @keyup.enter="createKb"
                         />
                         <button
-                            class="binary-button px-4"
+                            class="binary-button w-auto shrink-0 px-4 whitespace-nowrap"
                             :disabled="busy"
                             @click="createKb"
                         >
                             建立並使用
                         </button>
                     </div>
-                </div>
-
-                <div class="space-y-2">
-                    <div
-                        class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
-                    >
-                        既有知識庫
-                    </div>
-                    <button
-                        v-for="kb in kbs"
-                        :key="kb.id"
-                        class="binary-glass flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition hover:border-[var(--binary-primary)]"
-                        :disabled="busy"
-                        @click="chooseKb(kb)"
-                    >
-                        <div>
-                            <div class="text-sm text-[var(--binary-text)]">
-                                {{ kb.name }}
-                            </div>
-                            <div
-                                class="binary-label text-[10px] text-[var(--binary-outline)]"
-                            >
-                                {{ kb.collection }}
-                            </div>
-                        </div>
-                        <span
-                            class="binary-label text-[10px] text-[var(--binary-outline)]"
-                            >{{ kb.documents_count }} 檔</span
-                        >
-                    </button>
                 </div>
             </div>
 
