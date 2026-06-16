@@ -76,8 +76,8 @@ class RagService
                 'name' => $file['name'],
                 'mime_type' => $file['mime_type'],
                 'modified_time' => $file['modified_time'] ?? null,
-                // 已 commit 過又重切 → dirty;全新 → draft
-                'status' => $document->exists && $document->status === DocumentStatus::Committed
+                // 曾落庫(committed_at 有值,含 committed/dirty)再重切 → dirty;從沒落庫過 → draft
+                'status' => $document->committed_at !== null
                     ? DocumentStatus::Dirty
                     : DocumentStatus::Draft,
             ])->save();
