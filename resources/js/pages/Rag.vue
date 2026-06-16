@@ -612,25 +612,25 @@ onMounted(() => {
             <!-- ░░ 總覽 dashboard ░░ -->
             <div v-if="view === 'dashboard'">
                 <div
-                    class="mb-4 flex items-center gap-6 border-b border-[var(--binary-outline-variant)]"
+                    class="mb-4 flex w-fit gap-1 rounded-lg border border-[var(--binary-outline-variant)] p-1"
                 >
                     <button
-                        class="binary-label border-b-2 pb-2.5 text-[10px] uppercase transition"
+                        class="binary-label rounded-md px-3 py-1 text-[10px] uppercase transition"
                         :class="
                             dashTab === 'by_kb'
-                                ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
-                                : 'border-transparent text-[var(--binary-outline)]'
+                                ? 'bg-[var(--binary-surface-high)] text-[var(--binary-primary)]'
+                                : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
                         "
                         @click="dashTab = 'by_kb'"
                     >
                         庫為主
                     </button>
                     <button
-                        class="binary-label border-b-2 pb-2.5 text-[10px] uppercase transition"
+                        class="binary-label rounded-md px-3 py-1 text-[10px] uppercase transition"
                         :class="
                             dashTab === 'by_file'
-                                ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
-                                : 'border-transparent text-[var(--binary-outline)]'
+                                ? 'bg-[var(--binary-surface-high)] text-[var(--binary-primary)]'
+                                : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
                         "
                         @click="dashTab = 'by_file'"
                     >
