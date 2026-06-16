@@ -426,6 +426,19 @@ class RagService
         return $this->vecgen('stats', $kb->collectionName());
     }
 
+    /**
+     * 刪知識庫的向量 collection（刪庫時連向量一起清）。best-effort:
+     * 從未 commit 過的庫沒有 collection,reset 報錯可忽略(DB 才是真相)。
+     */
+    public function dropCollection(KnowledgeBase $kb): void
+    {
+        try {
+            $this->vecgen('reset', $kb->collectionName());
+        } catch (\Throwable) {
+            // collection 不存在等情況忽略
+        }
+    }
+
     // ── 內部 ────────────────────────────────────────────────────────────
 
     /**

@@ -20,7 +20,7 @@ use Throwable;
 class RagMcpService implements McpToolServiceInterface
 {
     private const TOOLS = [
-        'rag_list_kbs', 'rag_create_kb', 'rag_list_drive_files', 'rag_preview_chunks',
+        'rag_list_kbs', 'rag_create_kb', 'rag_delete_kb', 'rag_list_drive_files', 'rag_preview_chunks',
         'rag_lock', 'rag_unlock', 'rag_resume', 'rag_get_draft', 'rag_edit_chunks', 'rag_commit', 'rag_query',
     ];
 
@@ -40,6 +40,7 @@ class RagMcpService implements McpToolServiceInterface
             return match ($name) {
                 'rag_list_kbs' => $this->listKbs($id),
                 'rag_create_kb' => $this->createKb($id, $args),
+                'rag_delete_kb' => $this->deleteKb($id, $args),
                 'rag_list_drive_files' => $this->listDriveFiles($id, $args),
                 'rag_preview_chunks' => $this->previewChunks($id, $args),
                 'rag_lock' => $this->lock($id, $args),
@@ -88,6 +89,15 @@ class RagMcpService implements McpToolServiceInterface
         ]);
 
         return $this->json($id, ['id' => $kb->id, 'collection' => $kb->collectionName()]);
+    }
+
+    private function deleteKb(mixed $id, array $args): JsonResponse
+    {
+        $kb = $this->ownedKb($args['kb_id'] ?? 0);
+        $this->rag->dropCollection($kb);
+        $kb->delete();
+
+        return $this->json($id, ['ok' => true]);
     }
 
     private function listDriveFiles(mixed $id, array $args): JsonResponse
@@ -208,6 +218,7 @@ class RagMcpService implements McpToolServiceInterface
         return [
             ['name' => 'rag_list_kbs', 'description' => '列出我的知識庫(含文件數)。', 'inputSchema' => ['type' => 'object', 'properties' => new \stdClass]],
             ['name' => 'rag_create_kb', 'description' => '建立知識庫。', 'inputSchema' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']], 'required' => ['name']]],
+            ['name' => 'rag_delete_kb', 'description' => '刪除知識庫（連同文件/草稿/向量 collection 一併清除，不可復原）。', 'inputSchema' => ['type' => 'object', 'properties' => ['kb_id' => ['type' => 'integer']], 'required' => ['kb_id']]],
             ['name' => 'rag_list_drive_files', 'description' => '列全域 Drive 檔並標出相對此庫狀態(new/in_kb/changed)。', 'inputSchema' => ['type' => 'object', 'properties' => ['kb_id' => ['type' => 'integer']], 'required' => ['kb_id']]],
             ['name' => 'rag_preview_chunks', 'description' => '讀一個 Drive 檔、遞迴切塊並建/更新草稿(回提議塊與 diff);不會落庫。已有草稿預設直接載入(loaded=true,不覆蓋);force=true 才重新從 Drive 抽取重切。', 'inputSchema' => ['type' => 'object', 'properties' => ['kb_id' => ['type' => 'integer'], 'drive_file_id' => ['type' => 'string'], 'force' => ['type' => 'boolean', 'description' => '強制重切(會覆蓋現有草稿編輯)']], 'required' => ['kb_id', 'drive_file_id']]],
             ['name' => 'rag_lock', 'description' => '取得文件編輯鎖,回 lock_token(編輯/commit 必帶)。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId], 'required' => ['document_id']]],

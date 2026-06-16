@@ -265,6 +265,7 @@ export const api = {
     rag: {
         driveIndex: () => '/api/v1/rag/drive-files',
         kbs: () => '/api/v1/rag/kbs',
+        kb: (id: number) => `/api/v1/rag/kbs/${id}`,
         driveFiles: (kbId: number) => `/api/v1/rag/kbs/${kbId}/drive-files`,
         query: (kbId: number) => `/api/v1/rag/kbs/${kbId}/query`,
         documents: (kbId: number) => `/api/v1/rag/kbs/${kbId}/documents`,

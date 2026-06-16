@@ -60,6 +60,8 @@ const selectedFile = ref<DriveFile | null>(null);
 const kbs = ref<Kb[]>([]);
 const selectedKb = ref<Kb | null>(null);
 const newKbName = ref('');
+const manageMode = ref(false);
+const selectedKbIds = ref<number[]>([]);
 
 // step 3
 const documentId = ref<number | null>(null);
@@ -194,6 +196,42 @@ function reproposeForce() {
         diff.value = r.diff;
         committedInfo.value = `已重新切塊：未變 ${r.diff.unchanged} / 新增 ${r.diff.added} / 刪除 ${r.diff.removed}`;
         await loadChunks();
+    });
+}
+
+function toggleManage() {
+    manageMode.value = !manageMode.value;
+    selectedKbIds.value = [];
+}
+function toggleKbSelect(id: number) {
+    const i = selectedKbIds.value.indexOf(id);
+
+    if (i >= 0) {
+        selectedKbIds.value.splice(i, 1);
+    } else {
+        selectedKbIds.value.push(id);
+    }
+}
+function deleteSelectedKbs() {
+    const ids = [...selectedKbIds.value];
+
+    if (
+        !ids.length ||
+        !confirm(
+            `刪除 ${ids.length} 個知識庫？連同其文件/草稿/向量一併清除，不可復原。`,
+        )
+    ) {
+        return;
+    }
+
+    run(async () => {
+        for (const id of ids) {
+            await sendJSON(api.rag.kb(id), 'DELETE');
+        }
+
+        selectedKbIds.value = [];
+        manageMode.value = false;
+        kbs.value = (await getJSON(api.rag.kbs())).data;
     });
 }
 
@@ -409,10 +447,33 @@ onMounted(() => {
 
                 <!-- 既有庫（在上） -->
                 <div class="space-y-2">
-                    <div
-                        class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
-                    >
-                        既有知識庫
+                    <div class="flex items-center justify-between">
+                        <span
+                            class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                        >
+                            既有知識庫
+                        </span>
+                        <div v-if="kbs.length" class="flex items-center gap-2">
+                            <button
+                                v-if="manageMode && selectedKbIds.length"
+                                class="binary-label rounded px-2 py-1 text-[10px] text-[var(--binary-tertiary)] uppercase hover:bg-[var(--binary-surface-high)]"
+                                :disabled="busy"
+                                @click="deleteSelectedKbs"
+                            >
+                                🗑 刪除選取 ({{ selectedKbIds.length }})
+                            </button>
+                            <button
+                                class="binary-label rounded px-2 py-1 text-[10px] uppercase hover:bg-[var(--binary-surface-high)]"
+                                :class="
+                                    manageMode
+                                        ? 'text-[var(--binary-primary)]'
+                                        : 'text-[var(--binary-outline)]'
+                                "
+                                @click="toggleManage"
+                            >
+                                {{ manageMode ? '完成' : '管理' }}
+                            </button>
+                        </div>
                     </div>
                     <p
                         v-if="!kbs.length"
@@ -423,11 +484,29 @@ onMounted(() => {
                     <button
                         v-for="kb in kbs"
                         :key="kb.id"
-                        class="binary-glass flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition hover:border-[var(--binary-primary)]"
+                        class="binary-glass flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition hover:border-[var(--binary-primary)]"
+                        :class="
+                            manageMode && selectedKbIds.includes(kb.id)
+                                ? 'border-[var(--binary-tertiary)]'
+                                : ''
+                        "
                         :disabled="busy"
-                        @click="chooseKb(kb)"
+                        @click="
+                            manageMode ? toggleKbSelect(kb.id) : chooseKb(kb)
+                        "
                     >
-                        <div class="min-w-0">
+                        <span
+                            v-if="manageMode"
+                            class="shrink-0 text-sm"
+                            :class="
+                                selectedKbIds.includes(kb.id)
+                                    ? 'text-[var(--binary-tertiary)]'
+                                    : 'text-[var(--binary-outline)]'
+                            "
+                        >
+                            {{ selectedKbIds.includes(kb.id) ? '☑' : '☐' }}
+                        </span>
+                        <div class="min-w-0 flex-1">
                             <div class="text-sm text-[var(--binary-text)]">
                                 {{ kb.name }}
                             </div>

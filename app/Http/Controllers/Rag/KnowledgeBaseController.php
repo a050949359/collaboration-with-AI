@@ -55,6 +55,17 @@ class KnowledgeBaseController extends Controller
         return response()->json(['id' => $kb->id, 'collection' => $kb->collectionName()], 201);
     }
 
+    public function destroy(KnowledgeBase $knowledgeBase): JsonResponse
+    {
+        abort_unless($knowledgeBase->user_id === Auth::id(), 403);
+
+        // 先清向量 collection，再刪 DB（documents/chunks/locks 隨 FK cascade）
+        $this->rag->dropCollection($knowledgeBase);
+        $knowledgeBase->delete();
+
+        return response()->json(null, 204);
+    }
+
     public function driveFiles(KnowledgeBase $knowledgeBase): JsonResponse
     {
         $this->authorizeKb($knowledgeBase);
