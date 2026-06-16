@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Rag;
 
-use App\Enums\Rag\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Rag\Document;
 use App\Models\Rag\KnowledgeBase;
@@ -35,8 +34,9 @@ class KnowledgeBaseController extends Controller
 
         $kbs = KnowledgeBase::where('user_id', Auth::id())
             ->withCount([
-                'documents as committed_count' => fn ($q) => $q->where('status', DocumentStatus::Committed->value),
-                'documents as draft_count' => fn ($q) => $q->whereIn('status', [DocumentStatus::Draft->value, DocumentStatus::Dirty->value]),
+                // 進過向量庫＝committed_at 有值（committed/dirty 都算）；未落庫過＝null
+                'documents as committed_count' => fn ($q) => $q->whereNotNull('committed_at'),
+                'documents as draft_count' => fn ($q) => $q->whereNull('committed_at'),
             ])
             ->orderByDesc('created_at')
             ->get()
