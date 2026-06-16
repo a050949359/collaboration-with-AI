@@ -78,6 +78,8 @@ const committedInfo = ref<string | null>(null);
 const saved = ref<Record<number, { content: string; context: string | null }>>(
     {},
 );
+// 目前游標所在塊與位置（決定併上/併下是「移半邊」還是「整塊」、以及能否分割）
+const caret = ref<{ index: number; pos: number } | null>(null);
 
 const canEdit = computed(() => !!lockToken.value && !lockedByOther.value);
 
@@ -251,6 +253,7 @@ async function loadChunks() {
     const r = await getJSON(api.rag.chunks(documentId.value!));
     chunks.value = r.chunks;
     lockedByOther.value = !!r.lock && r.lock.locked_by !== user.value?.id;
+    caret.value = null;
     snapshotChunks();
 }
 function refreshDraft() {
@@ -331,14 +334,89 @@ function saveChunkField(c: Chunk) {
         { op: 'set_context', index: c.index, context: c.context },
     ]);
 }
-function splitChunk(c: Chunk) {
-    const at = Math.floor(c.content.length / 2);
-    mutate([{ op: 'split', index: c.index, at }]);
+// 記錄游標位置（textarea 互動時）
+function trackCaret(c: Chunk, e: Event) {
+    const el = e.target as HTMLTextAreaElement;
+    caret.value = { index: c.index, pos: el.selectionStart ?? 0 };
 }
-function mergeChunk(c: Chunk) {
-    mutate([{ op: 'merge', index: c.index }]);
+// 此塊內的「有效游標位置」（0<pos<長度 才有效，否則 null）
+function cursorPos(c: Chunk): number | null {
+    if (caret.value && caret.value.index === c.index) {
+        const p = caret.value.pos;
+
+        if (p > 0 && p < c.content.length) {
+            return p;
+        }
+    }
+
+    return null;
+}
+function isLast(c: Chunk): boolean {
+    return c.index >= chunks.value.length - 1;
+}
+
+// 併上：有游標→前半併入上塊、本塊留後半；無游標→整塊併入上塊
+function mergeUp(c: Chunk) {
+    if (c.index === 0) {
+        return;
+    }
+
+    const prev = chunks.value.find((x) => x.index === c.index - 1);
+    const p = cursorPos(c);
+    caret.value = null;
+
+    if (p === null) {
+        mutate([{ op: 'merge', index: c.index - 1 }]);
+    } else if (prev) {
+        mutate([
+            {
+                op: 'set_content',
+                index: c.index - 1,
+                content: prev.content + c.content.slice(0, p),
+            },
+            { op: 'set_content', index: c.index, content: c.content.slice(p) },
+        ]);
+    }
+}
+// 併下：有游標→後半併入下塊、本塊留前半；無游標→整塊併入下塊
+function mergeDown(c: Chunk) {
+    if (isLast(c)) {
+        return;
+    }
+
+    const next = chunks.value.find((x) => x.index === c.index + 1);
+    const p = cursorPos(c);
+    caret.value = null;
+
+    if (p === null) {
+        mutate([{ op: 'merge', index: c.index }]);
+    } else if (next) {
+        mutate([
+            {
+                op: 'set_content',
+                index: c.index + 1,
+                content: c.content.slice(p) + next.content,
+            },
+            {
+                op: 'set_content',
+                index: c.index,
+                content: c.content.slice(0, p),
+            },
+        ]);
+    }
+}
+function splitChunk(c: Chunk) {
+    const p = cursorPos(c);
+
+    if (p === null) {
+        return;
+    }
+
+    caret.value = null;
+    mutate([{ op: 'split', index: c.index, at: p }]);
 }
 function deleteChunk(c: Chunk) {
+    caret.value = null;
     mutate([{ op: 'delete', index: c.index }]);
 }
 function runTest() {
@@ -750,25 +828,46 @@ onMounted(() => {
                             rows="4"
                             class="binary-input w-full text-sm"
                             @blur="saveChunkField(c)"
+                            @click="trackCaret(c, $event)"
+                            @keyup="trackCaret(c, $event)"
+                            @select="trackCaret(c, $event)"
                         />
                         <div v-if="canEdit" class="mt-2 flex flex-wrap gap-2">
                             <button
+                                v-if="c.index > 0"
                                 class="binary-ghost-button px-3 py-1 text-[10px]"
-                                @click="splitChunk(c)"
+                                @click="mergeUp(c)"
                             >
-                                對半切
+                                {{
+                                    cursorPos(c) !== null
+                                        ? '↑ 併前半'
+                                        : '↑ 整塊併上'
+                                }}
                             </button>
                             <button
-                                class="binary-ghost-button px-3 py-1 text-[10px]"
-                                @click="mergeChunk(c)"
+                                class="binary-ghost-button px-3 py-1 text-[10px] disabled:opacity-40"
+                                :disabled="cursorPos(c) === null"
+                                title="把游標點在要切開的位置再按"
+                                @click="splitChunk(c)"
                             >
-                                與下塊合併
+                                ✂ 分割
+                            </button>
+                            <button
+                                v-if="!isLast(c)"
+                                class="binary-ghost-button px-3 py-1 text-[10px]"
+                                @click="mergeDown(c)"
+                            >
+                                {{
+                                    cursorPos(c) !== null
+                                        ? '併後半 ↓'
+                                        : '整塊併下 ↓'
+                                }}
                             </button>
                             <button
                                 class="binary-ghost-button px-3 py-1 text-[10px] text-[var(--binary-tertiary)]"
                                 @click="deleteChunk(c)"
                             >
-                                刪除
+                                🗑 刪除
                             </button>
                         </div>
                     </div>
