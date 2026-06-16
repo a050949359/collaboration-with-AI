@@ -74,6 +74,10 @@ const testQuery = ref('');
 const testResults = ref<TestHit[]>([]);
 const showCommitModal = ref(false);
 const committedInfo = ref<string | null>(null);
+// 每塊上次已存的 content/context（index → 值），blur 自動存時用來判斷是否有變
+const saved = ref<Record<number, { content: string; context: string | null }>>(
+    {},
+);
 
 const canEdit = computed(() => !!lockToken.value && !lockedByOther.value);
 
@@ -236,10 +240,25 @@ function deleteSelectedKbs() {
 }
 
 // ── step 3: editor ────────────────────────────────────────
+function snapshotChunks() {
+    saved.value = {};
+
+    for (const c of chunks.value) {
+        saved.value[c.index] = { content: c.content, context: c.context };
+    }
+}
 async function loadChunks() {
     const r = await getJSON(api.rag.chunks(documentId.value!));
     chunks.value = r.chunks;
     lockedByOther.value = !!r.lock && r.lock.locked_by !== user.value?.id;
+    snapshotChunks();
+}
+function refreshDraft() {
+    // 重新載入草稿（取得 Claude/他處經 MCP 的最新修改）。
+    // blur 自動存會在點按鈕前先把正在編的存起來，不會遺失。
+    run(async () => {
+        await loadChunks();
+    });
 }
 function acquireLock() {
     run(async () => {
@@ -269,35 +288,58 @@ function releaseLock() {
         lockToken.value = null;
     });
 }
-function applyOps(ops: unknown[]) {
-    if (!canEdit.value) {
+// 所有草稿變更串行化（佇列），避免 blur 自動存與結構操作併發互相覆蓋
+let opQueue: Promise<unknown> = Promise.resolve();
+function mutate(ops: unknown[]) {
+    if (!canEdit.value || !ops.length) {
         return;
     }
 
-    run(async () => {
-        const r = await sendJSON(api.rag.chunks(documentId.value!), 'POST', {
-            lock_token: lockToken.value,
-            ops,
+    busy.value = true;
+    error.value = null;
+    opQueue = opQueue
+        .then(async () => {
+            const r = await sendJSON(
+                api.rag.chunks(documentId.value!),
+                'POST',
+                {
+                    lock_token: lockToken.value,
+                    ops,
+                },
+            );
+            chunks.value = r.chunks;
+            nearDups.value = r.near_duplicates ?? [];
+            snapshotChunks();
+        })
+        .catch((e) => {
+            error.value = e instanceof Error ? e.message : String(e);
+        })
+        .finally(() => {
+            busy.value = false;
         });
-        chunks.value = r.chunks;
-        nearDups.value = r.near_duplicates ?? [];
-    });
 }
-function saveChunk(c: Chunk) {
-    applyOps([
+// 離開欄位時自動存（內容/情境有變才送，避免無謂清掉向量快取）
+function saveChunkField(c: Chunk) {
+    const base = saved.value[c.index];
+
+    if (base && base.content === c.content && base.context === c.context) {
+        return;
+    }
+
+    mutate([
         { op: 'set_content', index: c.index, content: c.content },
         { op: 'set_context', index: c.index, context: c.context },
     ]);
 }
 function splitChunk(c: Chunk) {
     const at = Math.floor(c.content.length / 2);
-    applyOps([{ op: 'split', index: c.index, at }]);
+    mutate([{ op: 'split', index: c.index, at }]);
 }
 function mergeChunk(c: Chunk) {
-    applyOps([{ op: 'merge', index: c.index }]);
+    mutate([{ op: 'merge', index: c.index }]);
 }
 function deleteChunk(c: Chunk) {
-    applyOps([{ op: 'delete', index: c.index }]);
+    mutate([{ op: 'delete', index: c.index }]);
 }
 function runTest() {
     if (!testQuery.value.trim()) {
@@ -579,6 +621,14 @@ onMounted(() => {
                         {{ diff.added }} / 刪除 {{ diff.removed }}
                     </div>
                     <div class="ml-auto flex flex-wrap items-center gap-2">
+                        <button
+                            class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
+                            :disabled="busy"
+                            title="重新載入草稿（取得 Claude／他處經 MCP 的最新修改）"
+                            @click="refreshDraft"
+                        >
+                            🔄 重新載入
+                        </button>
                         <span
                             v-if="lockedByOther"
                             class="binary-label shrink-0 rounded bg-[var(--binary-surface-high)] px-2 py-1 text-[10px] whitespace-nowrap text-[var(--binary-tertiary)]"
@@ -692,20 +742,16 @@ onMounted(() => {
                             :disabled="!canEdit"
                             class="binary-input mb-2 text-xs"
                             placeholder="情境前綴(選填,Contextual Retrieval)"
+                            @blur="saveChunkField(c)"
                         />
                         <textarea
                             v-model="c.content"
                             :disabled="!canEdit"
                             rows="4"
                             class="binary-input w-full text-sm"
+                            @blur="saveChunkField(c)"
                         />
                         <div v-if="canEdit" class="mt-2 flex flex-wrap gap-2">
-                            <button
-                                class="binary-ghost-button px-3 py-1 text-[10px]"
-                                @click="saveChunk(c)"
-                            >
-                                儲存
-                            </button>
                             <button
                                 class="binary-ghost-button px-3 py-1 text-[10px]"
                                 @click="splitChunk(c)"
