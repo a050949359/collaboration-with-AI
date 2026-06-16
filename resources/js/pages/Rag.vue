@@ -248,6 +248,15 @@ function acquireLock() {
         lockedByOther.value = false;
     });
 }
+function copyToken() {
+    if (!lockToken.value) {
+        return;
+    }
+
+    navigator.clipboard?.writeText(lockToken.value);
+    committedInfo.value =
+        '已複製 lock token，可貼給 Claude（rag_resume）接手編輯。';
+}
 function releaseLock() {
     if (!lockToken.value) {
         return;
@@ -311,7 +320,7 @@ function doCommit() {
         const r = await sendJSON(api.rag.commit(documentId.value!), 'POST', {
             lock_token: lockToken.value,
         });
-        committedInfo.value = `已落庫:${r.chunks} 塊(本次 embed ${r.embedded} 塊)`;
+        committedInfo.value = `已儲存:${r.chunks} 塊(本次 embed ${r.embedded} 塊)`;
         showCommitModal.value = false;
         await loadChunks();
     });
@@ -569,45 +578,46 @@ onMounted(() => {
                         diff: 未變 {{ diff.unchanged }} / 新增
                         {{ diff.added }} / 刪除 {{ diff.removed }}
                     </div>
-                    <div class="ml-auto flex items-center gap-2">
+                    <div class="ml-auto flex flex-wrap items-center gap-2">
                         <span
                             v-if="lockedByOther"
-                            class="binary-label rounded bg-[var(--binary-surface-high)] px-2 py-1 text-[10px] text-[var(--binary-tertiary)]"
+                            class="binary-label shrink-0 rounded bg-[var(--binary-surface-high)] px-2 py-1 text-[10px] whitespace-nowrap text-[var(--binary-tertiary)]"
                         >
                             🔒 其他人編輯中
                         </span>
                         <button
                             v-if="!lockToken && !lockedByOther"
-                            class="binary-button px-3 py-1.5 text-xs"
+                            class="binary-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
                             @click="acquireLock"
                         >
                             🔒 上鎖編輯
                         </button>
                         <template v-if="lockToken">
-                            <code
-                                class="rounded bg-[var(--binary-surface-high)] px-2 py-1 text-[10px] text-[var(--binary-primary)]"
-                                :title="lockToken"
-                            >
-                                token:{{ lockToken.slice(0, 8) }}…
-                            </code>
                             <button
-                                class="binary-ghost-button px-3 py-1.5 text-xs"
+                                class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
+                                title="複製 lock token（可貼給 Claude 接手編輯）"
+                                @click="copyToken"
+                            >
+                                📋 複製 token
+                            </button>
+                            <button
+                                class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
                                 :disabled="busy"
                                 @click="reproposeForce"
                             >
                                 ↻ 重新切塊
                             </button>
                             <button
-                                class="binary-ghost-button px-3 py-1.5 text-xs"
+                                class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
                                 @click="releaseLock"
                             >
                                 🔓 解鎖
                             </button>
                             <button
-                                class="binary-button px-3 py-1.5 text-xs"
+                                class="binary-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
                                 @click="showCommitModal = true"
                             >
-                                落庫…
+                                儲存
                             </button>
                         </template>
                     </div>
@@ -729,7 +739,7 @@ onMounted(() => {
                     <h2
                         class="binary-display mb-3 text-lg font-bold text-[var(--binary-primary)]"
                     >
-                        落庫確認
+                        儲存確認
                     </h2>
                     <p class="mb-2 text-sm text-[var(--binary-text)]">
                         將把 <b>{{ chunks.length }}</b> 塊 embed 後寫入向量庫
@@ -758,7 +768,7 @@ onMounted(() => {
                             :disabled="busy"
                             @click="doCommit"
                         >
-                            確認落庫
+                            確認儲存
                         </button>
                     </div>
                 </div>
