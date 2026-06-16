@@ -46,12 +46,34 @@ interface TestHit {
     content: string;
     similarity: number;
 }
+interface DashDoc {
+    drive_file_id: string;
+    name: string;
+    status: string;
+    chunk_count: number;
+    committed_at: string | null;
+}
+interface DashKb {
+    id: number;
+    name: string;
+    collection: string;
+    embedding_model: string;
+    dimensions: number;
+    vector_count: number;
+    documents: DashDoc[];
+}
 
 type Step = 'files' | 'kb' | 'editor';
+type View = 'dashboard' | 'wizard';
 
+const view = ref<View>('dashboard');
 const step = ref<Step>('files');
 const error = ref<string | null>(null);
 const busy = ref(false);
+
+// dashboard
+const dash = ref<DashKb[]>([]);
+const dashTab = ref<'by_kb' | 'by_file'>('by_kb');
 
 // step 1
 const driveFiles = ref<DriveFile[]>([]);
@@ -469,9 +491,57 @@ function resetFlow() {
     committedInfo.value = null;
 }
 
-onMounted(() => {
+// ── dashboard / 視圖切換 ───────────────────────────────────
+function loadDashboard() {
+    run(async () => {
+        dash.value = (await getJSON(api.rag.dashboard())).data;
+    });
+}
+function enterWizard() {
+    resetFlow();
+    view.value = 'wizard';
     loadFiles();
     loadKbs();
+}
+function backToDashboard() {
+    resetFlow();
+    view.value = 'dashboard';
+    loadDashboard();
+}
+// 檔為主視角：把各庫文件依 drive_file_id 收攏
+const byFile = computed(() => {
+    const map = new Map<
+        string,
+        {
+            name: string;
+            in: { kb: string; chunk_count: number; status: string }[];
+        }
+    >();
+
+    for (const kb of dash.value) {
+        for (const d of kb.documents) {
+            const e = map.get(d.drive_file_id) ?? { name: d.name, in: [] };
+            e.in.push({
+                kb: kb.name,
+                chunk_count: d.chunk_count,
+                status: d.status,
+            });
+            map.set(d.drive_file_id, e);
+        }
+    }
+
+    return [...map.values()];
+});
+
+function docStatusLabel(s: string): string {
+    return { draft: '草稿', dirty: '⚠ 待更新', committed: '✓ 已落庫' }[s] ?? s;
+}
+function chunkTotal(docs: DashDoc[]): number {
+    return docs.reduce((sum, d) => sum + d.chunk_count, 0);
+}
+
+onMounted(() => {
+    loadDashboard();
 });
 </script>
 
@@ -493,45 +563,28 @@ onMounted(() => {
                 </p>
             </div>
 
-            <!-- Stepper -->
-            <div
-                class="binary-label mb-5 flex items-center gap-2 text-[10px] uppercase"
-            >
-                <span
-                    :class="
-                        step === 'files'
-                            ? 'text-[var(--binary-primary)]'
-                            : 'text-[var(--binary-outline)]'
-                    "
-                    >1 選檔</span
-                >
-                <span class="text-[var(--binary-outline-variant)]">/</span>
-                <span
-                    :class="
-                        step === 'kb'
-                            ? 'text-[var(--binary-primary)]'
-                            : 'text-[var(--binary-outline)]'
-                    "
-                    >2 選庫</span
-                >
-                <span class="text-[var(--binary-outline-variant)]">/</span>
-                <span
-                    :class="
-                        step === 'editor'
-                            ? 'text-[var(--binary-primary)]'
-                            : 'text-[var(--binary-outline)]'
-                    "
-                    >3 編輯</span
-                >
+            <!-- 視圖切換 -->
+            <div class="mb-5 flex items-center gap-4">
                 <button
-                    v-if="step !== 'files'"
-                    class="binary-ghost-button ml-auto px-3 py-1 text-[10px]"
-                    @click="resetFlow"
+                    class="binary-label text-[10px] uppercase"
+                    :class="
+                        view === 'dashboard'
+                            ? 'text-[var(--binary-primary)]'
+                            : 'text-[var(--binary-outline)]'
+                    "
+                    @click="backToDashboard"
                 >
-                    重來
+                    總覽
+                </button>
+                <button
+                    class="binary-button ml-auto px-4 py-1.5 text-xs whitespace-nowrap"
+                    @click="enterWizard"
+                >
+                    ＋ 新增/編輯文件
                 </button>
             </div>
 
+            <!-- 共用提示 -->
             <div
                 v-if="error"
                 class="mb-4 rounded-lg border border-[var(--binary-tertiary)] px-4 py-2 text-sm text-[var(--binary-tertiary)]"
@@ -545,398 +598,597 @@ onMounted(() => {
                 {{ committedInfo }}
             </div>
 
-            <!-- Step 1: files -->
-            <div v-if="step === 'files'" class="space-y-2">
-                <p
-                    v-if="!driveFiles.length && !busy"
-                    class="text-sm text-[var(--binary-outline)]"
+            <!-- ░░ 總覽 dashboard ░░ -->
+            <div v-if="view === 'dashboard'">
+                <div
+                    class="mb-4 flex items-center gap-6 border-b border-[var(--binary-outline-variant)]"
                 >
-                    Drive 資料夾沒有可萃取的檔案(或尚未設定
-                    RAG_DRIVE_FOLDER_ID)。
-                </p>
-                <button
-                    v-for="f in driveFiles"
-                    :key="f.id"
-                    class="binary-glass flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition hover:border-[var(--binary-primary)]"
-                    @click="pickFile(f)"
-                >
-                    <div>
-                        <div class="text-sm text-[var(--binary-text)]">
-                            {{ f.name }}
-                        </div>
-                        <div
-                            class="binary-label text-[10px] text-[var(--binary-outline)]"
-                        >
-                            {{ f.mime_type }}
-                        </div>
-                    </div>
-                    <span
-                        class="binary-label text-[10px] text-[var(--binary-primary)]"
-                        >選取 →</span
+                    <button
+                        class="binary-label border-b-2 pb-2.5 text-[10px] uppercase transition"
+                        :class="
+                            dashTab === 'by_kb'
+                                ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                                : 'border-transparent text-[var(--binary-outline)]'
+                        "
+                        @click="dashTab = 'by_kb'"
                     >
-                </button>
-            </div>
-
-            <!-- Step 2: knowledge base -->
-            <div v-else-if="step === 'kb'" class="space-y-4">
-                <div class="text-sm text-[var(--binary-text-muted)]">
-                    檔案：<span class="text-[var(--binary-text)]">{{
-                        selectedFile?.name
-                    }}</span>
+                        庫為主
+                    </button>
+                    <button
+                        class="binary-label border-b-2 pb-2.5 text-[10px] uppercase transition"
+                        :class="
+                            dashTab === 'by_file'
+                                ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                                : 'border-transparent text-[var(--binary-outline)]'
+                        "
+                        @click="dashTab = 'by_file'"
+                    >
+                        檔為主
+                    </button>
                 </div>
 
-                <!-- 既有庫（在上） -->
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span
-                            class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
-                        >
-                            既有知識庫
-                        </span>
-                        <div v-if="kbs.length" class="flex items-center gap-2">
-                            <button
-                                v-if="manageMode && selectedKbIds.length"
-                                class="binary-label rounded px-2 py-1 text-[10px] text-[var(--binary-tertiary)] uppercase hover:bg-[var(--binary-surface-high)]"
-                                :disabled="busy"
-                                @click="deleteSelectedKbs"
+                <p
+                    v-if="!dash.length && !busy"
+                    class="text-sm text-[var(--binary-outline)]"
+                >
+                    還沒有知識庫，按「＋ 新增/編輯文件」開始。
+                </p>
+
+                <!-- 庫為主 -->
+                <div v-if="dashTab === 'by_kb'" class="space-y-4">
+                    <div
+                        v-for="kb in dash"
+                        :key="kb.id"
+                        class="binary-glass rounded-xl p-4"
+                    >
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <div
+                                    class="text-sm font-bold text-[var(--binary-text)]"
+                                >
+                                    {{ kb.name }}
+                                </div>
+                                <div
+                                    class="binary-label text-[10px] text-[var(--binary-outline)]"
+                                >
+                                    {{ kb.embedding_model }} ·
+                                    {{ kb.dimensions }}維
+                                </div>
+                            </div>
+                            <div
+                                class="binary-label shrink-0 text-right text-[10px] text-[var(--binary-outline)]"
                             >
-                                🗑 刪除選取 ({{ selectedKbIds.length }})
-                            </button>
-                            <button
-                                class="binary-label rounded px-2 py-1 text-[10px] uppercase hover:bg-[var(--binary-surface-high)]"
-                                :class="
-                                    manageMode
-                                        ? 'text-[var(--binary-primary)]'
-                                        : 'text-[var(--binary-outline)]'
-                                "
-                                @click="toggleManage"
+                                向量庫 {{ kb.vector_count }} 塊 · 目前
+                                {{ chunkTotal(kb.documents) }} 塊
+                            </div>
+                        </div>
+                        <div class="mt-3 space-y-1">
+                            <div
+                                v-for="d in kb.documents"
+                                :key="d.drive_file_id"
+                                class="flex items-center justify-between gap-3 border-t border-[var(--binary-outline-variant)] pt-1.5 text-xs"
                             >
-                                {{ manageMode ? '完成' : '管理' }}
-                            </button>
+                                <span
+                                    class="min-w-0 truncate text-[var(--binary-text)]"
+                                    >{{ d.name }}</span
+                                >
+                                <span
+                                    class="binary-label flex shrink-0 items-center gap-2 text-[10px]"
+                                >
+                                    <span
+                                        :class="
+                                            d.status === 'dirty'
+                                                ? 'text-[var(--binary-tertiary)]'
+                                                : d.status === 'committed'
+                                                  ? 'text-[var(--binary-primary)]'
+                                                  : 'text-[var(--binary-outline)]'
+                                        "
+                                        >{{ docStatusLabel(d.status) }}</span
+                                    >
+                                    <span class="text-[var(--binary-outline)]"
+                                        >· {{ d.chunk_count }} 塊</span
+                                    >
+                                </span>
+                            </div>
+                            <p
+                                v-if="!kb.documents.length"
+                                class="text-[10px] text-[var(--binary-outline)]"
+                            >
+                                （無文件）
+                            </p>
                         </div>
                     </div>
+                </div>
+
+                <!-- 檔為主 -->
+                <div v-else class="space-y-3">
+                    <div
+                        v-for="f in byFile"
+                        :key="f.name"
+                        class="binary-glass rounded-xl p-4"
+                    >
+                        <div class="text-sm text-[var(--binary-text)]">
+                            {{ f.name }}
+                            <span
+                                class="binary-label text-[10px] text-[var(--binary-outline)]"
+                                >· 在 {{ f.in.length }} 個庫</span
+                            >
+                        </div>
+                        <div class="mt-2 space-y-1">
+                            <div
+                                v-for="(loc, i) in f.in"
+                                :key="i"
+                                class="flex items-center justify-between gap-3 text-xs"
+                            >
+                                <span class="text-[var(--binary-text-muted)]">{{
+                                    loc.kb
+                                }}</span>
+                                <span
+                                    class="binary-label flex shrink-0 items-center gap-2 text-[10px]"
+                                >
+                                    <span
+                                        :class="
+                                            loc.status === 'dirty'
+                                                ? 'text-[var(--binary-tertiary)]'
+                                                : loc.status === 'committed'
+                                                  ? 'text-[var(--binary-primary)]'
+                                                  : 'text-[var(--binary-outline)]'
+                                        "
+                                        >{{ docStatusLabel(loc.status) }}</span
+                                    >
+                                    <span class="text-[var(--binary-outline)]"
+                                        >· {{ loc.chunk_count }} 塊</span
+                                    >
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ░░ 精靈 wizard ░░ -->
+            <div v-if="view === 'wizard'">
+                <!-- Stepper -->
+                <div
+                    class="binary-label mb-5 flex items-center gap-2 text-[10px] uppercase"
+                >
+                    <span
+                        :class="
+                            step === 'files'
+                                ? 'text-[var(--binary-primary)]'
+                                : 'text-[var(--binary-outline)]'
+                        "
+                        >1 選檔</span
+                    >
+                    <span class="text-[var(--binary-outline-variant)]">/</span>
+                    <span
+                        :class="
+                            step === 'kb'
+                                ? 'text-[var(--binary-primary)]'
+                                : 'text-[var(--binary-outline)]'
+                        "
+                        >2 選庫</span
+                    >
+                    <span class="text-[var(--binary-outline-variant)]">/</span>
+                    <span
+                        :class="
+                            step === 'editor'
+                                ? 'text-[var(--binary-primary)]'
+                                : 'text-[var(--binary-outline)]'
+                        "
+                        >3 編輯</span
+                    >
+                    <button
+                        v-if="step !== 'files'"
+                        class="binary-ghost-button ml-auto px-3 py-1 text-[10px]"
+                        @click="resetFlow"
+                    >
+                        重來
+                    </button>
+                </div>
+
+                <!-- Step 1: files -->
+                <div v-if="step === 'files'" class="space-y-2">
                     <p
-                        v-if="!kbs.length"
+                        v-if="!driveFiles.length && !busy"
                         class="text-sm text-[var(--binary-outline)]"
                     >
-                        還沒有知識庫，先在下方建立一個。
+                        Drive 資料夾沒有可萃取的檔案(或尚未設定
+                        RAG_DRIVE_FOLDER_ID)。
                     </p>
                     <button
-                        v-for="kb in kbs"
-                        :key="kb.id"
-                        class="binary-glass flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition hover:border-[var(--binary-primary)]"
-                        :class="
-                            manageMode && selectedKbIds.includes(kb.id)
-                                ? 'border-[var(--binary-tertiary)]'
-                                : ''
-                        "
-                        :disabled="busy"
-                        @click="
-                            manageMode ? toggleKbSelect(kb.id) : chooseKb(kb)
-                        "
+                        v-for="f in driveFiles"
+                        :key="f.id"
+                        class="binary-glass flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition hover:border-[var(--binary-primary)]"
+                        @click="pickFile(f)"
                     >
-                        <span
-                            v-if="manageMode"
-                            class="shrink-0 text-sm"
-                            :class="
-                                selectedKbIds.includes(kb.id)
-                                    ? 'text-[var(--binary-tertiary)]'
-                                    : 'text-[var(--binary-outline)]'
-                            "
-                        >
-                            {{ selectedKbIds.includes(kb.id) ? '☑' : '☐' }}
-                        </span>
-                        <div class="min-w-0 flex-1">
+                        <div>
                             <div class="text-sm text-[var(--binary-text)]">
-                                {{ kb.name }}
+                                {{ f.name }}
                             </div>
                             <div
                                 class="binary-label text-[10px] text-[var(--binary-outline)]"
                             >
-                                模型 {{ kb.collection.split('__')[1] }}
-                            </div>
-                            <div
-                                v-if="fileStatusLabel(kb.file_status)"
-                                class="binary-label mt-0.5 text-[10px]"
-                                :class="
-                                    kb.file_status === 'dirty'
-                                        ? 'text-[var(--binary-tertiary)]'
-                                        : 'text-[var(--binary-primary)]'
-                                "
-                            >
-                                {{ fileStatusLabel(kb.file_status) }}
+                                {{ f.mime_type }}
                             </div>
                         </div>
                         <span
-                            class="binary-label shrink-0 text-[10px] text-[var(--binary-outline)]"
+                            class="binary-label text-[10px] text-[var(--binary-primary)]"
+                            >選取 →</span
                         >
-                            {{ kb.committed_count }} 已落庫<template
-                                v-if="kb.draft_count"
-                            >
-                                · {{ kb.draft_count }} 草稿</template
-                            >
-                        </span>
                     </button>
                 </div>
 
-                <!-- 建立新庫（在下） -->
-                <div class="binary-glass rounded-xl p-4">
-                    <div
-                        class="binary-label mb-2 text-[10px] text-[var(--binary-outline)] uppercase"
-                    >
-                        建立新庫
+                <!-- Step 2: knowledge base -->
+                <div v-else-if="step === 'kb'" class="space-y-4">
+                    <div class="text-sm text-[var(--binary-text-muted)]">
+                        檔案：<span class="text-[var(--binary-text)]">{{
+                            selectedFile?.name
+                        }}</span>
                     </div>
-                    <div class="flex gap-2">
-                        <input
-                            v-model="newKbName"
-                            class="binary-input min-w-0 flex-1"
-                            placeholder="知識庫名稱（如：技術手冊）"
-                            @keyup.enter="createKb"
-                        />
-                        <button
-                            class="binary-button w-auto shrink-0 px-4 whitespace-nowrap"
-                            :disabled="busy"
-                            @click="createKb"
+
+                    <!-- 既有庫（在上） -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span
+                                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                            >
+                                既有知識庫
+                            </span>
+                            <div
+                                v-if="kbs.length"
+                                class="flex items-center gap-2"
+                            >
+                                <button
+                                    v-if="manageMode && selectedKbIds.length"
+                                    class="binary-label rounded px-2 py-1 text-[10px] text-[var(--binary-tertiary)] uppercase hover:bg-[var(--binary-surface-high)]"
+                                    :disabled="busy"
+                                    @click="deleteSelectedKbs"
+                                >
+                                    🗑 刪除選取 ({{ selectedKbIds.length }})
+                                </button>
+                                <button
+                                    class="binary-label rounded px-2 py-1 text-[10px] uppercase hover:bg-[var(--binary-surface-high)]"
+                                    :class="
+                                        manageMode
+                                            ? 'text-[var(--binary-primary)]'
+                                            : 'text-[var(--binary-outline)]'
+                                    "
+                                    @click="toggleManage"
+                                >
+                                    {{ manageMode ? '完成' : '管理' }}
+                                </button>
+                            </div>
+                        </div>
+                        <p
+                            v-if="!kbs.length"
+                            class="text-sm text-[var(--binary-outline)]"
                         >
-                            建立並使用
+                            還沒有知識庫，先在下方建立一個。
+                        </p>
+                        <button
+                            v-for="kb in kbs"
+                            :key="kb.id"
+                            class="binary-glass flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition hover:border-[var(--binary-primary)]"
+                            :class="
+                                manageMode && selectedKbIds.includes(kb.id)
+                                    ? 'border-[var(--binary-tertiary)]'
+                                    : ''
+                            "
+                            :disabled="busy"
+                            @click="
+                                manageMode
+                                    ? toggleKbSelect(kb.id)
+                                    : chooseKb(kb)
+                            "
+                        >
+                            <span
+                                v-if="manageMode"
+                                class="shrink-0 text-sm"
+                                :class="
+                                    selectedKbIds.includes(kb.id)
+                                        ? 'text-[var(--binary-tertiary)]'
+                                        : 'text-[var(--binary-outline)]'
+                                "
+                            >
+                                {{ selectedKbIds.includes(kb.id) ? '☑' : '☐' }}
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-sm text-[var(--binary-text)]">
+                                    {{ kb.name }}
+                                </div>
+                                <div
+                                    class="binary-label text-[10px] text-[var(--binary-outline)]"
+                                >
+                                    模型 {{ kb.collection.split('__')[1] }}
+                                </div>
+                                <div
+                                    v-if="fileStatusLabel(kb.file_status)"
+                                    class="binary-label mt-0.5 text-[10px]"
+                                    :class="
+                                        kb.file_status === 'dirty'
+                                            ? 'text-[var(--binary-tertiary)]'
+                                            : 'text-[var(--binary-primary)]'
+                                    "
+                                >
+                                    {{ fileStatusLabel(kb.file_status) }}
+                                </div>
+                            </div>
+                            <span
+                                class="binary-label shrink-0 text-[10px] text-[var(--binary-outline)]"
+                            >
+                                {{ kb.committed_count }} 已落庫<template
+                                    v-if="kb.draft_count"
+                                >
+                                    · {{ kb.draft_count }} 草稿</template
+                                >
+                            </span>
                         </button>
+                    </div>
+
+                    <!-- 建立新庫（在下） -->
+                    <div class="binary-glass rounded-xl p-4">
+                        <div
+                            class="binary-label mb-2 text-[10px] text-[var(--binary-outline)] uppercase"
+                        >
+                            建立新庫
+                        </div>
+                        <div class="flex gap-2">
+                            <input
+                                v-model="newKbName"
+                                class="binary-input min-w-0 flex-1"
+                                placeholder="知識庫名稱（如：技術手冊）"
+                                @keyup.enter="createKb"
+                            />
+                            <button
+                                class="binary-button w-auto shrink-0 px-4 whitespace-nowrap"
+                                :disabled="busy"
+                                @click="createKb"
+                            >
+                                建立並使用
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Step 3: editor -->
-            <div v-else class="space-y-4">
-                <!-- toolbar -->
-                <div
-                    class="binary-glass flex flex-wrap items-center gap-3 rounded-xl px-4 py-3"
-                >
-                    <div class="text-sm text-[var(--binary-text)]">
-                        {{ selectedKb?.name }} · {{ selectedFile?.name }}
-                    </div>
+                <!-- Step 3: editor -->
+                <div v-else class="space-y-4">
+                    <!-- toolbar -->
                     <div
-                        v-if="diff"
-                        class="binary-label text-[10px] text-[var(--binary-outline)]"
+                        class="binary-glass flex flex-wrap items-center gap-3 rounded-xl px-4 py-3"
                     >
-                        diff: 未變 {{ diff.unchanged }} / 新增
-                        {{ diff.added }} / 刪除 {{ diff.removed }}
-                    </div>
-                    <div class="ml-auto flex flex-wrap items-center gap-2">
-                        <button
-                            class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
-                            :disabled="busy"
-                            title="同步草稿（取得 Claude／他處經 MCP 的最新修改）"
-                            @click="refreshDraft"
+                        <div class="text-sm text-[var(--binary-text)]">
+                            {{ selectedKb?.name }} · {{ selectedFile?.name }}
+                        </div>
+                        <div
+                            v-if="diff"
+                            class="binary-label text-[10px] text-[var(--binary-outline)]"
                         >
-                            🔄 同步草稿
-                        </button>
-                        <span
-                            v-if="lockedByOther"
-                            class="binary-label shrink-0 rounded bg-[var(--binary-surface-high)] px-2 py-1 text-[10px] whitespace-nowrap text-[var(--binary-tertiary)]"
-                        >
-                            🔒 其他人編輯中
-                        </span>
-                        <button
-                            v-if="!lockToken && !lockedByOther"
-                            class="binary-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
-                            @click="acquireLock"
-                        >
-                            🔒 上鎖編輯
-                        </button>
-                        <template v-if="lockToken">
-                            <button
-                                class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
-                                title="複製 lock token（可貼給 Claude 接手編輯）"
-                                @click="copyToken"
-                            >
-                                📋 複製 token
-                            </button>
+                            diff: 未變 {{ diff.unchanged }} / 新增
+                            {{ diff.added }} / 刪除 {{ diff.removed }}
+                        </div>
+                        <div class="ml-auto flex flex-wrap items-center gap-2">
                             <button
                                 class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
                                 :disabled="busy"
-                                @click="reproposeForce"
+                                title="同步草稿（取得 Claude／他處經 MCP 的最新修改）"
+                                @click="refreshDraft"
                             >
-                                ↻ 重新切塊
+                                🔄 同步草稿
                             </button>
-                            <button
-                                class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
-                                @click="releaseLock"
+                            <span
+                                v-if="lockedByOther"
+                                class="binary-label shrink-0 rounded bg-[var(--binary-surface-high)] px-2 py-1 text-[10px] whitespace-nowrap text-[var(--binary-tertiary)]"
                             >
-                                🔓 解鎖
-                            </button>
+                                🔒 其他人編輯中
+                            </span>
                             <button
+                                v-if="!lockToken && !lockedByOther"
                                 class="binary-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
-                                @click="showCommitModal = true"
+                                @click="acquireLock"
                             >
-                                儲存
+                                🔒 上鎖編輯
                             </button>
-                        </template>
+                            <template v-if="lockToken">
+                                <button
+                                    class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
+                                    title="複製 lock token（可貼給 Claude 接手編輯）"
+                                    @click="copyToken"
+                                >
+                                    📋 複製 token
+                                </button>
+                                <button
+                                    class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
+                                    :disabled="busy"
+                                    @click="reproposeForce"
+                                >
+                                    ↻ 重新切塊
+                                </button>
+                                <button
+                                    class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
+                                    @click="releaseLock"
+                                >
+                                    🔓 解鎖
+                                </button>
+                                <button
+                                    class="binary-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
+                                    @click="showCommitModal = true"
+                                >
+                                    儲存
+                                </button>
+                            </template>
+                        </div>
                     </div>
-                </div>
 
-                <!-- test query -->
-                <div
-                    class="binary-glass flex items-center gap-2 rounded-xl px-4 py-3"
-                >
-                    <input
-                        v-model="testQuery"
-                        class="binary-input flex-1"
-                        placeholder="測試查詢:打一句話看會撈到哪些塊"
-                        @keyup.enter="runTest"
-                    />
-                    <button
-                        class="binary-ghost-button px-4 py-2 text-xs"
-                        :disabled="busy"
-                        @click="runTest"
-                    >
-                        測試
-                    </button>
-                </div>
-
-                <!-- near-dup warning -->
-                <div
-                    v-if="nearDups.length"
-                    class="rounded-lg border border-[var(--binary-tertiary)] px-4 py-2 text-xs text-[var(--binary-tertiary)]"
-                >
-                    ⚠ 近似重複:
-                    <span v-for="(d, i) in nearDups" :key="i"
-                        >#{{ d.a }}↔#{{ d.b }} ({{ d.similarity }})
-                    </span>
-                </div>
-
-                <!-- chunk cards -->
-                <div class="space-y-3">
+                    <!-- test query -->
                     <div
-                        v-for="c in chunks"
-                        :key="c.index"
-                        class="rounded-xl border bg-[var(--binary-surface-container)] p-4"
-                        :class="
-                            hitFor(c.index)
-                                ? 'border-[var(--binary-primary)]'
-                                : 'border-[var(--binary-outline-variant)]'
-                        "
+                        class="binary-glass flex items-center gap-2 rounded-xl px-4 py-3"
                     >
-                        <div
-                            class="binary-label mb-2 flex items-center gap-3 text-[10px] text-[var(--binary-outline)]"
-                        >
-                            <span>#{{ c.index }}</span>
-                            <span>{{ c.chars }} 字</span>
-                            <span
-                                :class="
-                                    c.embedded
-                                        ? 'text-[var(--binary-primary)]'
-                                        : ''
-                                "
-                            >
-                                {{ c.embedded ? '已向量' : '未向量' }}
-                            </span>
-                            <span
-                                v-if="hitFor(c.index)"
-                                class="ml-auto text-[var(--binary-primary)]"
-                            >
-                                命中 sim
-                                {{ hitFor(c.index)!.similarity.toFixed(3) }}
-                            </span>
-                        </div>
                         <input
-                            v-model="c.context"
-                            :disabled="!canEdit"
-                            class="binary-input mb-2 text-xs"
-                            placeholder="情境前綴(選填,Contextual Retrieval)"
-                            @blur="saveChunkField(c)"
+                            v-model="testQuery"
+                            class="binary-input flex-1"
+                            placeholder="測試查詢:打一句話看會撈到哪些塊"
+                            @keyup.enter="runTest"
                         />
-                        <textarea
-                            v-model="c.content"
-                            :disabled="!canEdit"
-                            rows="4"
-                            class="binary-input w-full text-sm"
-                            @blur="saveChunkField(c)"
-                            @click="trackCaret(c, $event)"
-                            @keyup="trackCaret(c, $event)"
-                            @select="trackCaret(c, $event)"
-                        />
-                        <div v-if="canEdit" class="mt-2 flex flex-wrap gap-2">
-                            <button
-                                v-if="c.index > 0"
-                                class="binary-ghost-button px-3 py-1 text-[10px]"
-                                @click="mergeUp(c)"
+                        <button
+                            class="binary-ghost-button px-4 py-2 text-xs"
+                            :disabled="busy"
+                            @click="runTest"
+                        >
+                            測試
+                        </button>
+                    </div>
+
+                    <!-- near-dup warning -->
+                    <div
+                        v-if="nearDups.length"
+                        class="rounded-lg border border-[var(--binary-tertiary)] px-4 py-2 text-xs text-[var(--binary-tertiary)]"
+                    >
+                        ⚠ 近似重複:
+                        <span v-for="(d, i) in nearDups" :key="i"
+                            >#{{ d.a }}↔#{{ d.b }} ({{ d.similarity }})
+                        </span>
+                    </div>
+
+                    <!-- chunk cards -->
+                    <div class="space-y-3">
+                        <div
+                            v-for="c in chunks"
+                            :key="c.index"
+                            class="rounded-xl border bg-[var(--binary-surface-container)] p-4"
+                            :class="
+                                hitFor(c.index)
+                                    ? 'border-[var(--binary-primary)]'
+                                    : 'border-[var(--binary-outline-variant)]'
+                            "
+                        >
+                            <div
+                                class="binary-label mb-2 flex items-center gap-3 text-[10px] text-[var(--binary-outline)]"
                             >
-                                {{
-                                    cursorPos(c) !== null
-                                        ? '↑ 併前半'
-                                        : '↑ 整塊併上'
-                                }}
-                            </button>
-                            <button
-                                class="binary-ghost-button px-3 py-1 text-[10px] disabled:opacity-40"
-                                :disabled="cursorPos(c) === null"
-                                title="把游標點在要切開的位置再按"
-                                @click="splitChunk(c)"
+                                <span>#{{ c.index }}</span>
+                                <span>{{ c.chars }} 字</span>
+                                <span
+                                    :class="
+                                        c.embedded
+                                            ? 'text-[var(--binary-primary)]'
+                                            : ''
+                                    "
+                                >
+                                    {{ c.embedded ? '已向量' : '未向量' }}
+                                </span>
+                                <span
+                                    v-if="hitFor(c.index)"
+                                    class="ml-auto text-[var(--binary-primary)]"
+                                >
+                                    命中 sim
+                                    {{ hitFor(c.index)!.similarity.toFixed(3) }}
+                                </span>
+                            </div>
+                            <input
+                                v-model="c.context"
+                                :disabled="!canEdit"
+                                class="binary-input mb-2 text-xs"
+                                placeholder="情境前綴(選填,Contextual Retrieval)"
+                                @blur="saveChunkField(c)"
+                            />
+                            <textarea
+                                v-model="c.content"
+                                :disabled="!canEdit"
+                                rows="4"
+                                class="binary-input w-full text-sm"
+                                @blur="saveChunkField(c)"
+                                @click="trackCaret(c, $event)"
+                                @keyup="trackCaret(c, $event)"
+                                @select="trackCaret(c, $event)"
+                            />
+                            <div
+                                v-if="canEdit"
+                                class="mt-2 flex flex-wrap gap-2"
                             >
-                                ✂ 分割
-                            </button>
-                            <button
-                                v-if="!isLast(c)"
-                                class="binary-ghost-button px-3 py-1 text-[10px]"
-                                @click="mergeDown(c)"
-                            >
-                                {{
-                                    cursorPos(c) !== null
-                                        ? '併後半 ↓'
-                                        : '整塊併下 ↓'
-                                }}
-                            </button>
-                            <button
-                                class="binary-ghost-button px-3 py-1 text-[10px] text-[var(--binary-tertiary)]"
-                                @click="deleteChunk(c)"
-                            >
-                                🗑 刪除
-                            </button>
+                                <button
+                                    v-if="c.index > 0"
+                                    class="binary-ghost-button px-3 py-1 text-[10px]"
+                                    @click="mergeUp(c)"
+                                >
+                                    {{
+                                        cursorPos(c) !== null
+                                            ? '↑ 併前半'
+                                            : '↑ 整塊併上'
+                                    }}
+                                </button>
+                                <button
+                                    class="binary-ghost-button px-3 py-1 text-[10px] disabled:opacity-40"
+                                    :disabled="cursorPos(c) === null"
+                                    title="把游標點在要切開的位置再按"
+                                    @click="splitChunk(c)"
+                                >
+                                    ✂ 分割
+                                </button>
+                                <button
+                                    v-if="!isLast(c)"
+                                    class="binary-ghost-button px-3 py-1 text-[10px]"
+                                    @click="mergeDown(c)"
+                                >
+                                    {{
+                                        cursorPos(c) !== null
+                                            ? '併後半 ↓'
+                                            : '整塊併下 ↓'
+                                    }}
+                                </button>
+                                <button
+                                    class="binary-ghost-button px-3 py-1 text-[10px] text-[var(--binary-tertiary)]"
+                                    @click="deleteChunk(c)"
+                                >
+                                    🗑 刪除
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- commit confirmation modal -->
-            <div
-                v-if="showCommitModal"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-                @click.self="showCommitModal = false"
-            >
-                <div class="binary-glass w-full max-w-lg rounded-xl p-6">
-                    <h2
-                        class="binary-display mb-3 text-lg font-bold text-[var(--binary-primary)]"
-                    >
-                        儲存確認
-                    </h2>
-                    <p class="mb-2 text-sm text-[var(--binary-text)]">
-                        將把 <b>{{ chunks.length }}</b> 塊 embed 後寫入向量庫
-                        <code class="text-[var(--binary-primary)]">{{
-                            selectedKb?.collection
-                        }}</code
-                        >。
-                    </p>
-                    <p
-                        v-if="diff"
-                        class="mb-4 text-xs text-[var(--binary-text-muted)]"
-                    >
-                        對比上次:未變 {{ diff.unchanged }} / 新增
-                        {{ diff.added }} / 刪除
-                        {{ diff.removed }}(未變塊重用快取,不重 embed)。
-                    </p>
-                    <div class="flex justify-end gap-2">
-                        <button
-                            class="binary-ghost-button px-4 py-2 text-sm"
-                            @click="showCommitModal = false"
+                <!-- commit confirmation modal -->
+                <div
+                    v-if="showCommitModal"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    @click.self="showCommitModal = false"
+                >
+                    <div class="binary-glass w-full max-w-lg rounded-xl p-6">
+                        <h2
+                            class="binary-display mb-3 text-lg font-bold text-[var(--binary-primary)]"
                         >
-                            取消
-                        </button>
-                        <button
-                            class="binary-button px-4 py-2 text-sm"
-                            :disabled="busy"
-                            @click="doCommit"
+                            儲存確認
+                        </h2>
+                        <p class="mb-2 text-sm text-[var(--binary-text)]">
+                            將把 <b>{{ chunks.length }}</b> 塊 embed
+                            後寫入向量庫
+                            <code class="text-[var(--binary-primary)]">{{
+                                selectedKb?.collection
+                            }}</code
+                            >。
+                        </p>
+                        <p
+                            v-if="diff"
+                            class="mb-4 text-xs text-[var(--binary-text-muted)]"
                         >
-                            確認儲存
-                        </button>
+                            對比上次:未變 {{ diff.unchanged }} / 新增
+                            {{ diff.added }} / 刪除
+                            {{ diff.removed }}(未變塊重用快取,不重 embed)。
+                        </p>
+                        <div class="flex justify-end gap-2">
+                            <button
+                                class="binary-ghost-button px-4 py-2 text-sm"
+                                @click="showCommitModal = false"
+                            >
+                                取消
+                            </button>
+                            <button
+                                class="binary-button px-4 py-2 text-sm"
+                                :disabled="busy"
+                                @click="doCommit"
+                            >
+                                確認儲存
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

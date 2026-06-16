@@ -263,6 +263,7 @@ export const api = {
     },
 
     rag: {
+        dashboard: () => '/api/v1/rag/dashboard',
         driveIndex: () => '/api/v1/rag/drive-files',
         kbs: (driveFileId?: string) =>
             driveFileId

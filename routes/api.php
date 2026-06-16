@@ -281,6 +281,7 @@ Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () 
 
 // RAG 互動式知識庫(前端用,session 驗證)
 Route::middleware('auth:sanctum')->prefix('v1/rag')->group(function () {
+    Route::get('/dashboard', [RagKnowledgeBaseController::class, 'dashboard']);
     Route::get('/drive-files', [RagKnowledgeBaseController::class, 'driveIndex']);
     Route::get('/kbs', [RagKnowledgeBaseController::class, 'index']);
     Route::post('/kbs', [RagKnowledgeBaseController::class, 'store']);

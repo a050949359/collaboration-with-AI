@@ -66,6 +66,39 @@ class KnowledgeBaseController extends Controller
         return response()->json(['id' => $kb->id, 'collection' => $kb->collectionName()], 201);
     }
 
+    /**
+     * 總覽 dashboard：每個庫 → 文件 → 塊數 + 狀態 + 向量庫實際塊數（揪不同步）。
+     * 資料全在 DB，向量數一次 vecgen stats（collections 欄含全部 collection）。
+     */
+    public function dashboard(): JsonResponse
+    {
+        $kbs = KnowledgeBase::where('user_id', Auth::id())
+            ->with(['documents' => fn ($q) => $q->withCount('chunks')->orderBy('name')])
+            ->orderByDesc('created_at')
+            ->get();
+
+        // 一次拿到所有 collection 的向量數
+        $vectorCounts = $kbs->isNotEmpty() ? ($this->rag->stats($kbs->first())['collections'] ?? []) : [];
+
+        $data = $kbs->map(fn (KnowledgeBase $kb) => [
+            'id' => $kb->id,
+            'name' => $kb->name,
+            'collection' => $kb->collectionName(),
+            'embedding_model' => $kb->embedding_model,
+            'dimensions' => $kb->dimensions,
+            'vector_count' => $vectorCounts[$kb->collectionName()] ?? 0,
+            'documents' => $kb->documents->map(fn (Document $d) => [
+                'drive_file_id' => $d->drive_file_id,
+                'name' => $d->name,
+                'status' => $d->status->value,
+                'chunk_count' => $d->chunks_count,
+                'committed_at' => $d->committed_at?->toIso8601String(),
+            ]),
+        ]);
+
+        return response()->json(['data' => $data]);
+    }
+
     public function destroy(KnowledgeBase $knowledgeBase): JsonResponse
     {
         abort_unless($knowledgeBase->user_id === Auth::id(), 403);
