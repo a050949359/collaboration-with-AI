@@ -22,14 +22,18 @@ class DocumentController extends Controller
     public function store(Request $request, KnowledgeBase $knowledgeBase): JsonResponse
     {
         abort_unless($knowledgeBase->user_id === Auth::id(), 403);
-        $data = $request->validate(['drive_file_id' => 'required|string']);
+        $data = $request->validate([
+            'drive_file_id' => 'required|string',
+            'force' => 'nullable|boolean',
+        ]);
 
-        $r = $this->rag->proposeDraftByFileId($knowledgeBase, $data['drive_file_id']);
+        $r = $this->rag->proposeDraftByFileId($knowledgeBase, $data['drive_file_id'], $request->boolean('force'));
 
         return response()->json([
             'document_id' => $r['document']->id,
             'chunks' => $r['chunks'],
             'diff' => $r['diff'],
+            'loaded' => $r['loaded'],
         ], 201);
     }
 

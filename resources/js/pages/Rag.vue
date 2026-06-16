@@ -161,8 +161,39 @@ function chooseKb(kb: Kb) {
         });
         documentId.value = r.document_id;
         diff.value = r.diff;
+        committedInfo.value = r.loaded
+            ? '已載入此檔既有草稿（未覆蓋）。若 Drive 上已更新，可按「重新切塊」。'
+            : null;
         await loadChunks();
         step.value = 'editor';
+    });
+}
+
+// 強制從 Drive 重新抽取重切（會覆蓋現有草稿編輯）—— 需使用者確認
+function reproposeForce() {
+    if (
+        !selectedKb.value ||
+        !selectedFile.value ||
+        !confirm(
+            '重新切塊會從 Drive 重抽並覆蓋現有草稿（含手填 context），確定？',
+        )
+    ) {
+        return;
+    }
+
+    run(async () => {
+        const r = await sendJSON(
+            api.rag.documents(selectedKb.value!.id),
+            'POST',
+            {
+                drive_file_id: selectedFile.value!.id,
+                force: true,
+            },
+        );
+        documentId.value = r.document_id;
+        diff.value = r.diff;
+        committedInfo.value = `已重新切塊：未變 ${r.diff.unchanged} / 新增 ${r.diff.added} / 刪除 ${r.diff.removed}`;
+        await loadChunks();
     });
 }
 
@@ -480,6 +511,13 @@ onMounted(() => {
                             >
                                 token:{{ lockToken.slice(0, 8) }}…
                             </code>
+                            <button
+                                class="binary-ghost-button px-3 py-1.5 text-xs"
+                                :disabled="busy"
+                                @click="reproposeForce"
+                            >
+                                ↻ 重新切塊
+                            </button>
                             <button
                                 class="binary-ghost-button px-3 py-1.5 text-xs"
                                 @click="releaseLock"

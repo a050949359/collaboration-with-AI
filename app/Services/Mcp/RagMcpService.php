@@ -100,13 +100,14 @@ class RagMcpService implements McpToolServiceInterface
     private function previewChunks(mixed $id, array $args): JsonResponse
     {
         $kb = $this->ownedKb($args['kb_id'] ?? 0);
-        $r = $this->rag->proposeDraftByFileId($kb, (string) ($args['drive_file_id'] ?? ''));
+        $r = $this->rag->proposeDraftByFileId($kb, (string) ($args['drive_file_id'] ?? ''), (bool) ($args['force'] ?? false));
         $doc = $r['document'];
 
         return $this->json($id, [
             'document_id' => $doc->id,
             'chunks' => $r['chunks'],
             'diff' => $r['diff'],
+            'loaded' => $r['loaded'],
             'preview' => $this->chunkList($doc),
         ]);
     }
@@ -208,7 +209,7 @@ class RagMcpService implements McpToolServiceInterface
             ['name' => 'rag_list_kbs', 'description' => '列出我的知識庫(含文件數)。', 'inputSchema' => ['type' => 'object', 'properties' => new \stdClass]],
             ['name' => 'rag_create_kb', 'description' => '建立知識庫。', 'inputSchema' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string']], 'required' => ['name']]],
             ['name' => 'rag_list_drive_files', 'description' => '列全域 Drive 檔並標出相對此庫狀態(new/in_kb/changed)。', 'inputSchema' => ['type' => 'object', 'properties' => ['kb_id' => ['type' => 'integer']], 'required' => ['kb_id']]],
-            ['name' => 'rag_preview_chunks', 'description' => '讀一個 Drive 檔、遞迴切塊並建/更新草稿(回提議塊與 diff);不會落庫。', 'inputSchema' => ['type' => 'object', 'properties' => ['kb_id' => ['type' => 'integer'], 'drive_file_id' => ['type' => 'string']], 'required' => ['kb_id', 'drive_file_id']]],
+            ['name' => 'rag_preview_chunks', 'description' => '讀一個 Drive 檔、遞迴切塊並建/更新草稿(回提議塊與 diff);不會落庫。已有草稿預設直接載入(loaded=true,不覆蓋);force=true 才重新從 Drive 抽取重切。', 'inputSchema' => ['type' => 'object', 'properties' => ['kb_id' => ['type' => 'integer'], 'drive_file_id' => ['type' => 'string'], 'force' => ['type' => 'boolean', 'description' => '強制重切(會覆蓋現有草稿編輯)']], 'required' => ['kb_id', 'drive_file_id']]],
             ['name' => 'rag_lock', 'description' => '取得文件編輯鎖,回 lock_token(編輯/commit 必帶)。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId], 'required' => ['document_id']]],
             ['name' => 'rag_unlock', 'description' => '釋放文件編輯鎖。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId, 'lock_token' => $lockToken], 'required' => ['document_id', 'lock_token']]],
             ['name' => 'rag_resume', 'description' => '用 lock_token 接手草稿(交接用:前端上鎖拿 token、貼來這裡)。回 document_id + 當前草稿塊,之後即可帶 document_id+lock_token 編輯/commit。', 'inputSchema' => ['type' => 'object', 'properties' => ['lock_token' => $lockToken], 'required' => ['lock_token']]],

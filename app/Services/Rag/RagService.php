@@ -36,11 +36,30 @@ class RagService
      * 重新 propose(檔更新/重切)時:依 content_hash 保留未變塊的向量快取,
      * 並回傳與舊塊的 diff(未變/新增/刪除)供「取代確認」用。
      *
+     * 預設「已有草稿就直接載入、不重切」(避免無聲覆蓋編輯/手填 context);
+     * 要強制重新從 Drive 抽取重切(如檔案已更新)須帶 $force=true。
+     *
      * @param  array{id: string, name: string, mime_type: string, modified_time?: string}  $file
-     * @return array{document: Document, chunks: int, diff: array{unchanged: int, added: int, removed: int}}
+     * @return array{document: Document, chunks: int, diff: array{unchanged: int, added: int, removed: int}, loaded: bool}
      */
-    public function proposeDraft(KnowledgeBase $kb, array $file): array
+    public function proposeDraft(KnowledgeBase $kb, array $file, bool $force = false): array
     {
+        $existing = Document::where('knowledge_base_id', $kb->id)
+            ->where('drive_file_id', $file['id'])
+            ->first();
+
+        // 已有草稿且非強制 → 載入既有,不重切(不覆蓋使用者編輯)
+        if ($existing && ! $force && $existing->chunks()->exists()) {
+            $n = $existing->chunks()->count();
+
+            return [
+                'document' => $existing,
+                'chunks' => $n,
+                'diff' => ['unchanged' => $n, 'added' => 0, 'removed' => 0],
+                'loaded' => true,
+            ];
+        }
+
         $text = $this->drive->extract($file['id'], $file['mime_type']);
         if (trim($text) === '') {
             throw new AIServiceException("檔案無可萃取文字: {$file['name']}");
@@ -96,6 +115,7 @@ class RagService
                     'added' => count($newHashes) - $unchanged,
                     'removed' => $old->count() - $unchanged,
                 ],
+                'loaded' => false,
             ];
         });
     }
@@ -127,14 +147,14 @@ class RagService
      *
      * @return array{document: Document, chunks: int, diff: array{unchanged: int, added: int, removed: int}}
      */
-    public function proposeDraftByFileId(KnowledgeBase $kb, string $driveFileId): array
+    public function proposeDraftByFileId(KnowledgeBase $kb, string $driveFileId, bool $force = false): array
     {
         $file = collect($this->drive->list())->firstWhere('id', $driveFileId);
         if (! $file) {
             throw new AIServiceException("Drive 找不到此檔或不支援: {$driveFileId}");
         }
 
-        return $this->proposeDraft($kb, $file);
+        return $this->proposeDraft($kb, $file, $force);
     }
 
     /**
