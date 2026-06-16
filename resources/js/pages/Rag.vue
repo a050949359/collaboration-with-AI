@@ -22,6 +22,7 @@ interface Kb {
     collection: string;
     committed_count: number;
     draft_count: number;
+    file_status?: string | null; // 選了檔時：此檔在該庫的狀態 new/draft/committed/dirty
 }
 interface Chunk {
     index: number;
@@ -131,15 +132,25 @@ function loadFiles() {
         driveFiles.value = (await getJSON(api.rag.driveIndex())).data;
     });
 }
-function loadKbs() {
+function loadKbs(driveFileId?: string) {
     run(async () => {
-        kbs.value = (await getJSON(api.rag.kbs())).data;
+        kbs.value = (await getJSON(api.rag.kbs(driveFileId))).data;
     });
 }
 function pickFile(f: DriveFile) {
     selectedFile.value = f;
     step.value = 'kb';
-    // 取得各 KB 對此檔狀態(若已選/有 KB,延後在選 KB 時顯示)
+    // 帶檔 id 重載：每個庫會標出此檔的狀態（未加入/草稿/已落庫/待更新）
+    loadKbs(f.id);
+}
+function fileStatusLabel(s?: string | null): string {
+    return (
+        {
+            draft: '📝 此檔有草稿',
+            dirty: '⚠ 此檔草稿待更新',
+            committed: '✓ 此檔已落庫',
+        }[s ?? ''] ?? ''
+    );
 }
 
 // ── step 2: knowledge base ────────────────────────────────
@@ -153,7 +164,7 @@ function createKb() {
     run(async () => {
         const r = await sendJSON(api.rag.kbs(), 'POST', { name });
         newKbName.value = '';
-        kbs.value = (await getJSON(api.rag.kbs())).data;
+        kbs.value = (await getJSON(api.rag.kbs(selectedFile.value?.id))).data;
         const created = kbs.value.find((k) => k.id === r.id);
 
         if (created) {
@@ -237,7 +248,7 @@ function deleteSelectedKbs() {
 
         selectedKbIds.value = [];
         manageMode.value = false;
-        kbs.value = (await getJSON(api.rag.kbs())).data;
+        kbs.value = (await getJSON(api.rag.kbs(selectedFile.value?.id))).data;
     });
 }
 
@@ -643,6 +654,17 @@ onMounted(() => {
                                 class="binary-label text-[10px] text-[var(--binary-outline)]"
                             >
                                 模型 {{ kb.collection.split('__')[1] }}
+                            </div>
+                            <div
+                                v-if="fileStatusLabel(kb.file_status)"
+                                class="binary-label mt-0.5 text-[10px]"
+                                :class="
+                                    kb.file_status === 'dirty'
+                                        ? 'text-[var(--binary-tertiary)]'
+                                        : 'text-[var(--binary-primary)]'
+                                "
+                            >
+                                {{ fileStatusLabel(kb.file_status) }}
                             </div>
                         </div>
                         <span

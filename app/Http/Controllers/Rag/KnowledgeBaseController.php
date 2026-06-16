@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Rag;
 
 use App\Enums\Rag\DocumentStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Rag\Document;
 use App\Models\Rag\KnowledgeBase;
 use App\Services\Rag\DriveReader;
 use App\Services\Rag\RagService;
@@ -21,8 +22,17 @@ class KnowledgeBaseController extends Controller
         return response()->json(['data' => $drive->list()]);
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        // 若帶 drive_file_id，標出該檔在各庫的狀態（new/draft/committed/dirty）
+        $fileId = $request->query('drive_file_id');
+        $statusByKb = $fileId
+            ? Document::whereHas('knowledgeBase', fn ($q) => $q->where('user_id', Auth::id()))
+                ->where('drive_file_id', $fileId)
+                ->pluck('status', 'knowledge_base_id')
+                ->all()
+            : [];
+
         $kbs = KnowledgeBase::where('user_id', Auth::id())
             ->withCount([
                 'documents as committed_count' => fn ($q) => $q->where('status', DocumentStatus::Committed->value),
@@ -36,6 +46,7 @@ class KnowledgeBaseController extends Controller
                 'collection' => $kb->collectionName(),
                 'committed_count' => $kb->committed_count,
                 'draft_count' => $kb->draft_count,
+                'file_status' => $fileId ? ($statusByKb[$kb->id] ?? 'new') : null,
             ]);
 
         return response()->json(['data' => $kbs]);
