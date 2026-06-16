@@ -4,15 +4,16 @@ namespace App\Enums;
 
 enum ApiKeyScope: string
 {
-    case TaskMcp   = 'task:mcp';
+    case TaskMcp = 'task:mcp';
     case MemoryMcp = 'memory:mcp';
-    case AgydMcp   = 'agyd:mcp';
+    case AgydMcp = 'agyd:mcp';
+    case RagMcp = 'rag:mcp';
 
     public function adminOnly(): bool
     {
         return match ($this) {
             self::MemoryMcp, self::AgydMcp => true,
-            default                        => false,
+            default => false,
         };
     }
 
