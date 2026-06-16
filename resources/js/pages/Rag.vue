@@ -724,10 +724,10 @@ onMounted(() => {
                         <button
                             class="binary-ghost-button shrink-0 px-3 py-1.5 text-xs whitespace-nowrap"
                             :disabled="busy"
-                            title="重新載入草稿（取得 Claude／他處經 MCP 的最新修改）"
+                            title="同步草稿（取得 Claude／他處經 MCP 的最新修改）"
                             @click="refreshDraft"
                         >
-                            🔄 重新載入
+                            🔄 同步草稿
                         </button>
                         <span
                             v-if="lockedByOther"
