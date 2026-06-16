@@ -119,6 +119,7 @@ const defaultNavLinks = computed((): NavLink[] => {
             active:
                 path.startsWith(routes.articles.index()) ||
                 path.startsWith(routes.about()) ||
+                path.startsWith(routes.rag()) ||
                 (isAdmin.value && path.startsWith(routes.storyRelay())),
             children: [
                 {
@@ -133,6 +134,16 @@ const defaultNavLinks = computed((): NavLink[] => {
                     icon: 'about',
                     active: path.startsWith(routes.about()),
                 },
+                ...(currentUser.value
+                    ? [
+                          {
+                              label: 'RAG',
+                              href: routes.rag(),
+                              icon: 'rag',
+                              active: path.startsWith(routes.rag()),
+                          },
+                      ]
+                    : []),
                 ...(isAdmin.value
                     ? [
                           {
