@@ -1,13 +1,13 @@
-// ragctl — RAG 向量庫 CLI（chromem-go，純 Go、非常駐）
+// vecgen — RAG 向量庫 CLI（chromem-go，純 Go、非常駐）
 //
 // Laravel 每次操作 exec 一次：JSON 走 stdin/stdout，做完即退、零常駐。
 // 向量由呼叫端（Laravel + Gemini）算好提供，本工具只負責存與查（BYO embeddings）。
 //
-//	ragctl upsert  --db <dir> [--collection kb]   < {"documents":[{id,content,embedding,metadata}]}
-//	ragctl query   --db <dir> [--collection kb]   < {"embedding":[...],"top_k":5,"where":{...}}
-//	ragctl stats   --db <dir> [--collection kb]
-//	ragctl delete  --db <dir> [--collection kb]   < {"ids":[...]} 或 {"where":{...}}
-//	ragctl reset   --db <dir> [--collection kb]
+//	vecgen upsert  --db <dir> [--collection kb]   < {"documents":[{id,content,embedding,metadata}]}
+//	vecgen query   --db <dir> [--collection kb]   < {"embedding":[...],"top_k":5,"where":{...}}
+//	vecgen stats   --db <dir> [--collection kb]
+//	vecgen delete  --db <dir> [--collection kb]   < {"ids":[...]} 或 {"where":{...}}
+//	vecgen reset   --db <dir> [--collection kb]
 package main
 
 import (
@@ -59,7 +59,7 @@ func main() {
 
 	cmd := os.Args[1]
 	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
-	dbPath := fs.String("db", env("RAGCTL_DB", "./rag_db"), "persistent DB 目錄")
+	dbPath := fs.String("db", env("VECGEN_DB", "./rag_db"), "persistent DB 目錄")
 	collName := fs.String("collection", "kb", "collection 名稱")
 	_ = fs.Parse(os.Args[2:])
 
@@ -251,7 +251,7 @@ func cmdReset(dbPath, collName string) error {
 // byoEmbed：向量一律由呼叫端提供，此 func 不應被觸發；若被呼叫代表有 document
 // 漏帶 embedding，直接報錯而非偷打外部 API。
 func byoEmbed(_ context.Context, _ string) ([]float32, error) {
-	return nil, errors.New("ragctl: embedding 由呼叫端提供，不應呼叫 embedding func")
+	return nil, errors.New("vecgen: embedding 由呼叫端提供，不應呼叫 embedding func")
 }
 
 // chromem-go 用 os.Create 就地覆寫檔案（非原子），且無內建並行保護。
@@ -319,10 +319,10 @@ func env(key, def string) string {
 }
 
 func usage() {
-	fmt.Fprint(os.Stderr, `ragctl — RAG 向量庫 CLI（chromem-go，非常駐，BYO embeddings）
+	fmt.Fprint(os.Stderr, `vecgen — RAG 向量庫 CLI（chromem-go，非常駐，BYO embeddings）
 
 用法:
-  ragctl <command> --db <dir> [--collection kb]
+  vecgen <command> --db <dir> [--collection kb]
 
 commands:
   upsert   存/更新文件   stdin: {"documents":[{"id","content","embedding":[...],"metadata":{}}]}
@@ -334,7 +334,7 @@ commands:
 過濾器：where = metadata 精確比對；where_document = 內容子字串（$contains / $not_contains）。
 
 flags:
-  --db <dir>           持久化 DB 目錄（或環境變數 RAGCTL_DB）
+  --db <dir>           持久化 DB 目錄（或環境變數 VECGEN_DB）
   --collection <name>  collection 名稱（預設 kb）
 
 所有輸出為 JSON；錯誤輸出 {"error":...} 並以 exit code 1 結束。

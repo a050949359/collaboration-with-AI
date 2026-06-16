@@ -38,11 +38,11 @@ class DriveReader
     }
 
     /**
-     * 列出資料夾內的 T1 檔並抽出文字。
+     * 列出資料夾內「可萃取(T1)」的檔案後設資料,不抽文字(供選檔/狀態列表用,較省)。
      *
-     * @return array<int, array{id: string, name: string, mime_type: string, modified_time: string, text: string}>
+     * @return array<int, array{id: string, name: string, mime_type: string, modified_time: string}>
      */
-    public function listAndExtract(?string $folderId = null): array
+    public function list(?string $folderId = null): array
     {
         $folderId = $folderId ?: (string) config('rag.drive.folder_id');
 
@@ -50,11 +50,29 @@ class DriveReader
             throw new AIServiceException('RAG_DRIVE_FOLDER_ID 未設定。');
         }
 
+        return array_values(array_filter(
+            $this->listFiles($folderId),
+            fn ($file) => $this->isSupported($file['mime_type']),
+        ));
+    }
+
+    /**
+     * 抽單一檔案的純文字(原生檔走 export、其餘走 alt=media)。
+     */
+    public function extract(string $fileId, string $mimeType): string
+    {
+        return $this->extractText($fileId, $mimeType);
+    }
+
+    /**
+     * 列出資料夾內的 T1 檔並抽出文字(便利方法:list + extract)。
+     *
+     * @return array<int, array{id: string, name: string, mime_type: string, modified_time: string, text: string}>
+     */
+    public function listAndExtract(?string $folderId = null): array
+    {
         $out = [];
-        foreach ($this->listFiles($folderId) as $file) {
-            if (! $this->isSupported($file['mime_type'])) {
-                continue;
-            }
+        foreach ($this->list($folderId) as $file) {
             $text = $this->extractText($file['id'], $file['mime_type']);
             if (trim($text) === '') {
                 continue;

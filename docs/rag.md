@@ -1,32 +1,32 @@
 # RAG + MCP 設定指南
 
 獨立的 RAG 系統：Laravel 負責 Drive 讀取、切塊、embedding、MCP 工具層；
-向量存取交給 `ragctl`（純 Go / chromem-go，非常駐 CLI）。
+向量存取交給 `vecgen`（純 Go / chromem-go，非常駐 CLI）。
 
 ```
 Claude ─MCP /api/mcp/rag─▶ Laravel
                             ├─ DriveReader（SA 讀分享資料夾，抽 T1 純文字）
                             ├─ Chunker（切塊，建置中）
                             ├─ embedding（Google AI Studio：gemini-embedding-001 / -2）
-                            └─ exec ─▶ ragctl（chromem-go）upsert/query ─▶ 持久化向量庫
+                            └─ exec ─▶ vecgen（chromem-go）upsert/query ─▶ 持久化向量庫
 ```
 
-向量資料持久在磁碟（`storage/app/rag_db`），ragctl 每次 exec 載入→操作→退出（零常駐）。
+向量資料持久在磁碟（`storage/app/rag_db`），vecgen 每次 exec 載入→操作→退出（零常駐）。
 
 ---
 
-## 1. 編譯 ragctl（向量庫 CLI）
+## 1. 編譯 vecgen（向量庫 CLI）
 
 binary 為 gitignore，clone 後需自行編譯（同 ws-lab/memctl 慣例）：
 
 ```bash
-cd cmd/ragctl && go build -o ragctl .
+cd cmd/vecgen && go build -o vecgen .
 ```
 
 確認可執行（直接跑印 usage）：
 
 ```bash
-cmd/ragctl/ragctl
+cmd/vecgen/vecgen
 ```
 
 > 需 Go 1.24+（chromem-go 為純 Go、CGO-free，免裝額外擴充）。
@@ -93,9 +93,9 @@ RAG_DRIVE_CREDENTIALS_PATH=        # SA 金鑰路徑，留空用預設 storage/a
 GEMINI_EMBEDDING_MODEL=            # 預設 gemini-embedding-001；多模態改 gemini-embedding-2
 GEMINI_EMBEDDING_DIMENSIONS=       # 預設 768
 
-# RAG：ragctl（皆可留空用預設）
-RAGCTL_BIN=                        # 預設 base_path(cmd/ragctl/ragctl)
-RAGCTL_DB=                         # 預設 storage_path(app/rag_db)
+# RAG：vecgen（皆可留空用預設）
+VECGEN_BIN=                        # 預設 base_path(cmd/vecgen/vecgen)
+VECGEN_DB=                         # 預設 storage_path(app/rag_db)
 ```
 
 embedding 模型（`config/services.php` 的 `gemini.embedding_model`，或上面 env 覆寫）：
@@ -118,12 +118,12 @@ $docs = (new App\Services\Rag\DriveReader)->listAndExtract();
 $vec = app(App\Services\AI\Contracts\TextEmbedding::class)->embed('測試', ['task_type' => 'RETRIEVAL_QUERY']);
 ```
 
-ragctl 端到端（存一筆、查一筆）：
+vecgen 端到端（存一筆、查一筆）：
 
 ```bash
 DB=storage/app/rag_db
-echo '{"documents":[{"id":"a","content":"hi","embedding":[1,0,0]}]}' | cmd/ragctl/ragctl upsert --db $DB
-echo '{"embedding":[1,0,0],"top_k":1}' | cmd/ragctl/ragctl query --db $DB
+echo '{"documents":[{"id":"a","content":"hi","embedding":[1,0,0]}]}' | cmd/vecgen/vecgen upsert --db $DB
+echo '{"embedding":[1,0,0],"top_k":1}' | cmd/vecgen/vecgen query --db $DB
 ```
 
 ---
@@ -132,11 +132,11 @@ echo '{"embedding":[1,0,0],"top_k":1}' | cmd/ragctl/ragctl query --db $DB
 
 | 元件 | 狀態 |
 |------|------|
-| `ragctl` 向量庫 CLI（chromem-go，5 命令 + where/where_document 過濾 + 讀寫鎖） | ✅ |
+| `vecgen` 向量庫 CLI（chromem-go，5 命令 + where/where_document 過濾 + 讀寫鎖） | ✅ |
 | `TextEmbedding` / `MultimodalEmbedding`（Gemini，container 綁定） | ✅ |
 | `DriveReader`（SA 讀資料夾、T1 純文字抽取） | ✅ |
 | `Chunker`（切塊 + overlap） | 🚧 建置中 |
-| `RagService`（組 collection 名、串 embedding + ragctl） | 🚧 |
+| `RagService`（組 collection 名、串 embedding + vecgen） | 🚧 |
 | MCP `/api/mcp/rag`（sync/list/query/config/eval） | 🚧 |
 
 > T1 = Google 原生檔（Docs/Sheets/Slides，走 export）+ 純文字類上傳檔。
