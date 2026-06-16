@@ -73,6 +73,26 @@ class LockService
     }
 
     /**
+     * 以 lock_token 反查鎖(交接用:前端上鎖拿 token、貼給 Claude,Claude 只憑 token 接手)。
+     * 驗未過期 + 持有者一致,通過順手續租,回傳鎖(可由 ->document 取草稿)。
+     */
+    public function resolveByToken(string $lockToken, int $userId): Lock
+    {
+        $lock = Lock::where('lock_token', $lockToken)->first();
+
+        if (! $lock || $lock->isExpired()) {
+            throw new AIServiceException('lock_token 無效或已過期。');
+        }
+        if ($lock->locked_by !== $userId) {
+            throw new AIServiceException('此 lock_token 非你持有。');
+        }
+
+        $lock->update(['expires_at' => Carbon::now()->addSeconds($this->ttl())]);
+
+        return $lock;
+    }
+
+    /**
      * 釋放鎖(需為持有者)。
      */
     public function release(Document $document, string $lockToken, int $userId): void
