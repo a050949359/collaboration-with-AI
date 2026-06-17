@@ -107,7 +107,20 @@ embedding 模型（`config/services.php` 的 `gemini.embedding_model`，或上�
 
 ---
 
-## 4. 驗證
+## 4. 前端資產與 MCP key
+
+```bash
+npm run build        # 前端（Rag.vue 等）需編譯資產；開發時可用 npm run dev（HMR）
+```
+
+要讓 Claude（Desktop/Code）經 MCP 操作知識庫，需建一把 `rag:mcp` scope 的 API key
+（任何登入者可在 UI 自建），Claude 設定帶 `Authorization: Bearer <key>` 打 `/api/mcp/rag`。
+
+> embedding 與 Q&A chat **共用同一把 `GEMINI_API_KEY`**（皆走 Google AI Studio）。
+
+---
+
+## 5. 驗證
 
 設定完後可在 tinker 確認各環節：
 
@@ -135,9 +148,14 @@ echo '{"embedding":[1,0,0],"top_k":1}' | cmd/vecgen/vecgen query --db $DB
 | `vecgen` 向量庫 CLI（chromem-go，5 命令 + where/where_document 過濾 + 讀寫鎖） | ✅ |
 | `TextEmbedding` / `MultimodalEmbedding`（Gemini，container 綁定） | ✅ |
 | `DriveReader`（SA 讀資料夾、T1 純文字抽取） | ✅ |
-| `Chunker`（切塊 + overlap） | 🚧 建置中 |
-| `RagService`（組 collection 名、串 embedding + vecgen） | 🚧 |
-| MCP `/api/mcp/rag`（sync/list/query/config/eval） | 🚧 |
+| `Chunker`（遞迴邊界切：段落>行>句>硬切 + 小塊合併） | ✅ |
+| `RagService`（草稿/commit/檢索/Q&A、collection 命名、向量快取） | ✅ |
+| `LockService`（per-document 編輯鎖、交接 token） | ✅ |
+| MCP `/api/mcp/rag`（列檔/建庫/preview/鎖/宣告式編輯/commit/query/near-dup） | ✅ |
+| REST `v1/rag/*` + 前端 `Rag.vue`（總覽 / 編輯器 / 問答） | ✅ |
 
 > T1 = Google 原生檔（Docs/Sheets/Slides，走 export）+ 純文字類上傳檔。
 > PDF / Office / 圖片多模態為後續。
+
+**未做（後續）**：probe + 列表掃描閘門、`rag_eval`（量測）、`rag_check`（無上下文 verifier）、
+相似度門檻、全文入口 + 結構偵測。MCP 端點尚未 live JSON-RPC 實測。
