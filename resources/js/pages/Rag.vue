@@ -236,6 +236,7 @@ function reproposeForce() {
     }
 
     run(async () => {
+        await opQueue; // 先等草稿編輯落地,免得重切覆蓋掉還沒存完的變更
         const r = await sendJSON(
             api.rag.documents(selectedKb.value!.id),
             'POST',
@@ -471,6 +472,7 @@ function runTest() {
     }
 
     run(async () => {
+        await opQueue; // 先等草稿編輯落地,測的才是最新內容
         const r = await sendJSON(api.rag.testQuery(documentId.value!), 'POST', {
             query: testQuery.value,
             top_k: 5,
@@ -483,6 +485,7 @@ function hitFor(index: number): TestHit | undefined {
 }
 function doCommit() {
     run(async () => {
+        await opQueue; // 等自動存的佇列全部落地,避免 commit 搶在最後一次 blur 存之前送出
         const r = await sendJSON(api.rag.commit(documentId.value!), 'POST', {
             lock_token: lockToken.value,
         });

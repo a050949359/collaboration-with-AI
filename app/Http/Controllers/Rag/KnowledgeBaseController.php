@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Rag;
 
+use App\Enums\Rag\DriveFileStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Rag\Document;
 use App\Models\Rag\KnowledgeBase;
@@ -46,7 +47,7 @@ class KnowledgeBaseController extends Controller
                 'collection' => $kb->collectionName(),
                 'committed_count' => $kb->committed_count,
                 'draft_count' => $kb->draft_count,
-                'file_status' => $fileId ? ($statusByKb[$kb->id] ?? 'new') : null,
+                'file_status' => $fileId ? ($statusByKb[$kb->id] ?? DriveFileStatus::New->value) : null,
             ]);
 
         return response()->json(['data' => $kbs]);

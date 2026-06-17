@@ -4,6 +4,7 @@ namespace App\Services\Rag;
 
 use App\Enums\Rag\ChunkStatus;
 use App\Enums\Rag\DocumentStatus;
+use App\Enums\Rag\DriveFileStatus;
 use App\Models\Rag\Chunk;
 use App\Models\Rag\Document;
 use App\Models\Rag\KnowledgeBase;
@@ -100,7 +101,10 @@ class RagService
                     'chunk_index' => $i,
                     'content' => $content,
                     'content_hash' => $hash,
-                    // 內容沒變 → 沿用舊向量(commit 不必重 embed)
+                    // 內容沒變 → 連同 context 一起沿用舊向量(commit 不必重 embed)。
+                    // ⚠ 必須一起帶 context:向量是 embed(context+content) 算的,
+                    //   只帶 embedding 不帶 context 會造成向量與文字不符(污染)。
+                    'context' => $cached?->context,
                     'embedding' => $cached?->embedding,
                     'embedded_at' => $cached?->embedded_at,
                     'status' => ChunkStatus::Draft,
@@ -133,14 +137,14 @@ class RagService
 
         return collect($this->drive->list())->map(function ($f) use ($docs) {
             $doc = $docs->get($f['id']);
-            $status = 'new';
+            $status = DriveFileStatus::New;
             if ($doc) {
                 $status = ($doc->modified_time && $f['modified_time'] && $f['modified_time'] !== $doc->modified_time)
-                    ? 'changed'
-                    : 'in_kb';
+                    ? DriveFileStatus::Changed
+                    : DriveFileStatus::InKb;
             }
 
-            return [...$f, 'status' => $status, 'document_id' => $doc?->id];
+            return [...$f, 'status' => $status->value, 'document_id' => $doc?->id];
         })->all();
     }
 
@@ -269,8 +273,12 @@ class RagService
 
                 case 'split':
                     $this->assertIndex($list, $i);
-                    $at = max(1, (int) ($op['at'] ?? 0));
                     $content = $list[$i]['content'];
+                    $at = max(1, (int) ($op['at'] ?? 0));
+                    // at 必須落在內容中間,否則會切出空塊(空塊 embed 無意義/會報錯)
+                    if ($at >= mb_strlen($content)) {
+                        throw new AIServiceException("分割位置 {$at} 超出塊長度,會產生空塊。");
+                    }
                     $first = mb_substr($content, 0, $at);
                     $second = mb_substr($content, $at);
                     $context = $list[$i]['context'];
@@ -493,6 +501,13 @@ class RagService
     public function nearDuplicates(Document $document, ?float $threshold = null): array
     {
         $threshold ??= (float) config('rag.dedup.threshold', 0.95);
+
+        // O(N²) 兩兩比對:塊數過多時跳過,避免大草稿拖垮請求(編輯每次都會帶這個)
+        $max = (int) config('rag.dedup.max_chunks', 300);
+        if ($document->chunks()->count() > $max) {
+            return [];
+        }
+
         $this->ensureEmbeddings($document);
 
         $chunks = $document->chunks()->get()->values();

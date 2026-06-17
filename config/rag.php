@@ -32,5 +32,7 @@ return [
     // 近似重複：草稿塊兩兩 cosine 超過此門檻視為重複（警示用）
     'dedup' => [
         'threshold' => (float) env('RAG_DEDUP_THRESHOLD', 0.95),
+        // O(N²) 比對上限：草稿塊數超過此值時跳過去重分析（避免大草稿請求逾時）
+        'max_chunks' => (int) env('RAG_DEDUP_MAX_CHUNKS', 300),
     ],
 ];
