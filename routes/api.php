@@ -38,7 +38,10 @@ use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
 use App\Http\Controllers\Mcp\AgydMcpController;
 use App\Http\Controllers\Mcp\MemoryMcpController;
+use App\Http\Controllers\Mcp\RagMcpController;
 use App\Http\Controllers\Mcp\TaskMcpController;
+use App\Http\Controllers\Rag\DocumentController as RagDocumentController;
+use App\Http\Controllers\Rag\KnowledgeBaseController as RagKnowledgeBaseController;
 use App\Http\Controllers\MiniOrch\MiniOrchController;
 use App\Http\Controllers\Story\CharacterController;
 use App\Http\Controllers\Story\StorySessionController;
@@ -276,10 +279,31 @@ Route::prefix('v1/gacha/rooms')->middleware('throttle:30,1')->group(function () 
     Route::post('/{code}/reset-draws', [GachaRoomController::class, 'resetDraws'])->middleware('auth:sanctum');
 });
 
+// RAG 互動式知識庫(前端用,session 驗證)
+Route::middleware('auth:sanctum')->prefix('v1/rag')->group(function () {
+    Route::get('/dashboard', [RagKnowledgeBaseController::class, 'dashboard']);
+    Route::get('/drive-files', [RagKnowledgeBaseController::class, 'driveIndex']);
+    Route::get('/kbs', [RagKnowledgeBaseController::class, 'index']);
+    Route::post('/kbs', [RagKnowledgeBaseController::class, 'store']);
+    Route::delete('/kbs/{knowledgeBase}', [RagKnowledgeBaseController::class, 'destroy']);
+    Route::get('/kbs/{knowledgeBase}/drive-files', [RagKnowledgeBaseController::class, 'driveFiles']);
+    Route::post('/kbs/{knowledgeBase}/query', [RagKnowledgeBaseController::class, 'query']);
+    Route::post('/kbs/{knowledgeBase}/ask', [RagKnowledgeBaseController::class, 'ask']);
+    Route::post('/kbs/{knowledgeBase}/documents', [RagDocumentController::class, 'store']);
+
+    Route::get('/documents/{document}/chunks', [RagDocumentController::class, 'chunks']);
+    Route::post('/documents/{document}/chunks', [RagDocumentController::class, 'edit']);
+    Route::post('/documents/{document}/lock', [RagDocumentController::class, 'lock']);
+    Route::delete('/documents/{document}/lock', [RagDocumentController::class, 'unlock']);
+    Route::post('/documents/{document}/test-query', [RagDocumentController::class, 'testQuery']);
+    Route::post('/documents/{document}/commit', [RagDocumentController::class, 'commit']);
+});
+
 // MCP JSON-RPC endpoint
 Route::post('/mcp/task', [TaskMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:task:mcp']);
 Route::post('/mcp/memory', [MemoryMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:memory:mcp']);
 Route::post('/mcp/agyd', [AgydMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:agyd:mcp']);
+Route::post('/mcp/rag', [RagMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:rag:mcp']);
 
 // agyd daemon callback（接收 ZIP，以 AGYD_SECRET 驗證）
 Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->middleware('throttle:10,1');

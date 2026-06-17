@@ -36,9 +36,9 @@ return [
     ],
 
     'google' => [
-        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect'      => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
     'social_auth' => [
@@ -56,19 +56,21 @@ return [
     ],
 
     'gemini' => [
-        'api_key'           => env('GEMINI_API_KEY'),
-        'model'             => env('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
-        'models'            => array_values(array_filter(array_map(
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
+        'models' => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('GEMINI_CHAT_MODELS', '')),
         ))),
-        'story_model'       => env('GEMINI_STORY_MODEL', 'gemini-2.5-flash'),
+        'story_model' => env('GEMINI_STORY_MODEL', 'gemini-2.5-flash'),
         'story_state_model' => env('GEMINI_STORY_STATE_MODEL', 'gemini-2.5-flash'),
 
-        // RAG embedding（Google AI Studio）。gemini-embedding-2：最新、多模態、Matryoshka
-        // （128–3072 維），文字與圖片共用此模型 → 同一向量空間，可跨模態檢索。
-        // 用 outputDimensionality 降到 768 省儲存。文字與多模態共用同一 model 確保空間一致。
-        'embedding_model'      => env('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-2'),
+        // RAG embedding（Google AI Studio）。文字與多模態共用此 model（同一向量空間）。
+        // 預設 gemini-embedding-001：純文字、支援 task_type（RETRIEVAL_DOCUMENT/QUERY）。
+        // 要啟用多模態（文字+圖片同空間、可跨模態檢索）改成 gemini-embedding-2，
+        //   文字端會一起切到 -2（-2 多模態、8192 token，但用 prompt 前綴取代 task_type）。
+        // 兩者皆 Matryoshka，用 outputDimensionality 降到 768 省儲存。
+        'embedding_model' => env('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001'),
         'embedding_dimensions' => env('GEMINI_EMBEDDING_DIMENSIONS', 768),
     ],
 
@@ -81,32 +83,32 @@ return [
         'providers' => [
             'gemini' => [
                 'api_key' => env('GEMINI_API_KEY'),
-                'models'  => array_values(array_filter(array_map('trim', explode(
+                'models' => array_values(array_filter(array_map('trim', explode(
                     ',',
                     (string) env('LLM_GEMINI_MODELS', 'gemini-2.5-flash,gemini-2.5-pro'),
                 )))),
             ],
             'nvidia' => [
-                'api_key'  => env('NVIDIA_API_KEY'),
+                'api_key' => env('NVIDIA_API_KEY'),
                 'base_url' => env('NVIDIA_BASE_URL', 'https://integrate.api.nvidia.com/v1'),
-                'models'   => array_values(array_filter(array_map('trim', explode(
+                'models' => array_values(array_filter(array_map('trim', explode(
                     ',',
                     (string) env('LLM_NVIDIA_MODELS', 'meta/llama-3.3-70b-instruct,google/gemma-2-27b-it'),
                 )))),
             ],
             'ollama' => [
                 'base_url' => env('OLLAMA_HOST', 'http://localhost:11434'),
-                'models'   => array_values(array_filter(array_map('trim', explode(
+                'models' => array_values(array_filter(array_map('trim', explode(
                     ',',
                     (string) env('LLM_OLLAMA_MODELS', 'llama3.1,qwen2.5'),
                 )))),
             ],
         ],
         'uses' => [
-            'story'       => ['provider' => env('LLM_STORY_PROVIDER', 'gemini'),       'model' => env('LLM_STORY_MODEL', 'gemini-2.5-flash')],
+            'story' => ['provider' => env('LLM_STORY_PROVIDER', 'gemini'),       'model' => env('LLM_STORY_MODEL', 'gemini-2.5-flash')],
             'story_state' => ['provider' => env('LLM_STORY_STATE_PROVIDER', 'gemini'), 'model' => env('LLM_STORY_STATE_MODEL', 'gemini-2.5-flash')],
-            'character'   => ['provider' => env('LLM_CHARACTER_PROVIDER', 'gemini'),   'model' => env('LLM_CHARACTER_MODEL', 'gemini-2.5-flash')],
-            'chat'        => ['provider' => env('LLM_CHAT_PROVIDER', 'gemini'),        'model' => env('LLM_CHAT_MODEL', 'gemini-2.5-flash')],
+            'character' => ['provider' => env('LLM_CHARACTER_PROVIDER', 'gemini'),   'model' => env('LLM_CHARACTER_MODEL', 'gemini-2.5-flash')],
+            'chat' => ['provider' => env('LLM_CHAT_PROVIDER', 'gemini'),        'model' => env('LLM_CHAT_MODEL', 'gemini-2.5-flash')],
         ],
     ],
 
@@ -116,8 +118,8 @@ return [
 
     'ws' => [
         'allowed_origins' => env('WS_ALLOWED_ORIGINS', 'localhost:*'),
-        'ws_addr'         => env('WS_ADDR',      '127.0.0.1:9001'),
-        'mgmt_addr'       => env('WS_MGMT_ADDR', '127.0.0.1:9002'),
+        'ws_addr' => env('WS_ADDR', '127.0.0.1:9001'),
+        'mgmt_addr' => env('WS_MGMT_ADDR', '127.0.0.1:9002'),
     ],
 
     'mcp' => [

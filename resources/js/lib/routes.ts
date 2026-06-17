@@ -70,6 +70,9 @@ export const routes = {
     // Story Relay
     storyRelay: () => `${WEB_PREFIX}/story-relay`,
 
+    // RAG 互動式知識庫
+    rag: () => `${WEB_PREFIX}/rag`,
+
     // Admin
     admin: {
         system: () => `${WEB_PREFIX}/admin`,
@@ -257,5 +260,24 @@ export const api = {
         storeExport: () => '/api/v1/tour/exports',
         exportStatus: (id: number) => `/api/v1/tour/exports/${id}/status`,
         exportDownload: (id: number) => `/api/v1/tour/exports/${id}/download`,
+    },
+
+    rag: {
+        dashboard: () => '/api/v1/rag/dashboard',
+        driveIndex: () => '/api/v1/rag/drive-files',
+        kbs: (driveFileId?: string) =>
+            driveFileId
+                ? `/api/v1/rag/kbs?drive_file_id=${encodeURIComponent(driveFileId)}`
+                : '/api/v1/rag/kbs',
+        kb: (id: number) => `/api/v1/rag/kbs/${id}`,
+        driveFiles: (kbId: number) => `/api/v1/rag/kbs/${kbId}/drive-files`,
+        query: (kbId: number) => `/api/v1/rag/kbs/${kbId}/query`,
+        ask: (kbId: number) => `/api/v1/rag/kbs/${kbId}/ask`,
+        documents: (kbId: number) => `/api/v1/rag/kbs/${kbId}/documents`,
+        chunks: (docId: number) => `/api/v1/rag/documents/${docId}/chunks`,
+        lock: (docId: number) => `/api/v1/rag/documents/${docId}/lock`,
+        testQuery: (docId: number) =>
+            `/api/v1/rag/documents/${docId}/test-query`,
+        commit: (docId: number) => `/api/v1/rag/documents/${docId}/commit`,
     },
 } as const;

@@ -2,9 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\PersonalAccessToken;
 use App\Notifications\VerifyEmailNotification;
 use App\Services\AI\Contracts\GeneratesArticleContent;
 use App\Services\AI\Contracts\GeneratesArticleImage;
+use App\Services\AI\Contracts\MultimodalEmbedding;
+use App\Services\AI\Contracts\TextEmbedding;
+use App\Services\AI\Gemini\GeminiEmbeddingService;
+use App\Services\AI\Gemini\GeminiMultimodalEmbeddingService;
 use App\Services\AI\LlmManager;
 use App\Services\AI\VertexGeminiArticleService;
 use App\Services\AI\VertexImageGenerationService;
@@ -12,11 +17,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\URL;
-use App\Models\PersonalAccessToken;
 use Illuminate\Support\ServiceProvider;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +31,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(GeneratesArticleContent::class, VertexGeminiArticleService::class);
         $this->app->bind(GeneratesArticleImage::class, VertexImageGenerationService::class);
         $this->app->singleton(LlmManager::class);
+
+        // RAG embedding（文字 + 多模態，皆走 gemini-embedding-2，預設由 config 決定）
+        $this->app->bind(TextEmbedding::class, GeminiEmbeddingService::class);
+        $this->app->bind(MultimodalEmbedding::class, GeminiMultimodalEmbeddingService::class);
     }
 
     /**

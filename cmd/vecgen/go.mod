@@ -1,4 +1,4 @@
-module ragctl
+module vecgen
 
 go 1.26
 

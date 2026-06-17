@@ -233,6 +233,30 @@ defineProps<{ name: string; size?: number }>();
             />
         </template>
 
+        <!-- rag (知識庫:疊層 + 檢索點) -->
+        <template v-else-if="name === 'rag'">
+            <ellipse
+                class="stroke-default"
+                cx="16"
+                cy="9"
+                rx="9"
+                ry="3.4"
+                stroke-width="1.5"
+            />
+            <path
+                class="stroke-default"
+                d="M7 9 V16 C7 17.9 11 19.4 16 19.4 C21 19.4 25 17.9 25 16 V9"
+                stroke-width="1.5"
+                fill="none"
+            />
+            <path
+                class="stroke-default anim-info-ring"
+                d="M7 16 V22 C7 23.9 11 25.4 16 25.4 C21 25.4 25 23.9 25 22 V16"
+                stroke-width="1.5"
+                fill="none"
+            />
+        </template>
+
         <!-- linebot -->
         <template v-else-if="name === 'linebot'">
             <line

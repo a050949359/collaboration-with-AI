@@ -37,6 +37,7 @@ Route::prefix('app')->group(function () {
     Route::inertia('/memory', 'MemoryGraph')->name('memory');
     Route::inertia('/computer-vision', 'ComputerVision')->name('computer-vision');
     Route::inertia('/gesture', 'GestureRecognition')->name('gesture');
+    Route::inertia('/rag', 'Rag')->name('rag')->middleware('auth:sanctum');
     Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
         Route::inertia('/story-relay', 'StoryRelay')->name('story-relay');
     });
