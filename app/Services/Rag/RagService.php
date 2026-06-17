@@ -191,9 +191,26 @@ class RagService
             ],
         ])->all();
 
-        // 先清掉此檔舊向量(處理塊數/索引變動),再寫新塊
-        $this->vecgen('delete', $collection, ['where' => ['file_id' => $document->drive_file_id]]);
-        $this->vecgen('upsert', $collection, ['documents' => $payload]);
+        // 寫向量庫:vectorId 是 deterministic 的 `<file_id>#<index>`,upsert 會覆蓋同 id。
+        $newCount = $chunks->count();
+        $oldCount = $document->committed_chunk_count; // 此時仍為上次落庫的塊數(下面才更新)
+
+        if ($oldCount === null) {
+            // 舊資料不知道上次幾塊 → 沿用「先刪全部再寫」(有失敗窗口,但可重 commit 復原)
+            $this->vecgen('delete', $collection, ['where' => ['file_id' => $document->drive_file_id]]);
+            $this->vecgen('upsert', $collection, ['documents' => $payload]);
+        } else {
+            // upsert 先寫:若失敗,舊向量原封不動、不會掉資料(比先刪後寫安全)
+            $this->vecgen('upsert', $collection, ['documents' => $payload]);
+            // 這次塊數變少 → 刪掉多出來的舊 id(#newCount .. #oldCount-1)
+            if ($oldCount > $newCount) {
+                $stale = [];
+                for ($i = $newCount; $i < $oldCount; $i++) {
+                    $stale[] = $document->drive_file_id.'#'.$i;
+                }
+                $this->vecgen('delete', $collection, ['ids' => $stale]);
+            }
+        }
 
         $document->chunks()->update(['status' => ChunkStatus::Committed]);
         $document->update([
@@ -215,16 +232,24 @@ class RagService
             return 0;
         }
 
+        $missing = $missing->values(); // 確保 0-based key 與 $vectors index 對齊
         $vectors = $this->embedder->embedBatch(
             $missing->map(fn (Chunk $c) => $c->embeddableText())->all(),
             ['task_type' => 'RETRIEVAL_DOCUMENT'],
         );
 
+        // 回傳數必須與請求數一致,否則塊與向量會錯位(配到別塊的向量)→ 寧可整批失敗重試
+        if (count($vectors) !== $missing->count()) {
+            throw new AIServiceException('embedding 回傳數與請求數不符,請重試。');
+        }
+
         foreach ($missing as $i => $chunk) {
-            $chunk->update([
-                'embedding' => $vectors[$i] ?? [],
-                'embedded_at' => Carbon::now(),
-            ]);
+            $vec = $vectors[$i] ?? [];
+            // 空向量別寫:[] 不是 null,寫了下次不會重試,且會污染向量庫/檢索
+            if ($vec === []) {
+                throw new AIServiceException('部分塊 embedding 失敗(空向量),請重試。');
+            }
+            $chunk->update(['embedding' => $vec, 'embedded_at' => Carbon::now()]);
         }
 
         return $missing->count();

@@ -5,6 +5,7 @@ namespace App\Services\Rag;
 use App\Models\Rag\Document;
 use App\Models\Rag\Lock;
 use App\Services\AI\AIServiceException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -29,28 +30,37 @@ class LockService
      */
     public function acquire(Document $document, int $userId): Lock
     {
-        // 事務 + 行鎖:避免兩個請求同時通過「無鎖」判斷而撞唯一索引(500)或互相覆蓋
-        return DB::transaction(function () use ($document, $userId) {
-            $existing = $document->lock()->lockForUpdate()->first();
+        // 事務 + 行鎖:避免兩個請求同時通過「無鎖」判斷而互相覆蓋。
+        // 但 lockForUpdate 鎖不住「尚不存在的行」→ 冷啟動仍可能兩請求同插、撞唯一索引;
+        // 故額外 catch 該 QueryException,轉成友善訊息(代表另一請求已搶先建鎖)。
+        try {
+            return DB::transaction(function () use ($document, $userId) {
+                $existing = $document->lock()->lockForUpdate()->first();
 
-            if ($existing && ! $existing->isExpired() && $existing->locked_by !== $userId) {
+                if ($existing && ! $existing->isExpired() && $existing->locked_by !== $userId) {
+                    throw new AIServiceException('此文件正由其他使用者編輯中。');
+                }
+
+                // 自己原本就持有 → 沿用同一個 token;否則發新 token
+                $token = ($existing && $existing->locked_by === $userId)
+                    ? $existing->lock_token
+                    : Str::random(48);
+
+                return Lock::updateOrCreate(
+                    ['document_id' => $document->id],
+                    [
+                        'locked_by' => $userId,
+                        'lock_token' => $token,
+                        'expires_at' => Carbon::now()->addSeconds($this->ttl()),
+                    ],
+                );
+            });
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23000') { // 唯一約束:另一請求已搶先建鎖
                 throw new AIServiceException('此文件正由其他使用者編輯中。');
             }
-
-            // 自己原本就持有 → 沿用同一個 token;否則發新 token
-            $token = ($existing && $existing->locked_by === $userId)
-                ? $existing->lock_token
-                : Str::random(48);
-
-            return Lock::updateOrCreate(
-                ['document_id' => $document->id],
-                [
-                    'locked_by' => $userId,
-                    'lock_token' => $token,
-                    'expires_at' => Carbon::now()->addSeconds($this->ttl()),
-                ],
-            );
-        });
+            throw $e;
+        }
     }
 
     /**

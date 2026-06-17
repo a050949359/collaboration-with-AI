@@ -11,6 +11,7 @@ use App\Services\Rag\RagService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class KnowledgeBaseController extends Controller
 {
@@ -47,7 +48,8 @@ class KnowledgeBaseController extends Controller
                 'collection' => $kb->collectionName(),
                 'committed_count' => $kb->committed_count,
                 'draft_count' => $kb->draft_count,
-                'file_status' => $fileId ? ($statusByKb[$kb->id] ?? DriveFileStatus::New->value) : null,
+                // $statusByKb 值是 DocumentStatus enum 實例(Model cast),取 ->value 與 'new' 字串一致
+                'file_status' => $fileId ? ($statusByKb[$kb->id]?->value ?? DriveFileStatus::New->value) : null,
             ]);
 
         return response()->json(['data' => $kbs]);
@@ -55,7 +57,16 @@ class KnowledgeBaseController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate(['name' => 'required|string|max:255']);
+        // 唯一鍵是 (user_id, name, embedding_model, dimensions);先驗證避免撞約束變 500
+        $data = $request->validate([
+            'name' => [
+                'required', 'string', 'max:255',
+                Rule::unique('rag_knowledge_bases', 'name')
+                    ->where('user_id', Auth::id())
+                    ->where('embedding_model', (string) config('services.gemini.embedding_model'))
+                    ->where('dimensions', (int) config('services.gemini.embedding_dimensions')),
+            ],
+        ]);
 
         $kb = KnowledgeBase::create([
             'user_id' => Auth::id(),
