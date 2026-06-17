@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('modified_time')->nullable()->comment('Drive modifiedTime,判斷是否變更');
             $table->string('status')->default(DocumentStatus::Draft->value);
             $table->timestamp('committed_at')->nullable();
+            $table->unsignedInteger('committed_chunk_count')->nullable()->comment('上次落庫的塊數;null=從未落庫。dirty 時仍保留,供顯示「已落庫 N / 草稿 M」');
             $table->timestamps();
 
             $table->unique(['knowledge_base_id', 'drive_file_id']);

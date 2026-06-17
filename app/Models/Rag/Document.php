@@ -18,13 +18,14 @@ use Illuminate\Support\Carbon;
  * @property string|null $modified_time
  * @property DocumentStatus $status
  * @property Carbon|null $committed_at
+ * @property int|null $committed_chunk_count
  */
 class Document extends Model
 {
     protected $table = 'rag_documents';
 
     protected $fillable = [
-        'knowledge_base_id', 'drive_file_id', 'name', 'mime_type', 'modified_time', 'status', 'committed_at',
+        'knowledge_base_id', 'drive_file_id', 'name', 'mime_type', 'modified_time', 'status', 'committed_at', 'committed_chunk_count',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ class Document extends Model
         return [
             'status' => DocumentStatus::class,
             'committed_at' => 'datetime',
+            'committed_chunk_count' => 'integer',
         ];
     }
 

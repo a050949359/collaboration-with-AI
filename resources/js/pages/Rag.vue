@@ -51,6 +51,7 @@ interface DashDoc {
     name: string;
     status: string;
     chunk_count: number;
+    committed_chunk_count: number | null;
     committed_at: string | null;
 }
 interface DashKb {
@@ -750,7 +751,12 @@ onMounted(() => {
                                         >{{ docStatusLabel(d.status) }}</span
                                     >
                                     <span class="text-[var(--binary-outline)]"
-                                        >· {{ d.chunk_count }} 塊</span
+                                        >·
+                                        {{
+                                            d.status === 'dirty'
+                                                ? `草稿 ${d.chunk_count} 塊（已落庫 ${d.committed_chunk_count ?? '?'}）`
+                                                : `${d.chunk_count} 塊`
+                                        }}</span
                                     >
                                 </span>
                             </div>
@@ -856,7 +862,7 @@ onMounted(() => {
                         />
                         <div class="mt-2 flex items-center gap-3">
                             <button
-                                class="binary-button"
+                                class="binary-button w-auto shrink-0 px-6 py-2.5 text-sm"
                                 :disabled="busy || !qaKbId || !qaQuery.trim()"
                                 @click="askQuestion"
                             >
@@ -1356,7 +1362,7 @@ onMounted(() => {
                                 取消
                             </button>
                             <button
-                                class="binary-button px-4 py-2 text-sm"
+                                class="binary-button w-auto px-4 py-2 text-sm"
                                 :disabled="busy"
                                 @click="doCommit"
                             >

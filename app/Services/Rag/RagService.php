@@ -195,6 +195,7 @@ class RagService
         $document->update([
             'status' => DocumentStatus::Committed,
             'committed_at' => Carbon::now(),
+            'committed_chunk_count' => $chunks->count(),
         ]);
 
         return ['collection' => $collection, 'chunks' => $chunks->count(), 'embedded' => $embedded];
