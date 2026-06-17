@@ -288,6 +288,7 @@ Route::middleware('auth:sanctum')->prefix('v1/rag')->group(function () {
     Route::delete('/kbs/{knowledgeBase}', [RagKnowledgeBaseController::class, 'destroy']);
     Route::get('/kbs/{knowledgeBase}/drive-files', [RagKnowledgeBaseController::class, 'driveFiles']);
     Route::post('/kbs/{knowledgeBase}/query', [RagKnowledgeBaseController::class, 'query']);
+    Route::post('/kbs/{knowledgeBase}/ask', [RagKnowledgeBaseController::class, 'ask']);
     Route::post('/kbs/{knowledgeBase}/documents', [RagDocumentController::class, 'store']);
 
     Route::get('/documents/{document}/chunks', [RagDocumentController::class, 'chunks']);

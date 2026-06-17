@@ -63,8 +63,14 @@ interface DashKb {
     documents: DashDoc[];
 }
 
+interface QaSource {
+    content: string;
+    similarity?: number;
+    metadata?: { file_name?: string; chunk_index?: number };
+}
+
 type Step = 'files' | 'kb' | 'editor';
-type View = 'dashboard' | 'wizard';
+type View = 'dashboard' | 'wizard' | 'qa';
 
 const view = ref<View>('dashboard');
 const step = ref<Step>('files');
@@ -74,6 +80,12 @@ const busy = ref(false);
 // dashboard
 const dash = ref<DashKb[]>([]);
 const dashTab = ref<'by_kb' | 'by_file'>('by_kb');
+
+// qa（問答）
+const qaKbId = ref<number | null>(null);
+const qaQuery = ref('');
+const qaAnswer = ref<string | null>(null);
+const qaSources = ref<QaSource[]>([]);
 
 // step 1
 const driveFiles = ref<DriveFile[]>([]);
@@ -508,6 +520,34 @@ function backToDashboard() {
     view.value = 'dashboard';
     loadDashboard();
 }
+// ── qa（問答）─────────────────────────────────────────────
+function enterQa() {
+    resetFlow();
+    view.value = 'qa';
+    qaAnswer.value = null;
+    qaSources.value = [];
+
+    if (!dash.value.length) {
+        loadDashboard();
+    }
+}
+// 只有已落庫（向量庫有塊）的庫能問答
+const qaKbs = computed(() => dash.value.filter((k) => k.vector_count > 0));
+function askQuestion() {
+    if (!qaKbId.value || !qaQuery.value.trim()) {
+        return;
+    }
+
+    run(async () => {
+        qaAnswer.value = null;
+        qaSources.value = [];
+        const r = await sendJSON(api.rag.ask(qaKbId.value!), 'POST', {
+            query: qaQuery.value,
+        });
+        qaAnswer.value = r.data.answer;
+        qaSources.value = r.data.sources ?? [];
+    });
+}
 // 檔為主視角：把各庫文件依 drive_file_id 收攏
 const byFile = computed(() => {
     const map = new Map<
@@ -562,7 +602,9 @@ onMounted(() => {
                     {{
                         view === 'wizard'
                             ? '選 Drive 檔 → 選知識庫 → 互動切塊/測試 → 落庫檢索'
-                            : '檢視各知識庫的文件、塊數與向量同步狀態'
+                            : view === 'qa'
+                              ? '選知識庫提問 → 檢索 top-k → LLM 依命中內容作答（附出處）'
+                              : '檢視各知識庫的文件、塊數與向量同步狀態'
                     }}
                 </p>
             </div>
@@ -592,6 +634,17 @@ onMounted(() => {
                     @click="enterWizard"
                 >
                     新增 / 編輯
+                </button>
+                <button
+                    class="binary-label border-b-2 pb-2.5 text-[10px] uppercase transition"
+                    :class="
+                        view === 'qa'
+                            ? 'border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                            : 'border-transparent text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
+                    "
+                    @click="enterQa"
+                >
+                    問答
                 </button>
             </div>
 
@@ -755,6 +808,116 @@ onMounted(() => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- ░░ 問答 qa ░░ -->
+            <div v-if="view === 'qa'" class="max-w-3xl space-y-4">
+                <p
+                    v-if="!qaKbs.length && !busy"
+                    class="text-sm text-[var(--binary-outline)]"
+                >
+                    還沒有已落庫的知識庫。請先在「新增 /
+                    編輯」把文件落庫，才能問答。
+                </p>
+
+                <template v-else>
+                    <!-- 選庫 -->
+                    <div>
+                        <label
+                            class="binary-label mb-1.5 block text-[10px] text-[var(--binary-outline)] uppercase"
+                            >知識庫</label
+                        >
+                        <select
+                            v-model="qaKbId"
+                            class="w-full rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-low)] px-3 py-2 text-sm text-[var(--binary-text)]"
+                        >
+                            <option :value="null" disabled>
+                                選一個知識庫…
+                            </option>
+                            <option
+                                v-for="kb in qaKbs"
+                                :key="kb.id"
+                                :value="kb.id"
+                            >
+                                {{ kb.name }}（{{ kb.vector_count }} 塊）
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- 問題 -->
+                    <div>
+                        <textarea
+                            v-model="qaQuery"
+                            rows="3"
+                            placeholder="輸入問題，依此庫已落庫的內容作答"
+                            class="w-full resize-y rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-low)] px-3 py-2 text-sm text-[var(--binary-text)]"
+                            @keydown.ctrl.enter="askQuestion"
+                            @keydown.meta.enter="askQuestion"
+                        />
+                        <div class="mt-2 flex items-center gap-3">
+                            <button
+                                class="binary-button"
+                                :disabled="busy || !qaKbId || !qaQuery.trim()"
+                                @click="askQuestion"
+                            >
+                                {{ busy ? '思考中…' : '提問' }}
+                            </button>
+                            <span
+                                class="binary-label text-[10px] text-[var(--binary-outline)]"
+                                >⌘/Ctrl + Enter 送出</span
+                            >
+                        </div>
+                    </div>
+
+                    <!-- 回答 -->
+                    <div v-if="qaAnswer" class="binary-glass rounded-xl p-4">
+                        <div
+                            class="binary-label mb-2 text-[10px] text-[var(--binary-primary)] uppercase"
+                        >
+                            回答
+                        </div>
+                        <div
+                            class="text-sm leading-relaxed whitespace-pre-wrap text-[var(--binary-text)]"
+                        >
+                            {{ qaAnswer }}
+                        </div>
+                    </div>
+
+                    <!-- 出處 -->
+                    <div v-if="qaSources.length" class="space-y-2">
+                        <div
+                            class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                        >
+                            出處（檢索命中 {{ qaSources.length }} 塊）
+                        </div>
+                        <details
+                            v-for="(s, i) in qaSources"
+                            :key="i"
+                            class="rounded-lg border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-low)] px-3 py-2"
+                        >
+                            <summary
+                                class="flex cursor-pointer items-center justify-between gap-2 text-xs text-[var(--binary-text-muted)]"
+                            >
+                                <span class="min-w-0 truncate">
+                                    [{{ i + 1 }}]
+                                    {{ s.metadata?.file_name ?? '?' }} #{{
+                                        s.metadata?.chunk_index ?? '?'
+                                    }}
+                                </span>
+                                <span
+                                    v-if="s.similarity != null"
+                                    class="binary-label shrink-0 text-[10px] text-[var(--binary-outline)]"
+                                    >sim {{ s.similarity.toFixed(3) }}</span
+                                >
+                            </summary>
+                            <div
+                                class="mt-2 text-xs leading-relaxed whitespace-pre-wrap text-[var(--binary-text-muted)]"
+                            >
+                                {{ s.content }}
+                            </div>
+                        </details>
+                    </div>
+                </template>
             </div>
 
             <!-- ░░ 精靈 wizard ░░ -->

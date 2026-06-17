@@ -130,6 +130,20 @@ class KnowledgeBaseController extends Controller
         return response()->json(['data' => $hits]);
     }
 
+    /** 最小 Q&A：檢索 top-k → 組 prompt → LLM 生成回答（回 answer + sources）。 */
+    public function ask(Request $request, KnowledgeBase $knowledgeBase): JsonResponse
+    {
+        $this->authorizeKb($knowledgeBase);
+        $data = $request->validate([
+            'query' => 'required|string',
+            'top_k' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $result = $this->rag->answer($knowledgeBase, $data['query'], $data['top_k'] ?? 5);
+
+        return response()->json(['data' => $result]);
+    }
+
     private function authorizeKb(KnowledgeBase $kb): void
     {
         abort_unless($kb->user_id === Auth::id(), 403);

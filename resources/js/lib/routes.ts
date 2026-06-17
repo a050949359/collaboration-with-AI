@@ -272,6 +272,7 @@ export const api = {
         kb: (id: number) => `/api/v1/rag/kbs/${id}`,
         driveFiles: (kbId: number) => `/api/v1/rag/kbs/${kbId}/drive-files`,
         query: (kbId: number) => `/api/v1/rag/kbs/${kbId}/query`,
+        ask: (kbId: number) => `/api/v1/rag/kbs/${kbId}/ask`,
         documents: (kbId: number) => `/api/v1/rag/kbs/${kbId}/documents`,
         chunks: (docId: number) => `/api/v1/rag/documents/${docId}/chunks`,
         lock: (docId: number) => `/api/v1/rag/documents/${docId}/lock`,

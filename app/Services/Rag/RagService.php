@@ -9,6 +9,7 @@ use App\Models\Rag\Document;
 use App\Models\Rag\KnowledgeBase;
 use App\Services\AI\AIServiceException;
 use App\Services\AI\Contracts\TextEmbedding;
+use App\Services\AI\LlmManager;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
@@ -26,6 +27,7 @@ class RagService
         private readonly TextEmbedding $embedder,
         private readonly Chunker $chunker,
         private readonly DriveReader $drive,
+        private readonly LlmManager $llm,
     ) {}
 
     // ── 草稿 ────────────────────────────────────────────────────────────
@@ -364,6 +366,43 @@ class RagService
         ]));
 
         return $res['results'] ?? [];
+    }
+
+    /**
+     * 最小 Q&A:檢索 top-k → 組 grounding prompt → 打 LLM 生成回答。
+     * 回 answer + sources(命中塊,含 file_name/chunk_index/similarity 供前端顯示出處)。
+     *
+     * 檢索無門檻(回滿 top_k),弱匹配也會進 context;答不出來時靠 system prompt 約束「資料沒有就說沒有」。
+     *
+     * @return array{answer: string, sources: array<int, array<string, mixed>>}
+     */
+    public function answer(KnowledgeBase $kb, string $question, int $topK = 5): array
+    {
+        $sources = $this->query($kb, $question, $topK);
+
+        if ($sources === []) {
+            return ['answer' => '知識庫中沒有相關內容,無法回答這個問題。', 'sources' => []];
+        }
+
+        $context = collect($sources)->map(function (array $hit, int $i) {
+            $meta = $hit['metadata'] ?? [];
+            $head = sprintf('[來源 %d｜%s #%s]', $i + 1, $meta['file_name'] ?? '?', $meta['chunk_index'] ?? '?');
+
+            return $head."\n".($hit['content'] ?? '');
+        })->implode("\n\n");
+
+        $system = implode("\n\n", [
+            '你是知識庫問答助理。只能依據以下「參考資料」回答使用者問題。',
+            '若參考資料中沒有足以回答的資訊,直接說:「知識庫裡找不到這個問題的答案。」禁止推測或自行補充未提供的內容。',
+            '回答時用繁體中文,並在句末以 [來源 N] 標註依據的來源編號。',
+            '--- 參考資料 ---',
+            $context,
+            '--- 參考資料結束 ---',
+        ]);
+
+        $answer = $this->llm->for('chat')->generate($system, [['role' => 'user', 'text' => $question]]);
+
+        return ['answer' => $answer, 'sources' => $sources];
     }
 
     /**
