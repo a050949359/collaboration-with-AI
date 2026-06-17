@@ -21,7 +21,8 @@ class RagMcpService implements McpToolServiceInterface
 {
     private const TOOLS = [
         'rag_list_kbs', 'rag_create_kb', 'rag_delete_kb', 'rag_list_drive_files', 'rag_preview_chunks',
-        'rag_lock', 'rag_unlock', 'rag_resume', 'rag_get_draft', 'rag_edit_chunks',
+        'rag_lock', 'rag_unlock', 'rag_resume', 'rag_get_draft',
+        'rag_set_chunks', 'rag_edit_chunk', 'rag_delete_chunk', 'rag_near_duplicates',
         'rag_test_query', 'rag_commit', 'rag_query',
     ];
 
@@ -48,7 +49,10 @@ class RagMcpService implements McpToolServiceInterface
                 'rag_unlock' => $this->unlock($id, $args),
                 'rag_resume' => $this->resume($id, $args),
                 'rag_get_draft' => $this->getDraft($id, $args),
-                'rag_edit_chunks' => $this->editChunks($id, $args),
+                'rag_set_chunks' => $this->setChunks($id, $args),
+                'rag_edit_chunk' => $this->editChunk($id, $args),
+                'rag_delete_chunk' => $this->deleteChunk($id, $args),
+                'rag_near_duplicates' => $this->nearDuplicates($id, $args),
                 'rag_test_query' => $this->testQuery($id, $args),
                 'rag_commit' => $this->commit($id, $args),
                 'rag_query' => $this->query($id, $args),
@@ -159,14 +163,58 @@ class RagMcpService implements McpToolServiceInterface
         return $this->json($id, ['document_id' => $doc->id, 'status' => $doc->status->value, 'chunks' => $this->chunkList($doc)]);
     }
 
-    private function editChunks(mixed $id, array $args): JsonResponse
+    /** 宣告式整份替換草稿塊集(無 index、無漂移)。 */
+    private function setChunks(mixed $id, array $args): JsonResponse
     {
         $doc = $this->ownedDoc($args['document_id'] ?? 0);
         $this->locks->verify($doc, (string) ($args['lock_token'] ?? ''), (int) Auth::id());
 
-        $doc = $this->rag->applyEdits($doc, $args['ops'] ?? []);
+        $doc = $this->rag->setChunks($doc, $args['chunks'] ?? []);
 
         return $this->json($id, ['document_id' => $doc->id, 'chunks' => $this->chunkList($doc)]);
+    }
+
+    /** 改單一塊 content/context(單一操作、不影響其他塊索引)。 */
+    private function editChunk(mixed $id, array $args): JsonResponse
+    {
+        $doc = $this->ownedDoc($args['document_id'] ?? 0);
+        $this->locks->verify($doc, (string) ($args['lock_token'] ?? ''), (int) Auth::id());
+
+        $index = (int) ($args['index'] ?? -1);
+        $ops = [];
+        if (\array_key_exists('content', $args)) {
+            $ops[] = ['op' => 'set_content', 'index' => $index, 'content' => (string) $args['content']];
+        }
+        if (\array_key_exists('context', $args)) {
+            $ops[] = ['op' => 'set_context', 'index' => $index, 'context' => $args['context']];
+        }
+        if ($ops === []) {
+            return $this->text($id, 'content 或 context 至少給一個', true);
+        }
+
+        $doc = $this->rag->applyEdits($doc, $ops);
+
+        return $this->json($id, ['document_id' => $doc->id, 'chunks' => $this->chunkList($doc)]);
+    }
+
+    /** 刪單一塊(by chunk_index),其餘自動重排。 */
+    private function deleteChunk(mixed $id, array $args): JsonResponse
+    {
+        $doc = $this->ownedDoc($args['document_id'] ?? 0);
+        $this->locks->verify($doc, (string) ($args['lock_token'] ?? ''), (int) Auth::id());
+
+        $doc = $this->rag->applyEdits($doc, [['op' => 'delete', 'index' => (int) ($args['index'] ?? -1)]]);
+
+        return $this->json($id, ['document_id' => $doc->id, 'chunks' => $this->chunkList($doc)]);
+    }
+
+    /** 草稿內近似重複塊配對(判斷該不該合併/去重);唯讀、不需鎖。 */
+    private function nearDuplicates(mixed $id, array $args): JsonResponse
+    {
+        $doc = $this->ownedDoc($args['document_id'] ?? 0);
+        $threshold = isset($args['threshold']) ? (float) $args['threshold'] : null;
+
+        return $this->json($id, $this->rag->nearDuplicates($doc, $threshold));
     }
 
     private function testQuery(mixed $id, array $args): JsonResponse
@@ -235,7 +283,10 @@ class RagMcpService implements McpToolServiceInterface
             ['name' => 'rag_unlock', 'description' => '釋放文件編輯鎖。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId, 'lock_token' => $lockToken], 'required' => ['document_id', 'lock_token']]],
             ['name' => 'rag_resume', 'description' => '用 lock_token 接手草稿(交接用:前端上鎖拿 token、貼來這裡)。回 document_id + 當前草稿塊,之後即可帶 document_id+lock_token 編輯/commit。', 'inputSchema' => ['type' => 'object', 'properties' => ['lock_token' => $lockToken], 'required' => ['lock_token']]],
             ['name' => 'rag_get_draft', 'description' => '取得文件目前草稿塊。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId], 'required' => ['document_id']]],
-            ['name' => 'rag_edit_chunks', 'description' => '套用草稿編輯。ops 為陣列,每項 op∈{set_content,set_context,split,merge,delete},index 指當下塊位置;split 需 at(字元位移)。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId, 'lock_token' => $lockToken, 'ops' => ['type' => 'array', 'items' => ['type' => 'object']]], 'required' => ['document_id', 'lock_token', 'ops']]],
+            ['name' => 'rag_set_chunks', 'description' => '宣告式設定草稿的「完整塊集」:傳入你要的塊清單(順序即最終順序),整份替換。無 index、無漂移;content/context 沒變的塊自動保留向量快取,空內容塊略過。適合大改/重新組織整份切塊。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId, 'lock_token' => $lockToken, 'chunks' => ['type' => 'array', 'description' => '目標塊清單', 'items' => ['type' => 'object', 'properties' => ['content' => ['type' => 'string'], 'context' => ['type' => ['string', 'null'], 'description' => 'Contextual Retrieval 情境前綴(可省/null)']], 'required' => ['content']]]], 'required' => ['document_id', 'lock_token', 'chunks']]],
+            ['name' => 'rag_edit_chunk', 'description' => '改單一塊的 content/context(by chunk_index)。單一操作、不影響其他塊索引;content、context 至少給一個,context 給 null 可清除。適合小修。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId, 'lock_token' => $lockToken, 'index' => ['type' => 'integer', 'description' => 'chunk_index'], 'content' => ['type' => 'string'], 'context' => ['type' => ['string', 'null']]], 'required' => ['document_id', 'lock_token', 'index']]],
+            ['name' => 'rag_delete_chunk', 'description' => '刪單一塊(by chunk_index),其餘塊自動重排索引。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId, 'lock_token' => $lockToken, 'index' => ['type' => 'integer', 'description' => 'chunk_index']], 'required' => ['document_id', 'lock_token', 'index']]],
+            ['name' => 'rag_near_duplicates', 'description' => '草稿內兩兩相似度超過門檻的塊配對(會順手 embed 缺向量的塊、快取),用於判斷該不該合併/去重。唯讀、不需鎖。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId, 'threshold' => ['type' => 'number', 'description' => '相似度門檻,預設讀 config rag.dedup.threshold']], 'required' => ['document_id']]],
             ['name' => 'rag_test_query', 'description' => '對「草稿」做測試查詢(PHP cosine,單一文件隔離、不落庫、不污染正式庫),用於落庫前粗驗切塊/context 撈不撈得到預期內容。注意:隔離測試、不含多檔混合競爭;真實檢索請落庫後用 rag_query。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId, 'query' => ['type' => 'string'], 'top_k' => ['type' => 'integer']], 'required' => ['document_id', 'query']]],
             ['name' => 'rag_commit', 'description' => '把草稿落庫(embed 變更塊 + upsert 進向量庫)。', 'inputSchema' => ['type' => 'object', 'properties' => ['document_id' => $docId, 'lock_token' => $lockToken], 'required' => ['document_id', 'lock_token']]],
             ['name' => 'rag_query', 'description' => '對已 commit 的知識庫做語意檢索。', 'inputSchema' => ['type' => 'object', 'properties' => ['kb_id' => ['type' => 'integer'], 'query' => ['type' => 'string'], 'top_k' => ['type' => 'integer']], 'required' => ['kb_id', 'query']]],

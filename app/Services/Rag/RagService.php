@@ -324,6 +324,65 @@ class RagService
     }
 
     /**
+     * 宣告式設定草稿的完整塊集:整份替換成 $chunks(順序即最終順序)。
+     * 無 index、無漂移(供 MCP/LLM 端宣告式編輯);以 embeddable(content+context)雜湊比對
+     * 保留未變塊的向量快取——content 或 context 任一變即重 embed(因 embedding 含 context)。
+     * 空內容塊略過,全空則擲例外。
+     *
+     * @param  array<int, array{content?: string, context?: string|null}>  $chunks
+     */
+    public function setChunks(Document $document, array $chunks): Document
+    {
+        // 舊塊:embeddable 雜湊 → 向量快取(content+context 皆同才可重用)
+        $cache = [];
+        foreach ($document->chunks()->get() as $c) {
+            $cache[hash('sha256', $c->embeddableText())] ??= [
+                'embedding' => $c->embedding,
+                'embedded_at' => $c->embedded_at,
+            ];
+        }
+
+        // 正規化目標塊:略過空內容塊
+        $entries = [];
+        foreach ($chunks as $row) {
+            $content = (string) ($row['content'] ?? '');
+            if (trim($content) === '') {
+                continue;
+            }
+            $entries[] = [
+                'content' => $content,
+                'context' => ($row['context'] ?? null) === null ? null : (string) $row['context'],
+            ];
+        }
+        if ($entries === []) {
+            throw new AIServiceException('沒有可用的塊(內容皆為空)。');
+        }
+
+        return DB::transaction(function () use ($document, $entries, $cache) {
+            $document->chunks()->delete();
+            foreach ($entries as $i => $entry) {
+                // 用 Chunk::embeddableText() 本身算 key,確保與舊塊比對規則一致
+                $cached = $cache[hash('sha256', (new Chunk($entry))->embeddableText())] ?? null;
+                Chunk::create([
+                    'document_id' => $document->id,
+                    'chunk_index' => $i,
+                    'content' => $entry['content'],
+                    'context' => $entry['context'],
+                    'content_hash' => hash('sha256', $entry['content']),
+                    'embedding' => $cached['embedding'] ?? null,
+                    'embedded_at' => $cached['embedded_at'] ?? null,
+                    'status' => ChunkStatus::Draft,
+                ]);
+            }
+            if ($document->status === DocumentStatus::Committed) {
+                $document->update(['status' => DocumentStatus::Dirty]);
+            }
+
+            return $document->refresh();
+        });
+    }
+
+    /**
      * 標記一筆串列項為「已變」:清掉向量快取(commit 時重 embed)。
      *
      * @param  array<string, mixed>  $entry
