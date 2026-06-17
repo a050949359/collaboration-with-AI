@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Log;
 class GeminiChatService implements ChatCompletion
 {
     private string $apiKey;
+
     private string $defaultModel;
+
     private bool $useRotation;
 
     /** @var array<int, string> */
@@ -49,19 +51,19 @@ class GeminiChatService implements ChatCompletion
 
         foreach ($messages as $turn) {
             $contents[] = [
-                'role'  => $turn['role'] === 'assistant' ? 'model' : $turn['role'],
+                'role' => $turn['role'] === 'assistant' ? 'model' : $turn['role'],
                 'parts' => [['text' => $turn['text']]],
             ];
         }
 
         $generationConfig = $this->buildGenerationConfig($options);
-        $attempted        = [];
+        $attempted = [];
 
         foreach ($this->models as $_unused) {
             $model = $this->nextModel();
-            $body  = [
+            $body = [
                 'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
-                'contents'           => $contents,
+                'contents' => $contents,
             ];
             if ($generationConfig !== []) {
                 $body['generationConfig'] = $generationConfig;
@@ -69,12 +71,13 @@ class GeminiChatService implements ChatCompletion
 
             $response = Http::withQueryParameters(['key' => $this->apiKey])
                 ->acceptJson()
+                ->withOptions(['proxy' => config('services.gemini.proxy')])
                 ->timeout(180)
                 ->post($this->endpointForModel($model), $body);
 
             Log::debug('GeminiChatService response', [
-                'status'   => $response->status(),
-                'model'    => $model,
+                'status' => $response->status(),
+                'model' => $model,
                 'endpoint' => $this->endpointForModel($model),
             ]);
 
@@ -82,16 +85,16 @@ class GeminiChatService implements ChatCompletion
                 return $this->extractText($response->json());
             }
 
-            $attempted[] = $model . ':' . $response->status();
+            $attempted[] = $model.':'.$response->status();
 
-            if (!in_array($response->status(), [404, 429, 500, 503], true)) {
-                throw new AIServiceException('Gemini request failed: ' . $response->status() . ' (model: ' . $model . ')');
+            if (! in_array($response->status(), [404, 429, 500, 503], true)) {
+                throw new AIServiceException('Gemini request failed: '.$response->status().' (model: '.$model.')');
             }
         }
 
         throw new AIServiceException(
-            'Gemini request failed across models [' . implode(', ', $attempted) . '] '
-            . '(404: model unavailable, 429: quota/rate limit).'
+            'Gemini request failed across models ['.implode(', ', $attempted).'] '
+            .'(404: model unavailable, 429: quota/rate limit).'
         );
     }
 
@@ -107,7 +110,7 @@ class GeminiChatService implements ChatCompletion
 
         if (isset($options['json_schema']) && is_array($options['json_schema'])) {
             $config['responseMimeType'] = 'application/json';
-            $config['responseSchema']   = $options['json_schema'];
+            $config['responseSchema'] = $options['json_schema'];
         }
 
         if (isset($options['temperature'])) {
@@ -133,7 +136,7 @@ class GeminiChatService implements ChatCompletion
     {
         $fallback = $this->models[0] ?? $this->defaultModel;
 
-        if (!$this->useRotation) {
+        if (! $this->useRotation) {
             return $fallback;
         }
 
@@ -141,27 +144,26 @@ class GeminiChatService implements ChatCompletion
         return rescue(function () use ($fallback) {
             $cacheKey = 'gemini_model_rotation_index';
 
-            if (!Cache::has($cacheKey)) {
+            if (! Cache::has($cacheKey)) {
                 Cache::forever($cacheKey, 0);
             }
 
-            $next  = (int) Cache::increment($cacheKey);
+            $next = (int) Cache::increment($cacheKey);
             $index = ($next - 1) % \count($this->models);
 
             return $this->models[$index] ?? $fallback;
         }, $fallback);
     }
 
-    /** @param mixed $payload */
     private function extractText(mixed $payload): string
     {
-        if (!is_array($payload)) {
+        if (! is_array($payload)) {
             return '';
         }
 
         $candidates = $payload['candidates'] ?? [];
 
-        if (!is_array($candidates) || !isset($candidates[0]['content']['parts'])) {
+        if (! is_array($candidates) || ! isset($candidates[0]['content']['parts'])) {
             return '';
         }
 

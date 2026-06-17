@@ -43,6 +43,7 @@ class GeminiMultimodalEmbeddingService implements MultimodalEmbedding
 
         $response = Http::withQueryParameters(['key' => $this->apiKey])
             ->acceptJson()
+            ->withOptions(['proxy' => config('services.gemini.proxy')])
             ->timeout(120)
             ->post($this->endpoint(), $body);
 
