@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('share_tokens', function (Blueprint $table) {
             $table->id();
             $table->string('token', 64)->unique();
-            $table->string('scope', 64);                     // 'about' | 'mcp' | 'mcp:read' ...
+            $table->string('scope', 64);                     // ShareTokenScope，目前僅 'about'
             $table->unsignedInteger('max_uses')->nullable(); // null = 無限，1 = 一次性
             $table->unsignedInteger('uses_count')->default(0);
             $table->string('note')->nullable();              // 備註用途，僅供管理者參考

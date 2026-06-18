@@ -13,7 +13,7 @@ class CheckApiKeyScope
             return response()->json(['error' => 'Unauthorized: API key required.'], 401);
         }
 
-        $keyScopes = $request->attributes->get('api_key_scopes'); // null = 無限制
+        $keyScopes = $request->attributes->get('api_key_scopes'); // null = 無任何 scope（下方直接 403）
 
         if ($keyScopes === null) {
             return response()->json(['error' => 'Forbidden: API key has no scopes.'], 403);
