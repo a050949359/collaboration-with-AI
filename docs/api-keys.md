@@ -3,7 +3,7 @@
 讓**外部 client(Claude Desktop/Code、其他程式)** 用 Bearer token 呼叫 MCP 端點。每把 key 帶 **scope**,決定能打哪些 endpoint。
 
 > [!NOTE]
-> 這跟 **ShareToken**(About/LINE 分享連結)是兩套不同東西。本篇只講 **`UserApiKey`(MCP 用)**。
+> 這跟 **ShareToken**(About/LINE 分享連結)是兩套不同東西。本篇只講 **`UserApiKey`(MCP 用)**。ShareToken 見 [share-token.md](share-token.md)。
 
 ## Scope 一覽(`app/Enums/ApiKeyScope.php`)
 
@@ -36,7 +36,7 @@ client ──Authorization: Bearer <raw key>──▶ /api/mcp/*
   - **明文只在回應回傳一次**(且以前端 public key 走 **RSA-OAEP/SHA-256 加密**後回,同 password 流程)→ 之後再也拿不到,要重建。
   - scope 驗證:若含 `adminOnly` scope 但非 admin → **403**。
 
-## 注意 / 技術債
+## 注意事項 / 陷阱
 
 - **明文 key 不可復原**:只在建立當下出現一次,遺失就 revoke 重建。
 - **`scopes = null` ＝ 打不了任何 MCP**:把關的 `CheckApiKeyScope` 對 null scope 回 **403**(不是「無限制」)。建 key 一定要給 scope。
