@@ -72,6 +72,10 @@ return [
         // 兩者皆 Matryoshka，用 outputDimensionality 降到 768 省儲存。
         'embedding_model' => env('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001'),
         'embedding_dimensions' => env('GEMINI_EMBEDDING_DIMENSIONS', 768),
+
+        // 出口 proxy：AI Studio（generativelanguage）有地區限制，prod 主機在不支援
+        // 地區時，透過支援地區的中繼（如 GCP VM tinyproxy）轉發。null=直連（dev/未設）。
+        'proxy' => env('GEMINI_PROXY'),
     ],
 
     /*

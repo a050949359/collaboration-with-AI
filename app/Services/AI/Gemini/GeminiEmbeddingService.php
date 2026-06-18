@@ -75,6 +75,7 @@ class GeminiEmbeddingService implements TextEmbedding
 
         $response = Http::withQueryParameters(['key' => $this->apiKey])
             ->acceptJson()
+            ->when(config('services.gemini.proxy'), fn ($req, $proxy) => $req->withOptions(['proxy' => $proxy]))
             ->timeout(120)
             ->post($this->endpoint(), ['requests' => $requests]);
 
