@@ -53,7 +53,7 @@ use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureRegistrationOpen;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/about/ask', [AboutController::class, 'ask'])->middleware('throttle:4,1');
+Route::post('/about/ask', [AboutController::class, 'ask'])->middleware(['throttle:4,1', 'share-token:about']);
 
 Route::post('/share-tokens/check', [ShareTokenController::class, 'check'])->middleware('throttle:3,1');
 
