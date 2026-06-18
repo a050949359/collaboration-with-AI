@@ -2,6 +2,7 @@
 
 namespace App\Services\Rag;
 
+use App\Enums\LlmUse;
 use App\Enums\Rag\ChunkStatus;
 use App\Enums\Rag\DocumentStatus;
 use App\Enums\Rag\DriveFileStatus;
@@ -493,7 +494,8 @@ class RagService
             '--- 參考資料結束 ---',
         ]);
 
-        $answer = $this->llm->for('chat')->generate($system, [['role' => 'user', 'text' => $question]]);
+        // 用途 LlmUse::Rag（獨立於 About 的 Chat，可在後台單獨設 provider/model）
+        $answer = $this->llm->for(LlmUse::Rag)->generate($system, [['role' => 'user', 'text' => $question]]);
 
         return ['answer' => $answer, 'sources' => $sources];
     }

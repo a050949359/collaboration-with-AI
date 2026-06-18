@@ -2,37 +2,38 @@
 
 namespace App\Services\Story;
 
+use App\Enums\LlmUse;
 use App\Services\AI\LlmManager;
 
 class LlmStoryService
 {
     /** Neutral JSON Schema for generateSetup / refineSetup */
     private const SETUP_SCHEMA = [
-        'type'       => 'object',
+        'type' => 'object',
         'properties' => [
-            'world'      => ['type' => 'string'],
-            'opening'    => ['type' => 'string'],
+            'world' => ['type' => 'string'],
+            'opening' => ['type' => 'string'],
             'characters' => [
-                'type'  => 'array',
+                'type' => 'array',
                 'items' => [
-                    'type'       => 'object',
+                    'type' => 'object',
                     'properties' => [
-                        'name'        => ['type' => 'string'],
-                        'persona'     => ['type' => 'string'],
-                        'secret'      => ['type' => 'string', 'nullable' => true],
+                        'name' => ['type' => 'string'],
+                        'persona' => ['type' => 'string'],
+                        'secret' => ['type' => 'string', 'nullable' => true],
                         'is_narrator' => ['type' => 'boolean'],
                     ],
                     'required' => ['name', 'persona', 'is_narrator'],
                 ],
             ],
             'items' => [
-                'type'  => 'array',
+                'type' => 'array',
                 'items' => [
-                    'type'       => 'object',
+                    'type' => 'object',
                     'properties' => [
-                        'name'        => ['type' => 'string'],
+                        'name' => ['type' => 'string'],
                         'description' => ['type' => 'string'],
-                        'holder'      => ['type' => 'string', 'nullable' => true],
+                        'holder' => ['type' => 'string', 'nullable' => true],
                     ],
                     'required' => ['name', 'description'],
                 ],
@@ -84,7 +85,7 @@ class LlmStoryService
 
         $messages[] = ['role' => 'user', 'text' => $turnInstruction];
 
-        return $this->llm->for('story')->generate($systemPrompt, $messages);
+        return $this->llm->for(LlmUse::Story)->generate($systemPrompt, $messages);
     }
 
     /**
@@ -110,7 +111,7 @@ class LlmStoryService
         $itemsList = empty($items)
             ? '（目前無道具）'
             : implode("\n", array_map(
-                fn($item) => '- ' . $item['name'] . '：' . $item['description'] . '（' . ($item['holder'] ?? '無人持有') . '）',
+                fn ($item) => '- '.$item['name'].'：'.$item['description'].'（'.($item['holder'] ?? '無人持有').'）',
                 $items,
             ));
 
@@ -126,7 +127,7 @@ class LlmStoryService
             ],
         ];
 
-        return $this->llm->for('story_state')->generate($systemPrompt, $messages);
+        return $this->llm->for(LlmUse::StoryState)->generate($systemPrompt, $messages);
     }
 
     /**
@@ -138,7 +139,7 @@ class LlmStoryService
     {
         $systemPrompt = implode("\n\n", [
             '你是一位故事背景設計師，負責根據關鍵字展開完整的故事背景設定。',
-            '類型基調：' . $this->genreHint($genre),
+            '類型基調：'.$this->genreHint($genre),
             '輸出格式為 JSON，包含以下欄位：',
             '- world：世界觀描述（時代、地點、規則，100 字以內）',
             '- characters：視角人物陣列，每個人物有 name、persona（個性、動機、觀察世界的方式）、secret（秘密，可空）、is_narrator（布林值：true 表示故事會以此角色視角輪流敘述，false 表示此角色存在於故事中但不主動敘述，適合設為配角或反派）',
@@ -150,7 +151,7 @@ class LlmStoryService
             ['role' => 'user', 'text' => "關鍵字：{$keywords}"],
         ];
 
-        return $this->llm->for('story')->generate($systemPrompt, $messages, ['json_schema' => self::SETUP_SCHEMA]);
+        return $this->llm->for(LlmUse::Story)->generate($systemPrompt, $messages, ['json_schema' => self::SETUP_SCHEMA]);
     }
 
     /**
@@ -172,22 +173,21 @@ class LlmStoryService
             [
                 'role' => 'user',
                 'text' => "以下是使用者修改後的設定草稿，請優化：\n\n"
-                    . json_encode($userEditedSetup, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
-                    . $notesText,
+                    .json_encode($userEditedSetup, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+                    .$notesText,
             ],
         ];
 
-        return $this->llm->for('story')->generate($systemPrompt, $messages, ['json_schema' => self::SETUP_SCHEMA]);
+        return $this->llm->for(LlmUse::Story)->generate($systemPrompt, $messages, ['json_schema' => self::SETUP_SCHEMA]);
     }
 
-    /** @return string */
     private function genreHint(string $genre): string
     {
         return match ($genre) {
             'mystery' => '懸疑推理，強調資訊不對稱、謊言與真相',
-            'scifi'   => '科幻，強調科技設定的自洽性與未來感',
-            'modern'  => '現代寫實，貼近日常生活，衝突來自人際與社會',
-            default   => '奇幻，允許魔法、異世界、非人種族等超自然元素',
+            'scifi' => '科幻，強調科技設定的自洽性與未來感',
+            'modern' => '現代寫實，貼近日常生活，衝突來自人際與社會',
+            default => '奇幻，允許魔法、異世界、非人種族等超自然元素',
         };
     }
 
@@ -217,7 +217,7 @@ class LlmStoryService
             ],
         ];
 
-        return $this->llm->for('story')->generate($systemPrompt, $messages);
+        return $this->llm->for(LlmUse::Story)->generate($systemPrompt, $messages);
     }
 
     private function buildSegmentPrompt(
@@ -232,7 +232,7 @@ class LlmStoryService
         $itemsList = empty($items)
             ? '（目前無道具）'
             : implode("\n", array_map(
-                fn($item) => '- ' . $item['name'] . '（' . ($item['holder'] ?? '無人持有') . '）：' . $item['description'],
+                fn ($item) => '- '.$item['name'].'（'.($item['holder'] ?? '無人持有').'）：'.$item['description'],
                 $items,
             ));
 
