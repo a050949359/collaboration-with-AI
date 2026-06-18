@@ -72,12 +72,12 @@ async function saveSettings() {
 
 // ── LLM 模型設定 ─────────────────────────────────────────
 
-const LLM_USES = [
-    { key: 'story', label: '故事段落生成' },
-    { key: 'story_state', label: '世界狀態更新' },
-    { key: 'character', label: '角色生成' },
-    { key: 'chat', label: 'About 履歷對話' },
-] as const;
+// 用途列表由後端 LlmUse enum 經 Inertia props 提供（單一來源，不再前端寫死）
+const LLM_USES = computed<{ key: string; label: string }[]>(() =>
+    ((page.props.llmUses as { value: string; label: string }[]) ?? []).map(
+        (u) => ({ key: u.value, label: u.label }),
+    ),
+);
 
 const llmCatalog = computed<Record<string, string[]>>(
     () => (page.props.llmCatalog as Record<string, string[]>) ?? {},
@@ -90,7 +90,7 @@ function modelsFor(provider: string): string[] {
 
 const llmForm = ref<LlmSettings>(
     Object.fromEntries(
-        LLM_USES.map((u) => {
+        LLM_USES.value.map((u) => {
             const existing = (
                 page.props.llmSettings as LlmSettings | undefined
             )?.[u.key];
@@ -762,6 +762,20 @@ onUnmounted(stopMicroPolling);
                             >
                                 &gt; 各用途的 LLM provider /
                                 model（儲存後即時生效）
+                            </p>
+                            <p
+                                class="text-[11px] text-[var(--binary-text-muted)]"
+                            >
+                                model 下拉來自各 provider
+                                的設定清單；正確名稱參考
+                                <a
+                                    href="https://ai.google.dev/gemini-api/docs/models?hl=zh-tw"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-[var(--binary-primary)] underline"
+                                    >Gemini API models</a
+                                >（注意 preview 模型含
+                                <code>-preview</code> 後綴，打錯會逾時）。
                             </p>
 
                             <div

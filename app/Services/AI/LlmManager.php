@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use App\Enums\LlmUse;
 use App\Services\AI\Contracts\ChatCompletion;
 use App\Services\AI\Gemini\GeminiChatService;
 use App\Services\AI\Nvidia\NvidiaChatService;
@@ -19,7 +20,7 @@ class LlmManager
     /**
      * 取得某用途的 driver。
      */
-    public function for(string $use): ChatCompletion
+    public function for(string|LlmUse $use): ChatCompletion
     {
         [$provider, $model] = $this->resolveUse($use);
 
@@ -35,7 +36,7 @@ class LlmManager
             'gemini' => new GeminiChatService($model),
             'nvidia' => new NvidiaChatService($model),
             'ollama' => new OllamaChatService($model),
-            default  => throw new AIServiceException("Unknown LLM provider: {$provider}"),
+            default => throw new AIServiceException("Unknown LLM provider: {$provider}"),
         };
     }
 
@@ -44,19 +45,22 @@ class LlmManager
      *
      * @return array{0: string, 1: string}
      */
-    public function resolveUse(string $use): array
+    public function resolveUse(string|LlmUse $use): array
     {
-        $default = config("services.llm.uses.{$use}", [
+        $key = $use instanceof LlmUse ? $use->value : $use;
+
+        // config 沒列此用途 → 退回 gemini 預設(用途以 LlmUse 為準,config 只是 env 覆蓋)
+        $default = config("services.llm.uses.{$key}", [
             'provider' => 'gemini',
-            'model'    => (string) config('services.gemini.model'),
+            'model' => (string) config('services.gemini.model'),
         ]);
 
         // AppSettings 內部已 rescue：Redis 掛掉時退回 config 預設，不讓設定讀取打斷 LLM 呼叫。
         $llm = AppSettings::get('llm', []);
-        $override = is_array($llm) ? ($llm[$use] ?? null) : null;
+        $override = is_array($llm) ? ($llm[$key] ?? null) : null;
 
         $provider = (string) ($override['provider'] ?? $default['provider']);
-        $model    = (string) ($override['model'] ?? $default['model']);
+        $model = (string) ($override['model'] ?? $default['model']);
 
         return [$provider, $model];
     }

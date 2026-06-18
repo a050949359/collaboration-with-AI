@@ -2,6 +2,7 @@
 
 namespace App\Services\About;
 
+use App\Enums\LlmUse;
 use App\Services\AI\LlmManager;
 use Illuminate\Support\Facades\Storage;
 
@@ -22,10 +23,10 @@ class ResumeChatService
             return '目前尚未匯入任何履歷背景資料，請先由管理員在 About 頁面匯入 Context。';
         }
 
-        $messages   = $history;
+        $messages = $history;
         $messages[] = ['role' => 'user', 'text' => $message];
 
-        return $this->llm->for('chat')->generate($this->buildSystemPrompt($context), $messages);
+        return $this->llm->for(LlmUse::Resume)->generate($this->buildSystemPrompt($context), $messages);
     }
 
     public function saveContext(string $context): void
@@ -35,7 +36,7 @@ class ResumeChatService
 
     public function loadContext(): string
     {
-        if (!Storage::exists('private/resume_context.md')) {
+        if (! Storage::exists('private/resume_context.md')) {
             return '';
         }
 

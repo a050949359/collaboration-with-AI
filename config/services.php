@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\LlmUse;
+
 return [
 
     /*
@@ -109,10 +111,12 @@ return [
             ],
         ],
         'uses' => [
-            'story' => ['provider' => env('LLM_STORY_PROVIDER', 'gemini'),       'model' => env('LLM_STORY_MODEL', 'gemini-2.5-flash')],
-            'story_state' => ['provider' => env('LLM_STORY_STATE_PROVIDER', 'gemini'), 'model' => env('LLM_STORY_STATE_MODEL', 'gemini-2.5-flash')],
-            'character' => ['provider' => env('LLM_CHARACTER_PROVIDER', 'gemini'),   'model' => env('LLM_CHARACTER_MODEL', 'gemini-2.5-flash')],
-            'chat' => ['provider' => env('LLM_CHAT_PROVIDER', 'gemini'),        'model' => env('LLM_CHAT_MODEL', 'gemini-2.5-flash')],
+            // key 綁 LlmUse(用途以 enum 為準);此處為各用途的 env 預設覆蓋,可選
+            LlmUse::Story->value => ['provider' => env('LLM_STORY_PROVIDER', 'gemini'),       'model' => env('LLM_STORY_MODEL', 'gemini-2.5-flash')],
+            LlmUse::StoryState->value => ['provider' => env('LLM_STORY_STATE_PROVIDER', 'gemini'), 'model' => env('LLM_STORY_STATE_MODEL', 'gemini-2.5-flash')],
+            LlmUse::Character->value => ['provider' => env('LLM_CHARACTER_PROVIDER', 'gemini'),   'model' => env('LLM_CHARACTER_MODEL', 'gemini-2.5-flash')],
+            LlmUse::Resume->value => ['provider' => env('LLM_RESUME_PROVIDER', 'gemini'),    'model' => env('LLM_RESUME_MODEL', 'gemini-2.5-flash')],
+            LlmUse::Rag->value => ['provider' => env('LLM_RAG_PROVIDER', 'gemini'),         'model' => env('LLM_RAG_MODEL', 'gemini-2.5-flash')],
         ],
     ],
 

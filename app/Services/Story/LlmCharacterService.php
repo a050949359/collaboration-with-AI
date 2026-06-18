@@ -2,24 +2,25 @@
 
 namespace App\Services\Story;
 
+use App\Enums\LlmUse;
 use App\Services\AI\LlmManager;
 
 class LlmCharacterService
 {
     private const CHARACTER_SCHEMA = [
-        'type'       => 'object',
+        'type' => 'object',
         'properties' => [
-            'name'       => ['type' => 'string'],
-            'persona'    => ['type' => 'string'],
-            'secret'     => ['type' => 'string', 'nullable' => true],
+            'name' => ['type' => 'string'],
+            'persona' => ['type' => 'string'],
+            'secret' => ['type' => 'string', 'nullable' => true],
             'background' => ['type' => 'string'],
             'appearance' => [
-                'type'       => 'object',
+                'type' => 'object',
                 'properties' => [
-                    'age'      => ['type' => 'string'],
-                    'hair'     => ['type' => 'string'],
-                    'eyes'     => ['type' => 'string'],
-                    'build'    => ['type' => 'string'],
+                    'age' => ['type' => 'string'],
+                    'hair' => ['type' => 'string'],
+                    'eyes' => ['type' => 'string'],
+                    'build' => ['type' => 'string'],
                     'features' => ['type' => 'string', 'nullable' => true],
                 ],
                 'required' => ['age', 'hair', 'eyes', 'build'],
@@ -30,7 +31,7 @@ class LlmCharacterService
     ];
 
     private const IMAGE_PROMPT_SCHEMA = [
-        'type'       => 'object',
+        'type' => 'object',
         'properties' => [
             'image_prompt' => ['type' => 'string'],
         ],
@@ -47,7 +48,7 @@ class LlmCharacterService
         $systemPrompt = implode("\n\n", [
             '你是一位角色設計師，擅長創造有深度、有特色的故事人物。',
             '請根據以下描述設計一個完整的角色。若無描述，請自由創作一個符合類型基調的有趣角色。',
-            '類型基調：' . $this->genreHint($genre),
+            '類型基調：'.$this->genreHint($genre),
             implode("\n", [
                 '欄位說明：',
                 '- name：角色全名',
@@ -63,7 +64,7 @@ class LlmCharacterService
             ['role' => 'user', 'text' => $description !== '' ? "描述：{$description}" : '請自由創作一個角色。'],
         ];
 
-        $raw = $this->llm->for('character')->generate($systemPrompt, $messages, ['json_schema' => self::CHARACTER_SCHEMA]);
+        $raw = $this->llm->for(LlmUse::Character)->generate($systemPrompt, $messages, ['json_schema' => self::CHARACTER_SCHEMA]);
 
         return $this->decode($raw);
     }
@@ -87,12 +88,12 @@ class LlmCharacterService
             [
                 'role' => 'user',
                 'text' => "以下是使用者修改後的角色設定，請優化：\n\n"
-                    . json_encode($character, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
-                    . $notesText,
+                    .json_encode($character, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+                    .$notesText,
             ],
         ];
 
-        $raw = $this->llm->for('character')->generate($systemPrompt, $messages, ['json_schema' => self::CHARACTER_SCHEMA]);
+        $raw = $this->llm->for(LlmUse::Character)->generate($systemPrompt, $messages, ['json_schema' => self::CHARACTER_SCHEMA]);
 
         return $this->decode($raw);
     }
@@ -114,11 +115,11 @@ class LlmCharacterService
         $messages = [
             [
                 'role' => 'user',
-                'text' => "角色設定：\n" . json_encode($character, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+                'text' => "角色設定：\n".json_encode($character, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
             ],
         ];
 
-        $raw = $this->llm->for('character')->generate($systemPrompt, $messages, ['json_schema' => self::IMAGE_PROMPT_SCHEMA]);
+        $raw = $this->llm->for(LlmUse::Character)->generate($systemPrompt, $messages, ['json_schema' => self::IMAGE_PROMPT_SCHEMA]);
 
         $decoded = $this->decode($raw);
 
@@ -137,9 +138,9 @@ class LlmCharacterService
     {
         return match ($genre) {
             'mystery' => '懸疑推理，強調資訊不對稱、謊言與真相',
-            'scifi'   => '科幻，強調科技設定的自洽性與未來感',
-            'modern'  => '現代寫實，貼近日常生活，衝突來自人際與社會',
-            default   => '奇幻，允許魔法、異世界、非人種族等超自然元素',
+            'scifi' => '科幻，強調科技設定的自洽性與未來感',
+            'modern' => '現代寫實，貼近日常生活，衝突來自人際與社會',
+            default => '奇幻，允許魔法、異世界、非人種族等超自然元素',
         };
     }
 }
