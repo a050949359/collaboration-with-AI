@@ -86,12 +86,16 @@ class AboutShareTokenTest extends TestCase
             ->assertStatus(403);
     }
 
-    public function test_logged_in_user_needs_no_token(): void
+    public function test_logged_in_user_via_bearer_token_needs_no_token(): void
     {
+        // 用真實 Sanctum PAT 重現正式環境（token-in-cookie → Bearer），
+        // 不用 actingAs(…, 'sanctum')，因它會 shouldUse('sanctum') 偷換預設 guard、
+        // 掩蓋「預設 web guard 認不到 API 使用者」的回歸。
         $this->fakeChatReturns();
         $user = User::factory()->create();
+        $token = $user->createToken('test')->plainTextToken;
 
-        $this->actingAs($user, 'sanctum')
+        $this->withToken($token)
             ->postJson('/api/about/ask', ['message' => 'hi'])
             ->assertOk();
     }

@@ -20,11 +20,11 @@ class AboutController extends Controller
                 history: $request->input('history', []),
             );
 
-            // 成功回覆後才扣次數（登入者無 share_token，這裡為 null → no-op）
-            $request->attributes->get('share_token')?->incrementUses();
-
             return response()->json(['reply' => $reply]);
         } catch (AIServiceException $e) {
+            // 次數已由 middleware 預扣；AI 失敗時退回（登入者無 share_token → no-op）
+            $request->attributes->get('share_token')?->decrement('uses_count');
+
             return response()->json(['message' => $e->getMessage()], 503);
         }
     }
