@@ -763,20 +763,6 @@ onUnmounted(stopMicroPolling);
                                 &gt; 各用途的 LLM provider /
                                 model（儲存後即時生效）
                             </p>
-                            <p
-                                class="text-[11px] text-[var(--binary-text-muted)]"
-                            >
-                                model 下拉來自各 provider
-                                的設定清單；正確名稱參考
-                                <a
-                                    href="https://ai.google.dev/gemini-api/docs/models?hl=zh-tw"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="text-[var(--binary-primary)] underline"
-                                    >Gemini API models</a
-                                >（注意 preview 模型含
-                                <code>-preview</code> 後綴，打錯會逾時）。
-                            </p>
 
                             <div
                                 v-for="use in LLM_USES"
