@@ -1,19 +1,20 @@
 <?php
 
 use App\Http\Middleware\AuthenticateWithApiKey;
-use App\Http\Middleware\CheckApiKeyScope;
-use App\Http\Middleware\VerifyTurnstile;
 use App\Http\Middleware\AuthTokenFromCookie;
-use App\Http\Middleware\TrustProxies;
+use App\Http\Middleware\CheckApiKeyScope;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\ShareTokenAuth;
+use App\Http\Middleware\TrustProxies;
+use App\Http\Middleware\VerifyTurnstile;
 use App\Rules\NoMaliciousPattern;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -36,14 +37,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToGroup('api', AuthTokenFromCookie::class);
 
         $middleware->alias([
-            'auth.apikey'    => AuthenticateWithApiKey::class,
-            'apikey.scope'   => CheckApiKeyScope::class,
-            'turnstile'      => VerifyTurnstile::class,
+            'auth.apikey' => AuthenticateWithApiKey::class,
+            'apikey.scope' => CheckApiKeyScope::class,
+            'share-token' => ShareTokenAuth::class,
+            'turnstile' => VerifyTurnstile::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $e, Request $request): ?JsonResponse {
-            if (!$request->expectsJson()) {
+            if (! $request->expectsJson()) {
                 return null;
             }
 
