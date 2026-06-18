@@ -1,0 +1,17 @@
+[Unit]
+Description=Laravel Queue Worker
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+# ⚠️ --timeout 必須 < .env 的 REDIS_QUEUE_RETRY_AFTER（見 docs/jobs.md），否則慢 job 會被重複執行
+ExecStart=/usr/bin/php /var/www/collaboration-with-AI/artisan queue:work redis --tries=3 --timeout=180
+WorkingDirectory=/var/www/collaboration-with-AI
+StandardOutput=append:/var/log/laravel-queue.log
+StandardError=append:/var/log/laravel-queue-error.log
+Environment=APP_ENV=production
+
+[Install]
+WantedBy=multi-user.target
