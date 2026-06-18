@@ -71,7 +71,7 @@ class GeminiChatService implements ChatCompletion
 
             $response = Http::withQueryParameters(['key' => $this->apiKey])
                 ->acceptJson()
-                ->withOptions(['proxy' => config('services.gemini.proxy')])
+                ->when(config('services.gemini.proxy'), fn ($req, $proxy) => $req->withOptions(['proxy' => $proxy]))
                 ->timeout(180)
                 ->post($this->endpointForModel($model), $body);
 
