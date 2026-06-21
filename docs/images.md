@@ -33,7 +33,7 @@ EXIF 藏的 code、檔尾接的 polyglot/PHP、GIF 註解區 payload —— 全�
 | | **public**（展示素材） | **private**（個人敏感 / NSFW，預設） |
 |---|---|---|
 | disk | `public`（`storage/app/public`） | `private`（`storage/app/private`） |
-| 出圖 | `/storage/...` 直連 URL，**免登入** | `GET /api/images/{id}`，**須登入**經鑑權 controller 串流 |
+| 出圖 | `/storage/...` 直連 URL，**免登入** | `GET /api/images/{id}`，**admin only** 經鑑權 controller 串流 |
 | 檔案權限 | `0644` | `0640`（owner rw、同群組 r、others 全擋）/ 目錄 `0750` |
 | 用途 | gacha 卡圖等公開美術 | 個人圖庫 |
 | 防護 | 不可枚舉的 uuid（但 URL 外流即公開） | 不可枚舉 uuid + 登入牆 |
@@ -43,7 +43,12 @@ EXIF 藏的 code、檔尾接的 polyglot/PHP、GIF 註解區 payload —— 全�
 > public 的「不可猜」不等於「有存取控制」：URL 一旦外流／被索引，任何人都看得到。**別把敏感內容設成 public。**
 
 > [!NOTE]
-> private 沒有「擁有者」概念 —— **任何登入者都能看所有 private 圖**（這是「登入牆」不是 per-user 私密）。出圖（`show`）只擋訪客、不綁 admin。
+> **權限分三層**:
+> - `POST /api/images`(admin)— 可指定 public/private。
+> - `GET /api/images/{id}`(admin)— private 出圖。
+> - `POST /api/images/public`(**任一登入者**)— **強制 public**,不可建 private。
+>
+> private 相關(建立/讀取)全是 admin only,且沒有「擁有者」概念(所有 admin 看同一批,不是 per-user 私密)。一般登入者只能透過 public 端點貢獻**公開**素材。
 
 ---
 
@@ -102,9 +107,17 @@ curl -X POST -H "Authorization: Bearer <admin-token>" \
      https://your-domain/api/images
 ```
 
+### `POST /api/images/public` — 登入者上傳（強制 public）
+
+- **權限**:`auth:sanctum`(**任一登入者**,不需 admin)。
+- **限流**:`throttle:30,1`。
+- **Body**:同 `POST /api/images`(`file`/`url` 二擇一);**`visibility` 一律忽略並強制 `public`** —— 即使帶 `visibility=private` 也會存成 public。
+- 回應同 `store`(`201` → `{ id, visibility:"public", url }`,`url` 為 `/storage/...` 直連)。
+- 用途:讓一般使用者貢獻**公開**素材(頭像、卡圖投稿等);private/NSFW 仍只有 admin 能放。
+
 ### `GET /api/images/{id}` — 出圖（僅 private）
 
-- **權限**:`auth:sanctum`（**任一登入者**，不綁 admin；訪客 `401`）。
+- **權限**:`auth:sanctum` + **admin only**（訪客 `401`、非 admin `403`）。
 - `{id}` 由路由 regex 限成 uuid（`[0-9a-fA-F-]{36}`）→ 擋 path traversal / 枚舉。
 - 回應:`200` + `Content-Type: image/webp`、`X-Content-Type-Options: nosniff`、`Cache-Control: private, max-age=86400`；不存在 `404`。
 - `<img src>` 走 same-site GET,Sanctum SameSite:Lax cookie 會自動帶上,可正常出圖。
@@ -146,7 +159,7 @@ curl -X POST -H "Authorization: Bearer <admin-token>" \
 | `app/Http/Requests/StoreImageRequest.php` | `file`/`url` 互斥 + `visibility` 驗證 |
 | `app/Enums/ImageVisibility.php` | `public` / `private` |
 | `config/images.php` | 限制值與 disk 對應 |
-| `routes/api.php` | `POST /images`(admin)、`GET /images/{id}`(登入) |
+| `routes/api.php` | `POST /images`(admin)、`GET /images/{id}`(admin)、`POST /images/public`(登入) |
 | `tests/Feature/ImageIngestTest.php` | 安全閘 / 權限 / SSRF 測試 |
 
 ## 設計決策

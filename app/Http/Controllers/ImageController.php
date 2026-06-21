@@ -16,8 +16,8 @@ class ImageController extends Controller
     public function __construct(private readonly ImageIngestService $images) {}
 
     /**
-     * 接收 file(拖曳上傳)或 url(伺服器下載),轉 webp 存對應 disk。
-     * public:回 /storage 直連 URL;private:回鑑權出圖 URL。
+     * 【admin】接收 file(拖曳上傳)或 url(伺服器下載),轉 webp 存對應 disk。
+     * visibility 可由 request 指定(預設 private):public 回 /storage 直連、private 回鑑權出圖。
      */
     public function store(StoreImageRequest $request): JsonResponse
     {
@@ -25,6 +25,23 @@ class ImageController extends Controller
             (string) $request->input('visibility', config('images.default_visibility')),
         );
 
+        return $this->ingest($request, $visibility);
+    }
+
+    /**
+     * 【任一登入者】上傳但**強制 public** —— 不可建立 private(忽略 request 的 visibility)。
+     * 給一般使用者貢獻公開素材用,private/NSFW 仍只有 admin 能放。
+     */
+    public function storePublic(StoreImageRequest $request): JsonResponse
+    {
+        return $this->ingest($request, ImageVisibility::Public);
+    }
+
+    /**
+     * 共用:跑 pipeline 並依 visibility 回 URL。
+     */
+    private function ingest(StoreImageRequest $request, ImageVisibility $visibility): JsonResponse
+    {
         try {
             $id = $request->hasFile('file')
                 ? $this->images->fromUpload($request->file('file'), $visibility)

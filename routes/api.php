@@ -344,13 +344,16 @@ Route::middleware('auth:sanctum')->prefix('v1/user-api-keys')->group(function ()
 });
 
 // 圖片儲存(三來源 → webp → 依 visibility 落 disk)
-// 上傳:admin only;出圖(private):任一登入者可看(無擁有者概念)
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/images', [ImageController::class, 'store'])
-        ->middleware([EnsureAdmin::class, 'throttle:30,1']);
+// admin:可指定 public/private 上傳 + private 鑑權出圖
+Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
+    Route::post('/images', [ImageController::class, 'store'])->middleware('throttle:30,1');
     Route::get('/images/{id}', [ImageController::class, 'show'])
         ->where('id', '[0-9a-fA-F-]{36}')
         ->name('images.show');
+});
+// 任一登入者:只能上傳 public(強制 public,不可建 private);public 圖由 /storage 直連
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/images/public', [ImageController::class, 'storePublic'])->middleware('throttle:30,1');
 });
 
 // Route::get('/debug-ip', fn() => response()->json([

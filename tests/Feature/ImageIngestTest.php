@@ -130,6 +130,46 @@ class ImageIngestTest extends TestCase
         $this->assertCount(0, Storage::disk('private')->allFiles('images'));
     }
 
+    public function test_logged_in_user_can_upload_public_via_public_endpoint(): void
+    {
+        $user = User::factory()->create(); // 一般登入者(非 admin)
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)]);
+
+        $response->assertCreated()->assertJsonPath('visibility', 'public');
+
+        $id = $response->json('id');
+        Storage::disk('public')->assertExists("images/{$id}.webp");
+        $this->assertStringContainsString('/storage/', (string) $response->json('url'));
+    }
+
+    public function test_public_endpoint_forces_public_even_if_private_requested(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', [
+                'file' => UploadedFile::fake()->image('p.png', 32, 32),
+                'visibility' => 'private', // 應被忽略
+            ]);
+
+        $response->assertCreated()->assertJsonPath('visibility', 'public');
+
+        $id = $response->json('id');
+        Storage::disk('public')->assertExists("images/{$id}.webp");
+        Storage::disk('private')->assertMissing("images/{$id}.webp");
+    }
+
+    public function test_guest_cannot_use_public_endpoint(): void
+    {
+        $response = $this->postJson('/api/images/public', [
+            'file' => UploadedFile::fake()->image('p.png', 32, 32),
+        ]);
+
+        $response->assertUnauthorized();
+    }
+
     public function test_guest_cannot_upload(): void
     {
         $response = $this->postJson('/api/images', [
@@ -139,9 +179,9 @@ class ImageIngestTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_non_admin_logged_in_user_can_view_private_image(): void
+    public function test_non_admin_cannot_view_private_image(): void
     {
-        // admin 上傳,一般登入者仍可出圖(show 不綁 admin,只擋訪客)
+        // 出圖也綁 admin:admin 上傳的 private 圖,一般登入者不可讀
         $id = $this->actingAs($this->admin(), 'sanctum')
             ->postJson('/api/images', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
             ->json('id');
@@ -149,8 +189,7 @@ class ImageIngestTest extends TestCase
         $viewer = User::factory()->create();
         $response = $this->actingAs($viewer, 'sanctum')->get("/api/images/{$id}");
 
-        $response->assertOk();
-        $this->assertSame('image/webp', $response->headers->get('Content-Type'));
+        $response->assertForbidden();
     }
 
     public function test_guest_cannot_fetch_image(): void
