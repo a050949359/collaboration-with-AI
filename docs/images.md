@@ -153,12 +153,23 @@ curl -X POST -H "Authorization: Bearer <admin-token>" \
 - **SSRF**:`fromUrl()` 只允許 http(s)、每一跳重驗 IP、擋私網/loopback/link-local/雲端 metadata（`169.254.169.254`）、限 redirect 次數與大小。
 - **public 檔數計數**（`PublicImageCounter`）:`scan` 直接掃 FS;`redis` 用一個 Hash（field = shard 2 碼、value = 該桶檔數),`hincrby` 原子加、`hgetall` 加總取 total,冷啟動自動從 FS seed（self-healing）。屬軟上限近似值 —— 若 public 圖被 app 外刪除會與實際脫節,需要時可重掃覆寫 hash 校正。
 
+## 待補（TODO）
+
+> [!NOTE]
+> 以下尚未實作,待之後補:
+
+- **`redis` driver 的計數漂移校正**。redis 模式下 counter 只增不減,且 self-healing 只在 hash 完全不存在時觸發;若 public 圖被 **app 外刪除**,hash 會高估、可能誤擋新上傳(不影響資料/出圖,純軟上限算不準)。`scan` 模式無此問題。待補其一:
+  - `PublicImageCounter::removed($id)`(`hincrby -1`),供未來「刪圖功能」呼叫;
+  - 一支 `php artisan image:reconcile-public-count`(重掃 FS 覆寫 hash,或直接 `Redis::del(key)` 讓下次讀取冷啟動 re-seed),可掛排程定期校正。
+- **孤兒成品圖回收**。成品 webp 無自動回收;沒被引用的圖會一直留著(尤其卡片刪除時未連帶刪圖)。待補清理機制。
+
 ## 關鍵檔案
 
 | 檔案 | 角色 |
 |------|------|
 | `app/Services/Image/ImageIngestService.php` | 核心 pipeline（三入口 + 安全閘 + re-encode + SSRF） |
 | `app/Services/Image/ImageRejectedException.php` | 被擋下時拋出 → controller 轉 `422` |
+| `app/Services/Image/PublicImageCounter.php` | public 檔數計數（`scan` / `redis` shard hash） |
 | `app/Http/Controllers/ImageController.php` | `store` / `show` |
 | `app/Http/Requests/StoreImageRequest.php` | `file`/`url` 互斥 + `visibility` 驗證 |
 | `app/Enums/ImageVisibility.php` | `public` / `private` |
