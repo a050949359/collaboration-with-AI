@@ -245,6 +245,9 @@ class ImageIngestService
     private function resolveSafeTarget(string $url): array
     {
         $parts = parse_url($url);
+        if ($parts === false) {
+            throw new ImageRejectedException('Invalid image URL.');
+        }
         $scheme = strtolower($parts['scheme'] ?? '');
         $host = $parts['host'] ?? '';
 
@@ -283,17 +286,22 @@ class ImageIngestService
             return [$literal];
         }
 
-        $ips = [];
+        // 分開收集再以 IPv4 優先 merge:pin 給 curl 時優先用 IPv4,
+        // 避免 IPv4-only 主機誤 pin 到 IPv6 連不出去。
+        $ipv4 = [];
+        $ipv6 = [];
         $records = @dns_get_record($host, DNS_A | DNS_AAAA);
         if (is_array($records)) {
             foreach ($records as $record) {
                 if (isset($record['ip'])) {
-                    $ips[] = $record['ip'];        // A
+                    $ipv4[] = $record['ip'];        // A
                 } elseif (isset($record['ipv6'])) {
-                    $ips[] = $record['ipv6'];      // AAAA
+                    $ipv6[] = $record['ipv6'];      // AAAA
                 }
             }
         }
+
+        $ips = array_merge($ipv4, $ipv6);
 
         if ($ips === []) {
             $ips = gethostbynamel($host) ?: []; // 後備(僅 IPv4)
@@ -319,6 +327,7 @@ class ImageIngestService
         $scheme = $parts['scheme'] ?? 'https';
         $host = $parts['host'] ?? '';
         $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+        $path = $parts['path'] ?? '/';
 
         // protocol-relative(//host/path):繼承 scheme,host 換成 Location 指定的
         // —— 必須在單斜線判斷之前攔,否則會被誤當成原 host 的路徑。
@@ -326,11 +335,15 @@ class ImageIngestService
             return $scheme.':'.$location;
         }
 
+        // query-only(?x=1):繼承完整 path,不可掉檔名(RFC 3986)。
+        if (str_starts_with($location, '?')) {
+            return $scheme.'://'.$host.$port.$path.$location;
+        }
+
         if (str_starts_with($location, '/')) {
             return $scheme.'://'.$host.$port.$location;
         }
 
-        $path = $parts['path'] ?? '/';
         $dir = substr($path, 0, (int) strrpos($path, '/') + 1);
 
         return $scheme.'://'.$host.$port.$dir.$location;

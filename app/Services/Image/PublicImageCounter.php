@@ -34,6 +34,8 @@ class PublicImageCounter
             return $this->seedFromScan(); // 冷啟動:從 FS 補
         }
 
+        unset($counts['_seeded']); // 排除佔位欄位
+
         return (int) array_sum(array_map('intval', $counts));
     }
 
@@ -64,9 +66,9 @@ class PublicImageCounter
             $perShard[$shard] = ($perShard[$shard] ?? 0) + 1;
         }
 
-        if ($perShard !== []) {
-            Redis::hmset($this->key(), $perShard);
-        }
+        // 寫入 _seeded 佔位:即使 0 張圖,hash 也非空,避免每次 total() 重掃(cache stampede)。
+        // shard 為 2 碼 hex,不會與 '_seeded' 撞;加總時已排除。
+        Redis::hmset($this->key(), $perShard + ['_seeded' => 1]);
 
         return (int) array_sum($perShard);
     }
@@ -75,8 +77,9 @@ class PublicImageCounter
     private function shardFromPath(string $path): string
     {
         $parts = explode('/', $path);
+        $count = count($parts);
 
-        return $parts[count($parts) - 2] ?? '';
+        return $count >= 2 ? $parts[$count - 2] : '';
     }
 
     private function driver(): string

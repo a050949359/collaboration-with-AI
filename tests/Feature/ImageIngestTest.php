@@ -256,6 +256,20 @@ class ImageIngestTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_redis_driver_empty_dir_seeds_placeholder_to_avoid_restampede(): void
+    {
+        config(['images.public_count_driver' => 'redis', 'images.public_max_files' => 5]);
+        Redis::shouldReceive('hgetall')->andReturn([]); // 空目錄 → 冷啟動
+        Redis::shouldReceive('hmset')->once();          // 寫入(含 _seeded 佔位,即使 0 張)
+        Redis::shouldReceive('hincrby')->once();        // 上傳後計數
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertCreated();
+    }
+
     public function test_guest_cannot_use_public_endpoint(): void
     {
         $response = $this->postJson('/api/images/public', [
@@ -334,6 +348,13 @@ class ImageIngestTest extends TestCase
 
         $this->expectException(ImageRejectedException::class);
         $service->fromUrl('file:///etc/passwd');
+    }
+
+    public function test_malformed_url_is_rejected(): void
+    {
+        // parse_url 對非法 port 回 false,不應觸發 Warning,應直接擋
+        $this->expectException(ImageRejectedException::class);
+        app(ImageIngestService::class)->fromUrl('http://example.com:notaport/x');
     }
 
     public function test_ipv6_loopback_url_is_rejected(): void
