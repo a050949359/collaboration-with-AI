@@ -1,0 +1,240 @@
+<?php
+
+namespace App\Services\Image;
+
+use App\Enums\ImageVisibility;
+use GdImage;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
+/**
+ * 本地圖片儲存 pipeline。
+ *
+ * 三種來源(拖曳上傳 / AI 生成 binary / URL 下載)全部 funnel 進 private 的 store(),
+ * 統一做安全閘 + 強制 GD re-encode 成 webp,再存 private disk。
+ *
+ * 安全核心:不「掃描」圖片找壞東西,而是用 GD 重新解碼像素再編碼成 webp ——
+ * EXIF 藏的 code、檔尾接的 polyglot/PHP、註解區 payload 全部在 re-encode 時被丟棄。
+ */
+class ImageIngestService
+{
+    /**
+     * 拖曳上傳:從 UploadedFile 取 bytes。
+     *
+     * @return string 不可猜的圖片 id(uuid,不含副檔名)
+     */
+    public function fromUpload(UploadedFile $file, ImageVisibility $visibility = ImageVisibility::Private): string
+    {
+        $bytes = @file_get_contents($file->getRealPath());
+
+        if (! is_string($bytes) || $bytes === '') {
+            throw new ImageRejectedException('Uploaded file is empty or unreadable.');
+        }
+
+        return $this->store($bytes, $visibility);
+    }
+
+    /**
+     * AI 生成端:直接給 binary。
+     *
+     * @return string 不可猜的圖片 id
+     */
+    public function fromBinary(string $bytes, ImageVisibility $visibility = ImageVisibility::Private): string
+    {
+        return $this->store($bytes, $visibility);
+    }
+
+    /**
+     * URL 下載:先過 SSRF 閘抓 bytes 再 store。
+     *
+     * @return string 不可猜的圖片 id
+     */
+    public function fromUrl(string $url, ImageVisibility $visibility = ImageVisibility::Private): string
+    {
+        return $this->store($this->fetchRemote($url), $visibility);
+    }
+
+    /**
+     * 共同 pipeline:安全閘 → re-encode webp → 依 visibility 存對應 disk。
+     *
+     * @return string 圖片 id(uuid)
+     */
+    private function store(string $bytes, ImageVisibility $visibility): string
+    {
+        // 1. 大小閘
+        $maxBytes = (int) config('images.max_bytes');
+        if (strlen($bytes) > $maxBytes) {
+            throw new ImageRejectedException('Image exceeds the maximum allowed size.');
+        }
+
+        // 2. 真實 MIME(看內容,不看副檔名)
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = $finfo !== false ? finfo_buffer($finfo, $bytes) : false;
+        if ($finfo !== false) {
+            finfo_close($finfo);
+        }
+        $allowed = (array) config('images.allowed_mimes');
+        if (! is_string($mime) || ! in_array($mime, $allowed, true)) {
+            throw new ImageRejectedException('Unsupported or undetectable image type.');
+        }
+
+        // 3. 尺寸閘(decompression bomb)
+        $size = @getimagesizefromstring($bytes);
+        if ($size === false) {
+            throw new ImageRejectedException('Image dimensions could not be read.');
+        }
+        $maxPixels = (int) config('images.max_megapixels') * 1_000_000;
+        if (($size[0] * $size[1]) > $maxPixels) {
+            throw new ImageRejectedException('Image resolution exceeds the allowed limit.');
+        }
+
+        // 4. 重新編碼(核心防線):只保留像素,丟棄一切附加資料
+        $webp = $this->reencodeToWebp($bytes);
+
+        // 5. 存檔(uuid 不可猜檔名),disk 由 visibility 決定
+        $id = Str::uuid()->toString();
+        $path = trim((string) config('images.directory'), '/').'/'.$id.'.webp';
+        $disk = (string) config('images.disks.'.$visibility->value);
+
+        // 明示 visibility,讓檔案權限(private→0640 / public→0644,見 filesystems.php)
+        // 由本 pipeline 宣告,不依賴 disk 預設。
+        if (Storage::disk($disk)->put($path, $webp, $visibility->value) !== true) {
+            throw new ImageRejectedException('Failed to persist image.');
+        }
+
+        return $id;
+    }
+
+    /**
+     * 用 GD 解碼像素後重編成 webp,回傳 webp bytes。
+     * 任何無法被 GD 解出像素的內容(偽圖、損毀)在這裡就會被拒。
+     */
+    private function reencodeToWebp(string $bytes): string
+    {
+        $image = @imagecreatefromstring($bytes);
+        if (! $image instanceof GdImage) {
+            throw new ImageRejectedException('Image could not be decoded.');
+        }
+
+        // 保留透明度(png → webp)
+        imagepalettetotruecolor($image);
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+
+        ob_start();
+        $ok = imagewebp($image, null, (int) config('images.webp_quality'));
+        $webp = (string) ob_get_clean();
+        imagedestroy($image);
+
+        if ($ok === false || $webp === '') {
+            throw new ImageRejectedException('Failed to encode image to webp.');
+        }
+
+        return $webp;
+    }
+
+    /**
+     * SSRF 防護下的遠端下載:只允許 http(s)、每一跳都擋私網/保留段 IP、限制 redirect 次數與大小。
+     */
+    private function fetchRemote(string $url): string
+    {
+        $maxRedirects = (int) config('images.max_redirects');
+        $timeout = (int) config('images.download_timeout');
+        $maxBytes = (int) config('images.max_bytes');
+
+        for ($hop = 0; $hop <= $maxRedirects; $hop++) {
+            $this->assertUrlIsSafe($url);
+
+            $response = Http::timeout($timeout)
+                ->withOptions([
+                    'allow_redirects' => false, // 自己處理,以便每一跳重驗 IP
+                    'stream' => false,
+                ])
+                ->get($url);
+
+            // 手動跟隨 redirect,並重驗下一跳的 IP
+            if ($response->redirect()) {
+                $location = $response->header('Location');
+                if ($location === '') {
+                    throw new ImageRejectedException('Redirect without a location.');
+                }
+                $url = $this->resolveRedirectUrl($url, $location);
+
+                continue;
+            }
+
+            if (! $response->successful()) {
+                throw new ImageRejectedException('Remote image fetch failed.');
+            }
+
+            $body = $response->body();
+            if (strlen($body) > $maxBytes) {
+                throw new ImageRejectedException('Remote image exceeds the maximum allowed size.');
+            }
+            if ($body === '') {
+                throw new ImageRejectedException('Remote image was empty.');
+            }
+
+            return $body;
+        }
+
+        throw new ImageRejectedException('Too many redirects while fetching the image.');
+    }
+
+    /**
+     * 驗證 URL 的 scheme 與解析後 IP 是否安全(擋私網/loopback/link-local/保留段)。
+     */
+    private function assertUrlIsSafe(string $url): void
+    {
+        $parts = parse_url($url);
+        $scheme = strtolower($parts['scheme'] ?? '');
+        $host = $parts['host'] ?? '';
+
+        if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
+            throw new ImageRejectedException('Only http(s) image URLs are allowed.');
+        }
+
+        // host 可能本身就是 IP;否則 DNS 解析出所有 A 紀錄逐一檢查
+        $ips = filter_var($host, FILTER_VALIDATE_IP) ? [$host] : (gethostbynamel($host) ?: []);
+        if ($ips === []) {
+            throw new ImageRejectedException('Image host could not be resolved.');
+        }
+
+        foreach ($ips as $ip) {
+            $public = filter_var(
+                $ip,
+                FILTER_VALIDATE_IP,
+                FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
+            );
+            if ($public === false) {
+                throw new ImageRejectedException('Image host resolves to a disallowed address.');
+            }
+        }
+    }
+
+    /**
+     * 把 redirect 的 Location(可能是相對路徑)解析成絕對 URL。
+     */
+    private function resolveRedirectUrl(string $base, string $location): string
+    {
+        if (parse_url($location, PHP_URL_SCHEME) !== null) {
+            return $location;
+        }
+
+        $parts = parse_url($base);
+        $scheme = $parts['scheme'] ?? 'https';
+        $host = $parts['host'] ?? '';
+        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+
+        if (str_starts_with($location, '/')) {
+            return $scheme.'://'.$host.$port.$location;
+        }
+
+        $path = $parts['path'] ?? '/';
+        $dir = substr($path, 0, (int) strrpos($path, '/') + 1);
+
+        return $scheme.'://'.$host.$port.$dir.$location;
+    }
+}

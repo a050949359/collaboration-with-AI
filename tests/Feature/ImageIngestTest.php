@@ -1,0 +1,204 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use App\Services\Image\ImageIngestService;
+use App\Services\Image\ImageRejectedException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+class ImageIngestTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('private');
+        Storage::fake('public');
+    }
+
+    private function admin(): User
+    {
+        return User::factory()->create(['role' => 'admin']);
+    }
+
+    public function test_authenticated_user_can_upload_image_and_it_is_stored_as_webp(): void
+    {
+        $user = $this->admin();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images', [
+                'file' => UploadedFile::fake()->image('photo.png', 64, 64),
+            ]);
+
+        $response->assertCreated()->assertJsonStructure(['id', 'url']);
+
+        $id = $response->json('id');
+        Storage::disk('private')->assertExists("images/{$id}.webp");
+    }
+
+    public function test_public_visibility_stores_on_public_disk_and_returns_storage_url(): void
+    {
+        $user = $this->admin();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images', [
+                'file' => UploadedFile::fake()->image('art.png', 64, 64),
+                'visibility' => 'public',
+            ]);
+
+        $response->assertCreated()->assertJsonPath('visibility', 'public');
+
+        $id = $response->json('id');
+        Storage::disk('public')->assertExists("images/{$id}.webp");
+        Storage::disk('private')->assertMissing("images/{$id}.webp");
+        // public 回傳 /storage 直連 URL,不是鑑權路由
+        $this->assertStringContainsString('/storage/', (string) $response->json('url'));
+    }
+
+    public function test_default_visibility_is_private(): void
+    {
+        $user = $this->admin();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images', [
+                'file' => UploadedFile::fake()->image('secret.png', 32, 32),
+            ]);
+
+        $response->assertCreated()->assertJsonPath('visibility', 'private');
+
+        $id = $response->json('id');
+        Storage::disk('private')->assertExists("images/{$id}.webp");
+        Storage::disk('public')->assertMissing("images/{$id}.webp");
+    }
+
+    public function test_served_image_has_webp_and_nosniff_headers(): void
+    {
+        $user = $this->admin();
+
+        $id = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->json('id');
+
+        $response = $this->actingAs($user, 'sanctum')->get("/api/images/{$id}");
+
+        $response->assertOk();
+        $this->assertSame('image/webp', $response->headers->get('Content-Type'));
+        $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
+    }
+
+    public function test_gif_upload_is_rejected(): void
+    {
+        $user = $this->admin();
+
+        // UploadedFile::fake()->image('x.gif') 會產生真正的 gif → 內容層 MIME 閘擋下
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images', [
+                'file' => UploadedFile::fake()->image('anim.gif', 32, 32),
+            ]);
+
+        $response->assertStatus(422);
+        $this->assertCount(0, Storage::disk('private')->allFiles('images'));
+    }
+
+    public function test_non_image_disguised_as_jpg_is_rejected(): void
+    {
+        $user = $this->admin();
+
+        $fake = UploadedFile::fake()->createWithContent('evil.jpg', "<?php echo 'pwn'; ?>");
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images', ['file' => $fake]);
+
+        $response->assertStatus(422);
+        $this->assertCount(0, Storage::disk('private')->allFiles('images'));
+    }
+
+    public function test_non_admin_cannot_upload(): void
+    {
+        $user = User::factory()->create(); // 一般登入者
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images', ['file' => UploadedFile::fake()->image('p.png', 32, 32)]);
+
+        $response->assertForbidden();
+        $this->assertCount(0, Storage::disk('private')->allFiles('images'));
+    }
+
+    public function test_guest_cannot_upload(): void
+    {
+        $response = $this->postJson('/api/images', [
+            'file' => UploadedFile::fake()->image('p.png', 32, 32),
+        ]);
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_non_admin_logged_in_user_can_view_private_image(): void
+    {
+        // admin 上傳,一般登入者仍可出圖(show 不綁 admin,只擋訪客)
+        $id = $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->json('id');
+
+        $viewer = User::factory()->create();
+        $response = $this->actingAs($viewer, 'sanctum')->get("/api/images/{$id}");
+
+        $response->assertOk();
+        $this->assertSame('image/webp', $response->headers->get('Content-Type'));
+    }
+
+    public function test_guest_cannot_fetch_image(): void
+    {
+        $response = $this->getJson('/api/images/'.Str::uuid());
+        $response->assertUnauthorized();
+    }
+
+    public function test_unknown_id_returns_404(): void
+    {
+        $user = $this->admin();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->get('/api/images/'.Str::uuid());
+
+        $response->assertNotFound();
+    }
+
+    public function test_non_uuid_path_does_not_match_route(): void
+    {
+        $user = $this->admin();
+
+        // 路徑含 traversal 字元,被路由 where regex 擋掉 → 404
+        $response = $this->actingAs($user, 'sanctum')->get('/api/images/..%2f..%2fetc');
+        $response->assertNotFound();
+    }
+
+    public function test_url_pointing_to_private_address_is_rejected(): void
+    {
+        $service = app(ImageIngestService::class);
+
+        $this->expectException(ImageRejectedException::class);
+        $service->fromUrl('http://169.254.169.254/latest/meta-data/');
+    }
+
+    public function test_url_pointing_to_loopback_is_rejected(): void
+    {
+        $service = app(ImageIngestService::class);
+
+        $this->expectException(ImageRejectedException::class);
+        $service->fromUrl('http://127.0.0.1/secret');
+    }
+
+    public function test_non_http_scheme_is_rejected(): void
+    {
+        $service = app(ImageIngestService::class);
+
+        $this->expectException(ImageRejectedException::class);
+        $service->fromUrl('file:///etc/passwd');
+    }
+}
