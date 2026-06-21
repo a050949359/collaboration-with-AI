@@ -90,17 +90,18 @@ class ImageIngestService
             throw new ImageRejectedException('Image resolution exceeds the allowed limit.');
         }
 
+        // 3.5 public 資料夾檔數上限(public 開放給任一登入者,需防塞爆);
+        //     放在 re-encode 前,超限就 fail fast、不浪費編碼。
+        if ($visibility === ImageVisibility::Public) {
+            $this->assertPublicFileLimit();
+        }
+
         // 4. 重新編碼(核心防線):只保留像素,丟棄一切附加資料
         $webp = $this->reencodeToWebp($bytes);
 
-        // 4.5 public 資料夾總量 quota(public 開放給任一登入者,需防塞爆)
-        if ($visibility === ImageVisibility::Public) {
-            $this->assertPublicQuota(strlen($webp));
-        }
-
-        // 5. 存檔(uuid 不可猜檔名),disk 由 visibility 決定
+        // 5. 存檔(uuid 不可猜檔名,前綴分桶避免單一資料夾過大),disk 由 visibility 決定
         $id = Str::uuid()->toString();
-        $path = trim((string) config('images.directory'), '/').'/'.$id.'.webp';
+        $path = self::pathFor($id);
         $disk = (string) config('images.disks.'.$visibility->value);
 
         // 明示 visibility,讓檔案權限(private→0640 / public→0644,見 filesystems.php)
@@ -113,12 +114,23 @@ class ImageIngestService
     }
 
     /**
-     * public 資料夾總量 quota:累加現有 public 圖大小 + 這次的 bytes,
-     * 超過 config 上限就拒。上限 <= 0 視為不限。
+     * 由圖片 id(uuid)推出 disk 內相對路徑,前 2 碼分桶(256 桶)避免單一資料夾過大。
+     * store / show / urlFor 共用此單一來源,id 即唯一 token,不需另存路徑。
      */
-    private function assertPublicQuota(int $incomingBytes): void
+    public static function pathFor(string $id): string
     {
-        $cap = (int) config('images.public_max_total_bytes');
+        $dir = trim((string) config('images.directory'), '/');
+
+        return $dir.'/'.substr($id, 0, 2).'/'.$id.'.webp';
+    }
+
+    /**
+     * public 資料夾檔數上限:現有檔數已達上限就拒新上傳。上限 <= 0 視為不限。
+     * 只 count(列目錄),不逐檔 stat,比累加 bytes 省。
+     */
+    private function assertPublicFileLimit(): void
+    {
+        $cap = (int) config('images.public_max_files');
         if ($cap <= 0) {
             return;
         }
@@ -126,13 +138,8 @@ class ImageIngestService
         $fs = Storage::disk((string) config('images.disks.public'));
         $dir = trim((string) config('images.directory'), '/');
 
-        $total = 0;
-        foreach ($fs->allFiles($dir) as $file) {
-            $total += $fs->size($file);
-        }
-
-        if ($total + $incomingBytes > $cap) {
-            throw new ImageRejectedException('Public image storage quota exceeded.');
+        if (count($fs->allFiles($dir)) >= $cap) {
+            throw new ImageRejectedException('Public image count limit reached.');
         }
     }
 

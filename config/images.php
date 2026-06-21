@@ -42,9 +42,10 @@ return [
     // webp 輸出品質(0-100)。
     'webp_quality' => (int) env('IMAGE_WEBP_QUALITY', 82),
 
-    // public 資料夾(storage/app/public/images)總量上限(bytes)。
-    // public 端點開放給任一登入者,需防塞爆;0 或負值 = 不限。
-    'public_max_total_bytes' => (int) env('IMAGE_PUBLIC_MAX_TOTAL_BYTES', 1024 * 1024 * 1024), // 1 GB
+    // public 資料夾(storage/app/public/images)檔案數上限。
+    // public 端點開放給任一登入者,需防塞爆;達上限即拒新上傳。0 或負值 = 不限。
+    // (用檔數而非 bytes:只列目錄、免逐檔 stat;每檔已受 max_bytes 限制)
+    'public_max_files' => (int) env('IMAGE_PUBLIC_MAX_FILES', 10000),
 
     // URL 下載(SSRF 防護)相關。
     'download_timeout' => (int) env('IMAGE_DOWNLOAD_TIMEOUT', 15), // 秒

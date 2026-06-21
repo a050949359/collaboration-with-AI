@@ -27,6 +27,12 @@ class ImageIngestTest extends TestCase
         return User::factory()->create(['role' => 'admin']);
     }
 
+    /** 對應 ImageIngestService::pathFor 的分桶路徑 */
+    private function storedPath(string $id): string
+    {
+        return 'images/'.substr($id, 0, 2)."/{$id}.webp";
+    }
+
     public function test_authenticated_user_can_upload_image_and_it_is_stored_as_webp(): void
     {
         $user = $this->admin();
@@ -39,7 +45,7 @@ class ImageIngestTest extends TestCase
         $response->assertCreated()->assertJsonStructure(['id', 'url']);
 
         $id = $response->json('id');
-        Storage::disk('private')->assertExists("images/{$id}.webp");
+        Storage::disk('private')->assertExists($this->storedPath($id));
     }
 
     public function test_public_visibility_stores_on_public_disk_and_returns_storage_url(): void
@@ -55,8 +61,8 @@ class ImageIngestTest extends TestCase
         $response->assertCreated()->assertJsonPath('visibility', 'public');
 
         $id = $response->json('id');
-        Storage::disk('public')->assertExists("images/{$id}.webp");
-        Storage::disk('private')->assertMissing("images/{$id}.webp");
+        Storage::disk('public')->assertExists($this->storedPath($id));
+        Storage::disk('private')->assertMissing($this->storedPath($id));
         // public 回傳 /storage 直連 URL,不是鑑權路由
         $this->assertStringContainsString('/storage/', (string) $response->json('url'));
     }
@@ -73,8 +79,8 @@ class ImageIngestTest extends TestCase
         $response->assertCreated()->assertJsonPath('visibility', 'private');
 
         $id = $response->json('id');
-        Storage::disk('private')->assertExists("images/{$id}.webp");
-        Storage::disk('public')->assertMissing("images/{$id}.webp");
+        Storage::disk('private')->assertExists($this->storedPath($id));
+        Storage::disk('public')->assertMissing($this->storedPath($id));
     }
 
     public function test_served_image_has_webp_and_nosniff_headers(): void
@@ -140,7 +146,7 @@ class ImageIngestTest extends TestCase
         $response->assertCreated()->assertJsonPath('visibility', 'public');
 
         $id = $response->json('id');
-        Storage::disk('public')->assertExists("images/{$id}.webp");
+        Storage::disk('public')->assertExists($this->storedPath($id));
         $this->assertStringContainsString('/storage/', (string) $response->json('url'));
     }
 
@@ -157,44 +163,54 @@ class ImageIngestTest extends TestCase
         $response->assertCreated()->assertJsonPath('visibility', 'public');
 
         $id = $response->json('id');
-        Storage::disk('public')->assertExists("images/{$id}.webp");
-        Storage::disk('private')->assertMissing("images/{$id}.webp");
+        Storage::disk('public')->assertExists($this->storedPath($id));
+        Storage::disk('private')->assertMissing($this->storedPath($id));
     }
 
-    public function test_public_quota_blocks_upload_when_folder_would_exceed_cap(): void
+    public function test_public_file_limit_blocks_when_reached(): void
     {
-        config(['images.public_max_total_bytes' => 1]); // 任何 webp 都會超過
+        config(['images.public_max_files' => 1]);
 
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)]);
+        // 第一張 OK(達上限)
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('a.png', 32, 32)])
+            ->assertCreated();
 
-        $response->assertStatus(422);
-        $this->assertCount(0, Storage::disk('public')->allFiles('images'));
+        // 第二張被擋
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('b.png', 32, 32)])
+            ->assertStatus(422);
+
+        $this->assertCount(1, Storage::disk('public')->allFiles('images'));
     }
 
-    public function test_public_quota_zero_means_unlimited(): void
+    public function test_public_file_limit_zero_means_unlimited(): void
     {
-        config(['images.public_max_total_bytes' => 0]);
+        config(['images.public_max_files' => 0]);
 
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)]);
-
-        $response->assertCreated();
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertCreated();
     }
 
-    public function test_public_quota_does_not_affect_private_upload(): void
+    public function test_public_file_limit_does_not_affect_private_upload(): void
     {
-        config(['images.public_max_total_bytes' => 1]); // 卡死 public
+        config(['images.public_max_files' => 1]);
 
-        // private(admin)不受 public quota 影響
-        $response = $this->actingAs($this->admin(), 'sanctum')
-            ->postJson('/api/images', ['file' => UploadedFile::fake()->image('p.png', 32, 32)]);
+        // 先把 public 灌到上限
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('a.png', 32, 32)])
+            ->assertCreated();
 
-        $response->assertCreated()->assertJsonPath('visibility', 'private');
+        // private(admin)不受 public 檔數上限影響
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', ['file' => UploadedFile::fake()->image('b.png', 32, 32)])
+            ->assertCreated()
+            ->assertJsonPath('visibility', 'private');
     }
 
     public function test_guest_cannot_use_public_endpoint(): void

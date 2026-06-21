@@ -77,7 +77,7 @@ EXIF 藏的 code、檔尾接的 polyglot/PHP、GIF 註解區 payload —— 全�
 ```
 
 - `visibility=public` 時 `url` 為 `/storage/...` 直連網址；`private` 時為上方鑑權出圖路由。
-- `id` 為不含副檔名的 uuid（成品實際是 `images/{id}.webp`）。
+- `id` 為不含副檔名的 uuid。成品實際路徑以 **id 前 2 碼分桶**：`images/{前2碼}/{id}.webp`（256 桶,避免單一資料夾檔案過多拖慢 FS）。路徑由 `ImageIngestService::pathFor($id)` 統一推導,id 即唯一 token。
 
 **錯誤:**
 

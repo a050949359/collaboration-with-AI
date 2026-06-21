@@ -65,7 +65,7 @@ class ImageController extends Controller
     private function urlFor(string $id, ImageVisibility $visibility): string
     {
         if ($visibility === ImageVisibility::Public) {
-            $path = trim((string) config('images.directory'), '/').'/'.$id.'.webp';
+            $path = ImageIngestService::pathFor($id);
 
             // local/public driver 的 url() 在具體 FilesystemAdapter 上,
             // Storage::disk() 的回傳型別宣告是 Filesystem interface(無 url()),故先 narrow。
@@ -84,7 +84,7 @@ class ImageController extends Controller
      */
     public function show(string $id): StreamedResponse
     {
-        $path = trim((string) config('images.directory'), '/').'/'.$id.'.webp';
+        $path = ImageIngestService::pathFor($id);
 
         // response() 在具體 FilesystemAdapter 上,先 narrow 型別(同 urlFor)。
         /** @var FilesystemAdapter $disk */
