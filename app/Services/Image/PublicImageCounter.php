@@ -78,8 +78,14 @@ class PublicImageCounter
     {
         $parts = explode('/', $path);
         $count = count($parts);
+        if ($count < 2) {
+            return '';
+        }
 
-        return $count >= 2 ? $parts[$count - 2] : '';
+        // 僅接受 2 碼 hex 的分桶名,避免 .DS_Store 等非分桶檔污染計數
+        $shard = $parts[$count - 2];
+
+        return (strlen($shard) === 2 && ctype_xdigit($shard)) ? $shard : '';
     }
 
     private function driver(): string

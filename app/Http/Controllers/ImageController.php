@@ -24,7 +24,8 @@ class ImageController extends Controller
         // tryFrom + fallback:即使 payload 明確帶 visibility:null(nullable 通過驗證)
         // 也不會把 "" 丟給 from() 觸發 ValueError(500),而是退回預設。
         $visibility = ImageVisibility::tryFrom((string) $request->input('visibility'))
-            ?? ImageVisibility::from((string) config('images.default_visibility'));
+            ?? ImageVisibility::tryFrom((string) config('images.default_visibility'))
+            ?? ImageVisibility::Private; // config 壞掉時最終後備,不 500
 
         return $this->ingest($request, $visibility);
     }

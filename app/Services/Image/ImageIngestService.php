@@ -159,7 +159,8 @@ class ImageIngestService
         imagesavealpha($image, true);
 
         ob_start();
-        $ok = imagewebp($image, null, (int) config('images.webp_quality'));
+        // 與 @imagecreatefromstring 一致抑制 Warning:避免錯誤文字混入 output buffer 損毀 webp。
+        $ok = @imagewebp($image, null, (int) config('images.webp_quality'));
         $webp = (string) ob_get_clean();
         imagedestroy($image);
 
@@ -185,13 +186,14 @@ class ImageIngestService
         for ($hop = 0; $hop <= $maxRedirects; $hop++) {
             // 驗證 scheme + IP 安全,並取回要 pin 的目標(host/port/ip)
             ['host' => $host, 'port' => $port, 'ip' => $ip] = $this->resolveSafeTarget($url);
-            $pinnedIp = str_contains($ip, ':') ? "[$ip]" : $ip; // IPv6 需用中括號
 
+            // CURLOPT_RESOLVE 的 ADDRESS 段是「前兩個冒號之後的全部」,IPv6 直接放、不加中括號
+            // (中括號在部分 libcurl 版本會被判為無效 IP 而連線失敗)。
             $response = Http::timeout($timeout)
                 ->withOptions([
                     'allow_redirects' => false, // 自己處理,以便每一跳重驗 IP
                     'stream' => true,           // 串流,避免整包進記憶體
-                    'curl' => [CURLOPT_RESOLVE => ["{$host}:{$port}:{$pinnedIp}"]],
+                    'curl' => [CURLOPT_RESOLVE => ["{$host}:{$port}:{$ip}"]],
                 ])
                 ->get($url);
 

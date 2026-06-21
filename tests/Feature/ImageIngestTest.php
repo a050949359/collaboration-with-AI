@@ -85,6 +85,16 @@ class ImageIngestTest extends TestCase
         Storage::disk('public')->assertMissing($this->storedPath($id));
     }
 
+    public function test_invalid_default_visibility_config_falls_back_to_private(): void
+    {
+        config(['images.default_visibility' => 'bogus']); // 壞掉的 config
+
+        $response = $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', ['file' => UploadedFile::fake()->image('p.png', 32, 32)]);
+
+        $response->assertCreated()->assertJsonPath('visibility', 'private'); // 不 500,退回 private
+    }
+
     public function test_served_image_has_webp_and_nosniff_headers(): void
     {
         $user = $this->admin();
