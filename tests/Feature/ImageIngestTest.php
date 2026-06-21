@@ -161,6 +161,42 @@ class ImageIngestTest extends TestCase
         Storage::disk('private')->assertMissing("images/{$id}.webp");
     }
 
+    public function test_public_quota_blocks_upload_when_folder_would_exceed_cap(): void
+    {
+        config(['images.public_max_total_bytes' => 1]); // 任何 webp 都會超過
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)]);
+
+        $response->assertStatus(422);
+        $this->assertCount(0, Storage::disk('public')->allFiles('images'));
+    }
+
+    public function test_public_quota_zero_means_unlimited(): void
+    {
+        config(['images.public_max_total_bytes' => 0]);
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)]);
+
+        $response->assertCreated();
+    }
+
+    public function test_public_quota_does_not_affect_private_upload(): void
+    {
+        config(['images.public_max_total_bytes' => 1]); // 卡死 public
+
+        // private(admin)不受 public quota 影響
+        $response = $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', ['file' => UploadedFile::fake()->image('p.png', 32, 32)]);
+
+        $response->assertCreated()->assertJsonPath('visibility', 'private');
+    }
+
     public function test_guest_cannot_use_public_endpoint(): void
     {
         $response = $this->postJson('/api/images/public', [

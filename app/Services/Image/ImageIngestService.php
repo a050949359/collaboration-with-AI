@@ -93,6 +93,11 @@ class ImageIngestService
         // 4. 重新編碼(核心防線):只保留像素,丟棄一切附加資料
         $webp = $this->reencodeToWebp($bytes);
 
+        // 4.5 public 資料夾總量 quota(public 開放給任一登入者,需防塞爆)
+        if ($visibility === ImageVisibility::Public) {
+            $this->assertPublicQuota(strlen($webp));
+        }
+
         // 5. 存檔(uuid 不可猜檔名),disk 由 visibility 決定
         $id = Str::uuid()->toString();
         $path = trim((string) config('images.directory'), '/').'/'.$id.'.webp';
@@ -105,6 +110,30 @@ class ImageIngestService
         }
 
         return $id;
+    }
+
+    /**
+     * public 資料夾總量 quota:累加現有 public 圖大小 + 這次的 bytes,
+     * 超過 config 上限就拒。上限 <= 0 視為不限。
+     */
+    private function assertPublicQuota(int $incomingBytes): void
+    {
+        $cap = (int) config('images.public_max_total_bytes');
+        if ($cap <= 0) {
+            return;
+        }
+
+        $fs = Storage::disk((string) config('images.disks.public'));
+        $dir = trim((string) config('images.directory'), '/');
+
+        $total = 0;
+        foreach ($fs->allFiles($dir) as $file) {
+            $total += $fs->size($file);
+        }
+
+        if ($total + $incomingBytes > $cap) {
+            throw new ImageRejectedException('Public image storage quota exceeded.');
+        }
     }
 
     /**

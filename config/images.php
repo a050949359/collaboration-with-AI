@@ -42,6 +42,10 @@ return [
     // webp 輸出品質(0-100)。
     'webp_quality' => (int) env('IMAGE_WEBP_QUALITY', 82),
 
+    // public 資料夾(storage/app/public/images)總量上限(bytes)。
+    // public 端點開放給任一登入者,需防塞爆;0 或負值 = 不限。
+    'public_max_total_bytes' => (int) env('IMAGE_PUBLIC_MAX_TOTAL_BYTES', 1024 * 1024 * 1024), // 1 GB
+
     // URL 下載(SSRF 防護)相關。
     'download_timeout' => (int) env('IMAGE_DOWNLOAD_TIMEOUT', 15), // 秒
     'max_redirects' => (int) env('IMAGE_MAX_REDIRECTS', 3),

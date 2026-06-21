@@ -136,9 +136,10 @@ curl -X POST -H "Authorization: Bearer <admin-token>" \
 | `max_megapixels` | `50` | 解析後像素總量上限（擋 decompression bomb） |
 | `allowed_mimes` | jpeg/png/webp | 內容層 MIME 白名單 |
 | `webp_quality` | `82` | webp 輸出品質 |
+| `public_max_total_bytes` | `1GB` | **public 資料夾(`storage/app/public/images`)總量上限**;上傳前累加現有大小 + 本次,超過拒（`422`）。`0`/負值 = 不限。只擋 public（private 為 admin only，不受此限） |
 | `download_timeout` / `max_redirects` | `15s` / `3` | URL 下載 |
 
-對應 env:`IMAGE_MAX_BYTES`、`IMAGE_MAX_MEGAPIXELS`、`IMAGE_WEBP_QUALITY`、`IMAGE_DOWNLOAD_TIMEOUT`、`IMAGE_MAX_REDIRECTS`。
+對應 env:`IMAGE_MAX_BYTES`、`IMAGE_MAX_MEGAPIXELS`、`IMAGE_WEBP_QUALITY`、`IMAGE_DOWNLOAD_TIMEOUT`、`IMAGE_MAX_REDIRECTS`、`IMAGE_PUBLIC_MAX_TOTAL_BYTES`。
 
 ## 部署 / 維運注意
 
