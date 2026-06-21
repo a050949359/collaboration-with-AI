@@ -21,9 +21,10 @@ class ImageController extends Controller
      */
     public function store(StoreImageRequest $request): JsonResponse
     {
-        $visibility = ImageVisibility::from(
-            (string) $request->input('visibility', config('images.default_visibility')),
-        );
+        // tryFrom + fallback:即使 payload 明確帶 visibility:null(nullable 通過驗證)
+        // 也不會把 "" 丟給 from() 觸發 ValueError(500),而是退回預設。
+        $visibility = ImageVisibility::tryFrom((string) $request->input('visibility'))
+            ?? ImageVisibility::from((string) config('images.default_visibility'));
 
         return $this->ingest($request, $visibility);
     }

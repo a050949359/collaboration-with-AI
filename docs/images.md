@@ -150,7 +150,7 @@ curl -X POST -H "Authorization: Bearer <admin-token>" \
   `nginx client_max_body_size` ≥ `php.ini post_max_size` ≥ `php.ini upload_max_filesize` ≥ Laravel `max:` ≥ `max_bytes`。
 - **檔案權限 mode 由 code 鎖死**（`filesystems.php` 的 `private` disk `permissions`:private `0640`/`0750`）;但 **group ownership 是 OS/部署層的事**。0640 的 group-read 只有在「檔案群組 = 共用群組」時才有意義 —— 確認部署使用者已加入 web 程序（www-data）群組,或對 `storage/app/private` 上 setgid（`chmod -R g+s`）讓新檔繼承父目錄群組。
 - **暫存檔不會累積**:PHP 原生上傳暫存(`/tmp/phpXXXX`,0600)在 request 結束由 PHP 自動 `unlink`。會持續長大的是**成品 webp**,目前**無自動回收**(孤兒圖需另行清理)。
-- **SSRF**:`fromUrl()` 只允許 http(s)、每一跳重驗 IP、擋私網/loopback/link-local/雲端 metadata（`169.254.169.254`）、限 redirect 次數與大小。
+- **SSRF / DoS（URL 下載）**:`fromUrl()` 只允許 http(s);每一跳解析 **A + AAAA**(IPv4/IPv6)並擋私網/loopback/link-local/ULA/雲端 metadata（`169.254.169.254`、`::1`、`fc00::/7` 等）;把驗證過的 IP 用 **`CURLOPT_RESOLVE` pin 給 curl**,防 DNS rebinding(TOCTOU);**串流邊讀邊累加**、超過 `max_bytes` 立即中斷(防 OOM);protocol-relative(`//host`)redirect 正確繼承 scheme 後重驗;限 redirect 次數。
 - **public 檔數計數**（`PublicImageCounter`）:`scan` 直接掃 FS;`redis` 用一個 Hash（field = shard 2 碼、value = 該桶檔數),`hincrby` 原子加、`hgetall` 加總取 total,冷啟動自動從 FS seed（self-healing）。屬軟上限近似值 —— 若 public 圖被 app 外刪除會與實際脫節,需要時可重掃覆寫 hash 校正。
 
 ## 待補（TODO）

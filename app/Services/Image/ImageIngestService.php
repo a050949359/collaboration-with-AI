@@ -72,11 +72,7 @@ class ImageIngestService
         }
 
         // 2. 真實 MIME(看內容,不看副檔名)
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime = $finfo !== false ? finfo_buffer($finfo, $bytes) : false;
-        if ($finfo !== false) {
-            finfo_close($finfo);
-        }
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
         $allowed = (array) config('images.allowed_mimes');
         if (! is_string($mime) || ! in_array($mime, $allowed, true)) {
             throw new ImageRejectedException('Unsupported or undetectable image type.');
@@ -175,7 +171,10 @@ class ImageIngestService
     }
 
     /**
-     * SSRF 防護下的遠端下載:只允許 http(s)、每一跳都擋私網/保留段 IP、限制 redirect 次數與大小。
+     * SSRF 防護下的遠端下載:
+     *  - 只允許 http(s);每一跳都解析並擋私網/保留段 IP(IPv4 + IPv6)
+     *  - 把驗證過的 IP 用 CURLOPT_RESOLVE pin 給 curl,避免「驗證後再解析」的 DNS rebinding(TOCTOU)
+     *  - 串流邊讀邊累加,超過 max_bytes 立即中斷(防 OOM DoS)
      */
     private function fetchRemote(string $url): string
     {
@@ -184,18 +183,21 @@ class ImageIngestService
         $maxBytes = (int) config('images.max_bytes');
 
         for ($hop = 0; $hop <= $maxRedirects; $hop++) {
-            $this->assertUrlIsSafe($url);
+            // 驗證 scheme + IP 安全,並取回要 pin 的目標(host/port/ip)
+            ['host' => $host, 'port' => $port, 'ip' => $ip] = $this->resolveSafeTarget($url);
+            $pinnedIp = str_contains($ip, ':') ? "[$ip]" : $ip; // IPv6 需用中括號
 
             $response = Http::timeout($timeout)
                 ->withOptions([
                     'allow_redirects' => false, // 自己處理,以便每一跳重驗 IP
-                    'stream' => false,
+                    'stream' => true,           // 串流,避免整包進記憶體
+                    'curl' => [CURLOPT_RESOLVE => ["{$host}:{$port}:{$pinnedIp}"]],
                 ])
                 ->get($url);
 
             // 手動跟隨 redirect,並重驗下一跳的 IP
             if ($response->redirect()) {
-                $location = $response->header('Location');
+                $location = (string) $response->header('Location');
                 if ($location === '') {
                     throw new ImageRejectedException('Redirect without a location.');
                 }
@@ -208,10 +210,22 @@ class ImageIngestService
                 throw new ImageRejectedException('Remote image fetch failed.');
             }
 
-            $body = $response->body();
-            if (strlen($body) > $maxBytes) {
+            // Content-Length 若已超標,先擋(省下載)
+            $declared = (int) $response->header('Content-Length');
+            if ($declared > $maxBytes) {
                 throw new ImageRejectedException('Remote image exceeds the maximum allowed size.');
             }
+
+            // 串流讀取,邊累加邊檢查上限
+            $stream = $response->toPsrResponse()->getBody();
+            $body = '';
+            while (! $stream->eof()) {
+                $body .= $stream->read(8192);
+                if (strlen($body) > $maxBytes) {
+                    throw new ImageRejectedException('Remote image exceeds the maximum allowed size.');
+                }
+            }
+
             if ($body === '') {
                 throw new ImageRejectedException('Remote image was empty.');
             }
@@ -223,9 +237,12 @@ class ImageIngestService
     }
 
     /**
-     * 驗證 URL 的 scheme 與解析後 IP 是否安全(擋私網/loopback/link-local/保留段)。
+     * 驗證 URL 的 scheme 與解析後的所有 IP(IPv4 A + IPv6 AAAA)是否安全,
+     * 回傳 ['host','port','ip'] —— ip 為已驗證安全、供 pin 用的位址。
+     *
+     * @return array{host: string, port: int, ip: string}
      */
-    private function assertUrlIsSafe(string $url): void
+    private function resolveSafeTarget(string $url): array
     {
         $parts = parse_url($url);
         $scheme = strtolower($parts['scheme'] ?? '');
@@ -235,11 +252,8 @@ class ImageIngestService
             throw new ImageRejectedException('Only http(s) image URLs are allowed.');
         }
 
-        // host 可能本身就是 IP;否則 DNS 解析出所有 A 紀錄逐一檢查
-        $ips = filter_var($host, FILTER_VALIDATE_IP) ? [$host] : (gethostbynamel($host) ?: []);
-        if ($ips === []) {
-            throw new ImageRejectedException('Image host could not be resolved.');
-        }
+        $port = (int) ($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
+        $ips = $this->resolveHostIps($host);
 
         foreach ($ips as $ip) {
             $public = filter_var(
@@ -251,6 +265,45 @@ class ImageIngestService
                 throw new ImageRejectedException('Image host resolves to a disallowed address.');
             }
         }
+
+        // 全部 IP 皆已驗證安全,pin 第一個
+        return ['host' => $host, 'port' => $port, 'ip' => $ips[0]];
+    }
+
+    /**
+     * 解析 host 的所有 IP(A + AAAA);host 本身是 IP literal 則直接回。
+     *
+     * @return array<int, string>
+     */
+    private function resolveHostIps(string $host): array
+    {
+        // IPv6 literal URL 的 host 帶中括號,去掉再驗
+        $literal = trim($host, '[]');
+        if (filter_var($literal, FILTER_VALIDATE_IP)) {
+            return [$literal];
+        }
+
+        $ips = [];
+        $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+        if (is_array($records)) {
+            foreach ($records as $record) {
+                if (isset($record['ip'])) {
+                    $ips[] = $record['ip'];        // A
+                } elseif (isset($record['ipv6'])) {
+                    $ips[] = $record['ipv6'];      // AAAA
+                }
+            }
+        }
+
+        if ($ips === []) {
+            $ips = gethostbynamel($host) ?: []; // 後備(僅 IPv4)
+        }
+
+        if ($ips === []) {
+            throw new ImageRejectedException('Image host could not be resolved.');
+        }
+
+        return $ips;
     }
 
     /**
@@ -266,6 +319,12 @@ class ImageIngestService
         $scheme = $parts['scheme'] ?? 'https';
         $host = $parts['host'] ?? '';
         $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+
+        // protocol-relative(//host/path):繼承 scheme,host 換成 Location 指定的
+        // —— 必須在單斜線判斷之前攔,否則會被誤當成原 host 的路徑。
+        if (str_starts_with($location, '//')) {
+            return $scheme.':'.$location;
+        }
 
         if (str_starts_with($location, '/')) {
             return $scheme.'://'.$host.$port.$location;

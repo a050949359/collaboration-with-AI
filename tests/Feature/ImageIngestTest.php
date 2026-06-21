@@ -7,6 +7,7 @@ use App\Services\Image\ImageIngestService;
 use App\Services\Image\ImageRejectedException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -333,5 +334,42 @@ class ImageIngestTest extends TestCase
 
         $this->expectException(ImageRejectedException::class);
         $service->fromUrl('file:///etc/passwd');
+    }
+
+    public function test_ipv6_loopback_url_is_rejected(): void
+    {
+        // gethostbynamel 不查 AAAA;改用 dns_get_record 後私有 IPv6 也擋
+        $this->expectException(ImageRejectedException::class);
+        app(ImageIngestService::class)->fromUrl('http://[::1]/x');
+    }
+
+    public function test_null_visibility_defaults_to_private(): void
+    {
+        // 帶 visibility:null 不應 500,應退回預設 private
+        $response = $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', [
+                'file' => UploadedFile::fake()->image('p.png', 32, 32),
+                'visibility' => null,
+            ]);
+
+        $response->assertCreated()->assertJsonPath('visibility', 'private');
+    }
+
+    public function test_redirect_to_protocol_relative_internal_is_rejected(): void
+    {
+        // 起點為公開 IP,被導去 //127.0.0.1/.. → 下一跳重驗應擋下(且 // 不被誤判成路徑)
+        Http::fake(['*' => Http::response('', 302, ['Location' => '//127.0.0.1/evil'])]);
+
+        $this->expectException(ImageRejectedException::class);
+        app(ImageIngestService::class)->fromUrl('http://8.8.8.8/start');
+    }
+
+    public function test_oversized_remote_body_is_rejected_while_streaming(): void
+    {
+        config(['images.max_bytes' => 10]);
+        Http::fake(['*' => Http::response(str_repeat('A', 5000), 200)]);
+
+        $this->expectException(ImageRejectedException::class);
+        app(ImageIngestService::class)->fromUrl('http://8.8.8.8/big');
     }
 }
