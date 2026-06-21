@@ -136,10 +136,12 @@ curl -X POST -H "Authorization: Bearer <admin-token>" \
 | `max_megapixels` | `50` | 解析後像素總量上限（擋 decompression bomb） |
 | `allowed_mimes` | jpeg/png/webp | 內容層 MIME 白名單 |
 | `webp_quality` | `82` | webp 輸出品質 |
-| `public_max_total_bytes` | `1GB` | **public 資料夾(`storage/app/public/images`)總量上限**;上傳前累加現有大小 + 本次,超過拒（`422`）。`0`/負值 = 不限。只擋 public（private 為 admin only，不受此限） |
+| `public_max_files` | `10000` | **public 圖檔數上限**;達上限即拒新上傳（`422`）。`0`/負值 = 不限。只擋 public（private 為 admin only，不受此限） |
+| `public_count_driver` | `scan` | 計數方式:`scan`（掃 FS，O(n)，零依賴）或 `redis`（shard hash，取總和近 O(1)） |
+| `public_count_redis_key` | `image:public:shard_counts` | `redis` driver 用的 Hash key |
 | `download_timeout` / `max_redirects` | `15s` / `3` | URL 下載 |
 
-對應 env:`IMAGE_MAX_BYTES`、`IMAGE_MAX_MEGAPIXELS`、`IMAGE_WEBP_QUALITY`、`IMAGE_DOWNLOAD_TIMEOUT`、`IMAGE_MAX_REDIRECTS`、`IMAGE_PUBLIC_MAX_TOTAL_BYTES`。
+對應 env:`IMAGE_MAX_BYTES`、`IMAGE_MAX_MEGAPIXELS`、`IMAGE_WEBP_QUALITY`、`IMAGE_DOWNLOAD_TIMEOUT`、`IMAGE_MAX_REDIRECTS`、`IMAGE_PUBLIC_MAX_FILES`、`IMAGE_PUBLIC_COUNT_DRIVER`、`IMAGE_PUBLIC_COUNT_REDIS_KEY`。
 
 ## 部署 / 維運注意
 
@@ -149,6 +151,7 @@ curl -X POST -H "Authorization: Bearer <admin-token>" \
 - **檔案權限 mode 由 code 鎖死**（`filesystems.php` 的 `private` disk `permissions`:private `0640`/`0750`）;但 **group ownership 是 OS/部署層的事**。0640 的 group-read 只有在「檔案群組 = 共用群組」時才有意義 —— 確認部署使用者已加入 web 程序（www-data）群組,或對 `storage/app/private` 上 setgid（`chmod -R g+s`）讓新檔繼承父目錄群組。
 - **暫存檔不會累積**:PHP 原生上傳暫存(`/tmp/phpXXXX`,0600)在 request 結束由 PHP 自動 `unlink`。會持續長大的是**成品 webp**,目前**無自動回收**(孤兒圖需另行清理)。
 - **SSRF**:`fromUrl()` 只允許 http(s)、每一跳重驗 IP、擋私網/loopback/link-local/雲端 metadata（`169.254.169.254`）、限 redirect 次數與大小。
+- **public 檔數計數**（`PublicImageCounter`）:`scan` 直接掃 FS;`redis` 用一個 Hash（field = shard 2 碼、value = 該桶檔數),`hincrby` 原子加、`hgetall` 加總取 total,冷啟動自動從 FS seed（self-healing）。屬軟上限近似值 —— 若 public 圖被 app 外刪除會與實際脫節,需要時可重掃覆寫 hash 校正。
 
 ## 關鍵檔案
 

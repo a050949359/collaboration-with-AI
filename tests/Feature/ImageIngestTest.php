@@ -7,6 +7,7 @@ use App\Services\Image\ImageIngestService;
 use App\Services\Image\ImageRejectedException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -211,6 +212,47 @@ class ImageIngestTest extends TestCase
             ->postJson('/api/images', ['file' => UploadedFile::fake()->image('b.png', 32, 32)])
             ->assertCreated()
             ->assertJsonPath('visibility', 'private');
+    }
+
+    public function test_redis_driver_blocks_when_shard_sum_reaches_cap(): void
+    {
+        config(['images.public_count_driver' => 'redis', 'images.public_max_files' => 5]);
+        Redis::shouldReceive('hgetall')->andReturn(['00' => 3, '01' => 2]); // 加總 5 >= 5
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertStatus(422);
+    }
+
+    public function test_redis_driver_increments_shard_on_success(): void
+    {
+        config(['images.public_count_driver' => 'redis', 'images.public_max_files' => 100]);
+        Redis::shouldReceive('hgetall')->andReturn(['00' => 1]); // 未達上限
+        Redis::shouldReceive('hincrby')->once();                 // 寫入後維護計數
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertCreated();
+    }
+
+    public function test_redis_driver_cold_start_seeds_from_filesystem(): void
+    {
+        config(['images.public_count_driver' => 'redis', 'images.public_max_files' => 1]);
+        // FS 已有一張(模擬冷啟動前既有檔)
+        Storage::disk('public')->put('images/ab/'.Str::uuid().'.webp', 'x');
+        Redis::shouldReceive('hgetall')->andReturn([]); // hash 不存在 → 冷啟動
+        Redis::shouldReceive('hmset')->once();          // 從 FS seed
+
+        $user = User::factory()->create();
+
+        // seed 後 total=1 已達上限 → 擋
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertStatus(422);
     }
 
     public function test_guest_cannot_use_public_endpoint(): void

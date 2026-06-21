@@ -20,6 +20,8 @@ use Illuminate\Support\Str;
  */
 class ImageIngestService
 {
+    public function __construct(private readonly PublicImageCounter $counter) {}
+
     /**
      * 拖曳上傳:從 UploadedFile 取 bytes。
      *
@@ -110,6 +112,10 @@ class ImageIngestService
             throw new ImageRejectedException('Failed to persist image.');
         }
 
+        if ($visibility === ImageVisibility::Public) {
+            $this->counter->added($id);
+        }
+
         return $id;
     }
 
@@ -126,7 +132,7 @@ class ImageIngestService
 
     /**
      * public 資料夾檔數上限:現有檔數已達上限就拒新上傳。上限 <= 0 視為不限。
-     * 只 count(列目錄),不逐檔 stat,比累加 bytes 省。
+     * 計數委派 PublicImageCounter(scan 直接掃 FS / redis 走 shard hash)。
      */
     private function assertPublicFileLimit(): void
     {
@@ -135,10 +141,7 @@ class ImageIngestService
             return;
         }
 
-        $fs = Storage::disk((string) config('images.disks.public'));
-        $dir = trim((string) config('images.directory'), '/');
-
-        if (count($fs->allFiles($dir)) >= $cap) {
+        if ($this->counter->total() >= $cap) {
             throw new ImageRejectedException('Public image count limit reached.');
         }
     }

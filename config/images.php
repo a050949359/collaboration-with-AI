@@ -47,6 +47,11 @@ return [
     // (用檔數而非 bytes:只列目錄、免逐檔 stat;每檔已受 max_bytes 限制)
     'public_max_files' => (int) env('IMAGE_PUBLIC_MAX_FILES', 10000),
 
+    // public 計數 driver:'scan'(掃 FS,預設、零依賴)或 'redis'(shard hash,O(1) 取總和)。
+    'public_count_driver' => env('IMAGE_PUBLIC_COUNT_DRIVER', 'scan'),
+    // redis driver 用的 hash key(field = shard 2 碼、value = 該桶檔數)。
+    'public_count_redis_key' => env('IMAGE_PUBLIC_COUNT_REDIS_KEY', 'image:public:shard_counts'),
+
     // URL 下載(SSRF 防護)相關。
     'download_timeout' => (int) env('IMAGE_DOWNLOAD_TIMEOUT', 15), // 秒
     'max_redirects' => (int) env('IMAGE_MAX_REDIRECTS', 3),
