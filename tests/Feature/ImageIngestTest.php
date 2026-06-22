@@ -380,6 +380,20 @@ class ImageIngestTest extends TestCase
         $this->actingAs($this->admin(), 'sanctum')
             ->get('/api/images/'.Str::uuid())
             ->assertNotFound();
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertNotFound();
+    }
+
+    public function test_master_switch_off_hides_endpoint_even_for_invalid_request(): void
+    {
+        // 總開關關時,連「不合法請求」也回 404(而非驗證的 422),不洩漏端點存在
+        config(['images.enabled' => false]);
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', []) // file/url 皆缺,平時會 422
+            ->assertNotFound();
     }
 
     public function test_upload_switch_off_returns_403(): void
