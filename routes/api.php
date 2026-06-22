@@ -70,8 +70,8 @@ Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
 
 Route::group(['prefix' => 'auth'], function () {
     Route::get('/key', PublicKeyController::class);
-    Route::post('/register', [RegistController::class, 'register'])->middleware([EnsureRegistrationOpen::class, DecryptPasswordFields::class, 'turnstile']);
-    Route::post('/login', [LoginController::class, 'login'])->middleware([DecryptPasswordFields::class, 'turnstile']);
+    Route::post('/register', [RegistController::class, 'register'])->middleware([EnsureRegistrationOpen::class, DecryptPasswordFields::class, 'turnstile', 'throttle:5,1']);
+    Route::post('/login', [LoginController::class, 'login'])->middleware([DecryptPasswordFields::class, 'turnstile', 'throttle:10,1']);
     Route::post('/forgot-password', [ForgotPasswordController::class, 'sendLink'])->middleware('throttle:5,1');
     Route::post('/reset-password', [ForgotPasswordController::class, 'reset'])->middleware(DecryptPasswordFields::class);
     Route::get('/{provider}/redirect', [SocialAccountController::class, 'redirect'])->where(['provider' => 'google']);
