@@ -21,6 +21,12 @@ class ImageController extends Controller
      */
     public function store(StoreImageRequest $request): JsonResponse
     {
+        $this->ensureFeatureEnabled();
+        if ($request->hasFile('file')) {
+            abort_unless((bool) config('images.upload_enabled'), 403, 'Image upload is disabled.');
+        }
+        $this->ensureUrlDownloadAllowed($request);
+
         // tryFrom + fallback:即使 payload 明確帶 visibility:null(nullable 通過驗證)
         // 也不會把 "" 丟給 from() 觸發 ValueError(500),而是退回預設。
         $visibility = ImageVisibility::tryFrom((string) $request->input('visibility'))
@@ -36,7 +42,25 @@ class ImageController extends Controller
      */
     public function storePublic(StoreImageRequest $request): JsonResponse
     {
+        $this->ensureFeatureEnabled();
+        abort_unless((bool) config('images.public_upload_enabled'), 403, 'Public image upload is disabled.');
+        $this->ensureUrlDownloadAllowed($request);
+
         return $this->ingest($request, ImageVisibility::Public);
+    }
+
+    /** 總開關:關閉時整個功能視為不存在(404)。 */
+    private function ensureFeatureEnabled(): void
+    {
+        abort_unless((bool) config('images.enabled'), 404);
+    }
+
+    /** URL 下載子開關:帶 url 但功能關閉時擋下(SSRF 面 kill-switch 的 HTTP 層)。 */
+    private function ensureUrlDownloadAllowed(StoreImageRequest $request): void
+    {
+        if ($request->filled('url')) {
+            abort_unless((bool) config('images.url_download_enabled'), 403, 'Image URL download is disabled.');
+        }
     }
 
     /**
@@ -86,6 +110,8 @@ class ImageController extends Controller
      */
     public function show(string $id): StreamedResponse
     {
+        $this->ensureFeatureEnabled();
+
         $path = ImageIngestService::pathFor($id);
 
         // response() 在具體 FilesystemAdapter 上,先 narrow 型別(同 urlFor)。

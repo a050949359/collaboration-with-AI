@@ -4,6 +4,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | 功能開關(預設全關,需明確開啟)
+    |--------------------------------------------------------------------------
+    |
+    | enabled:總開關,關閉時所有 image 路由回 404(整個功能停用)。
+    | 其餘為子開關,總開關開啟後才有意義;對應停用回 403:
+    |   upload_enabled        — admin 檔案上傳(POST /images 帶 file)
+    |   public_upload_enabled — 登入者 public 上傳(POST /images/public)
+    |   url_download_enabled  — URL 下載(SSRF 面;service 層也會擋)
+    |
+    */
+    'enabled' => (bool) env('IMAGE_ENABLED', false),
+    'upload_enabled' => (bool) env('IMAGE_UPLOAD_ENABLED', false),
+    'public_upload_enabled' => (bool) env('IMAGE_PUBLIC_UPLOAD_ENABLED', false),
+    'url_download_enabled' => (bool) env('IMAGE_URL_DOWNLOAD_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | 本地圖片儲存設定
     |--------------------------------------------------------------------------
     |

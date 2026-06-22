@@ -60,6 +60,11 @@ class ImageIngestService
      */
     public function fromUrl(string $url, ImageVisibility $visibility = ImageVisibility::Private): string
     {
+        // SSRF 面 kill-switch:即使被非 HTTP 路徑呼叫,功能關閉時也一律拒。
+        if (! (bool) config('images.url_download_enabled')) {
+            throw new ImageRejectedException('Image URL download is disabled.');
+        }
+
         return $this->store($this->fetchRemote($url), $visibility);
     }
 
