@@ -32,18 +32,18 @@ class LoginController extends Controller
         }
 
         if (!Auth::attempt($credentials, $remember)) {
+            // 帳號鎖定計數只在帳號存在時進行；但對外一律回同一句 401，
+            // 不洩漏「此 email 是否註冊／還剩幾次」，避免使用者列舉（enumeration）。
+            // 跨帳號的暴力嘗試（密碼噴灑、猜不存在的 email）由路由層 throttle:10,1（依 IP）擋。
             if ($user) {
                 $user->failed_login_attempts += 1;
                 if ($user->failed_login_attempts >= self::MAX_ATTEMPTS) {
                     $user->locked_until = now()->addMinutes(self::LOCKOUT_MINUTES);
-                    $user->save();
-                    return response()->json(['message' => "登入失敗次數過多，帳號已鎖定 " . self::LOCKOUT_MINUTES . " 分鐘"], 429);
                 }
                 $user->save();
-                $remaining = self::MAX_ATTEMPTS - $user->failed_login_attempts;
-                return response()->json(['message' => "登入失敗，還剩 {$remaining} 次機會"], 401);
             }
-            return response()->json(['message' => '登入失敗'], 401);
+
+            return response()->json(['message' => '帳號或密碼錯誤'], 401);
         }
 
         // 2. 取得 User 實例
