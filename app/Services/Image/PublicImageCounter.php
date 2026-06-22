@@ -116,7 +116,7 @@ class PublicImageCounter
 
     private function disk(): Filesystem
     {
-        return Storage::disk((string) config('images.disks.public'));
+        return Storage::disk((string) config('images.disks.public', 'public'));
     }
 
     private function dir(): string
