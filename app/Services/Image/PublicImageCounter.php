@@ -54,8 +54,12 @@ class PublicImageCounter
         }
 
         // 計數為盡力而為:檔案已存好,計數失敗不應讓上傳失敗(下次冷啟動會從 FS 校正)。
+        // 只在 hash 已 seed(存在)時增量;否則略過,讓下次 total() 觸發完整 seedFromScan ——
+        // 避免 hincrby 自行建立「只有這一桶」的部分 hash,使 total() 永遠跳過冷啟動掃描而脫節。
         try {
-            Redis::hincrby($this->key(), substr($id, 0, 2), 1);
+            if (Redis::exists($this->key())) {
+                Redis::hincrby($this->key(), substr($id, 0, 2), 1);
+            }
         } catch (\Throwable $e) {
             report($e);
         }

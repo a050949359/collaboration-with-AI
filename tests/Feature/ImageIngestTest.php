@@ -241,6 +241,7 @@ class ImageIngestTest extends TestCase
     {
         config(['images.public_count_driver' => 'redis', 'images.public_max_files' => 100]);
         Redis::shouldReceive('hgetall')->andReturn(['00' => 1]); // 未達上限
+        Redis::shouldReceive('exists')->andReturn(true);         // hash 已 seed
         Redis::shouldReceive('hincrby')->once();                 // 寫入後維護計數
 
         $user = User::factory()->create();
@@ -271,6 +272,7 @@ class ImageIngestTest extends TestCase
         config(['images.public_count_driver' => 'redis', 'images.public_max_files' => 5]);
         Redis::shouldReceive('hgetall')->andReturn([]); // 空目錄 → 冷啟動
         Redis::shouldReceive('hmset')->once();          // 寫入(含 _seeded 佔位,即使 0 張)
+        Redis::shouldReceive('exists')->andReturn(true); // seed 後 hash 已存在
         Redis::shouldReceive('hincrby')->once();        // 上傳後計數
 
         $user = User::factory()->create();
@@ -358,6 +360,20 @@ class ImageIngestTest extends TestCase
 
         $this->expectException(ImageRejectedException::class);
         $service->fromUrl('file:///etc/passwd');
+    }
+
+    public function test_oversized_upload_rejected_before_reading_into_memory(): void
+    {
+        config(['images.max_bytes' => 1024 * 1024]); // 1MB
+
+        // 2MB 檔,getSize 先擋,不會整包讀進記憶體
+        $big = UploadedFile::fake()->create('big.png', 2048);
+
+        $response = $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', ['file' => $big]);
+
+        $response->assertStatus(422);
+        $this->assertCount(0, Storage::disk('private')->allFiles('images'));
     }
 
     public function test_malformed_url_is_rejected(): void

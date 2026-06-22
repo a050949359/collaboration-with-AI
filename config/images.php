@@ -57,4 +57,9 @@ return [
     // URL 下載(SSRF 防護)相關。
     'download_timeout' => (int) env('IMAGE_DOWNLOAD_TIMEOUT', 15), // 秒
     'max_redirects' => (int) env('IMAGE_MAX_REDIRECTS', 3),
+    // 下載用 UA:預設 Guzzle UA 常被 CDN/圖床當爬蟲擋,給個瀏覽器樣式提高相容性。
+    'download_user_agent' => env(
+        'IMAGE_DOWNLOAD_USER_AGENT',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    ),
 ];

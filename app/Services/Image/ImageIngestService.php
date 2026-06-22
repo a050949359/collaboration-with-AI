@@ -29,6 +29,11 @@ class ImageIngestService
      */
     public function fromUpload(UploadedFile $file, ImageVisibility $visibility = ImageVisibility::Private): string
     {
+        // 先用回報的大小擋,避免把超大檔整包讀進記憶體(store() 仍會再以實際 bytes 把關)
+        if ($file->getSize() > (int) config('images.max_bytes')) {
+            throw new ImageRejectedException('Image exceeds the maximum allowed size.');
+        }
+
         $bytes = @file_get_contents($file->getRealPath());
 
         if (! is_string($bytes) || $bytes === '') {
@@ -187,14 +192,22 @@ class ImageIngestService
             // 驗證 scheme + IP 安全,並取回要 pin 的目標(host/port/ip)
             ['host' => $host, 'port' => $port, 'ip' => $ip] = $this->resolveSafeTarget($url);
 
-            // CURLOPT_RESOLVE 的 ADDRESS 段是「前兩個冒號之後的全部」,IPv6 直接放、不加中括號
-            // (中括號在部分 libcurl 版本會被判為無效 IP 而連線失敗)。
+            $options = [
+                'allow_redirects' => false, // 自己處理,以便每一跳重驗 IP
+                'stream' => true,           // 串流,避免整包進記憶體
+                'read_timeout' => $timeout, // 涵蓋讀取階段,防慢速讀取(slowloris)
+            ];
+
+            // 只有 host 是 DNS 名稱才需 pin IP(防 rebinding);host 本身是 IP literal 時不 pin,
+            // 否則 IPv6 literal 會讓 CURLOPT_RESOLVE 字串("[v6]:port:v6")多冒號而解析失敗。
+            // CURLOPT_RESOLVE 的 ADDRESS 段是「前兩冒號後全部」,IPv6 直接放、不加中括號。
+            if (! filter_var(trim($host, '[]'), FILTER_VALIDATE_IP)) {
+                $options['curl'] = [CURLOPT_RESOLVE => ["{$host}:{$port}:{$ip}"]];
+            }
+
             $response = Http::timeout($timeout)
-                ->withOptions([
-                    'allow_redirects' => false, // 自己處理,以便每一跳重驗 IP
-                    'stream' => true,           // 串流,避免整包進記憶體
-                    'curl' => [CURLOPT_RESOLVE => ["{$host}:{$port}:{$ip}"]],
-                ])
+                ->withUserAgent((string) config('images.download_user_agent'))
+                ->withOptions($options)
                 ->get($url);
 
             // 手動跟隨 redirect,並重驗下一跳的 IP
