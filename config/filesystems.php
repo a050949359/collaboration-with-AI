@@ -64,6 +64,12 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/private'),
             'visibility' => 'private',
+            // 部署使用者與 web 程序(www-data)同群組:private 檔需 group 可讀(0640)、
+            // others 全擋;目錄 0750 讓同群組可進入。覆蓋 Flysystem 預設的 0600/0700。
+            'permissions' => [
+                'file' => ['public' => 0644, 'private' => 0640],
+                'dir' => ['public' => 0755, 'private' => 0750],
+            ],
             'throw' => false,
             'report' => true,
         ],

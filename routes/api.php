@@ -5,6 +5,7 @@ use App\Http\Controllers\About\ResumeContextController;
 use App\Http\Controllers\Admin\MicroHostController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ShareTokenController;
+use App\Http\Controllers\Agyd\AgydReceiveController;
 use App\Http\Controllers\ApiKey\UserApiKeyController;
 use App\Http\Controllers\Article\ArticleBrowseController;
 use App\Http\Controllers\Article\ArticleCommentController;
@@ -31,8 +32,8 @@ use App\Http\Controllers\Aviation\NearbyAirportController;
 use App\Http\Controllers\Gacha\GachaCardController;
 use App\Http\Controllers\Gacha\GachaDeckController;
 use App\Http\Controllers\Gacha\GachaRoomController;
+use App\Http\Controllers\ImageController;
 use App\Http\Controllers\Lab\WsLabController;
-use App\Http\Controllers\Agyd\AgydReceiveController;
 use App\Http\Controllers\Line\LineAboutTokenController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
@@ -40,9 +41,9 @@ use App\Http\Controllers\Mcp\AgydMcpController;
 use App\Http\Controllers\Mcp\MemoryMcpController;
 use App\Http\Controllers\Mcp\RagMcpController;
 use App\Http\Controllers\Mcp\TaskMcpController;
+use App\Http\Controllers\MiniOrch\MiniOrchController;
 use App\Http\Controllers\Rag\DocumentController as RagDocumentController;
 use App\Http\Controllers\Rag\KnowledgeBaseController as RagKnowledgeBaseController;
-use App\Http\Controllers\MiniOrch\MiniOrchController;
 use App\Http\Controllers\Story\CharacterController;
 use App\Http\Controllers\Story\StorySessionController;
 use App\Http\Controllers\Story\StorySetupController;
@@ -340,6 +341,19 @@ Route::middleware('auth:sanctum')->prefix('v1/user-api-keys')->group(function ()
     Route::post('/', [UserApiKeyController::class, 'store']);
     Route::patch('/{id}', [UserApiKeyController::class, 'update']);
     Route::delete('/{id}', [UserApiKeyController::class, 'destroy']);
+});
+
+// 圖片儲存(三來源 → webp → 依 visibility 落 disk)
+// admin:可指定 public/private 上傳 + private 鑑權出圖
+Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
+    Route::post('/images', [ImageController::class, 'store'])->middleware('throttle:30,1');
+    Route::get('/images/{id}', [ImageController::class, 'show'])
+        ->where('id', '[0-9a-fA-F-]{36}')
+        ->name('images.show');
+});
+// 任一登入者:只能上傳 public(強制 public,不可建 private);public 圖由 /storage 直連
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/images/public', [ImageController::class, 'storePublic'])->middleware('throttle:30,1');
 });
 
 // Route::get('/debug-ip', fn() => response()->json([

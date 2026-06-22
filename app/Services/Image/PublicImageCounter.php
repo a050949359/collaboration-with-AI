@@ -1,0 +1,126 @@
+<?php
+
+namespace App\Services\Image;
+
+use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Storage;
+
+/**
+ * public 圖檔數計數器。
+ *
+ * Redis 結構:一個 Hash(field = shard 2 碼、value = 該桶檔數),
+ * `hincrby` 原子加、`hgetall` 後加總取 total —— 每桶一個值、要算時取總和。
+ *
+ * driver:
+ *  - `scan`(預設):直接掃 FS 計數(O(n)),零依賴、測試友善。
+ *  - `redis`:用上述 Hash;冷啟動(hash 不存在)自動從 FS seed,self-healing。
+ *
+ * 註:這是「軟上限」用的近似計數。若 public 圖被 app 外刪除會與實際脫節,
+ * 需要時可另寫 reconcile 指令重掃覆寫 hash。
+ */
+class PublicImageCounter
+{
+    /** 目前 public 圖總數 */
+    public function total(): int
+    {
+        if ($this->driver() !== 'redis') {
+            return $this->scanTotal();
+        }
+
+        // Redis 故障時降級回 FS 掃描,不讓上傳因 Redis 掛掉而 500。
+        try {
+            $counts = Redis::hgetall($this->key());
+
+            if (! is_array($counts) || $counts === []) {
+                return $this->seedFromScan(); // 冷啟動:從 FS 補
+            }
+
+            unset($counts['_seeded']); // 排除佔位欄位
+
+            return (int) array_sum(array_map('intval', $counts));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->scanTotal();
+        }
+    }
+
+    /** 成功寫入一張 public 圖後呼叫,維護對應 shard 計數 */
+    public function added(string $id): void
+    {
+        if ($this->driver() !== 'redis') {
+            return; // scan 模式不需維護
+        }
+
+        // 計數為盡力而為:檔案已存好,計數失敗不應讓上傳失敗(下次冷啟動會從 FS 校正)。
+        // 只在 hash 已 seed(存在)時增量;否則略過,讓下次 total() 觸發完整 seedFromScan ——
+        // 避免 hincrby 自行建立「只有這一桶」的部分 hash,使 total() 永遠跳過冷啟動掃描而脫節。
+        try {
+            if (Redis::exists($this->key())) {
+                Redis::hincrby($this->key(), substr($id, 0, 2), 1);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function scanTotal(): int
+    {
+        return count($this->disk()->allFiles($this->dir()));
+    }
+
+    /** 掃 FS 逐 shard 計數寫進 hash,回傳總數 */
+    private function seedFromScan(): int
+    {
+        $perShard = [];
+        foreach ($this->disk()->allFiles($this->dir()) as $file) {
+            $shard = $this->shardFromPath($file);
+            if ($shard === '') {
+                continue;
+            }
+            $perShard[$shard] = ($perShard[$shard] ?? 0) + 1;
+        }
+
+        // 寫入 _seeded 佔位:即使 0 張圖,hash 也非空,避免每次 total() 重掃(cache stampede)。
+        // shard 為 2 碼 hex,不會與 '_seeded' 撞;加總時已排除。
+        Redis::hmset($this->key(), $perShard + ['_seeded' => 1]);
+
+        return (int) array_sum($perShard);
+    }
+
+    /** images/ab/uuid.webp → ab */
+    private function shardFromPath(string $path): string
+    {
+        $parts = explode('/', $path);
+        $count = count($parts);
+        if ($count < 2) {
+            return '';
+        }
+
+        // 僅接受 2 碼 hex 的分桶名,避免 .DS_Store 等非分桶檔污染計數
+        $shard = $parts[$count - 2];
+
+        return (strlen($shard) === 2 && ctype_xdigit($shard)) ? $shard : '';
+    }
+
+    private function driver(): string
+    {
+        return (string) config('images.public_count_driver', 'scan');
+    }
+
+    private function key(): string
+    {
+        return (string) config('images.public_count_redis_key', 'image:public:shard_counts');
+    }
+
+    private function disk(): Filesystem
+    {
+        return Storage::disk((string) config('images.disks.public', 'public'));
+    }
+
+    private function dir(): string
+    {
+        return trim((string) config('images.directory'), '/');
+    }
+}
