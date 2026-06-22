@@ -100,7 +100,7 @@ class ImageIngestService
         // 5. 存檔(uuid 不可猜檔名,前綴分桶避免單一資料夾過大),disk 由 visibility 決定
         $id = Str::uuid()->toString();
         $path = self::pathFor($id);
-        $disk = (string) config('images.disks.'.$visibility->value);
+        $disk = (string) config('images.disks.'.$visibility->value) ?: $visibility->value;
 
         // 明示 visibility,讓檔案權限(private→0640 / public→0644,見 filesystems.php)
         // 由本 pipeline 宣告,不依賴 disk 預設。
@@ -251,7 +251,8 @@ class ImageIngestService
             throw new ImageRejectedException('Invalid image URL.');
         }
         $scheme = strtolower($parts['scheme'] ?? '');
-        $host = $parts['host'] ?? '';
+        // host 轉小寫:curl 內部會把 host 轉小寫比對 CURLOPT_RESOLVE,大小寫不一致會讓 pin 失配。
+        $host = strtolower($parts['host'] ?? '');
 
         if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
             throw new ImageRejectedException('Only http(s) image URLs are allowed.');
@@ -261,8 +262,10 @@ class ImageIngestService
         $ips = $this->resolveHostIps($host);
 
         foreach ($ips as $ip) {
+            // 先把 IPv4-mapped/compatible IPv6(::ffff:127.0.0.1 等)還原成 IPv4 再驗,
+            // 否則 filter_var 可能看不出內嵌的私網/保留位址 → SSRF 繞過。
             $public = filter_var(
-                $ip,
+                $this->unwrapMappedIpv4($ip),
                 FILTER_VALIDATE_IP,
                 FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
             );
@@ -314,6 +317,29 @@ class ImageIngestService
         }
 
         return $ips;
+    }
+
+    /**
+     * IPv4-mapped(::ffff:x.x.x.x)/ IPv4-compatible(::x.x.x.x)的 IPv6 還原成 IPv4,
+     * 讓 filter_var 能看出內嵌的私網/保留位址;非此類則原樣回傳。
+     */
+    private function unwrapMappedIpv4(string $ip): string
+    {
+        $packed = @inet_pton($ip);
+        if ($packed === false || strlen($packed) !== 16) {
+            return $ip;
+        }
+
+        $mapped = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff";
+        $compat = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        if (str_starts_with($packed, $mapped) || str_starts_with($packed, $compat)) {
+            $v4 = inet_ntop(substr($packed, 12));
+            if ($v4 !== false) {
+                return $v4;
+            }
+        }
+
+        return $ip;
     }
 
     /**

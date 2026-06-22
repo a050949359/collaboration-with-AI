@@ -28,15 +28,22 @@ class PublicImageCounter
             return $this->scanTotal();
         }
 
-        $counts = Redis::hgetall($this->key());
+        // Redis 故障時降級回 FS 掃描,不讓上傳因 Redis 掛掉而 500。
+        try {
+            $counts = Redis::hgetall($this->key());
 
-        if (! is_array($counts) || $counts === []) {
-            return $this->seedFromScan(); // 冷啟動:從 FS 補
+            if (! is_array($counts) || $counts === []) {
+                return $this->seedFromScan(); // 冷啟動:從 FS 補
+            }
+
+            unset($counts['_seeded']); // 排除佔位欄位
+
+            return (int) array_sum(array_map('intval', $counts));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->scanTotal();
         }
-
-        unset($counts['_seeded']); // 排除佔位欄位
-
-        return (int) array_sum(array_map('intval', $counts));
     }
 
     /** 成功寫入一張 public 圖後呼叫,維護對應 shard 計數 */
@@ -46,7 +53,12 @@ class PublicImageCounter
             return; // scan 模式不需維護
         }
 
-        Redis::hincrby($this->key(), substr($id, 0, 2), 1);
+        // 計數為盡力而為:檔案已存好,計數失敗不應讓上傳失敗(下次冷啟動會從 FS 校正)。
+        try {
+            Redis::hincrby($this->key(), substr($id, 0, 2), 1);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     private function scanTotal(): int

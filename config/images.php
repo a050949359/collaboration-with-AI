@@ -30,7 +30,9 @@ return [
     'max_bytes' => (int) env('IMAGE_MAX_BYTES', 10 * 1024 * 1024), // 10 MB
 
     // 解析後像素總量上限(百萬像素),擋 decompression bomb。
-    'max_megapixels' => (int) env('IMAGE_MAX_MEGAPIXELS', 50),
+    // 注意:接近上限的圖 GD 解碼會吃約 寬×高×4 bytes 記憶體(20MP ≈ 80MB),
+    // 調高時請確認 PHP memory_limit 足夠,否則大圖會 OOM。
+    'max_megapixels' => (int) env('IMAGE_MAX_MEGAPIXELS', 20),
 
     // 以「內容」判定的合法 MIME 白名單(不看副檔名)。刻意不含 gif/svg。
     'allowed_mimes' => [

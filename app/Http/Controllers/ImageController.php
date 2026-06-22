@@ -72,7 +72,7 @@ class ImageController extends Controller
             // local/public driver 的 url() 在具體 FilesystemAdapter 上,
             // Storage::disk() 的回傳型別宣告是 Filesystem interface(無 url()),故先 narrow。
             /** @var FilesystemAdapter $disk */
-            $disk = Storage::disk((string) config('images.disks.public'));
+            $disk = Storage::disk((string) config('images.disks.public', 'public'));
 
             return $disk->url($path);
         }
@@ -90,7 +90,7 @@ class ImageController extends Controller
 
         // response() 在具體 FilesystemAdapter 上,先 narrow 型別(同 urlFor)。
         /** @var FilesystemAdapter $disk */
-        $disk = Storage::disk((string) config('images.disks.private'));
+        $disk = Storage::disk((string) config('images.disks.private', 'private'));
 
         abort_unless($disk->exists($path), 404);
 

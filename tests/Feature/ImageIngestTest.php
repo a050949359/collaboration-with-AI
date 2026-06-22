@@ -374,6 +374,13 @@ class ImageIngestTest extends TestCase
         app(ImageIngestService::class)->fromUrl('http://[::1]/x');
     }
 
+    public function test_ipv4_mapped_ipv6_loopback_is_rejected(): void
+    {
+        // ::ffff:127.0.0.1 須先還原成 127.0.0.1 再驗,否則 filter_var 看不出私網
+        $this->expectException(ImageRejectedException::class);
+        app(ImageIngestService::class)->fromUrl('http://[::ffff:127.0.0.1]/x');
+    }
+
     public function test_null_visibility_defaults_to_private(): void
     {
         // 帶 visibility:null 不應 500,應退回預設 private
