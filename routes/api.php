@@ -51,6 +51,7 @@ use App\Http\Controllers\Task\TaskController;
 use App\Http\Controllers\Task\TaskItemController;
 use App\Http\Middleware\DecryptPasswordFields;
 use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureImageFeatureEnabled;
 use App\Http\Middleware\EnsureRegistrationOpen;
 use Illuminate\Support\Facades\Route;
 
@@ -344,15 +345,16 @@ Route::middleware('auth:sanctum')->prefix('v1/user-api-keys')->group(function ()
 });
 
 // 圖片儲存(三來源 → webp → 依 visibility 落 disk)
+// 總開關(EnsureImageFeatureEnabled)放最前面:關閉時在驗證前就 404,不洩漏端點存在。
 // admin:可指定 public/private 上傳 + private 鑑權出圖
-Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
+Route::middleware(['auth:sanctum', EnsureAdmin::class, EnsureImageFeatureEnabled::class])->group(function () {
     Route::post('/images', [ImageController::class, 'store'])->middleware('throttle:30,1');
     Route::get('/images/{id}', [ImageController::class, 'show'])
         ->where('id', '[0-9a-fA-F-]{36}')
         ->name('images.show');
 });
 // 任一登入者:只能上傳 public(強制 public,不可建 private);public 圖由 /storage 直連
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', EnsureImageFeatureEnabled::class])->group(function () {
     Route::post('/images/public', [ImageController::class, 'storePublic'])->middleware('throttle:30,1');
 });
 

@@ -22,6 +22,13 @@ class ImageIngestTest extends TestCase
         parent::setUp();
         Storage::fake('private');
         Storage::fake('public');
+        // 開關預設全關;既有行為測試需在「功能開啟」前提下驗證。
+        config([
+            'images.enabled' => true,
+            'images.upload_enabled' => true,
+            'images.public_upload_enabled' => true,
+            'images.url_download_enabled' => true,
+        ]);
     }
 
     private function admin(): User
@@ -360,6 +367,68 @@ class ImageIngestTest extends TestCase
 
         $this->expectException(ImageRejectedException::class);
         $service->fromUrl('file:///etc/passwd');
+    }
+
+    public function test_master_switch_off_makes_routes_404(): void
+    {
+        config(['images.enabled' => false]);
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertNotFound();
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->get('/api/images/'.Str::uuid())
+            ->assertNotFound();
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertNotFound();
+    }
+
+    public function test_master_switch_off_hides_endpoint_even_for_invalid_request(): void
+    {
+        // 總開關關時,連「不合法請求」也回 404(而非驗證的 422),不洩漏端點存在
+        config(['images.enabled' => false]);
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', []) // file/url 皆缺,平時會 422
+            ->assertNotFound();
+    }
+
+    public function test_upload_switch_off_returns_403(): void
+    {
+        config(['images.upload_enabled' => false]);
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertForbidden();
+    }
+
+    public function test_public_upload_switch_off_returns_403(): void
+    {
+        config(['images.public_upload_enabled' => false]);
+
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->postJson('/api/images/public', ['file' => UploadedFile::fake()->image('p.png', 32, 32)])
+            ->assertForbidden();
+    }
+
+    public function test_url_download_switch_off_returns_403(): void
+    {
+        config(['images.url_download_enabled' => false]);
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->postJson('/api/images', ['url' => 'https://example.com/a.png'])
+            ->assertForbidden();
+    }
+
+    public function test_url_download_switch_off_blocks_service_layer(): void
+    {
+        config(['images.url_download_enabled' => false]);
+
+        $this->expectException(ImageRejectedException::class);
+        app(ImageIngestService::class)->fromUrl('https://example.com/a.png');
     }
 
     public function test_oversized_upload_rejected_before_reading_into_memory(): void

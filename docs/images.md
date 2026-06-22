@@ -125,6 +125,20 @@ curl -X POST -H "Authorization: Bearer <admin-token>" \
 
 ---
 
+## 功能開關（預設全關)
+
+4 個獨立開關,**預設全 `false`** —— 部署後需在 `.env` 明確開啟才會啟用。
+
+| 開關 / env | 控制 | 關閉時 |
+|---|---|---|
+| `enabled` / `IMAGE_ENABLED` | **總開關** | 所有 image 路由 → **404**(整個功能視為不存在) |
+| `upload_enabled` / `IMAGE_UPLOAD_ENABLED` | admin 檔案上傳 | `POST /images` 帶 file → **403** |
+| `public_upload_enabled` / `IMAGE_PUBLIC_UPLOAD_ENABLED` | 登入者 public 上傳 | `POST /images/public` → **403** |
+| `url_download_enabled` / `IMAGE_URL_DOWNLOAD_ENABLED` | **URL 下載(SSRF 面)** | 帶 `url` → **403**;`fromUrl()` service 層也擋(kill-switch) |
+
+- 總開關關 → 404(裝作沒這功能);子開關關 → 403(有但停用)。
+- `url_download_enabled` 在 controller(403)與 service(`fromUrl` 拋例外)**雙層**把關,確保即使非 HTTP 路徑呼叫也擋得住 —— 這是 SSRF 面的 kill-switch。
+
 ## 設定（`config/images.php`）
 
 | 鍵 | 預設 | 說明 |
