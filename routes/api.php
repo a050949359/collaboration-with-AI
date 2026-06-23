@@ -247,6 +247,9 @@ Route::prefix('v1/characters')->middleware('throttle:20,1')->group(function () {
     Route::post('/ai/generate', [CharacterController::class, 'generate']);
     Route::post('/ai/refine', [CharacterController::class, 'refine']);
     Route::post('/{character}/image-prompt', [CharacterController::class, 'generateImagePrompt']);
+    // 生圖會打付費 Gemini 圖片 API:須登入 + 更嚴格速率(2/min,壓過 group 的 20/min)。
+    Route::post('/{character}/image', [CharacterController::class, 'generateImage'])
+        ->middleware(['auth:sanctum', 'throttle:2,1']);
 });
 
 Route::prefix('v1/story')->middleware('throttle:30,1')->group(function () {
