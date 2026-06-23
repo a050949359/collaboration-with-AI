@@ -60,6 +60,9 @@ return [
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
+        // key-based 圖片生成 model（nano-banana 等），供 GeneratesImage 的 Gemini 實作用。
+        // 留空時 GeminiImageGenerationService 丟例外。
+        'image_model' => env('GEMINI_IMAGE_MODEL', ''),
         'models' => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('GEMINI_CHAT_MODELS', '')),
