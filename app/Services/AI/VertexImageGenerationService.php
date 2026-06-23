@@ -4,10 +4,11 @@ namespace App\Services\AI;
 
 use App\Enums\ArticleAspectRatio;
 use App\Services\AI\Contracts\GeneratesArticleImage;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Log;
 
 class VertexImageGenerationService implements GeneratesArticleImage
 {
@@ -57,7 +58,7 @@ class VertexImageGenerationService implements GeneratesArticleImage
             JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE,
         );
 
-        if (!is_string($json)) {
+        if (! is_string($json)) {
             throw new AIServiceException('Failed to encode image generation payload.');
         }
 
@@ -68,7 +69,7 @@ class VertexImageGenerationService implements GeneratesArticleImage
             ->withBody($json, 'application/json')
             ->post($endpoint);
 
-        if (!$response->ok()) {
+        if (! $response->ok()) {
             throw new AIServiceException('Vertex image generation failed.');
         }
 
@@ -81,19 +82,24 @@ class VertexImageGenerationService implements GeneratesArticleImage
 
         $binary = base64_decode($base64Image, true);
 
-        if (!is_string($binary) || $binary === '') {
+        if (! is_string($binary) || $binary === '') {
             throw new AIServiceException('Failed to decode Vertex image output.');
         }
 
         $filename = Str::uuid()->toString().'.png';
         $path = trim($directory, '/').'/'.$filename;
 
-        $written = Storage::disk('public')->put($path, $binary);
+        // url() 在具體 FilesystemAdapter 上(Storage::disk() 宣告型別為 Filesystem interface,
+        // 無 url()),先 narrow;順便收斂重複的 Storage::disk('public') 呼叫。
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
 
-        if ($written === true && Storage::disk('public')->exists($path)) {
+        $written = $disk->put($path, $binary);
+
+        if ($written === true && $disk->exists($path)) {
             return [
                 'image_path' => $path,
-                'image_url' => Storage::disk('public')->url($path),
+                'image_url' => $disk->url($path),
             ];
         }
 
@@ -114,14 +120,14 @@ class VertexImageGenerationService implements GeneratesArticleImage
     {
         $baseDir = '/tmp/collaboration-with-ai-images';
 
-        if (!is_dir($baseDir) && !@mkdir($baseDir, 0775, true) && !is_dir($baseDir)) {
+        if (! is_dir($baseDir) && ! @mkdir($baseDir, 0775, true) && ! is_dir($baseDir)) {
             throw new AIServiceException('Failed to create /tmp fallback directory.');
         }
 
         $tmpPath = $baseDir.'/'.Str::uuid()->toString().'.png';
         $bytes = @file_put_contents($tmpPath, $binary);
 
-        if (!is_int($bytes) || $bytes <= 0 || !is_file($tmpPath)) {
+        if (! is_int($bytes) || $bytes <= 0 || ! is_file($tmpPath)) {
             throw new AIServiceException('Failed to persist generated image to storage and /tmp fallback.');
         }
 
@@ -143,18 +149,15 @@ class VertexImageGenerationService implements GeneratesArticleImage
         return $converted;
     }
 
-    /**
-     * @param mixed $payload
-     */
     private function extractBase64Image(mixed $payload): string
     {
-        if (!is_array($payload)) {
+        if (! is_array($payload)) {
             return '';
         }
 
         $predictions = $payload['predictions'] ?? null;
 
-        if (!is_array($predictions) || !isset($predictions[0]) || !is_array($predictions[0])) {
+        if (! is_array($predictions) || ! isset($predictions[0]) || ! is_array($predictions[0])) {
             return '';
         }
 

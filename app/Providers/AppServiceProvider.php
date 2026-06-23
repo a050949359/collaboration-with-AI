@@ -6,9 +6,11 @@ use App\Models\PersonalAccessToken;
 use App\Notifications\VerifyEmailNotification;
 use App\Services\AI\Contracts\GeneratesArticleContent;
 use App\Services\AI\Contracts\GeneratesArticleImage;
+use App\Services\AI\Contracts\GeneratesImage;
 use App\Services\AI\Contracts\MultimodalEmbedding;
 use App\Services\AI\Contracts\TextEmbedding;
 use App\Services\AI\Gemini\GeminiEmbeddingService;
+use App\Services\AI\Gemini\GeminiImageGenerationService;
 use App\Services\AI\Gemini\GeminiMultimodalEmbeddingService;
 use App\Services\AI\LlmManager;
 use App\Services\AI\VertexGeminiArticleService;
@@ -35,6 +37,7 @@ class AppServiceProvider extends ServiceProvider
         // RAG embedding（文字 + 多模態，皆走 gemini-embedding-2，預設由 config 決定）
         $this->app->bind(TextEmbedding::class, GeminiEmbeddingService::class);
         $this->app->bind(MultimodalEmbedding::class, GeminiMultimodalEmbeddingService::class);
+        $this->app->bind(GeneratesImage::class, GeminiImageGenerationService::class);
     }
 
     /**
