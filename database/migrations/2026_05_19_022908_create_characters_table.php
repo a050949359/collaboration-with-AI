@@ -20,6 +20,8 @@ return new class extends Migration
             $table->json('appearance')->nullable();
             $table->string('outfit', 300)->nullable();
             $table->text('image_prompt')->nullable();
+            $table->string('image_path')->nullable();   // 生成後的 webp 相對路徑（public disk）
+            $table->string('image_url')->nullable();     // 對外可直連的圖片 URL（public 直連）
             $table->timestamps();
         });
     }
