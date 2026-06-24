@@ -47,13 +47,12 @@ class CharacterImageGenerationTest extends TestCase
     {
         Http::fake([
             'generativelanguage.googleapis.com/*' => Http::response([
-                'candidates' => [[
-                    'content' => [
-                        'parts' => [[
-                            'inlineData' => ['mimeType' => 'image/png', 'data' => base64_encode($this->fakePngBytes())],
-                        ]],
+                'predictions' => [
+                    [
+                        'bytesBase64Encoded' => base64_encode($this->fakePngBytes()),
+                        'mimeType' => 'image/png',
                     ],
-                ]],
+                ],
             ], 200),
         ]);
     }
@@ -105,7 +104,7 @@ class CharacterImageGenerationTest extends TestCase
         ])->assertOk();
 
         $this->assertSame('new override prompt', $character->fresh()->image_prompt);
-        Http::assertSent(fn ($request) => str_contains((string) ($request['contents'][0]['parts'][0]['text'] ?? ''), 'new override prompt'));
+        Http::assertSent(fn ($request) => str_contains((string) ($request['instances'][0]['prompt'] ?? ''), 'new override prompt'));
     }
 
     public function test_null_image_prompt_falls_back_to_stored(): void
@@ -119,7 +118,7 @@ class CharacterImageGenerationTest extends TestCase
             'image_prompt' => null,
         ])->assertOk();
 
-        Http::assertSent(fn ($request) => str_contains((string) ($request['contents'][0]['parts'][0]['text'] ?? ''), 'stored hero prompt'));
+        Http::assertSent(fn ($request) => str_contains((string) ($request['instances'][0]['prompt'] ?? ''), 'stored hero prompt'));
     }
 
     public function test_null_aspect_ratio_uses_portrait_default(): void
@@ -133,7 +132,7 @@ class CharacterImageGenerationTest extends TestCase
         ])->assertOk();
 
         // null 應落預設 3:4,而非 Gemini service 的 1:1 fallback。
-        Http::assertSent(fn ($request) => ($request['generationConfig']['imageConfig']['aspectRatio'] ?? null) === '3:4');
+        Http::assertSent(fn ($request) => ($request['parameters']['aspectRatio'] ?? null) === '3:4');
     }
 
     public function test_rejects_when_no_prompt_available(): void
