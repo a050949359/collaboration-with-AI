@@ -88,6 +88,8 @@ type Character = {
     } | null;
     outfit: string | null;
     image_prompt: string | null;
+    image_path: string | null;
+    image_url: string | null;
     updated_at: string;
 };
 
@@ -109,7 +111,7 @@ type CharDraft = {
 
 // ── Auth ──────────────────────────────────────────────────
 
-const { isAdmin } = useAuth();
+const { isAdmin, isLoggedIn } = useAuth();
 const { t } = useI18n();
 
 // ── Main tab ──────────────────────────────────────────────
@@ -161,6 +163,7 @@ const charGenDesc = ref('');
 const charGenGenre = ref<string>(storyGenres.value[0]);
 const charRefineNotes = ref('');
 const charImgLoading = ref(false);
+const charImageGenLoading = ref(false);
 
 // ── Polling ───────────────────────────────────────────────
 
@@ -681,6 +684,47 @@ async function generateImagePrompt() {
             e instanceof Error ? e.message : t('story_relay.err_generate');
     } finally {
         charImgLoading.value = false;
+    }
+}
+
+// 用目前 image_prompt 實際生圖（須登入；比例固定 3:4 走後端預設）。
+async function generateImage() {
+    if (!selectedChar.value || !charDraft.value) {
+        return;
+    }
+
+    charImageGenLoading.value = true;
+    charError.value = '';
+
+    try {
+        const res = await fetchJson<{ image_path: string; image_url: string }>(
+            api.characters.image(selectedChar.value.id),
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image_prompt: charDraft.value.image_prompt,
+                }),
+            },
+        );
+
+        selectedChar.value = {
+            ...selectedChar.value,
+            image_path: res.image_path,
+            image_url: res.image_url,
+        };
+        const idx = characters.value.findIndex(
+            (c) => c.id === selectedChar.value!.id,
+        );
+
+        if (idx !== -1) {
+            characters.value[idx] = selectedChar.value;
+        }
+    } catch (e: unknown) {
+        charError.value =
+            e instanceof Error ? e.message : t('story_relay.err_generate');
+    } finally {
+        charImageGenLoading.value = false;
     }
 }
 
@@ -1846,6 +1890,38 @@ onMounted(() => {
                                               )
                                     }}
                                 </button>
+
+                                <!-- 實際生圖：僅登入者可用（對齊 API auth），比例固定 3:4 -->
+                                <button
+                                    v-if="isLoggedIn"
+                                    class="binary-button mt-2 ml-2 px-4 py-1.5 text-xs disabled:opacity-40"
+                                    type="button"
+                                    :disabled="
+                                        charImageGenLoading ||
+                                        !charDraft.image_prompt
+                                    "
+                                    @click="generateImage"
+                                >
+                                    {{
+                                        charImageGenLoading
+                                            ? t(
+                                                  'story_relay.btn_img_generating',
+                                              )
+                                            : t(
+                                                  'story_relay.btn_generate_image',
+                                              )
+                                    }}
+                                </button>
+
+                                <!-- 立繪預覽（公開直連圖，未登入也看得到既有圖） -->
+                                <img
+                                    v-if="selectedChar?.image_url"
+                                    :src="selectedChar.image_url"
+                                    :alt="
+                                        t('story_relay.label_character_image')
+                                    "
+                                    class="mt-2 max-h-64 rounded-lg border border-[var(--binary-outline)]/20"
+                                />
                             </div>
 
                             <!-- AI refine -->

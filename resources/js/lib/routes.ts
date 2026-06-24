@@ -218,6 +218,7 @@ export const api = {
         aiGenerate: () => '/api/v1/characters/ai/generate',
         aiRefine: () => '/api/v1/characters/ai/refine',
         imagePrompt: (id: number) => `/api/v1/characters/${id}/image-prompt`,
+        image: (id: number) => `/api/v1/characters/${id}/image`,
     },
 
     gacha: {
