@@ -64,14 +64,14 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
+        // 密碼強度單一來源：所有設定密碼的流程（註冊/改密/重設）皆引用 Password::defaults()。
+        Password::defaults(fn (): Password => Password::min(12)
+            ->mixedCase()
+            ->letters()
+            ->numbers()
+            ->symbols()
+            // ->uncompromised()  // HIBP 會連網查 api.pwnedpasswords.com；prod egress 受限先停用。
+            //                       日後若要開：放行該 domain egress，或綁本地 UncompromisedVerifier 改本地比對。
         );
     }
 }

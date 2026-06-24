@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
@@ -60,6 +61,36 @@ class User extends Authenticatable implements MustVerifyEmail
     public function passwordHistories(): HasMany
     {
         return $this->hasMany(PasswordHistory::class)->latest('created_at');
+    }
+
+    /** 密碼歷史保留筆數（單一來源，供改密/重設共用）。 */
+    public const PASSWORD_HISTORY_LIMIT = 5;
+
+    /**
+     * 新密碼（明文）是否與最近 PASSWORD_HISTORY_LIMIT 筆相同。
+     */
+    public function passwordUsedRecently(string $plain): bool
+    {
+        foreach ($this->passwordHistories()->take(self::PASSWORD_HISTORY_LIMIT)->get() as $history) {
+            if (Hash::check($plain, $history->password_hash)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 記錄一筆密碼歷史（傳入已雜湊值），並修剪至最近 PASSWORD_HISTORY_LIMIT 筆。
+     */
+    public function recordPasswordHistory(string $hash): void
+    {
+        $this->passwordHistories()->create(['password_hash' => $hash]);
+
+        $stale = $this->passwordHistories()->pluck('id')->skip(self::PASSWORD_HISTORY_LIMIT);
+        if ($stale->isNotEmpty()) {
+            $this->passwordHistories()->whereIn('id', $stale)->delete();
+        }
     }
 
     protected function avatar(): Attribute

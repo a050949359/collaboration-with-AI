@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules;
 
@@ -27,17 +26,15 @@ class ForgotPasswordController extends Controller
         $request->validate([
             'token'                 => 'required|string',
             'email'                 => 'required|email',
-            'password'              => ['required', 'confirmed', Rules\Password::min(8)->mixedCase()->numbers()->symbols()],
+            'password'              => ['required', 'confirmed', Rules\Password::defaults()],
             'password_confirmation' => 'required',
         ]);
 
         $user = User::where('email', $request->email)->first();
 
         if ($user) {
-            foreach ($user->passwordHistories()->take(5)->get() as $history) {
-                if (Hash::check($request->password, $history->password_hash)) {
-                    return response()->json(['errors' => ['password' => ['密碼不能與最近 5 次相同']]], 422);
-                }
+            if ($user->passwordUsedRecently($request->password)) {
+                return response()->json(['errors' => ['password' => ['密碼不能與最近 ' . User::PASSWORD_HISTORY_LIMIT . ' 次相同']]], 422);
             }
         }
 
@@ -51,11 +48,7 @@ class ForgotPasswordController extends Controller
                 $user->locked_until = null;
                 $user->save();
 
-                $user->passwordHistories()->create(['password_hash' => $hash]);
-                $ids = $user->passwordHistories()->pluck('id')->skip(5);
-                if ($ids->count()) {
-                    $user->passwordHistories()->whereIn('id', $ids)->delete();
-                }
+                $user->recordPasswordHistory($hash);
             }
         );
 
