@@ -88,6 +88,8 @@ type Character = {
     } | null;
     outfit: string | null;
     image_prompt: string | null;
+    image_path: string | null;
+    image_url: string | null;
     updated_at: string;
 };
 
@@ -109,7 +111,7 @@ type CharDraft = {
 
 // ── Auth ──────────────────────────────────────────────────
 
-const { isAdmin } = useAuth();
+const { isAdmin, isLoggedIn } = useAuth();
 const { t } = useI18n();
 
 // ── Main tab ──────────────────────────────────────────────
@@ -161,6 +163,7 @@ const charGenDesc = ref('');
 const charGenGenre = ref<string>(storyGenres.value[0]);
 const charRefineNotes = ref('');
 const charImgLoading = ref(false);
+const charImageGenLoading = ref(false);
 
 // ── Polling ───────────────────────────────────────────────
 
@@ -681,6 +684,58 @@ async function generateImagePrompt() {
             e instanceof Error ? e.message : t('story_relay.err_generate');
     } finally {
         charImgLoading.value = false;
+    }
+}
+
+// 用目前 image_prompt 實際生圖（須登入；比例固定 3:4 走後端預設）。
+async function generateImage() {
+    if (!selectedChar.value || !charDraft.value || charImageGenLoading.value) {
+        return;
+    }
+
+    charImageGenLoading.value = true;
+    charError.value = '';
+
+    // 快取目標 id：await 期間使用者可能切換/取消選擇，回來後須確認仍是同一角色才寫回，
+    // 否則會把生圖結果張冠李戴給別的角色（或對已清空的 selectedChar 觸發錯誤）。
+    const id = selectedChar.value.id;
+
+    try {
+        const res = await fetchJson<{ image_path: string; image_url: string }>(
+            api.characters.image(id),
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image_prompt: charDraft.value.image_prompt,
+                }),
+            },
+        );
+
+        if (selectedChar.value?.id !== id) {
+            return;
+        }
+
+        const updated: Character = {
+            ...selectedChar.value,
+            image_path: res.image_path,
+            image_url: res.image_url,
+        };
+        selectedChar.value = updated;
+        const idx = characters.value.findIndex((c) => c.id === id);
+
+        if (idx !== -1) {
+            characters.value[idx] = updated;
+        }
+    } catch (e: unknown) {
+        // 同成功路徑：await 期間可能已切換角色，錯誤訊息只寫回仍是同一角色的情況，
+        // 避免在新選中的角色編輯區無故顯示錯誤。
+        if (selectedChar.value?.id === id) {
+            charError.value =
+                e instanceof Error ? e.message : t('story_relay.err_generate');
+        }
+    } finally {
+        charImageGenLoading.value = false;
     }
 }
 
@@ -1846,6 +1901,38 @@ onMounted(() => {
                                               )
                                     }}
                                 </button>
+
+                                <!-- 實際生圖：僅登入者可用（對齊 API auth），比例固定 3:4 -->
+                                <button
+                                    v-if="isLoggedIn"
+                                    class="binary-button mt-2 ml-2 px-4 py-1.5 text-xs disabled:opacity-40"
+                                    type="button"
+                                    :disabled="
+                                        charImageGenLoading ||
+                                        !charDraft.image_prompt.trim()
+                                    "
+                                    @click="generateImage"
+                                >
+                                    {{
+                                        charImageGenLoading
+                                            ? t(
+                                                  'story_relay.btn_img_generating',
+                                              )
+                                            : t(
+                                                  'story_relay.btn_generate_image',
+                                              )
+                                    }}
+                                </button>
+
+                                <!-- 立繪預覽（公開直連圖，未登入也看得到既有圖） -->
+                                <img
+                                    v-if="selectedChar?.image_url"
+                                    :src="selectedChar.image_url"
+                                    :alt="
+                                        t('story_relay.label_character_image')
+                                    "
+                                    class="mt-2 max-h-64 rounded-lg border border-[var(--binary-outline)]/20"
+                                />
                             </div>
 
                             <!-- AI refine -->
