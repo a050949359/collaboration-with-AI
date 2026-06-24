@@ -247,9 +247,13 @@ Route::prefix('v1/characters')->middleware('throttle:20,1')->group(function () {
     Route::post('/ai/generate', [CharacterController::class, 'generate']);
     Route::post('/ai/refine', [CharacterController::class, 'refine']);
     Route::post('/{character}/image-prompt', [CharacterController::class, 'generateImagePrompt']);
-    // 生圖會打付費 Gemini 圖片 API:須登入 + 更嚴格速率(2/min,壓過 group 的 20/min)。
-    Route::post('/{character}/image', [CharacterController::class, 'generateImage'])
-        ->middleware(['auth:sanctum', 'throttle:2,1']);
+    // ── 角色立繪實際生圖：暫停用 ────────────────────────────────────────────
+    // Gemini 圖片生成（Imagen / nano-banana 皆然）需「付費方案」，目前帳號無付費額度，
+    // 打 API 一律 400「only available on paid plans」。先註解掉路由（前端按鈕也已 disable）。
+    // 重啟方式：開通 Gemini 付費方案 → 取消下面註解 → System 頁「圖片」子 tab 選對應 model。
+    //   service 仍為 nano-banana（:generateContent）；若改用 Imagen 需改回 :predict 格式。
+    // Route::post('/{character}/image', [CharacterController::class, 'generateImage'])
+    //     ->middleware(['auth:sanctum', 'throttle:2,1']);
 });
 
 Route::prefix('v1/story')->middleware('throttle:30,1')->group(function () {

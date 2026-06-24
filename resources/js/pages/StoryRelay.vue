@@ -1902,26 +1902,19 @@ onMounted(() => {
                                     }}
                                 </button>
 
-                                <!-- 實際生圖：僅登入者可用（對齊 API auth），比例固定 3:4 -->
+                                <!--
+                                  實際生圖：暫停用。Gemini 圖片生成需付費方案，目前無付費額度
+                                  （API 回 400 only available on paid plans），故按鈕 disable、
+                                  後端路由也已註解。開通付費後移除 disabled + 取消路由註解即可。
+                                -->
                                 <button
                                     v-if="isLoggedIn"
                                     class="binary-button mt-2 ml-2 px-4 py-1.5 text-xs disabled:opacity-40"
                                     type="button"
-                                    :disabled="
-                                        charImageGenLoading ||
-                                        !charDraft.image_prompt.trim()
-                                    "
+                                    disabled
                                     @click="generateImage"
                                 >
-                                    {{
-                                        charImageGenLoading
-                                            ? t(
-                                                  'story_relay.btn_img_generating',
-                                              )
-                                            : t(
-                                                  'story_relay.btn_generate_image',
-                                              )
-                                    }}
+                                    {{ t('story_relay.btn_generate_image') }}
                                 </button>
 
                                 <!-- 立繪預覽（公開直連圖，未登入也看得到既有圖） -->

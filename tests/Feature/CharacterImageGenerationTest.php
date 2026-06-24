@@ -17,6 +17,11 @@ class CharacterImageGenerationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // 角色立繪生圖路由已暫停用（需付費 Gemini 方案，目前無扣打；見 routes/api.php 註解）。
+        // 路由被註解掉後這些案會打到 404，故整類跳過；重啟功能時移除此行即可。
+        $this->markTestSkipped('Character image generation route is disabled (paid Gemini plan required).');
+
         Storage::fake('public');
         config([
             'services.gemini.api_key' => 'test-key',
@@ -47,12 +52,13 @@ class CharacterImageGenerationTest extends TestCase
     {
         Http::fake([
             'generativelanguage.googleapis.com/*' => Http::response([
-                'predictions' => [
-                    [
-                        'bytesBase64Encoded' => base64_encode($this->fakePngBytes()),
-                        'mimeType' => 'image/png',
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [[
+                            'inlineData' => ['mimeType' => 'image/png', 'data' => base64_encode($this->fakePngBytes())],
+                        ]],
                     ],
-                ],
+                ]],
             ], 200),
         ]);
     }
@@ -104,7 +110,7 @@ class CharacterImageGenerationTest extends TestCase
         ])->assertOk();
 
         $this->assertSame('new override prompt', $character->fresh()->image_prompt);
-        Http::assertSent(fn ($request) => str_contains((string) ($request['instances'][0]['prompt'] ?? ''), 'new override prompt'));
+        Http::assertSent(fn ($request) => str_contains((string) ($request['contents'][0]['parts'][0]['text'] ?? ''), 'new override prompt'));
     }
 
     public function test_null_image_prompt_falls_back_to_stored(): void
@@ -118,7 +124,7 @@ class CharacterImageGenerationTest extends TestCase
             'image_prompt' => null,
         ])->assertOk();
 
-        Http::assertSent(fn ($request) => str_contains((string) ($request['instances'][0]['prompt'] ?? ''), 'stored hero prompt'));
+        Http::assertSent(fn ($request) => str_contains((string) ($request['contents'][0]['parts'][0]['text'] ?? ''), 'stored hero prompt'));
     }
 
     public function test_null_aspect_ratio_uses_portrait_default(): void
@@ -132,7 +138,7 @@ class CharacterImageGenerationTest extends TestCase
         ])->assertOk();
 
         // null 應落預設 3:4,而非 Gemini service 的 1:1 fallback。
-        Http::assertSent(fn ($request) => ($request['parameters']['aspectRatio'] ?? null) === '3:4');
+        Http::assertSent(fn ($request) => ($request['generationConfig']['imageConfig']['aspectRatio'] ?? null) === '3:4');
     }
 
     public function test_rejects_when_no_prompt_available(): void
