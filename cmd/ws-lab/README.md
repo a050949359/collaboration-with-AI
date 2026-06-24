@@ -115,4 +115,4 @@ go build -o ws-lab .
 ./ws-lab --mgmt-addr 127.0.0.1:9002
 ```
 
-> binary 為 gitignore，clone 後需自行編譯。生產環境由 nginx 將 `/ws-lab` proxy 到本 binary。
+> binary 已被列入 .gitignore，clone 後需自行編譯。生產環境由 nginx 將 `/ws-lab` proxy 到本 binary。

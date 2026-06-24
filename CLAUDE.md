@@ -8,7 +8,7 @@
 - Vue 3 + TypeScript + Vite + Tailwind CSS
 - Inertia.js（SPA 橋接，前端頁面以 Inertia component 掛載）
 - Laravel Sanctum（token-based auth，SameSite:Lax cookie）
-- Laravel Reverb（WebSocket，開發中）
+- 自製 Go WebSocket Server（`cmd/ws-lab`，多房間即時同步；非 Laravel Reverb）
 - MySQL/SQLite（主要資料）、Redis（Queue/Cache）
 
 ---
@@ -252,7 +252,7 @@ daemon 完成工作後 ZIP 靜態產出，POST 回 `POST /api/agyd/upload/{task_
 ### 本機 CLI（cmd/memctl、cmd/taskctl、cmd/agydctl）
 打上述 MCP server 的精簡 Go CLI client，取代冗長 curl、也免 native MCP 連線常駐（省 token）。token / URL 自動讀 `.vscode/mcp.json`。
 
-> ⚠️ binary 為 **gitignore**（同 `cmd/ws-lab` 慣例），clone 後沒有執行檔，**需先用 Go 編譯**：
+> ⚠️ binary **已被列入 .gitignore**（同 `cmd/ws-lab` 慣例），clone 後沒有執行檔，**需先用 Go 編譯**：
 > `cd cmd/memctl && go build -o memctl .`（`taskctl`、`agydctl` 同理）。
 
 **確認用法：直接執行 binary（不帶參數）即印出完整說明，不需要讀 source code：**
