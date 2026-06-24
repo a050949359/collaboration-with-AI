@@ -8,7 +8,7 @@
 - Vue 3 + TypeScript + Vite + Tailwind CSS
 - Inertia.js（SPA 橋接，前端頁面以 Inertia component 掛載）
 - Laravel Sanctum（token-based auth，SameSite:Lax cookie）
-- Laravel Reverb（WebSocket，開發中）
+- 自製 Go WebSocket Server（`cmd/ws-lab`，多房間即時同步；非 Laravel Reverb）
 - MySQL/SQLite（主要資料）、Redis（Queue/Cache）
 
 ---
