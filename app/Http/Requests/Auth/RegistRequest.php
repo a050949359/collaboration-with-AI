@@ -26,12 +26,7 @@ class RegistRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', Password::min(8) // 至少 8 個字
-                ->letters()   // 必須包含字母
-                ->mixedCase() // 必須包含大小寫
-                ->numbers()   // 必須包含數字
-                ->symbols()   // 必須包含特殊符號
-            ],
+            'password' => ['required', 'string', Password::defaults()],
             'password_confirmation' => ['required', 'same:password'],
             'terms' => ['required', 'accepted'],
             'device_id' => ['sometimes', 'nullable', 'regex:/^([0-9a-f]{16}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i'],

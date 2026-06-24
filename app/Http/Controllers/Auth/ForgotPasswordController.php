@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
 
 class ForgotPasswordController extends Controller
 {
@@ -27,23 +27,21 @@ class ForgotPasswordController extends Controller
         $request->validate([
             'token'                 => 'required|string',
             'email'                 => 'required|email',
-            'password'              => ['required', 'confirmed', Rules\Password::min(8)->mixedCase()->numbers()->symbols()],
+            'password'              => ['required', 'string', 'confirmed', Rules\Password::defaults()],
             'password_confirmation' => 'required',
         ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        if ($user) {
-            foreach ($user->passwordHistories()->take(5)->get() as $history) {
-                if (Hash::check($request->password, $history->password_hash)) {
-                    return response()->json(['errors' => ['password' => ['密碼不能與最近 5 次相同']]], 422);
-                }
-            }
-        }
 
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password) {
+                // 歷史檢查放在 token 驗證之後（callback 內），避免未驗證 token 就跑 bcrypt
+                // 而透過回應延遲洩漏 email 是否存在（timing-based user enumeration）。
+                if ($user->passwordUsedRecently($password)) {
+                    throw ValidationException::withMessages([
+                        'password' => ['密碼不能與最近 ' . User::PASSWORD_HISTORY_LIMIT . ' 次相同'],
+                    ]);
+                }
+
                 $user->password = $password;
                 $hash = $user->password;
                 $user->password_changed_at = now();
@@ -51,11 +49,7 @@ class ForgotPasswordController extends Controller
                 $user->locked_until = null;
                 $user->save();
 
-                $user->passwordHistories()->create(['password_hash' => $hash]);
-                $ids = $user->passwordHistories()->pluck('id')->skip(5);
-                if ($ids->count()) {
-                    $user->passwordHistories()->whereIn('id', $ids)->delete();
-                }
+                $user->recordPasswordHistory($hash);
             }
         );
 
