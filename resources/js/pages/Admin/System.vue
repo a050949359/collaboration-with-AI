@@ -11,6 +11,7 @@ import {
 } from '@/lib/admin-api';
 import type {
     AdminSettings,
+    ImageSettings,
     LlmSettings,
     LlmTestResult,
 } from '@/lib/admin-api';
@@ -115,6 +116,27 @@ function onProviderChange(useKey: string) {
     }
 }
 
+// ── AI 模型分頁:文字 / 圖片 子 tab ──
+const llmSubTab = ref<'text' | 'image'>('text');
+
+// 圖片生成(key-based Gemini)的 runtime model：候選清單來自 env、目前值來自 admin_settings。
+const imageModelCatalog = computed<string[]>(
+    () => (page.props.imageModels as string[]) ?? [],
+);
+const imageForm = ref<ImageSettings>({
+    model: (page.props.imageSettings as ImageSettings | undefined)?.model ?? '',
+});
+// 下拉選項：候選清單 + 目前值(若不在清單也保留可見)，去重。
+const imageModelOptions = computed<string[]>(() => {
+    const opts = [...imageModelCatalog.value];
+
+    if (imageForm.value.model && !opts.includes(imageForm.value.model)) {
+        opts.unshift(imageForm.value.model);
+    }
+
+    return opts;
+});
+
 const llmSaving = ref(false);
 const llmSaveMsg = ref('');
 const llmSaveErr = ref('');
@@ -129,7 +151,7 @@ async function saveLlm() {
     llmSaveErr.value = '';
 
     try {
-        const r = await saveLlmSettings(llmForm.value);
+        const r = await saveLlmSettings(llmForm.value, imageForm.value);
         llmSaveMsg.value = r.message || '模型設定已更新';
     } catch (e: unknown) {
         llmSaveErr.value =
@@ -757,104 +779,186 @@ onUnmounted(stopMicroPolling);
                     <!-- ── LLM 模型 Tab ── -->
                     <template v-else-if="activeTab === 'llm'">
                         <div class="max-w-3xl space-y-5">
-                            <p
-                                class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
-                            >
-                                &gt; 各用途的 LLM provider /
-                                model（儲存後即時生效）
-                            </p>
-
+                            <!-- 子 tab：文字 / 圖片 -->
                             <div
-                                v-for="use in LLM_USES"
-                                :key="use.key"
-                                class="space-y-3 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5 md:rounded-xl"
+                                class="flex gap-1 border-b border-[var(--binary-outline-variant)]"
                             >
-                                <div class="flex items-center justify-between">
-                                    <span
-                                        class="binary-label text-xs font-bold text-[var(--binary-text)] uppercase"
-                                        >{{ use.label }}</span
-                                    >
-                                    <code
-                                        class="text-[10px] text-[var(--binary-outline)]"
-                                        >{{ use.key }}</code
-                                    >
-                                </div>
+                                <button
+                                    v-for="sub in [
+                                        { key: 'text', label: '文字' },
+                                        { key: 'image', label: '圖片' },
+                                    ] as const"
+                                    :key="sub.key"
+                                    type="button"
+                                    class="binary-label px-4 py-2 text-[11px] font-bold tracking-widest uppercase transition-colors"
+                                    :class="
+                                        llmSubTab === sub.key
+                                            ? '-mb-px border-b-2 border-[var(--binary-primary)] text-[var(--binary-primary)]'
+                                            : 'text-[var(--binary-outline)] hover:text-[var(--binary-text)]'
+                                    "
+                                    @click="llmSubTab = sub.key"
+                                >
+                                    {{ sub.label }}
+                                </button>
+                            </div>
 
-                                <div class="grid gap-3 sm:grid-cols-2">
-                                    <select
-                                        v-model="llmForm[use.key].provider"
-                                        class="binary-input"
-                                        @change="onProviderChange(use.key)"
+                            <template v-if="llmSubTab === 'text'">
+                                <p
+                                    class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                >
+                                    &gt; 各用途的 LLM provider /
+                                    model（儲存後即時生效）
+                                </p>
+
+                                <div
+                                    v-for="use in LLM_USES"
+                                    :key="use.key"
+                                    class="space-y-3 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5 md:rounded-xl"
+                                >
+                                    <div
+                                        class="flex items-center justify-between"
                                     >
-                                        <option
-                                            v-for="p in llmProviders"
-                                            :key="p"
-                                            :value="p"
+                                        <span
+                                            class="binary-label text-xs font-bold text-[var(--binary-text)] uppercase"
+                                            >{{ use.label }}</span
                                         >
-                                            {{ p }}
-                                        </option>
-                                    </select>
+                                        <code
+                                            class="text-[10px] text-[var(--binary-outline)]"
+                                            >{{ use.key }}</code
+                                        >
+                                    </div>
+
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <select
+                                            v-model="llmForm[use.key].provider"
+                                            class="binary-input"
+                                            @change="onProviderChange(use.key)"
+                                        >
+                                            <option
+                                                v-for="p in llmProviders"
+                                                :key="p"
+                                                :value="p"
+                                            >
+                                                {{ p }}
+                                            </option>
+                                        </select>
+                                        <select
+                                            v-model="llmForm[use.key].model"
+                                            class="binary-input"
+                                        >
+                                            <option
+                                                v-for="m in modelsFor(
+                                                    llmForm[use.key].provider,
+                                                )"
+                                                :key="m"
+                                                :value="m"
+                                            >
+                                                {{ m }}
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div
+                                        class="flex flex-wrap items-center gap-4"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="binary-ghost-button px-3 py-1.5 text-xs"
+                                            :disabled="llmTesting[use.key]"
+                                            @click="testLlm(use.key)"
+                                        >
+                                            {{
+                                                llmTesting[use.key]
+                                                    ? '測試中...'
+                                                    : '測試'
+                                            }}
+                                        </button>
+                                        <label
+                                            class="flex cursor-pointer items-center gap-2 text-[11px] text-[var(--binary-outline)]"
+                                        >
+                                            <input
+                                                v-model="llmTestSchema[use.key]"
+                                                type="checkbox"
+                                                class="h-3.5 w-3.5 border-0 bg-[var(--binary-surface-highest)] text-[var(--binary-primary-container)] focus:ring-0"
+                                            />
+                                            測 JSON 輸出
+                                        </label>
+                                        <span
+                                            v-if="llmResults[use.key]"
+                                            class="text-xs"
+                                            :class="
+                                                llmResults[use.key].ok
+                                                    ? 'text-[var(--binary-primary)]'
+                                                    : 'text-red-400'
+                                            "
+                                        >
+                                            <template
+                                                v-if="llmResults[use.key].ok"
+                                            >
+                                                ✓
+                                                {{
+                                                    llmResults[use.key]
+                                                        .latency_ms
+                                                }}ms ·
+                                                {{ llmResults[use.key].reply }}
+                                            </template>
+                                            <template v-else>
+                                                ✗
+                                                {{ llmResults[use.key].error }}
+                                            </template>
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- 圖片子 tab：key-based Gemini 的生圖 model -->
+                            <template v-else>
+                                <p
+                                    class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                >
+                                    &gt; 圖片生成 model（角色立繪等 · key-based
+                                    Gemini）
+                                </p>
+                                <div
+                                    class="space-y-3 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5 md:rounded-xl"
+                                >
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <span
+                                            class="binary-label text-xs font-bold text-[var(--binary-text)] uppercase"
+                                            >角色立繪 / 圖片生成</span
+                                        >
+                                        <code
+                                            class="text-[10px] text-[var(--binary-outline)]"
+                                            >image.model</code
+                                        >
+                                    </div>
                                     <select
-                                        v-model="llmForm[use.key].model"
+                                        v-model="imageForm.model"
                                         class="binary-input"
                                     >
+                                        <option value="">
+                                            （用 env 預設 GEMINI_IMAGE_MODEL）
+                                        </option>
                                         <option
-                                            v-for="m in modelsFor(
-                                                llmForm[use.key].provider,
-                                            )"
+                                            v-for="m in imageModelOptions"
                                             :key="m"
                                             :value="m"
                                         >
                                             {{ m }}
                                         </option>
                                     </select>
+                                    <p
+                                        class="text-[10px] text-[var(--binary-outline)]"
+                                    >
+                                        provider 固定 key-based
+                                        Gemini；留空＝退回 env
+                                        預設。文章封面圖另走
+                                        Vertex，不在此設定。
+                                    </p>
                                 </div>
-
-                                <div class="flex flex-wrap items-center gap-4">
-                                    <button
-                                        type="button"
-                                        class="binary-ghost-button px-3 py-1.5 text-xs"
-                                        :disabled="llmTesting[use.key]"
-                                        @click="testLlm(use.key)"
-                                    >
-                                        {{
-                                            llmTesting[use.key]
-                                                ? '測試中...'
-                                                : '測試'
-                                        }}
-                                    </button>
-                                    <label
-                                        class="flex cursor-pointer items-center gap-2 text-[11px] text-[var(--binary-outline)]"
-                                    >
-                                        <input
-                                            v-model="llmTestSchema[use.key]"
-                                            type="checkbox"
-                                            class="h-3.5 w-3.5 border-0 bg-[var(--binary-surface-highest)] text-[var(--binary-primary-container)] focus:ring-0"
-                                        />
-                                        測 JSON 輸出
-                                    </label>
-                                    <span
-                                        v-if="llmResults[use.key]"
-                                        class="text-xs"
-                                        :class="
-                                            llmResults[use.key].ok
-                                                ? 'text-[var(--binary-primary)]'
-                                                : 'text-red-400'
-                                        "
-                                    >
-                                        <template v-if="llmResults[use.key].ok">
-                                            ✓
-                                            {{
-                                                llmResults[use.key].latency_ms
-                                            }}ms ·
-                                            {{ llmResults[use.key].reply }}
-                                        </template>
-                                        <template v-else>
-                                            ✗ {{ llmResults[use.key].error }}
-                                        </template>
-                                    </span>
-                                </div>
-                            </div>
+                            </template>
 
                             <p
                                 v-if="llmSaveErr"

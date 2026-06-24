@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Services\AI\AIServiceException;
 use App\Services\AI\Gemini\GeminiImageGenerationService;
+use App\Support\AppSettings;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -105,6 +107,28 @@ class GeminiImageGenerationTest extends TestCase
         $this->expectException(AIServiceException::class);
 
         app(GeminiImageGenerationService::class)->generate('prompt');
+    }
+
+    public function test_admin_settings_image_model_overrides_env(): void
+    {
+        $this->fakeGeminiImageResponse();
+        // env 預設是 test-image-model；runtime 設定指定別的 → 應打到 runtime 的 model。
+        Cache::forever(AppSettings::CACHE_KEY, ['image' => ['model' => 'runtime-model']]);
+
+        app(GeminiImageGenerationService::class)->generate('prompt');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/models/runtime-model:generateContent'));
+    }
+
+    public function test_falls_back_to_env_model_when_admin_setting_blank(): void
+    {
+        $this->fakeGeminiImageResponse();
+        // runtime 設定留空 → 退回 env 預設 test-image-model。
+        Cache::forever(AppSettings::CACHE_KEY, ['image' => ['model' => '']]);
+
+        app(GeminiImageGenerationService::class)->generate('prompt');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/models/test-image-model:generateContent'));
     }
 
     public function test_throws_when_response_has_no_image(): void

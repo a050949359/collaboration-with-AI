@@ -81,8 +81,11 @@ export type LlmTestResult = {
 };
 
 /** 局部更新 settings：只送 llm 區（後端 sometimes 驗證，其餘欄位保留）。 */
+export type ImageSettings = { model: string };
+
 export async function saveLlmSettings(
     llm: LlmSettings,
+    image?: ImageSettings,
 ): Promise<{ message: string }> {
     const response = await fetch(api.admin.settings(), {
         method: 'PATCH',
@@ -91,7 +94,7 @@ export async function saveLlmSettings(
             Accept: 'application/json',
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ llm }),
+        body: JSON.stringify(image ? { llm, image } : { llm }),
     });
 
     return parseJson<{ message: string }>(response);

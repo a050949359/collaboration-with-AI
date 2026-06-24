@@ -8,6 +8,7 @@ use App\Services\AI\AIServiceException;
 use App\Services\AI\Contracts\GeneratesImage;
 use App\Services\Image\ImageIngestService;
 use App\Services\Image\ImageRejectedException;
+use App\Support\AppSettings;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -43,9 +44,15 @@ class GeminiImageGenerationService implements GeneratesImage
             throw new AIServiceException('GEMINI_API_KEY is not configured.');
         }
 
-        $model = (string) config('services.gemini.image_model', '');
+        // model 解析:System 頁 runtime 設定(admin_settings.image.model)優先,
+        // 空則退回 env 預設 GEMINI_IMAGE_MODEL；皆空才報錯。
+        $imageSettings = AppSettings::get('image', []);
+        $model = is_array($imageSettings) ? trim((string) ($imageSettings['model'] ?? '')) : '';
         if ($model === '') {
-            throw new AIServiceException('GEMINI_IMAGE_MODEL is not configured.');
+            $model = (string) config('services.gemini.image_model', '');
+        }
+        if ($model === '') {
+            throw new AIServiceException('No image generation model configured (set it in System settings or GEMINI_IMAGE_MODEL).');
         }
 
         $prompt = $this->sanitizeUtf8($prompt);
