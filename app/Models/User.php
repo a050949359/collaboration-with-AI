@@ -67,10 +67,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public const PASSWORD_HISTORY_LIMIT = 5;
 
     /**
-     * 新密碼（明文）是否與最近 PASSWORD_HISTORY_LIMIT 筆相同。
+     * 新密碼（明文）是否與目前密碼或最近 PASSWORD_HISTORY_LIMIT 筆相同。
      */
     public function passwordUsedRecently(string $plain): bool
     {
+        // 先比目前密碼：history 可能未含目前密碼（註冊未寫入 / legacy 轉移）。
+        if ($this->password && Hash::check($plain, $this->password)) {
+            return true;
+        }
+
         foreach ($this->passwordHistories()->take(self::PASSWORD_HISTORY_LIMIT)->get() as $history) {
             if (Hash::check($plain, $history->password_hash)) {
                 return true;
