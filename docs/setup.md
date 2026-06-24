@@ -132,7 +132,7 @@ go build -o ws-lab .
 ./ws-lab --mgmt-addr 127.0.0.1:9002
 ```
 
-> binary 為 gitignore，clone 後需自行編譯。生產環境由 nginx 將 `/ws-lab` proxy 到本 binary（本地無 nginx 時前端無法連線）。
+> binary 已被列入 .gitignore，clone 後需自行編譯。生產環境由 nginx 將 `/ws-lab` proxy 到本 binary（本地無 nginx 時前端無法連線）。
 
 ### 抽卡房間（Gacha Room）
 
@@ -213,7 +213,7 @@ POST /api/v1/gacha/rooms/{code}/draw  # 抽卡（server-side 隨機）
 `cmd/memctl`、`cmd/taskctl` 是上述兩個 MCP server 的精簡 Go CLI client，供本機直接操作（取代冗長 curl，亦免 native MCP 連線常駐）。token / URL 自動從 `.vscode/mcp.json` 讀取。
 
 ```bash
-# binary 為 gitignore，clone 後需先以 Go 編譯一次
+# binary 已被列入 .gitignore，clone 後需先以 Go 編譯一次
 cd cmd/memctl  && go build -o memctl  .
 cd cmd/taskctl && go build -o taskctl .
 
