@@ -17,7 +17,7 @@ Claude ─MCP /api/mcp/rag─▶ Laravel
 
 ## 1. 編譯 vecgen（向量庫 CLI）
 
-binary 為 gitignore，clone 後需自行編譯（同 ws-lab/memctl 慣例）：
+binary 已被列入 .gitignore，clone 後需自行編譯（同 ws-lab/memctl 慣例）：
 
 ```bash
 cd cmd/vecgen && go build -o vecgen .

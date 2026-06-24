@@ -32,7 +32,7 @@ flowchart LR
 
 ## 編譯
 
-binary 為 **gitignore**（同 ws-lab/memctl 慣例），clone 後需自行編譯：
+binary **已被列入 .gitignore**（同 ws-lab/memctl 慣例），clone 後需自行編譯：
 
 ```bash
 cd cmd/vecgen && go build -o vecgen .
