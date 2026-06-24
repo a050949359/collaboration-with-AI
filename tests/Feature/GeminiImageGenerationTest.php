@@ -36,15 +36,19 @@ class GeminiImageGenerationTest extends TestCase
         return $bytes;
     }
 
-    private function fakeGeminiImageResponse(string $key = 'bytesBase64Encoded'): void
+    private function fakeGeminiImageResponse(string $key = 'inlineData'): void
     {
         $base64 = base64_encode($this->fakePngBytes());
 
         Http::fake([
             'generativelanguage.googleapis.com/*' => Http::response([
-                'predictions' => [
-                    [$key => $base64, 'mimeType' => 'image/png'],
-                ],
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [[
+                            $key => ['mimeType' => 'image/png', 'data' => $base64],
+                        ]],
+                    ],
+                ]],
             ], 200),
         ]);
     }
@@ -61,17 +65,17 @@ class GeminiImageGenerationTest extends TestCase
         $this->assertStringStartsWith('images/', $result['image_path']);
         Storage::disk('public')->assertExists($result['image_path']);
 
-        // 真的送到 Imagen :predict endpoint、帶 key 與 instances prompt。
+        // 真的送到 generateContent endpoint、帶 key 與 IMAGE modality。
         Http::assertSent(function ($request) {
-            return str_contains($request->url(), ':predict')
+            return str_contains($request->url(), ':generateContent')
                 && str_contains($request->url(), 'key=test-key')
-                && ($request['instances'][0]['prompt'] ?? null) === 'a serene mountain lake';
+                && in_array('IMAGE', $request['generationConfig']['responseModalities'] ?? [], true);
         });
     }
 
-    public function test_accepts_alternate_image_base64_key(): void
+    public function test_accepts_snake_case_inline_data_key(): void
     {
-        $this->fakeGeminiImageResponse('imageBase64');
+        $this->fakeGeminiImageResponse('inline_data');
 
         $result = app(GeminiImageGenerationService::class)->generate('prompt', 'articles/1', '1:1');
 
@@ -85,7 +89,7 @@ class GeminiImageGenerationTest extends TestCase
         app(GeminiImageGenerationService::class)->generate('prompt', 'articles/1', 'bogus');
 
         Http::assertSent(function ($request) {
-            return ($request['parameters']['aspectRatio'] ?? null) === '1:1';
+            return ($request['generationConfig']['imageConfig']['aspectRatio'] ?? null) === '1:1';
         });
     }
 
@@ -113,7 +117,7 @@ class GeminiImageGenerationTest extends TestCase
 
         app(GeminiImageGenerationService::class)->generate('prompt');
 
-        Http::assertSent(fn ($request) => str_contains($request->url(), '/models/runtime-model:predict'));
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/models/runtime-model:generateContent'));
     }
 
     public function test_falls_back_to_env_model_when_admin_setting_blank(): void
@@ -124,14 +128,14 @@ class GeminiImageGenerationTest extends TestCase
 
         app(GeminiImageGenerationService::class)->generate('prompt');
 
-        Http::assertSent(fn ($request) => str_contains($request->url(), '/models/test-image-model:predict'));
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/models/test-image-model:generateContent'));
     }
 
     public function test_throws_when_response_has_no_image(): void
     {
         Http::fake([
             'generativelanguage.googleapis.com/*' => Http::response([
-                'predictions' => [['mimeType' => 'image/png']], // 無 base64 欄位
+                'candidates' => [['content' => ['parts' => [['text' => 'no image here']]]]],
             ], 200),
         ]);
 

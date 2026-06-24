@@ -17,9 +17,8 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Key-based(AI Studio / generativelanguage)的共用圖片生成(GeneratesImage)。
  *
- * 用 GEMINI_API_KEY 走 v1beta 的 Imagen :predict（generativelanguage 端點），query 帶 key、
- * 支援 GEMINI_PROXY 出口代理(AI Studio 地區限制)。請求/回應格式同 Vertex 的
- * instances/parameters → predictions[].bytesBase64Encoded，差別僅在認證走 key 而非 GCP token。特性:
+ * 對齊 GeminiChatService:用 GEMINI_API_KEY 走 v1beta generateContent,query 帶 key、
+ * 支援 GEMINI_PROXY 出口代理(AI Studio 地區限制)。特性:
  *   - 不需 GCP 服務帳號 / project_id,只要一把 key(與需要 GCP 的 Vertex 文章那條獨立)。
  *   - 產出 binary 不自行落地,一律 funnel 進 ImageIngestService::fromBinary() ——
  *     強制 GD re-encode 成 webp(剝除任何附加 payload)後存 public disk,路徑/檔名
@@ -61,14 +60,13 @@ class GeminiImageGenerationService implements GeneratesImage
             ? $aspectRatio
             : ArticleAspectRatio::R1x1->value;
 
-        // Imagen（key 帳號可用的圖片模型）走 :predict，格式同 Vertex 的 instances/parameters。
         $body = [
-            'instances' => [
-                ['prompt' => $prompt],
+            'contents' => [
+                ['parts' => [['text' => $prompt]]],
             ],
-            'parameters' => [
-                'sampleCount' => 1,
-                'aspectRatio' => $aspectRatio,
+            'generationConfig' => [
+                'responseModalities' => ['IMAGE'],
+                'imageConfig' => ['aspectRatio' => $aspectRatio],
             ],
         ];
 
@@ -119,14 +117,15 @@ class GeminiImageGenerationService implements GeneratesImage
     private function endpointForModel(string $model): string
     {
         return sprintf(
-            'https://generativelanguage.googleapis.com/v1beta/models/%s:predict',
+            'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
             $model,
         );
     }
 
     /**
-     * 從 Imagen :predict 回應取出第一張圖的 base64。
-     * 主鍵為 bytesBase64Encoded;不同版本/相容欄位再試 imageBase64 / b64_json。
+     * 從 generateContent 回應取出第一張圖的 base64。
+     * 回應的 inline data 鍵在不同版本可能是 camelCase(inlineData)或 snake_case(inline_data),
+     * 兩者都試;data 欄位同理。
      */
     private function extractBase64Image(mixed $payload): string
     {
@@ -134,15 +133,22 @@ class GeminiImageGenerationService implements GeneratesImage
             return '';
         }
 
-        $prediction = $payload['predictions'][0] ?? null;
-        if (! is_array($prediction)) {
+        $parts = $payload['candidates'][0]['content']['parts'] ?? null;
+        if (! is_array($parts)) {
             return '';
         }
 
-        foreach (['bytesBase64Encoded', 'imageBase64', 'b64_json'] as $key) {
-            $data = $prediction[$key] ?? null;
-            if (is_string($data) && $data !== '') {
-                return $data;
+        foreach ($parts as $part) {
+            if (! is_array($part)) {
+                continue;
+            }
+
+            $inline = $part['inlineData'] ?? $part['inline_data'] ?? null;
+            if (is_array($inline)) {
+                $data = $inline['data'] ?? null;
+                if (is_string($data) && $data !== '') {
+                    return $data;
+                }
             }
         }
 
