@@ -66,7 +66,7 @@ return [
         // System 頁「圖片」子 tab 的 model 候選清單（逗號分隔 env）。
         'image_models' => array_values(array_filter(array_map(
             'trim',
-            explode(',', (string) env('IMAGE_GEMINI_MODELS', '')),
+            explode(',', (string) env('GEMINI_IMAGE_MODELS', '')),
         ))),
         'models' => array_values(array_filter(array_map(
             'trim',
