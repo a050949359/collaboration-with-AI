@@ -696,9 +696,13 @@ async function generateImage() {
     charImageGenLoading.value = true;
     charError.value = '';
 
+    // 快取目標 id：await 期間使用者可能切換/取消選擇，回來後須確認仍是同一角色才寫回，
+    // 否則會把生圖結果張冠李戴給別的角色（或對已清空的 selectedChar 觸發錯誤）。
+    const id = selectedChar.value.id;
+
     try {
         const res = await fetchJson<{ image_path: string; image_url: string }>(
-            api.characters.image(selectedChar.value.id),
+            api.characters.image(id),
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -708,17 +712,20 @@ async function generateImage() {
             },
         );
 
-        selectedChar.value = {
+        if (selectedChar.value?.id !== id) {
+            return;
+        }
+
+        const updated: Character = {
             ...selectedChar.value,
             image_path: res.image_path,
             image_url: res.image_url,
         };
-        const idx = characters.value.findIndex(
-            (c) => c.id === selectedChar.value!.id,
-        );
+        selectedChar.value = updated;
+        const idx = characters.value.findIndex((c) => c.id === id);
 
         if (idx !== -1) {
-            characters.value[idx] = selectedChar.value;
+            characters.value[idx] = updated;
         }
     } catch (e: unknown) {
         charError.value =
@@ -1898,7 +1905,7 @@ onMounted(() => {
                                     type="button"
                                     :disabled="
                                         charImageGenLoading ||
-                                        !charDraft.image_prompt
+                                        !charDraft.image_prompt.trim()
                                     "
                                     @click="generateImage"
                                 >
