@@ -77,6 +77,10 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         foreach ($this->passwordHistories()->take(self::PASSWORD_HISTORY_LIMIT)->get() as $history) {
+            // 目前密碼通常是 history 第一筆，已於上方比過，跳過以免重複跑 bcrypt。
+            if ($history->password_hash === $this->password) {
+                continue;
+            }
             if (Hash::check($plain, $history->password_hash)) {
                 return true;
             }
