@@ -18,7 +18,7 @@ class ChangePasswordController extends Controller
     {
         $request->validate([
             'current_password' => 'required|string',
-            'password'         => ['required', 'confirmed', Rules\Password::defaults()],
+            'password'         => ['required', 'string', 'confirmed', Rules\Password::defaults()],
             'password_confirmation' => 'required',
         ]);
 
