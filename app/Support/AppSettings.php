@@ -45,12 +45,14 @@ class AppSettings
     public static function defaults(): array
     {
         return [
-            'site_name'          => config('app.name'),
-            'maintenance_mode'   => false,
+            'site_name' => config('app.name'),
+            'maintenance_mode' => false,
             'allow_registration' => true,
             'max_login_attempts' => 5,
-            'avatar_size'        => 128,
-            'llm'                => config('services.llm.uses', []),
+            'avatar_size' => 128,
+            'llm' => config('services.llm.uses', []),
+            // 圖片生成（key-based Gemini）的 runtime model，預設取 env GEMINI_IMAGE_MODEL。
+            'image' => ['model' => (string) config('services.gemini.image_model', '')],
         ];
     }
 }

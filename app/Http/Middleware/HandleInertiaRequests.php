@@ -98,6 +98,9 @@ class HandleInertiaRequests extends Middleware
                 ),
                 'llmSettings' => AppSettings::get('llm') ?: config('services.llm.uses', []),
                 'llmUses' => LlmUse::options(),
+                // 圖片生成（key-based Gemini）的 model 候選清單 + 目前 runtime 設定。
+                'imageModels' => array_values(config('services.gemini.image_models', [])),
+                'imageSettings' => AppSettings::get('image') ?: ['model' => (string) config('services.gemini.image_model', '')],
                 'gachaRarities' => array_column(GachaRarity::cases(), 'value'),
             ],
             $request->routeIs('task') => [

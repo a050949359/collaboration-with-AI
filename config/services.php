@@ -61,8 +61,13 @@ return [
         'api_key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
         // key-based 圖片生成 model（nano-banana 等），供 GeneratesImage 的 Gemini 實作用。
-        // 留空時 GeminiImageGenerationService 丟例外。
+        // 為 env 預設值；可被 System 頁的 admin_settings.image.model runtime 覆寫（空時退回此）。
         'image_model' => env('GEMINI_IMAGE_MODEL', ''),
+        // System 頁「圖片」子 tab 的 model 候選清單（逗號分隔 env）。
+        'image_models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('IMAGE_GEMINI_MODELS', '')),
+        ))),
         'models' => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('GEMINI_CHAT_MODELS', '')),

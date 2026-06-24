@@ -26,14 +26,16 @@ class SettingsController extends Controller
     public function update(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'site_name'          => ['sometimes', 'string', 'max:80'],
-            'maintenance_mode'   => ['sometimes', 'boolean'],
+            'site_name' => ['sometimes', 'string', 'max:80'],
+            'maintenance_mode' => ['sometimes', 'boolean'],
             'allow_registration' => ['sometimes', 'boolean'],
             'max_login_attempts' => ['sometimes', 'integer', 'min:1', 'max:20'],
-            'avatar_size'        => ['sometimes', 'integer', 'in:64,128,256'],
-            'llm'                => ['sometimes', 'array'],
-            'llm.*.provider'     => ['required', 'in:gemini,nvidia,ollama'],
-            'llm.*.model'        => ['required', 'string', 'max:100'],
+            'avatar_size' => ['sometimes', 'integer', 'in:64,128,256'],
+            'llm' => ['sometimes', 'array'],
+            'llm.*.provider' => ['required', 'in:gemini,nvidia,ollama'],
+            'llm.*.model' => ['required', 'string', 'max:100'],
+            'image' => ['sometimes', 'array'],
+            'image.model' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
         $current = $this->getSettings();
@@ -42,7 +44,7 @@ class SettingsController extends Controller
         Cache::forever(AppSettings::CACHE_KEY, $merged);
 
         return response()->json([
-            'message'  => '設定已更新',
+            'message' => '設定已更新',
             'settings' => $merged,
         ]);
     }
@@ -54,17 +56,17 @@ class SettingsController extends Controller
     public function testLlm(Request $request, LlmManager $llm): JsonResponse
     {
         $validated = $request->validate([
-            'provider'    => ['required', 'in:gemini,nvidia,ollama'],
-            'model'       => ['required', 'string', 'max:100'],
+            'provider' => ['required', 'in:gemini,nvidia,ollama'],
+            'model' => ['required', 'string', 'max:100'],
             'with_schema' => ['sometimes', 'boolean'],
         ]);
 
         $options = [];
         if ($request->boolean('with_schema')) {
             $options['json_schema'] = [
-                'type'       => 'object',
+                'type' => 'object',
                 'properties' => ['ok' => ['type' => 'boolean']],
-                'required'   => ['ok'],
+                'required' => ['ok'],
             ];
         }
 
@@ -78,15 +80,15 @@ class SettingsController extends Controller
             );
 
             return response()->json([
-                'ok'         => true,
+                'ok' => true,
                 'latency_ms' => (int) round((microtime(true) - $start) * 1000),
-                'reply'      => mb_substr($reply, 0, 500),
+                'reply' => mb_substr($reply, 0, 500),
             ]);
         } catch (\Throwable $e) {
             return response()->json([
-                'ok'         => false,
+                'ok' => false,
                 'latency_ms' => (int) round((microtime(true) - $start) * 1000),
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }
