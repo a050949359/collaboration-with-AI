@@ -689,7 +689,7 @@ async function generateImagePrompt() {
 
 // 用目前 image_prompt 實際生圖（須登入；比例固定 3:4 走後端預設）。
 async function generateImage() {
-    if (!selectedChar.value || !charDraft.value) {
+    if (!selectedChar.value || !charDraft.value || charImageGenLoading.value) {
         return;
     }
 
@@ -728,8 +728,12 @@ async function generateImage() {
             characters.value[idx] = updated;
         }
     } catch (e: unknown) {
-        charError.value =
-            e instanceof Error ? e.message : t('story_relay.err_generate');
+        // 同成功路徑：await 期間可能已切換角色，錯誤訊息只寫回仍是同一角色的情況，
+        // 避免在新選中的角色編輯區無故顯示錯誤。
+        if (selectedChar.value?.id === id) {
+            charError.value =
+                e instanceof Error ? e.message : t('story_relay.err_generate');
+        }
     } finally {
         charImageGenLoading.value = false;
     }
