@@ -87,7 +87,7 @@ class GeminiSpeechToTextService implements SpeechToText
 
         // 相容舊 generateContent 結構（candidates[].content.parts[].text）。
         if ($texts === []) {
-            foreach (($payload['candidates'][0]['content']['parts'] ?? []) as $part) {
+            foreach (data_get($payload, 'candidates.0.content.parts', []) as $part) {
                 if (is_array($part) && isset($part['text']) && is_string($part['text'])) {
                     $texts[] = trim($part['text']);
                 }

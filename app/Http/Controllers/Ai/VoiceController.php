@@ -65,7 +65,8 @@ class VoiceController extends Controller
     public function stt(Request $request, SpeechToText $stt): JsonResponse
     {
         $request->validate([
-            'audio' => ['required', 'file', 'mimetypes:audio/wav,audio/x-wav,audio/mpeg,audio/mp3,audio/aac,audio/ogg,audio/flac,audio/aiff', 'max:20480'],
+            // 14MB：Gemini inline 上限 20MB，但 base64 會膨脹 ~33%，留安全餘裕。
+            'audio' => ['required', 'file', 'mimetypes:audio/wav,audio/x-wav,audio/mpeg,audio/mp3,audio/aac,audio/ogg,audio/flac,audio/aiff', 'max:14336'],
             'prompt' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
 
@@ -75,8 +76,9 @@ class VoiceController extends Controller
             $options['prompt'] = (string) $request->input('prompt');
         }
 
-        $audio = file_get_contents($file->getRealPath());
-        if ($audio === false) {
+        try {
+            $audio = $file->get();
+        } catch (\Throwable $e) {
             return response()->json(['message' => '音檔讀取失敗'], 400);
         }
 

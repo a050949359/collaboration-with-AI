@@ -80,8 +80,14 @@ class GeminiTextToSpeechService implements TextToSpeech
                 $mime = is_array($part) ? ($part['mime_type'] ?? '') : '';
 
                 if (is_string($mime) && str_starts_with($mime, 'audio/') && isset($part['data']) && is_string($part['data'])) {
+                    $decoded = base64_decode($part['data'], true);
+
+                    if ($decoded === false) {
+                        throw new AIServiceException('Gemini TTS returned undecodable base64 audio.');
+                    }
+
                     return [
-                        'audio' => (string) base64_decode($part['data'], true),
+                        'audio' => $decoded,
                         // l16 不帶取樣率；Gemini TTS 固定 24kHz mono 16-bit。
                         'mimeType' => $mime,
                         'sampleRate' => 24000,
