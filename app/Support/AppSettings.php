@@ -53,6 +53,13 @@ class AppSettings
             'llm' => config('services.llm.uses', []),
             // 圖片生成（key-based Gemini）的 runtime model，預設取 env GEMINI_IMAGE_MODEL。
             'image' => ['model' => (string) config('services.gemini.image_model', '')],
+            // 語音相關 runtime 設定（預設取對應 env），可被 System 頁覆寫。
+            'live' => ['model' => (string) config('services.gemini.live_model', '')],
+            'tts' => [
+                'model' => (string) config('services.gemini.tts_model', ''),
+                'voice' => (string) config('services.gemini.tts_voice', 'Kore'),
+            ],
+            'stt' => ['model' => (string) config('services.gemini.stt_model', '')],
         ];
     }
 }
