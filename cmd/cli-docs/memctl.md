@@ -9,12 +9,10 @@
 
 在**任何專案**裡需要查 / 存**跨機器、跨專案的持久性知識**時用它（專案間依賴、主機環境、整合狀態）。
 
-## 工具位置
+## 位置 / 呼叫
 
-- **source**：repo 內 `cmd/memctl/`（Go module）。binary 已列入 `.gitignore`，clone 後沒有執行檔。
-- **build**：`cd cmd/memctl && go build -o memctl .`
-- **安裝**：build 後 symlink 到 PATH（如 `~/.local/bin/memctl`），即可在任何目錄呼叫。
-- 隨 release 發布時通常已附 prebuilt binary，放上 PATH 即可。
+由 release 的 `install.sh` 裝在 PATH（`~/.local/bin/memctl`），**任何目錄直接執行 `memctl`** 即可。
+若要從源碼自行編譯：見 `collaboration-with-AI` repo 的 `cmd/memctl/`（`go build -o memctl .`）。
 
 ## Token
 
