@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -27,7 +26,8 @@ class AddContentSecurityPolicy
         }
 
         $nonce = base64_encode(random_bytes(16));
-        View::share('cspNonce', $nonce);
+        // scoped（非 View::share）：per-request 綁定，Octane/Swoole 等常駐環境每請求自動清，不殘留。
+        app()->scoped('cspNonce', fn () => $nonce);
 
         $response = $next($request);
 
