@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -52,12 +53,24 @@ func loadConfig() config {
 		log.Fatal("ERROR: REDIS_HOST is not set")
 	}
 	port := envOr("REDIS_PORT", "6379")
+
+	// ttl / interval 必須 > 0：interval <= 0 會讓 time.NewTicker panic，
+	// ttl <= 0 會讓 key 永不過期（dashboard 永遠顯示在線）。皆 fallback 預設值。
+	ttl := time.Duration(envInt("REDIS_TTL", 120)) * time.Second
+	if ttl <= 0 {
+		ttl = 120 * time.Second
+	}
+	interval := time.Duration(envInt("HEARTBEAT_INTERVAL", 60)) * time.Second
+	if interval <= 0 {
+		interval = 60 * time.Second
+	}
+
 	return config{
-		redisAddr:     host + ":" + port,
+		redisAddr:     net.JoinHostPort(host, port), // 正確處理 IPv4 / IPv6
 		redisPassword: os.Getenv("REDIS_PASSWORD"),
 		redisKey:      envOr("REDIS_KEY", "micro:online"),
-		ttl:           time.Duration(envInt("REDIS_TTL", 120)) * time.Second,
-		interval:      time.Duration(envInt("HEARTBEAT_INTERVAL", 60)) * time.Second,
+		ttl:           ttl,
+		interval:      interval,
 		pveNode:       envOr("PVE_NODE", "pve"),
 	}
 }
@@ -124,8 +137,8 @@ func main() {
 
 // beat 抓一次狀態並寫入 Redis。
 func beat(ctx context.Context, rdb *redis.Client, cfg config, hostname string) {
-	vms, vmErr := getGuests(cfg.pveNode, "qemu")
-	cts, ctErr := getGuests(cfg.pveNode, "lxc")
+	vms, vmErr := getGuests(ctx, cfg.pveNode, "qemu")
+	cts, ctErr := getGuests(ctx, cfg.pveNode, "lxc")
 
 	p := payload{
 		Host:     hostname,
@@ -166,9 +179,13 @@ type pveGuest struct {
 
 // getGuests 抓某 node 的 qemu 或 lxc 清單。
 // 回傳 (清單, 是否格式錯誤)；命令失敗或結構非預期時回 ([], true)。
-func getGuests(node, kind string) ([]guest, bool) {
+// pvesh 綁 10s timeout 並接 ctx：避免 Proxmox API 無回應時卡死主迴圈、
+// 並讓 SIGTERM 能即時中止卡住的指令以利優雅關閉。
+func getGuests(ctx context.Context, node, kind string) ([]guest, bool) {
 	path := "/nodes/" + node + "/" + kind
-	out, err := exec.Command("pvesh", "get", path, "--output-format", "json").Output()
+	cmdCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(cmdCtx, "pvesh", "get", path, "--output-format", "json").Output()
 	if err != nil {
 		log.Printf("[warn] pvesh %s: %v", path, err)
 		return []guest{}, true
