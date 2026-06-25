@@ -103,7 +103,11 @@ func main() {
 	})
 	defer rdb.Close()
 
-	hostname, _ := os.Hostname()
+	hostname, err := os.Hostname()
+	if err != nil || hostname == "" {
+		log.Printf("[warn] os.Hostname failed（payload host 改用 fallback）: %v", err)
+		hostname = "unknown-host"
+	}
 
 	// 收到 SIGTERM/SIGINT（systemd stop / 重啟）時優雅退出。
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -111,6 +115,16 @@ func main() {
 
 	log.Printf("micro-heartbeat started: redis=%s key=%s interval=%s ttl=%s node=%s",
 		cfg.redisAddr, cfg.redisKey, cfg.interval, cfg.ttl, cfg.pveNode)
+
+	// 啟動 Ping 一次：連線設定問題（密碼/網路/防火牆）能即早在 log 顯現。
+	// 非致命——daemon 應有韌性，beat() 之後仍會持續重試。
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	if err := rdb.Ping(pingCtx).Err(); err != nil {
+		log.Printf("[warn] redis ping failed at startup（後續仍會重試）: %v", err)
+	} else {
+		log.Printf("redis connected: %s", cfg.redisAddr)
+	}
+	cancel()
 
 	// 啟動即先寫一次，不等第一個 tick。
 	beat(ctx, rdb, cfg, hostname)
