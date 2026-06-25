@@ -250,17 +250,9 @@ daemon 完成工作後 ZIP 靜態產出，POST 回 `POST /api/agyd/upload/{task_
 **Heartbeat**：daemon 定期寫 Redis key（ZeroTier 直連），Laravel 讀 key 判斷在線狀態（`agyd:heartbeat`）。
 
 ### 本機 CLI（cmd/memctl、cmd/taskctl、cmd/agydctl）
-打上述 MCP server 的精簡 Go CLI client，取代冗長 curl、也免 native MCP 連線常駐（省 token）。token / URL 自動讀 `.vscode/mcp.json`。
-
-> ⚠️ binary **已被列入 .gitignore**（同 `cmd/ws-lab` 慣例），clone 後沒有執行檔，**需先用 Go 編譯**：
-> `cd cmd/memctl && go build -o memctl .`（`taskctl`、`agydctl` 同理）。
-
-**確認用法：直接執行 binary（不帶參數）即印出完整說明，不需要讀 source code：**
-```bash
-cmd/taskctl/taskctl     # 印 usage
-cmd/memctl/memctl       # 印 usage
-cmd/agydctl/agydctl     # 印 usage
-```
+打上述 MCP server 的精簡 Go CLI client，取代冗長 curl、也免 native MCP 連線常駐（省 token）。
+> 📄 **完整說明（用途、何時用、位置、build、token 解析）見 `~/.claude/cli-docs/memctl.md` 與 `taskctl.md`**（隨 release 安裝至全域 `~/.claude`，任何專案皆可參考）。
+> **用法一律以 binary 不帶參數印出的 usage 為準**（`taskctl` / `memctl` / `agydctl`），不需讀 source code。`agydctl` 同類但尚未支援專屬 env（僅 `MCP_TOKEN` / 檔案）。
 
 ### 跨專案知識圖譜
 知識圖譜用於記錄**跨機器、跨專案**的持久性知識（entity/relation/observation）。
@@ -268,17 +260,7 @@ cmd/agydctl/agydctl     # 印 usage
 **儲存時機：當你決定儲存記憶時，詢問使用者：**
 > 「這個要同步到 MCP 知識圖譜嗎？適合記錄跨專案關係或主機環境資訊。」
 
-**適合存入圖譜的內容：**
-- 專案間的依賴或整合關係（`linebot → calls_api → collaboration-with-AI`）
-- 主機環境資訊（dev-wsl2 的設定、prod-server 的部署狀態）
-- 跨專案的整合狀態（share token 待接、wasm build pipeline 狀況）
-
-**不適合存入圖譜的內容：**
-- 本對話的暫時脈絡（存本機 file memory 即可）
-- 已在 CLAUDE.md 記載的架構資訊
-
-### Entity type 慣例（自由字串，以下僅供參考）
-- `project`、`host`、`service`、`integration`
+> 📄 **適合 / 不適合存入的內容、entity type 慣例** 見 `~/.claude/cli-docs/memctl.md`。
 
 ### Claude Desktop 設定範例
 ```json

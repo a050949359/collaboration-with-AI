@@ -1,6 +1,6 @@
 // memctl — 知識圖譜 MCP（/api/mcp/memory）的精簡 CLI client。
 // 目的：取代 native MCP（省去 context 常駐 schema）與冗長 curl；指令短、輸出 trim。
-// token / url 自動從 .vscode/mcp.json 讀（往上層目錄找），或用 MCP_TOKEN/MCP_BASE_URL 環境變數覆寫。
+// token / url 解析優先序：MCP_MEMORY_TOKEN（專屬）> MCP_TOKEN（共用）> .vscode/mcp.json（從當前目錄往上層找）。base url 用 MCP_BASE_URL 覆寫。
 //
 // 用法：
 //
@@ -163,9 +163,15 @@ type mcpConfig struct {
 }
 
 // resolveEndpoint 回傳指定 suffix（memory/task）的 url 與 token。
-// 優先 MCP_TOKEN 環境變數（搭配 MCP_BASE_URL，預設 ohya.vip）；否則往上找 .vscode/mcp.json。
+// 優先序：MCP_<SUFFIX>_TOKEN（專屬）> MCP_TOKEN（共用，搭配 MCP_BASE_URL，預設 ohya.vip）> .vscode/mcp.json。
 func resolveEndpoint(suffix string) (string, string, error) {
-	if tok := os.Getenv("MCP_TOKEN"); tok != "" {
+	// 每個工具可設專屬 env（MCP_TASK_TOKEN / MCP_MEMORY_TOKEN，依 suffix），
+	// 優先於共用 MCP_TOKEN；兩者皆無才退回 .vscode/mcp.json。
+	tok := os.Getenv("MCP_" + strings.ToUpper(suffix) + "_TOKEN")
+	if tok == "" {
+		tok = os.Getenv("MCP_TOKEN")
+	}
+	if tok != "" {
 		base := os.Getenv("MCP_BASE_URL")
 		if base == "" {
 			base = defaultBase
@@ -174,7 +180,7 @@ func resolveEndpoint(suffix string) (string, string, error) {
 	}
 	path, err := findUp(".vscode/mcp.json")
 	if err != nil {
-		return "", "", fmt.Errorf("找不到 token：請設 MCP_TOKEN 或提供 .vscode/mcp.json")
+		return "", "", fmt.Errorf("未設定 API key：請 export MCP_%s_TOKEN（或共用 MCP_TOKEN），或在當前目錄樹放 .vscode/mcp.json", strings.ToUpper(suffix))
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -357,6 +363,6 @@ func usage() {
 
   --json                    印原始 JSON（預設為精簡文字輸出）
 
-token / url 自動從 .vscode/mcp.json 讀取（往上層目錄找），或用 MCP_TOKEN / MCP_BASE_URL 環境變數覆寫。
+token 解析優先序：MCP_MEMORY_TOKEN > MCP_TOKEN > .vscode/mcp.json（從當前目錄往上層找）。base url 可用 MCP_BASE_URL 覆寫。
 `)
 }
