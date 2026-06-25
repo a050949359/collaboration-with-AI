@@ -16,7 +16,7 @@
         <x-inertia::head>
             <title>{{ config('app.name', 'Laravel') }}</title>
         </x-inertia::head>
-        <script nonce="{{ $cspNonce ?? '' }}">
+        <script @isset($cspNonce) nonce="{{ $cspNonce }}" @endisset>
             (function () {
                 try {
                     var t = localStorage.getItem('theme');

@@ -31,7 +31,10 @@ class AddContentSecurityPolicy
 
         $response = $next($request);
 
-        $response->headers->set(self::HEADER, $this->policy($nonce));
+        // 只給 HTML 文件加 CSP；JSON / 圖片(如 avatar)/檔案下載加了多餘。
+        if (str_contains((string) $response->headers->get('Content-Type'), 'text/html')) {
+            $response->headers->set(self::HEADER, $this->policy($nonce));
+        }
 
         return $response;
     }
@@ -50,6 +53,8 @@ class AddContentSecurityPolicy
             "connect-src 'self' wss://generativelanguage.googleapis.com https://cdn.jsdelivr.net",
             // Turnstile widget iframe。
             'frame-src https://challenges.cloudflare.com',
+            // 防 clickjacking：只允許自家頁面 iframe 本站，擋外部嵌入。
+            "frame-ancestors 'self'",
             "base-uri 'self'",
             "form-action 'self'",
             "object-src 'none'",
