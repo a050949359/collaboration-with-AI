@@ -10,6 +10,14 @@ BIN_DIR="${HOME}/.local/bin"
 DOCS_DIR="${HOME}/.claude/cli-docs"
 GLOBAL_MD="${HOME}/.claude/CLAUDE.md"
 
+# 需從解壓後的套件根目錄執行（同層要有 bin/ 與 cli-docs/）。
+# 直接在 repo 的 cmd/cli-docs/ 執行會找不到，給明確錯誤而非靜默失敗。
+if [ ! -d "$HERE/bin" ] || [ ! -d "$HERE/cli-docs" ]; then
+	echo "✗ 找不到 $HERE/bin 或 $HERE/cli-docs" >&2
+	echo "  請從解壓後的 release 套件根目錄執行此腳本。" >&2
+	exit 1
+fi
+
 # 1. binaries → PATH
 mkdir -p "$BIN_DIR"
 for b in memctl taskctl; do
@@ -31,17 +39,21 @@ MARK_START="<!-- >>> mcp-cli (memctl/taskctl) >>> -->"
 MARK_END="<!-- <<< mcp-cli (memctl/taskctl) <<< -->"
 
 tmp="$(mktemp)"
-# 先移除舊區段（含標記），其餘原樣保留
+trap 'rm -f "$tmp"' EXIT
+# 移除舊區段（含標記），並去掉尾端多餘空白行——否則重跑時前置空行會逐次累積
 awk -v s="$MARK_START" -v e="$MARK_END" '
 	$0==s {skip=1}
 	skip && $0==e {skip=0; next}
 	!skip {print}
-' "$GLOBAL_MD" >"$tmp"
+' "$GLOBAL_MD" | awk 'NF{last=NR} {line[NR]=$0} END{for(i=1;i<=last;i++) print line[i]}' >"$tmp"
 
-# 再附上最新區段
+# 再附上最新區段（與既有內容間僅留一行空行；檔案原本為空則不留前導空行）
 {
-	cat "$tmp"
-	printf '\n%s\n' "$MARK_START"
+	if [ -s "$tmp" ]; then
+		cat "$tmp"
+		printf '\n'
+	fi
+	printf '%s\n' "$MARK_START"
 	cat <<'EOF'
 ## 本機 MCP CLI（memctl / taskctl）
 
@@ -54,7 +66,6 @@ awk -v s="$MARK_START" -v e="$MARK_END" '
 EOF
 	printf '%s\n' "$MARK_END"
 } >"$GLOBAL_MD"
-rm -f "$tmp"
 echo "✓ 指標 → $GLOBAL_MD"
 
 # 4. 下一步提醒
