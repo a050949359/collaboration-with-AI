@@ -114,7 +114,7 @@ class HandleInertiaRequests extends Middleware
             ],
             $request->routeIs('live-translate') => [
                 'translateLanguages' => array_values(config('services.gemini.translate_languages', [])),
-                'liveModel' => ((string) (data_get(AppSettings::get('live'), 'model') ?? '')) ?: (string) config('services.gemini.live_model'),
+                'liveModel' => (string) (data_get(AppSettings::get('live'), 'model') ?: config('services.gemini.live_model')),
             ],
             $request->routeIs('task') => [
                 'taskStatuses' => array_column(TaskStatus::cases(), 'value'),

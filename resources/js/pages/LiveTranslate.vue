@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { GoogleGenAI } from '@google/genai';
+import type { Session, LiveServerMessage } from '@google/genai';
 import { Head, usePage } from '@inertiajs/vue3';
 import { ref, computed, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -43,7 +44,7 @@ class MicProcessor extends AudioWorkletProcessor {
 registerProcessor('mic-processor', MicProcessor);
 `;
 
-let session: any = null;
+let session: Session | null = null;
 let micCtx: AudioContext | null = null;
 let playCtx: AudioContext | null = null;
 let micStream: MediaStream | null = null;
@@ -76,7 +77,8 @@ function playPcm(b64: string) {
     const f32 = new Float32Array(numSamples);
 
     for (let i = 0; i < numSamples; i++) {
-        f32[i] = i16[i] / 32768;
+        // 與送出端對稱：負值 /32768、正值 /32767。
+        f32[i] = i16[i] < 0 ? i16[i] / 32768 : i16[i] / 32767;
     }
 
     const buf = playCtx.createBuffer(1, numSamples, 24000);
@@ -167,10 +169,10 @@ async function start() {
                     state.value = 'live';
                     statusText.value = '🟢 連線中，開始說話吧';
                 },
-                onmessage: (m: any) => {
+                onmessage: (m: LiveServerMessage) => {
                     const sc = m.serverContent;
                     const audio = sc?.modelTurn?.parts?.find(
-                        (p: any) => p.inlineData,
+                        (p) => p.inlineData,
                     )?.inlineData?.data;
 
                     if (audio) {
@@ -185,7 +187,7 @@ async function start() {
                         mergeTranscript('dst', sc.outputTranscription.text);
                     }
                 },
-                onerror: (e: any) => {
+                onerror: (e: ErrorEvent) => {
                     errMsg.value = e?.message || '連線錯誤';
                     state.value = 'error';
                 },
@@ -224,13 +226,9 @@ async function start() {
             }
 
             const raw = new Uint8Array(i16.buffer);
-            let bin = '';
-
-            for (let i = 0; i < raw.length; i++) {
-                bin += String.fromCharCode(raw[i]);
-            }
-
-            const b64 = btoa(bin);
+            const b64 = btoa(
+                Array.from(raw, (byte) => String.fromCharCode(byte)).join(''),
+            );
 
             try {
                 session?.sendRealtimeInput({
@@ -241,8 +239,8 @@ async function start() {
             }
         };
         srcNode.connect(node);
-    } catch (e: any) {
-        errMsg.value = e?.message || String(e);
+    } catch (e) {
+        errMsg.value = e instanceof Error ? e.message : String(e);
         state.value = 'error';
         statusText.value = '';
         cleanup();
