@@ -136,6 +136,11 @@ async function start() {
 
         // 2) 開麥克風（強制 16kHz，省去手動降採樣）。
         statusText.value = '開麥克風…';
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+            throw new Error('此瀏覽器不支援麥克風存取（需 HTTPS 安全連線）');
+        }
+
         micStream = await navigator.mediaDevices.getUserMedia({
             audio: {
                 channelCount: 1,
@@ -176,7 +181,12 @@ async function start() {
                     )?.inlineData?.data;
 
                     if (audio) {
-                        playPcm(audio);
+                        // 單次音訊解碼/播放失敗不該中斷整個 onmessage（逐字稿仍要收）。
+                        try {
+                            playPcm(audio);
+                        } catch (err) {
+                            console.error('播放音訊失敗:', err);
+                        }
                     }
 
                     if (sc?.inputTranscription?.text) {
@@ -240,9 +250,13 @@ async function start() {
         };
         srcNode.connect(node);
     } catch (e) {
-        errMsg.value = e instanceof Error ? e.message : String(e);
-        state.value = 'error';
-        statusText.value = '';
+        // 使用者連線途中按停止會讓 await 拋例外（cleanup 已把 micCtx 設 null）→ 別翻成 error。
+        if (micCtx) {
+            errMsg.value = e instanceof Error ? e.message : String(e);
+            state.value = 'error';
+            statusText.value = '';
+        }
+
         cleanup();
     }
 }
