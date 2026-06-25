@@ -753,7 +753,14 @@ onMounted(() => {
     fetchTokens();
 });
 
-onUnmounted(stopMicroPolling);
+onUnmounted(() => {
+    stopMicroPolling();
+
+    // 釋放閉環測試產生的 audio Object URL，避免記憶體洩漏。
+    if (loopAudioUrl.value) {
+        URL.revokeObjectURL(loopAudioUrl.value);
+    }
+});
 </script>
 
 <template>

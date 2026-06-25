@@ -51,6 +51,9 @@ class VoiceController extends Controller
             $result = $tts->synthesize($text, $options);
         } catch (AIServiceException $e) {
             return response($e->getMessage(), 502);
+        } catch (\Throwable) {
+            // 連線逾時等非 AIServiceException 也統一回 502，不噴 500。
+            return response('AI 服務呼叫失敗', 502);
         }
 
         return response($this->pcmToWav($result['audio'], $result['sampleRate']), 200, [
@@ -86,6 +89,8 @@ class VoiceController extends Controller
             $text = $stt->transcribe($audio, (string) $file->getMimeType(), $options);
         } catch (AIServiceException $e) {
             return response()->json(['message' => $e->getMessage()], 502);
+        } catch (\Throwable) {
+            return response()->json(['message' => 'AI 服務呼叫失敗'], 502);
         }
 
         return response()->json(['text' => $text]);
@@ -104,6 +109,8 @@ class VoiceController extends Controller
             $result = $minter->mint($validated['target']);
         } catch (AIServiceException $e) {
             return response()->json(['message' => $e->getMessage()], 502);
+        } catch (\Throwable) {
+            return response()->json(['message' => 'AI 服務呼叫失敗'], 502);
         }
 
         return response()->json($result);

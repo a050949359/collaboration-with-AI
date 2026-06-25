@@ -76,7 +76,9 @@ class GeminiTextToSpeechService implements TextToSpeech
                 continue;
             }
 
-            foreach (($step['content'] ?? []) as $part) {
+            $content = $step['content'] ?? [];
+
+            foreach (is_array($content) ? $content : [] as $part) {
                 $mime = is_array($part) ? ($part['mime_type'] ?? '') : '';
 
                 if (is_string($mime) && str_starts_with($mime, 'audio/') && isset($part['data']) && is_string($part['data'])) {
