@@ -83,6 +83,39 @@ return [
         'embedding_model' => env('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001'),
         'embedding_dimensions' => env('GEMINI_EMBEDDING_DIMENSIONS', 768),
 
+        // 即時語音翻譯（Live API）：ephemeral token 鑄造用 model。可被 admin_settings.live.model 覆寫。
+        'live_model' => env('GEMINI_LIVE_MODEL', 'gemini-3.5-live-translate-preview'),
+        'live_models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GEMINI_LIVE_MODELS', '')),
+        ))),
+
+        // 文轉語音（TTS · interactions API）。model/voice 可被 admin_settings.tts 覆寫。
+        'tts_model' => env('GEMINI_TTS_MODEL', 'gemini-3.1-flash-tts-preview'),
+        'tts_voice' => env('GEMINI_TTS_VOICE', 'Kore'),
+        'tts_models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GEMINI_TTS_MODELS', 'gemini-3.1-flash-tts-preview,gemini-2.5-flash-preview-tts,gemini-2.5-pro-preview-tts')),
+        ))),
+        // System 頁 voice 下拉候選（Gemini TTS 內建語音）。
+        'tts_voices' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GEMINI_TTS_VOICES', 'Kore,Puck,Zephyr,Charon,Fenrir,Leda,Aoede,Orus,Callirrhoe,Autonoe,Enceladus,Iapetus')),
+        ))),
+
+        // 語音轉文（STT · interactions API）。model 可被 admin_settings.stt.model 覆寫。
+        'stt_model' => env('GEMINI_STT_MODEL', 'gemini-3.5-flash'),
+        'stt_models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GEMINI_STT_MODELS', 'gemini-3.5-flash,gemini-2.5-flash')),
+        ))),
+
+        // 翻譯目標語言白名單：TTS（先翻再念）與 Live token 鑄造皆對此校驗，不在清單回 422。
+        'translate_languages' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GEMINI_TRANSLATE_LANGUAGES', 'English,Japanese,Korean,Traditional Chinese,Simplified Chinese,Spanish,French,German')),
+        ))),
+
         // 出口 proxy：AI Studio（generativelanguage）有地區限制，prod 主機在不支援
         // 地區時，透過支援地區的中繼（如 GCP VM tinyproxy）轉發。null=直連（dev/未設）。
         'proxy' => env('GEMINI_PROXY'),

@@ -100,6 +100,91 @@ export async function saveLlmSettings(
     return parseJson<{ message: string }>(response);
 }
 
+// ── 語音設定（TTS / STT / Live 即時翻譯）──────────────────
+
+export type VoiceSettings = {
+    live: { model: string };
+    tts: { model: string; voice: string };
+    stt: { model: string };
+};
+
+/** 局部更新：只送 live/tts/stt 三區（後端 sometimes 驗證，其餘保留）。 */
+export async function saveVoiceSettings(
+    voice: VoiceSettings,
+): Promise<{ message: string }> {
+    const response = await fetch(api.admin.settings(), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(voice),
+    });
+
+    return parseJson<{ message: string }>(response);
+}
+
+/** 文轉語音：回傳 WAV blob（可選 target 先翻再念）。 */
+export async function ttsSynthesize(
+    text: string,
+    target?: string,
+    voice?: string,
+): Promise<Blob> {
+    const response = await fetch(api.ai.tts(), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { Accept: 'audio/wav', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            text,
+            target: target || null,
+            voice: voice || null,
+        }),
+    });
+
+    if (!response.ok) {
+        const msg = await response.text();
+
+        throw new AdminApiError(msg || 'TTS failed.', response.status);
+    }
+
+    return response.blob();
+}
+
+/** 語音轉文：上傳音檔 blob，回傳轉錄文字。 */
+export async function sttTranscribe(audio: Blob): Promise<string> {
+    const form = new FormData();
+    form.append('audio', audio, 'audio.wav');
+
+    const response = await fetch(api.ai.stt(), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+        body: form,
+    });
+
+    const payload = await parseJson<{ text: string }>(response);
+
+    return payload.text;
+}
+
+/** 鑄 Live ephemeral token（測試用，回 token + 到期時間）。 */
+export async function mintLiveToken(
+    target: string,
+): Promise<{ token: string; expiresAt: string }> {
+    const response = await fetch(api.ai.liveToken(), {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ target }),
+    });
+
+    return parseJson<{ token: string; expiresAt: string }>(response);
+}
+
 /** 連線測試：失敗時後端仍回 200（ok:false），故直接讀回應。 */
 export async function testLlmConnection(
     provider: string,

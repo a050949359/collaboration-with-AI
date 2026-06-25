@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\MicroHostController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ShareTokenController;
 use App\Http\Controllers\Agyd\AgydReceiveController;
+use App\Http\Controllers\Ai\VoiceController;
 use App\Http\Controllers\ApiKey\UserApiKeyController;
 use App\Http\Controllers\Article\ArticleBrowseController;
 use App\Http\Controllers\Article\ArticleCommentController;
@@ -254,6 +255,13 @@ Route::prefix('v1/characters')->middleware('throttle:20,1')->group(function () {
     //   service 仍為 nano-banana（:generateContent）；若改用 Imagen 需改回 :predict 格式。
     // Route::post('/{character}/image', [CharacterController::class, 'generateImage'])
     //     ->middleware(['auth:sanctum', 'throttle:2,1']);
+});
+
+// 語音 AI：文轉語音 / 語音轉文 / 即時翻譯 token（皆需登入）。
+Route::prefix('v1/ai')->middleware(['auth:sanctum', 'throttle:20,1'])->group(function () {
+    Route::post('/tts', [VoiceController::class, 'tts']);
+    Route::post('/stt', [VoiceController::class, 'stt']);
+    Route::post('/live-token', [VoiceController::class, 'liveToken'])->middleware('throttle:10,1');
 });
 
 Route::prefix('v1/story')->middleware('throttle:30,1')->group(function () {

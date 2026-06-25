@@ -142,6 +142,12 @@ export const api = {
         microHostStatus: () => '/api/admin/micro-host/status',
     },
 
+    ai: {
+        tts: () => '/api/v1/ai/tts',
+        stt: () => '/api/v1/ai/stt',
+        liveToken: () => '/api/v1/ai/live-token',
+    },
+
     articles: {
         index: () => '/api/articles',
         show: (id: number) => `/api/articles/${id}`,
