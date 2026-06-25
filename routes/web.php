@@ -40,6 +40,7 @@ Route::prefix('app')->group(function () {
     Route::inertia('/rag', 'Rag')->name('rag')->middleware('auth:sanctum');
     Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
         Route::inertia('/story-relay', 'StoryRelay')->name('story-relay');
+        Route::inertia('/live-translate', 'LiveTranslate')->name('live-translate');
     });
 
     Route::redirect('/login', '/app/')->name('login');

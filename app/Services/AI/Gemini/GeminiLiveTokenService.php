@@ -66,6 +66,9 @@ class GeminiLiveTokenService implements MintsLiveToken
                         'parts' => [['text' => "Translate the spoken input into {$targetLanguage}. Only output the translation."]],
                     ],
                     'generationConfig' => ['responseModalities' => ['AUDIO']],
+                    // 開啟輸入/輸出逐字稿（前端顯示 🗣️ 原文 / 🌐 譯文）。空物件＝啟用預設。
+                    'inputAudioTranscription' => (object) [],
+                    'outputAudioTranscription' => (object) [],
                 ],
             ]);
 

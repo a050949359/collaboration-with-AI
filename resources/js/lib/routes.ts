@@ -70,6 +70,9 @@ export const routes = {
     // Story Relay
     storyRelay: () => `${WEB_PREFIX}/story-relay`,
 
+    // 即時語音翻譯（admin only）
+    liveTranslate: () => `${WEB_PREFIX}/live-translate`,
+
     // RAG 互動式知識庫
     rag: () => `${WEB_PREFIX}/rag`,
 
