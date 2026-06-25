@@ -51,15 +51,35 @@ let workletUrl = '';
 let nextPlayTime = 0;
 
 // 24kHz PCM(base64) → 排進播放佇列。
+// 用迴圈轉換（不用 .from() 的逐元素 callback，省 CPU 避免播放卡頓）；
+// floor 成偶數長度，防止串流切片為奇數 byte 時 new Int16Array 拋 RangeError。
 function playPcm(b64: string) {
     if (!playCtx) {
         return;
     }
 
-    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    const i16 = new Int16Array(bytes.buffer);
-    const f32 = Float32Array.from(i16, (v) => v / 32768);
-    const buf = playCtx.createBuffer(1, f32.length, 24000);
+    const bin = atob(b64);
+    const numSamples = Math.floor(bin.length / 2);
+
+    if (numSamples === 0) {
+        return;
+    }
+
+    const arrayBuf = new ArrayBuffer(numSamples * 2);
+    const bytes = new Uint8Array(arrayBuf);
+
+    for (let i = 0; i < numSamples * 2; i++) {
+        bytes[i] = bin.charCodeAt(i);
+    }
+
+    const i16 = new Int16Array(arrayBuf);
+    const f32 = new Float32Array(numSamples);
+
+    for (let i = 0; i < numSamples; i++) {
+        f32[i] = i16[i] / 32768;
+    }
+
+    const buf = playCtx.createBuffer(1, numSamples, 24000);
     buf.getChannelData(0).set(f32);
     const src = playCtx.createBufferSource();
     src.buffer = buf;
@@ -72,6 +92,18 @@ function playPcm(b64: string) {
 
     src.start(nextPlayTime);
     nextPlayTime += buf.duration;
+}
+
+// 逐字稿合併：同一說話者就更新最後一行，避免累積式片段塞滿重複行。
+// 相容累積式（新文字含舊文字→覆寫）與增量式（片段→接續）兩種回傳。
+function mergeTranscript(who: 'src' | 'dst', text: string) {
+    const last = lines.value[lines.value.length - 1];
+
+    if (last && last.who === who) {
+        last.text = text.startsWith(last.text) ? text : last.text + text;
+    } else {
+        lines.value.push({ who, text });
+    }
 }
 
 async function start() {
@@ -123,10 +155,15 @@ async function start() {
             apiKey: token,
             httpOptions: { apiVersion: 'v1alpha' },
         });
-        session = await ai.live.connect({
+        const newSession = await ai.live.connect({
             model: MODEL,
             callbacks: {
                 onopen: () => {
+                    // 連線期間已被停止（cleanup 把 micCtx 設 null）→ 不要翻轉狀態。
+                    if (!micCtx) {
+                        return;
+                    }
+
                     state.value = 'live';
                     statusText.value = '🟢 連線中，開始說話吧';
                 },
@@ -141,17 +178,11 @@ async function start() {
                     }
 
                     if (sc?.inputTranscription?.text) {
-                        lines.value.push({
-                            who: 'src',
-                            text: sc.inputTranscription.text,
-                        });
+                        mergeTranscript('src', sc.inputTranscription.text);
                     }
 
                     if (sc?.outputTranscription?.text) {
-                        lines.value.push({
-                            who: 'dst',
-                            text: sc.outputTranscription.text,
-                        });
+                        mergeTranscript('dst', sc.outputTranscription.text);
                     }
                 },
                 onerror: (e: any) => {
@@ -166,6 +197,20 @@ async function start() {
             },
         });
 
+        // race condition：若連線等待期間使用者按了停止（cleanup 已把 micCtx 設 null），
+        // 丟棄這條新連線，不要接上 audio graph 變成孤兒連線。
+        if (!micCtx || !micStream) {
+            try {
+                newSession.close();
+            } catch {
+                /* noop */
+            }
+
+            return;
+        }
+
+        session = newSession;
+
         // 4) 麥克風 → session（worklet 回來的 Float32 轉 16-bit PCM 串上去）。
         const srcNode = micCtx.createMediaStreamSource(micStream);
         const node = new AudioWorkletNode(micCtx, 'mic-processor');
@@ -178,9 +223,14 @@ async function start() {
                 i16[i] = s < 0 ? s * 32768 : s * 32767;
             }
 
-            const b64 = btoa(
-                String.fromCharCode(...new Uint8Array(i16.buffer)),
-            );
+            const raw = new Uint8Array(i16.buffer);
+            let bin = '';
+
+            for (let i = 0; i < raw.length; i++) {
+                bin += String.fromCharCode(raw[i]);
+            }
+
+            const b64 = btoa(bin);
 
             try {
                 session?.sendRealtimeInput({
