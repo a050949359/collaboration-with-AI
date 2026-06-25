@@ -9,12 +9,10 @@
 
 在**任何專案**裡需要記錄 / 查詢 / 更新待辦事項時優先用它，特別是想跨 repo 追蹤同一台機器上多個專案的任務（用 `--project` 歸類）。
 
-## 工具位置
+## 位置 / 呼叫
 
-- **source**：repo 內 `cmd/taskctl/`（Go module）。binary 已列入 `.gitignore`，clone 後沒有執行檔。
-- **build**：`cd cmd/taskctl && go build -o taskctl .`
-- **安裝**：build 後 symlink 到 PATH（如 `~/.local/bin/taskctl`），即可在任何目錄呼叫。
-- 隨 release 發布時通常已附 prebuilt binary，放上 PATH 即可。
+由 release 的 `install.sh` 裝在 PATH（`~/.local/bin/taskctl`），**任何目錄直接執行 `taskctl`** 即可。
+若要從源碼自行編譯：見 `collaboration-with-AI` repo 的 `cmd/taskctl/`（`go build -o taskctl .`）。
 
 ## Token
 
