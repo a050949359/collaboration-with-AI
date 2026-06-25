@@ -69,7 +69,8 @@ class VoiceController extends Controller
     {
         $request->validate([
             // 14MB：Gemini inline 上限 20MB，但 base64 會膨脹 ~33%，留安全餘裕。
-            'audio' => ['required', 'file', 'mimetypes:audio/wav,audio/x-wav,audio/mpeg,audio/mp3,audio/aac,audio/ogg,audio/flac,audio/aiff', 'max:14336'],
+            // webm/mp4/m4a：瀏覽器 MediaRecorder（Chrome/Firefox 吐 webm、iOS/Safari 吐 mp4/m4a）錄音格式，供麥克風輸入用。
+            'audio' => ['required', 'file', 'mimetypes:audio/wav,audio/x-wav,audio/mpeg,audio/mp3,audio/aac,audio/ogg,audio/flac,audio/aiff,audio/webm,audio/mp4,audio/m4a,audio/x-m4a', 'max:14336'],
             'prompt' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
 

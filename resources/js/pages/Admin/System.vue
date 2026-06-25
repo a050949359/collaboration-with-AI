@@ -242,6 +242,20 @@ const voiceForm = ref<VoiceSettings>({
     },
 });
 
+// 下拉選項用 computed 快取（避免在 template 直接呼叫 withCurrent 造成每次渲染重算）。
+const liveModelOptions = computed(() =>
+    withCurrent(liveModels.value, voiceForm.value.live.model),
+);
+const sttModelOptions = computed(() =>
+    withCurrent(sttModels.value, voiceForm.value.stt.model),
+);
+const ttsModelOptions = computed(() =>
+    withCurrent(ttsModels.value, voiceForm.value.tts.model),
+);
+const ttsVoiceOptions = computed(() =>
+    withCurrent(ttsVoices.value, voiceForm.value.tts.voice),
+);
+
 const voiceSaving = ref(false);
 const voiceSaveMsg = ref('');
 const voiceSaveErr = ref('');
@@ -1137,10 +1151,7 @@ onUnmounted(() => {
                                                 class="binary-input"
                                             >
                                                 <option
-                                                    v-for="m in withCurrent(
-                                                        liveModels,
-                                                        voiceForm.live.model,
-                                                    )"
+                                                    v-for="m in liveModelOptions"
                                                     :key="m"
                                                     :value="m"
                                                 >
@@ -1161,10 +1172,7 @@ onUnmounted(() => {
                                                 class="binary-input"
                                             >
                                                 <option
-                                                    v-for="m in withCurrent(
-                                                        sttModels,
-                                                        voiceForm.stt.model,
-                                                    )"
+                                                    v-for="m in sttModelOptions"
                                                     :key="m"
                                                     :value="m"
                                                 >
@@ -1185,10 +1193,7 @@ onUnmounted(() => {
                                                 class="binary-input"
                                             >
                                                 <option
-                                                    v-for="m in withCurrent(
-                                                        ttsModels,
-                                                        voiceForm.tts.model,
-                                                    )"
+                                                    v-for="m in ttsModelOptions"
                                                     :key="m"
                                                     :value="m"
                                                 >
@@ -1206,10 +1211,7 @@ onUnmounted(() => {
                                                 class="binary-input"
                                             >
                                                 <option
-                                                    v-for="v in withCurrent(
-                                                        ttsVoices,
-                                                        voiceForm.tts.voice,
-                                                    )"
+                                                    v-for="v in ttsVoiceOptions"
                                                     :key="v"
                                                     :value="v"
                                                 >
