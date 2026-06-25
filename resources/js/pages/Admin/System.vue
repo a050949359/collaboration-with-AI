@@ -5,15 +5,20 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import {
     AdminApiError,
     fetchAdminSettings,
+    mintLiveToken,
     saveAdminSettings,
     saveLlmSettings,
+    saveVoiceSettings,
+    sttTranscribe,
     testLlmConnection,
+    ttsSynthesize,
 } from '@/lib/admin-api';
 import type {
     AdminSettings,
     ImageSettings,
     LlmSettings,
     LlmTestResult,
+    VoiceSettings,
 } from '@/lib/admin-api';
 import { api, routes } from '@/lib/routes';
 
@@ -116,8 +121,8 @@ function onProviderChange(useKey: string) {
     }
 }
 
-// ── AI 模型分頁:文字 / 圖片 子 tab ──
-const llmSubTab = ref<'text' | 'image'>('text');
+// ── AI 模型分頁:文字 / 圖片 / 語音 子 tab ──
+const llmSubTab = ref<'text' | 'image' | 'voice'>('text');
 
 // 圖片生成(key-based Gemini)的 runtime model：候選清單來自 env、目前值來自 admin_settings。
 const imageModelCatalog = computed<string[]>(
@@ -186,6 +191,154 @@ async function testLlm(useKey: string) {
         llmTesting.value[useKey] = false;
     }
 }
+
+// ── 語音設定（TTS / STT / Live 即時翻譯）+ 內建測試 ───────
+
+const liveModels = computed<string[]>(
+    () => (page.props.liveModels as string[]) ?? [],
+);
+const ttsModels = computed<string[]>(
+    () => (page.props.ttsModels as string[]) ?? [],
+);
+const ttsVoices = computed<string[]>(
+    () => (page.props.ttsVoices as string[]) ?? [],
+);
+const sttModels = computed<string[]>(
+    () => (page.props.sttModels as string[]) ?? [],
+);
+const translateLanguages = computed<string[]>(
+    () => (page.props.translateLanguages as string[]) ?? [],
+);
+
+// 下拉選項：候選清單 + 目前值（即使不在清單也保留可見），去重。
+function withCurrent(list: string[], current: string): string[] {
+    const opts = [...list];
+
+    if (current && !opts.includes(current)) {
+        opts.unshift(current);
+    }
+
+    return opts;
+}
+
+const voiceForm = ref<VoiceSettings>({
+    live: {
+        model:
+            (page.props.liveSettings as { model?: string } | undefined)
+                ?.model ?? '',
+    },
+    tts: {
+        model:
+            (page.props.ttsSettings as { model?: string } | undefined)?.model ??
+            '',
+        voice:
+            (page.props.ttsSettings as { voice?: string } | undefined)?.voice ??
+            '',
+    },
+    stt: {
+        model:
+            (page.props.sttSettings as { model?: string } | undefined)?.model ??
+            '',
+    },
+});
+
+const voiceSaving = ref(false);
+const voiceSaveMsg = ref('');
+const voiceSaveErr = ref('');
+
+async function saveVoice() {
+    if (voiceSaving.value) {
+        return;
+    }
+
+    voiceSaving.value = true;
+    voiceSaveMsg.value = '';
+    voiceSaveErr.value = '';
+
+    try {
+        const r = await saveVoiceSettings(voiceForm.value);
+        voiceSaveMsg.value = r.message || '語音設定已更新';
+    } catch (e: unknown) {
+        voiceSaveErr.value =
+            e instanceof AdminApiError ? e.message : '儲存失敗，請稍後再試';
+    } finally {
+        voiceSaving.value = false;
+    }
+}
+
+// 閉環測試：文字 →（翻譯）→ TTS 念出來 → STT 轉回文字。
+const loopText = ref('哈囉，今天過得好嗎？希望你有美好的一天。');
+const loopTarget = ref('');
+const loopBusy = ref(false);
+const loopAudioUrl = ref('');
+const loopHeard = ref('');
+const loopErr = ref('');
+
+async function runLoop() {
+    if (loopBusy.value || !loopText.value.trim()) {
+        return;
+    }
+
+    loopBusy.value = true;
+    loopErr.value = '';
+    loopHeard.value = '';
+
+    if (loopAudioUrl.value) {
+        URL.revokeObjectURL(loopAudioUrl.value);
+        loopAudioUrl.value = '';
+    }
+
+    try {
+        const blob = await ttsSynthesize(
+            loopText.value.trim(),
+            loopTarget.value || undefined,
+            voiceForm.value.tts.voice || undefined,
+        );
+        loopAudioUrl.value = URL.createObjectURL(blob);
+        loopHeard.value = await sttTranscribe(blob);
+    } catch (e: unknown) {
+        loopErr.value =
+            e instanceof AdminApiError ? e.message : '測試失敗，請稍後再試';
+    } finally {
+        loopBusy.value = false;
+    }
+}
+
+// Live ephemeral token 鑄造測試。
+const tokenTarget = ref('');
+const tokenBusy = ref(false);
+const tokenResult = ref<{ token: string; expiresAt: string } | null>(null);
+const tokenErr = ref('');
+
+async function testToken() {
+    if (tokenBusy.value || !tokenTarget.value) {
+        return;
+    }
+
+    tokenBusy.value = true;
+    tokenErr.value = '';
+    tokenResult.value = null;
+
+    try {
+        tokenResult.value = await mintLiveToken(tokenTarget.value);
+    } catch (e: unknown) {
+        tokenErr.value =
+            e instanceof AdminApiError ? e.message : '鑄 token 失敗';
+    } finally {
+        tokenBusy.value = false;
+    }
+}
+
+// 測試用的目標語言預設第一個。
+watchEffect(() => {
+    if (!loopTarget.value && translateLanguages.value.length) {
+        loopTarget.value = translateLanguages.value[0];
+    }
+
+    if (!tokenTarget.value && translateLanguages.value.length) {
+        tokenTarget.value = translateLanguages.value[0];
+    }
+});
 
 // ── Share Tokens ─────────────────────────────────────────
 
@@ -787,6 +940,7 @@ onUnmounted(stopMicroPolling);
                                     v-for="sub in [
                                         { key: 'text', label: '文字' },
                                         { key: 'image', label: '圖片' },
+                                        { key: 'voice', label: '語音' },
                                     ] as const"
                                     :key="sub.key"
                                     type="button"
@@ -912,7 +1066,7 @@ onUnmounted(stopMicroPolling);
                             </template>
 
                             <!-- 圖片子 tab：key-based Gemini 的生圖 model -->
-                            <template v-else>
+                            <template v-else-if="llmSubTab === 'image'">
                                 <p
                                     class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
                                 >
@@ -960,20 +1114,294 @@ onUnmounted(stopMicroPolling);
                                 </div>
                             </template>
 
+                            <!-- 語音子 tab：TTS / STT / Live model + 內建測試 -->
+                            <template v-else>
+                                <p
+                                    class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                >
+                                    &gt; 語音 model（即時翻譯 / 文轉語音 /
+                                    語音轉文 · 儲存後即時生效）
+                                </p>
+
+                                <div
+                                    class="space-y-4 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5 md:rounded-xl"
+                                >
+                                    <div class="grid gap-4 sm:grid-cols-2">
+                                        <div class="space-y-1.5">
+                                            <label
+                                                class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                                >即時翻譯 model
+                                                <code class="text-[10px]"
+                                                    >live</code
+                                                ></label
+                                            >
+                                            <select
+                                                v-model="voiceForm.live.model"
+                                                class="binary-input"
+                                            >
+                                                <option
+                                                    v-for="m in withCurrent(
+                                                        liveModels,
+                                                        voiceForm.live.model,
+                                                    )"
+                                                    :key="m"
+                                                    :value="m"
+                                                >
+                                                    {{ m }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label
+                                                class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                                >語音轉文 model
+                                                <code class="text-[10px]"
+                                                    >stt</code
+                                                ></label
+                                            >
+                                            <select
+                                                v-model="voiceForm.stt.model"
+                                                class="binary-input"
+                                            >
+                                                <option
+                                                    v-for="m in withCurrent(
+                                                        sttModels,
+                                                        voiceForm.stt.model,
+                                                    )"
+                                                    :key="m"
+                                                    :value="m"
+                                                >
+                                                    {{ m }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label
+                                                class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                                >文轉語音 model
+                                                <code class="text-[10px]"
+                                                    >tts</code
+                                                ></label
+                                            >
+                                            <select
+                                                v-model="voiceForm.tts.model"
+                                                class="binary-input"
+                                            >
+                                                <option
+                                                    v-for="m in withCurrent(
+                                                        ttsModels,
+                                                        voiceForm.tts.model,
+                                                    )"
+                                                    :key="m"
+                                                    :value="m"
+                                                >
+                                                    {{ m }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label
+                                                class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                                >文轉語音 voice</label
+                                            >
+                                            <select
+                                                v-model="voiceForm.tts.voice"
+                                                class="binary-input"
+                                            >
+                                                <option
+                                                    v-for="v in withCurrent(
+                                                        ttsVoices,
+                                                        voiceForm.tts.voice,
+                                                    )"
+                                                    :key="v"
+                                                    :value="v"
+                                                >
+                                                    {{ v }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="flex flex-wrap items-center justify-end gap-4"
+                                    >
+                                        <span
+                                            v-if="voiceSaveErr"
+                                            class="text-xs text-red-400"
+                                            >{{ voiceSaveErr }}</span
+                                        >
+                                        <span
+                                            v-if="voiceSaveMsg"
+                                            class="text-xs text-[var(--binary-primary)]"
+                                            >{{ voiceSaveMsg }}</span
+                                        >
+                                        <button
+                                            type="button"
+                                            class="binary-button"
+                                            :disabled="voiceSaving"
+                                            @click="saveVoice"
+                                        >
+                                            {{
+                                                voiceSaving
+                                                    ? '儲存中...'
+                                                    : '儲存語音設定'
+                                            }}
+                                            <span aria-hidden="true">-></span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 閉環測試：文字 →（翻譯）→ TTS → STT 轉回 -->
+                                <div
+                                    class="space-y-3 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5 md:rounded-xl"
+                                >
+                                    <p
+                                        class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                    >
+                                        &gt; 閉環測試：文字 → 翻譯 → 念出來 →
+                                        轉回文字
+                                    </p>
+                                    <textarea
+                                        v-model="loopText"
+                                        rows="2"
+                                        maxlength="2000"
+                                        class="binary-input w-full"
+                                        placeholder="輸入要念的文字"
+                                    />
+                                    <div
+                                        class="flex flex-wrap items-center gap-3"
+                                    >
+                                        <label
+                                            class="text-[11px] text-[var(--binary-outline)]"
+                                            >翻成</label
+                                        >
+                                        <select
+                                            v-model="loopTarget"
+                                            class="binary-input w-auto"
+                                        >
+                                            <option value="">
+                                                （不翻譯，直接念）
+                                            </option>
+                                            <option
+                                                v-for="l in translateLanguages"
+                                                :key="l"
+                                                :value="l"
+                                            >
+                                                {{ l }}
+                                            </option>
+                                        </select>
+                                        <button
+                                            type="button"
+                                            class="binary-ghost-button px-3 py-1.5 text-xs"
+                                            :disabled="
+                                                loopBusy || !loopText.trim()
+                                            "
+                                            @click="runLoop"
+                                        >
+                                            {{
+                                                loopBusy
+                                                    ? '測試中...'
+                                                    : '跑閉環'
+                                            }}
+                                        </button>
+                                    </div>
+                                    <p
+                                        v-if="loopErr"
+                                        class="text-xs text-red-400"
+                                    >
+                                        {{ loopErr }}
+                                    </p>
+                                    <audio
+                                        v-if="loopAudioUrl"
+                                        :src="loopAudioUrl"
+                                        controls
+                                        class="w-full"
+                                    />
+                                    <p
+                                        v-if="loopHeard"
+                                        class="text-xs text-[var(--binary-text)]"
+                                    >
+                                        <span
+                                            class="text-[var(--binary-outline)]"
+                                            >STT 轉回：</span
+                                        >{{ loopHeard }}
+                                    </p>
+                                </div>
+
+                                <!-- Live ephemeral token 鑄造測試 -->
+                                <div
+                                    class="space-y-3 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5 md:rounded-xl"
+                                >
+                                    <p
+                                        class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                    >
+                                        &gt; 即時翻譯 token 鑄造測試
+                                    </p>
+                                    <div
+                                        class="flex flex-wrap items-center gap-3"
+                                    >
+                                        <select
+                                            v-model="tokenTarget"
+                                            class="binary-input w-auto"
+                                        >
+                                            <option
+                                                v-for="l in translateLanguages"
+                                                :key="l"
+                                                :value="l"
+                                            >
+                                                {{ l }}
+                                            </option>
+                                        </select>
+                                        <button
+                                            type="button"
+                                            class="binary-ghost-button px-3 py-1.5 text-xs"
+                                            :disabled="tokenBusy"
+                                            @click="testToken"
+                                        >
+                                            {{
+                                                tokenBusy
+                                                    ? '鑄造中...'
+                                                    : '測試鑄 token'
+                                            }}
+                                        </button>
+                                        <span
+                                            v-if="tokenErr"
+                                            class="text-xs text-red-400"
+                                            >✗ {{ tokenErr }}</span
+                                        >
+                                        <span
+                                            v-if="tokenResult"
+                                            class="text-xs text-[var(--binary-primary)]"
+                                            >✓ 鑄到 token（到期
+                                            {{ tokenResult.expiresAt }}）</span
+                                        >
+                                    </div>
+                                    <p
+                                        v-if="tokenResult"
+                                        class="font-mono text-[10px] break-all text-[var(--binary-outline)]"
+                                    >
+                                        {{ tokenResult.token }}
+                                    </p>
+                                </div>
+                            </template>
+
                             <p
-                                v-if="llmSaveErr"
+                                v-if="llmSubTab !== 'voice' && llmSaveErr"
                                 class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
                             >
                                 {{ llmSaveErr }}
                             </p>
                             <p
-                                v-if="llmSaveMsg"
+                                v-if="llmSubTab !== 'voice' && llmSaveMsg"
                                 class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]"
                             >
                                 {{ llmSaveMsg }}
                             </p>
 
-                            <div class="flex justify-end">
+                            <div
+                                v-if="llmSubTab !== 'voice'"
+                                class="flex justify-end"
+                            >
                                 <button
                                     class="binary-button"
                                     :disabled="llmSaving"

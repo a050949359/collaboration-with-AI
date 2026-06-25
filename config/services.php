@@ -97,6 +97,11 @@ return [
             'trim',
             explode(',', (string) env('GEMINI_TTS_MODELS', 'gemini-3.1-flash-tts-preview,gemini-2.5-flash-preview-tts,gemini-2.5-pro-preview-tts')),
         ))),
+        // System 頁 voice 下拉候選（Gemini TTS 內建語音）。
+        'tts_voices' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GEMINI_TTS_VOICES', 'Kore,Puck,Zephyr,Charon,Fenrir,Leda,Aoede,Orus,Callirrhoe,Autonoe,Enceladus,Iapetus')),
+        ))),
 
         // 語音轉文（STT · interactions API）。model 可被 admin_settings.stt.model 覆寫。
         'stt_model' => env('GEMINI_STT_MODEL', 'gemini-3.5-flash'),

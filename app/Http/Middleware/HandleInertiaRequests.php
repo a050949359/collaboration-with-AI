@@ -101,6 +101,15 @@ class HandleInertiaRequests extends Middleware
                 // 圖片生成（key-based Gemini）的 model 候選清單 + 目前 runtime 設定。
                 'imageModels' => array_values(config('services.gemini.image_models', [])),
                 'imageSettings' => AppSettings::get('image') ?: ['model' => (string) config('services.gemini.image_model', '')],
+                // 語音（TTS / STT / Live 即時翻譯）的 model 候選清單 + 目前 runtime 設定。
+                'liveModels' => array_values(config('services.gemini.live_models', [])),
+                'ttsModels' => array_values(config('services.gemini.tts_models', [])),
+                'ttsVoices' => array_values(config('services.gemini.tts_voices', [])),
+                'sttModels' => array_values(config('services.gemini.stt_models', [])),
+                'translateLanguages' => array_values(config('services.gemini.translate_languages', [])),
+                'liveSettings' => AppSettings::get('live') ?: ['model' => (string) config('services.gemini.live_model', '')],
+                'ttsSettings' => AppSettings::get('tts') ?: ['model' => (string) config('services.gemini.tts_model', ''), 'voice' => (string) config('services.gemini.tts_voice', 'Kore')],
+                'sttSettings' => AppSettings::get('stt') ?: ['model' => (string) config('services.gemini.stt_model', '')],
                 'gachaRarities' => array_column(GachaRarity::cases(), 'value'),
             ],
             $request->routeIs('task') => [

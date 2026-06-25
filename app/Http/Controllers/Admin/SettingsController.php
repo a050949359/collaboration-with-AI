@@ -36,6 +36,13 @@ class SettingsController extends Controller
             'llm.*.model' => ['required', 'string', 'max:100'],
             'image' => ['sometimes', 'array'],
             'image.model' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'live' => ['sometimes', 'array'],
+            'live.model' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'tts' => ['sometimes', 'array'],
+            'tts.model' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'tts.voice' => ['sometimes', 'nullable', 'string', 'max:40'],
+            'stt' => ['sometimes', 'array'],
+            'stt.model' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
         $current = $this->getSettings();
