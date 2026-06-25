@@ -481,6 +481,43 @@ defineProps<{ name: string; size?: number }>();
             />
         </template>
 
+        <!-- live-translate (microphone + sound waves) -->
+        <template v-else-if="name === 'live-translate'">
+            <rect
+                class="stroke-default"
+                x="13"
+                y="5"
+                width="6"
+                height="13"
+                rx="3"
+                stroke-width="1.5"
+            />
+            <path
+                class="stroke-default"
+                d="M9 14 a7 7 0 0 0 14 0"
+                stroke-width="1.5"
+                stroke-linecap="round"
+            />
+            <line
+                class="stroke-default"
+                x1="16"
+                y1="21"
+                x2="16"
+                y2="25"
+                stroke-width="1.5"
+                stroke-linecap="round"
+            />
+            <line
+                class="stroke-default anim-pulse"
+                x1="11"
+                y1="27"
+                x2="21"
+                y2="27"
+                stroke-width="1.5"
+                stroke-linecap="round"
+            />
+        </template>
+
         <!-- cv (computer vision — eye + detection brackets) -->
         <template v-else-if="name === 'cv'">
             <!-- corner detection brackets -->

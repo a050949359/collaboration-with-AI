@@ -112,6 +112,10 @@ class HandleInertiaRequests extends Middleware
                 'sttSettings' => AppSettings::get('stt') ?: ['model' => (string) config('services.gemini.stt_model', '')],
                 'gachaRarities' => array_column(GachaRarity::cases(), 'value'),
             ],
+            $request->routeIs('live-translate') => [
+                'translateLanguages' => array_values(config('services.gemini.translate_languages', [])),
+                'liveModel' => (string) (data_get(AppSettings::get('live'), 'model') ?: config('services.gemini.live_model')),
+            ],
             $request->routeIs('task') => [
                 'taskStatuses' => array_column(TaskStatus::cases(), 'value'),
             ],

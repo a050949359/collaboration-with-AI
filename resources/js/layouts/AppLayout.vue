@@ -120,7 +120,8 @@ const defaultNavLinks = computed((): NavLink[] => {
                 path.startsWith(routes.articles.index()) ||
                 path.startsWith(routes.about()) ||
                 path.startsWith(routes.rag()) ||
-                (isAdmin.value && path.startsWith(routes.storyRelay())),
+                (isAdmin.value && path.startsWith(routes.storyRelay())) ||
+                (isAdmin.value && path.startsWith(routes.liveTranslate())),
             children: [
                 {
                     label: t('articles.nav.articles'),
@@ -151,6 +152,12 @@ const defaultNavLinks = computed((): NavLink[] => {
                               href: routes.storyRelay(),
                               icon: 'story',
                               active: path.startsWith(routes.storyRelay()),
+                          },
+                          {
+                              label: '即時翻譯',
+                              href: routes.liveTranslate(),
+                              icon: 'live-translate',
+                              active: path.startsWith(routes.liveTranslate()),
                           },
                       ]
                     : []),
