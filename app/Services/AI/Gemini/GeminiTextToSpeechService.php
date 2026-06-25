@@ -72,6 +72,10 @@ class GeminiTextToSpeechService implements TextToSpeech
         $steps = is_array($payload) ? ($payload['steps'] ?? []) : [];
 
         foreach (is_array($steps) ? $steps : [] as $step) {
+            if (! is_array($step)) {
+                continue;
+            }
+
             foreach (($step['content'] ?? []) as $part) {
                 $mime = is_array($part) ? ($part['mime_type'] ?? '') : '';
 

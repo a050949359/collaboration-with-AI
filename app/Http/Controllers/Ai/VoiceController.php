@@ -34,19 +34,20 @@ class VoiceController extends Controller
 
         $text = $validated['text'];
 
-        if (! empty($validated['target'])) {
-            $text = $llm->driver('gemini', (string) config('services.gemini.model'))->generate(
-                "Translate the user's text into {$validated['target']}. Output ONLY the translation, no quotes, no explanation.",
-                [['role' => 'user', 'text' => $text]],
-            );
-        }
-
         $options = [];
         if (! empty($validated['voice'])) {
             $options['voice'] = $validated['voice'];
         }
 
         try {
+            // 翻譯也納入 try：LLM 失敗（限流/斷線）統一回 502，不噴 500。
+            if (! empty($validated['target'])) {
+                $text = $llm->driver('gemini', (string) config('services.gemini.model'))->generate(
+                    "Translate the user's text into {$validated['target']}. Output ONLY the translation, no quotes, no explanation.",
+                    [['role' => 'user', 'text' => $text]],
+                );
+            }
+
             $result = $tts->synthesize($text, $options);
         } catch (AIServiceException $e) {
             return response($e->getMessage(), 502);
@@ -74,12 +75,13 @@ class VoiceController extends Controller
             $options['prompt'] = (string) $request->input('prompt');
         }
 
+        $audio = file_get_contents($file->getRealPath());
+        if ($audio === false) {
+            return response()->json(['message' => '音檔讀取失敗'], 400);
+        }
+
         try {
-            $text = $stt->transcribe(
-                (string) file_get_contents($file->getRealPath()),
-                (string) $file->getMimeType(),
-                $options,
-            );
+            $text = $stt->transcribe($audio, (string) $file->getMimeType(), $options);
         } catch (AIServiceException $e) {
             return response()->json(['message' => $e->getMessage()], 502);
         }

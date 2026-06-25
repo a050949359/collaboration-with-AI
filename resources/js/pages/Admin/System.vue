@@ -268,7 +268,8 @@ async function saveVoice() {
 
 // 閉環測試：文字 →（翻譯）→ TTS 念出來 → STT 轉回文字。
 const loopText = ref('哈囉，今天過得好嗎？希望你有美好的一天。');
-const loopTarget = ref('');
+// 預設第一個語言；空字串＝不翻譯（直接念）。直接給初值，不用 watchEffect（否則選空會被彈回）。
+const loopTarget = ref(translateLanguages.value[0] ?? '');
 const loopBusy = ref(false);
 const loopAudioUrl = ref('');
 const loopHeard = ref('');
@@ -305,7 +306,7 @@ async function runLoop() {
 }
 
 // Live ephemeral token 鑄造測試。
-const tokenTarget = ref('');
+const tokenTarget = ref(translateLanguages.value[0] ?? '');
 const tokenBusy = ref(false);
 const tokenResult = ref<{ token: string; expiresAt: string } | null>(null);
 const tokenErr = ref('');
@@ -328,17 +329,6 @@ async function testToken() {
         tokenBusy.value = false;
     }
 }
-
-// 測試用的目標語言預設第一個。
-watchEffect(() => {
-    if (!loopTarget.value && translateLanguages.value.length) {
-        loopTarget.value = translateLanguages.value[0];
-    }
-
-    if (!tokenTarget.value && translateLanguages.value.length) {
-        tokenTarget.value = translateLanguages.value[0];
-    }
-});
 
 // ── Share Tokens ─────────────────────────────────────────
 
@@ -1227,7 +1217,7 @@ onUnmounted(stopMicroPolling);
                                     >
                                         <span
                                             v-if="voiceSaveErr"
-                                            class="text-xs text-red-400"
+                                            class="text-xs text-[var(--binary-tertiary)]"
                                             >{{ voiceSaveErr }}</span
                                         >
                                         <span
@@ -1307,7 +1297,7 @@ onUnmounted(stopMicroPolling);
                                     </div>
                                     <p
                                         v-if="loopErr"
-                                        class="text-xs text-red-400"
+                                        class="text-xs text-[var(--binary-tertiary)]"
                                     >
                                         {{ loopErr }}
                                     </p>
@@ -1366,7 +1356,7 @@ onUnmounted(stopMicroPolling);
                                         </button>
                                         <span
                                             v-if="tokenErr"
-                                            class="text-xs text-red-400"
+                                            class="text-xs text-[var(--binary-tertiary)]"
                                             >✗ {{ tokenErr }}</span
                                         >
                                         <span

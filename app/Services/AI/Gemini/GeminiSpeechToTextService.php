@@ -74,6 +74,10 @@ class GeminiSpeechToTextService implements SpeechToText
 
         // interactions：steps[].content[] 內的 text part。
         foreach (($payload['steps'] ?? []) as $step) {
+            if (! is_array($step)) {
+                continue;
+            }
+
             foreach (($step['content'] ?? []) as $part) {
                 if (is_array($part) && isset($part['text']) && is_string($part['text'])) {
                     $texts[] = trim($part['text']);

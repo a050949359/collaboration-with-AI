@@ -47,8 +47,10 @@ class GeminiLiveTokenService implements MintsLiveToken
         $model = ((string) ($options['model'] ?? '')) ?: $this->defaultModel;
 
         // token 與單一 session 的有效期（保守：30 分鐘可新開 session，1 分鐘後不可再鑄新 session）。
-        $expireTime = now()->addMinutes(30)->toIso8601String();
-        $newSessionExpireTime = now()->addMinute()->toIso8601String();
+        // 抓一次 now（CarbonImmutable，addMinutes 回新實例，$now 不變），避免兩次呼叫時間不一致。
+        $now = now();
+        $expireTime = $now->addMinutes(30)->toIso8601String();
+        $newSessionExpireTime = $now->addMinute()->toIso8601String();
 
         $response = Http::withHeaders(['x-goog-api-key' => $this->apiKey])
             ->acceptJson()
