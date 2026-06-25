@@ -250,7 +250,8 @@ daemon 完成工作後 ZIP 靜態產出，POST 回 `POST /api/agyd/upload/{task_
 **Heartbeat**：daemon 定期寫 Redis key（ZeroTier 直連），Laravel 讀 key 判斷在線狀態（`agyd:heartbeat`）。
 
 ### 本機 CLI（cmd/memctl、cmd/taskctl、cmd/agydctl）
-打上述 MCP server 的精簡 Go CLI client，取代冗長 curl、也免 native MCP 連線常駐（省 token）。token / URL 自動讀 `.vscode/mcp.json`。
+打上述 MCP server 的精簡 Go CLI client，取代冗長 curl、也免 native MCP 連線常駐（省 token）。token / URL 解析優先序：**專屬 env（`MCP_TASK_TOKEN` / `MCP_MEMORY_TOKEN`）> 共用 `MCP_TOKEN` > `.vscode/mcp.json`**（從當前目錄往上層找）；base url 可用 `MCP_BASE_URL` 覆寫。export env 即可在任何目錄（含 repo 外）使用；三者皆無時 binary 會明確提示需設定 API key。
+> ⚠️ `agydctl` 尚未支援專屬 env（僅 `MCP_TOKEN` / 檔案）。
 
 > ⚠️ binary **已被列入 .gitignore**（同 `cmd/ws-lab` 慣例），clone 後沒有執行檔，**需先用 Go 編譯**：
 > `cd cmd/memctl && go build -o memctl .`（`taskctl`、`agydctl` 同理）。
