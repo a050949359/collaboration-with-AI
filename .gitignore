@@ -38,3 +38,6 @@ check_results.txt
 /cmd/taskctl/taskctl
 /cmd/agydctl/agydctl
 /cmd/vecgen/vecgen
+/cmd/micro-heartbeat/micro-heartbeat
+/cmd/micro-heartbeat/go.sum
+/cmd/micro-heartbeat/micro-heartbeat.env

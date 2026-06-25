@@ -1,0 +1,16 @@
+[Unit]
+Description=Proxmox micro-host heartbeat (writes VM/CT status to Redis)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# pvesh 需 root 權限（毋須 API token）
+User=root
+ExecStart=/opt/micro-heartbeat/micro-heartbeat
+EnvironmentFile=/opt/micro-heartbeat/micro-heartbeat.env
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
