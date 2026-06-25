@@ -104,10 +104,11 @@ return [
         ))),
 
         // 語音轉文（STT · interactions API）。model 可被 admin_settings.stt.model 覆寫。
-        'stt_model' => env('GEMINI_STT_MODEL', 'gemini-3.5-flash'),
+        // gemini-2.5-flash 實測穩定回 200；gemini-3.5-flash 目前常回 500「high demand」（容量不穩），列為次選。
+        'stt_model' => env('GEMINI_STT_MODEL', 'gemini-2.5-flash'),
         'stt_models' => array_values(array_filter(array_map(
             'trim',
-            explode(',', (string) env('GEMINI_STT_MODELS', 'gemini-3.5-flash,gemini-2.5-flash')),
+            explode(',', (string) env('GEMINI_STT_MODELS', 'gemini-2.5-flash,gemini-3.5-flash')),
         ))),
 
         // 翻譯目標語言白名單：TTS（先翻再念）與 Live token 鑄造皆對此校驗，不在清單回 422。
