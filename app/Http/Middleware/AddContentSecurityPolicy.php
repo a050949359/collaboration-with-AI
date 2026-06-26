@@ -10,14 +10,14 @@ use Symfony\Component\HttpFoundation\Response;
  * 為 web（Inertia HTML）回應加上 Content-Security-Policy。
  *
  * - 每請求產生 nonce，share 給 app.blade.php 的 inline theme script（其餘 inline script 一律擋）。
- * - 目前用 Report-Only：瀏覽器只回報違規、不真的擋；各頁確認 console 乾淨後，
- *   把 HEADER 常數改成 'Content-Security-Policy' 即正式啟用。
+ * - 已正式啟用（enforce，HEADER = 'Content-Security-Policy'）：違規資源會真的被擋。
+ *   若某功能被誤擋，把 HEADER 常數改回 'Content-Security-Policy-Report-Only' 即回退觀察。
  * - 本地（dev）跳過：Vite dev server 的 HMR WebSocket / inline script 會與 CSP 打架。
  */
 class AddContentSecurityPolicy
 {
-    /** 先 Report-Only；驗證無誤後改成 'Content-Security-Policy'。 */
-    private const HEADER = 'Content-Security-Policy-Report-Only';
+    /** 正式啟用（enforce）。要回退觀察就改回 'Content-Security-Policy-Report-Only'。 */
+    private const HEADER = 'Content-Security-Policy';
 
     public function handle(Request $request, Closure $next): Response
     {
