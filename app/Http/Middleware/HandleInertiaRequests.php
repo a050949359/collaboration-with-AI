@@ -110,6 +110,13 @@ class HandleInertiaRequests extends Middleware
                 'liveSettings' => AppSettings::get('live') ?: ['model' => (string) config('services.gemini.live_model', '')],
                 'ttsSettings' => AppSettings::get('tts') ?: ['model' => (string) config('services.gemini.tts_model', ''), 'voice' => (string) config('services.gemini.tts_voice', 'Kore')],
                 'sttSettings' => AppSettings::get('stt') ?: ['model' => (string) config('services.gemini.stt_model', '')],
+                // Gemini tools（Google Search / Google Maps）的 model 候選清單（各一份）+ 目前 runtime 設定。
+                'searchModels' => array_values(config('services.gemini.search_models', [])),
+                'mapModels' => array_values(config('services.gemini.map_models', [])),
+                'toolsSettings' => AppSettings::get('tools') ?: [
+                    'search_model' => (string) config('services.gemini.search_model', ''),
+                    'map_model' => (string) config('services.gemini.map_model', ''),
+                ],
                 'gachaRarities' => array_column(GachaRarity::cases(), 'value'),
             ],
             $request->routeIs('live-translate') => [

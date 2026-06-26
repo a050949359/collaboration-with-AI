@@ -60,6 +60,11 @@ class AppSettings
                 'voice' => (string) config('services.gemini.tts_voice', 'Kore'),
             ],
             'stt' => ['model' => (string) config('services.gemini.stt_model', '')],
+            // Gemini tools（Google Search / Google Maps）：各自 runtime model，預設取對應 env。
+            'tools' => [
+                'search_model' => (string) config('services.gemini.search_model', ''),
+                'map_model' => (string) config('services.gemini.map_model', ''),
+            ],
         ];
     }
 }

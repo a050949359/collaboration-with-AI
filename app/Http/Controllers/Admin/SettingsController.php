@@ -43,6 +43,9 @@ class SettingsController extends Controller
             'tts.voice' => ['sometimes', 'nullable', 'string', 'max:40'],
             'stt' => ['sometimes', 'array'],
             'stt.model' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'tools' => ['sometimes', 'array'],
+            'tools.search_model' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'tools.map_model' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
         $current = $this->getSettings();

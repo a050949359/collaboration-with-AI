@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\MicroHostController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ShareTokenController;
 use App\Http\Controllers\Agyd\AgydReceiveController;
+use App\Http\Controllers\Ai\ToolsController;
 use App\Http\Controllers\Ai\VoiceController;
 use App\Http\Controllers\ApiKey\UserApiKeyController;
 use App\Http\Controllers\Article\ArticleBrowseController;
@@ -262,6 +263,12 @@ Route::prefix('v1/ai')->middleware(['auth:sanctum', 'throttle:20,1'])->group(fun
     Route::post('/tts', [VoiceController::class, 'tts']);
     Route::post('/stt', [VoiceController::class, 'stt']);
     Route::post('/live-token', [VoiceController::class, 'liveToken'])->middleware('throttle:10,1');
+});
+
+// Gemini tools 對外 API：Google Search / Google Maps grounding（需登入；可用 personal access token 從外部呼叫）。
+Route::prefix('v1/ai/tools')->middleware(['auth:sanctum', 'throttle:20,1'])->group(function () {
+    Route::post('/search', [ToolsController::class, 'search']);
+    Route::post('/map', [ToolsController::class, 'map'])->middleware('throttle:10,1');
 });
 
 Route::prefix('v1/story')->middleware('throttle:30,1')->group(function () {
