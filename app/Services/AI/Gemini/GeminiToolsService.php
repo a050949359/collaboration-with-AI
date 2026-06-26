@@ -245,7 +245,8 @@ class GeminiToolsService
             }
         }
 
-        return trim(implode("\n", array_filter($texts)));
+        // array_filter 不給 callback 會連 "0" 一起濾掉（PHP falsy），明確只濾空字串。
+        return trim(implode("\n", array_filter($texts, fn ($t) => $t !== '')));
     }
 
     private function endpointForModel(string $model): string

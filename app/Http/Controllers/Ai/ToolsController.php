@@ -35,7 +35,10 @@ class ToolsController extends Controller
             );
         } catch (AIServiceException $e) {
             return response()->json(['message' => $e->getMessage()], 502);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // 非預期錯誤（型別/網路等）：report 進 log 便於排查，對外仍回通用 502。
+            report($e);
+
             return response()->json(['message' => 'AI 服務呼叫失敗'], 502);
         }
 
@@ -67,7 +70,10 @@ class ToolsController extends Controller
             $result = $tools->mapGrounded($validated['query'], $options);
         } catch (AIServiceException $e) {
             return response()->json(['message' => $e->getMessage()], 502);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // 非預期錯誤（型別/網路等）：report 進 log 便於排查，對外仍回通用 502。
+            report($e);
+
             return response()->json(['message' => 'AI 服務呼叫失敗'], 502);
         }
 
