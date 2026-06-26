@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AddContentSecurityPolicy;
 use App\Http\Middleware\AuthenticateWithApiKey;
 use App\Http\Middleware\AuthTokenFromCookie;
 use App\Http\Middleware\CheckApiKeyScope;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            AddContentSecurityPolicy::class,
         ]);
 
         // web group 也需要讀 auth_token cookie，讓 HandleInertiaRequests 可以拿到登入使用者
