@@ -33,26 +33,37 @@ class AddContentSecurityPolicy
 
         // 只給 HTML 文件加 CSP；JSON / 圖片(如 avatar)/檔案下載加了多餘。
         if (str_contains((string) $response->headers->get('Content-Type'), 'text/html')) {
-            $response->headers->set(self::HEADER, $this->policy($nonce));
+            // 邊緣偵測(OpenCV WASM) / 手勢辨識(MediaPipe TFLite WASM) 需 WASM + eval，
+            // 只對這兩頁放寬 unsafe-eval，其餘頁(登入/admin/文章…)維持嚴格。
+            $allowEval = $request->routeIs('computer-vision', 'gesture');
+            $response->headers->set(self::HEADER, $this->policy($nonce, $allowEval));
         }
 
         return $response;
     }
 
-    private function policy(string $nonce): string
+    private function policy(string $nonce, bool $allowEval = false): string
     {
+        // static.cloudflareinsights.com：CF Web Analytics 的 beacon script（rum 回報走同源 /cdn-cgi/rum，'self' 已涵蓋）。
+        $scriptSrc = "script-src 'self' 'nonce-{$nonce}' https://challenges.cloudflare.com https://static.cloudflareinsights.com";
+
+        if ($allowEval) {
+            $scriptSrc .= " 'unsafe-eval'";
+        }
+
         return implode('; ', [
             "default-src 'self'",
-            // inline theme script 走 nonce；Turnstile 載入腳本。
-            "script-src 'self' 'nonce-{$nonce}' https://challenges.cloudflare.com",
+            // inline theme script 走 nonce；Turnstile 載入腳本。（CV 頁另含 unsafe-eval）
+            $scriptSrc,
             // Vue :style 產生 inline style 屬性，只能 unsafe-inline；Google Fonts 樣式表。
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com",
-            "img-src 'self' data:",
+            // self + data:；Google 登入頭像走 *.googleusercontent.com。
+            "img-src 'self' data: https://*.googleusercontent.com",
             // 同源 ws-lab/gacha 由 'self' 涵蓋；Gemini Live wss；地球儀的 world-atlas JSON。
             "connect-src 'self' wss://generativelanguage.googleapis.com https://cdn.jsdelivr.net",
-            // Turnstile widget iframe。
-            'frame-src https://challenges.cloudflare.com',
+            // 'self'：mini-orch 嵌自己的 dashboard iframe（同源）；Turnstile widget iframe。
+            "frame-src 'self' https://challenges.cloudflare.com",
             // 防 clickjacking：只允許自家頁面 iframe 本站，擋外部嵌入。
             "frame-ancestors 'self'",
             "base-uri 'self'",
