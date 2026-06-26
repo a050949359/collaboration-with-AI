@@ -44,7 +44,8 @@ class AddContentSecurityPolicy
 
     private function policy(string $nonce, bool $allowEval = false): string
     {
-        $scriptSrc = "script-src 'self' 'nonce-{$nonce}' https://challenges.cloudflare.com";
+        // static.cloudflareinsights.com：CF Web Analytics 的 beacon script（rum 回報走同源 /cdn-cgi/rum，'self' 已涵蓋）。
+        $scriptSrc = "script-src 'self' 'nonce-{$nonce}' https://challenges.cloudflare.com https://static.cloudflareinsights.com";
 
         if ($allowEval) {
             $scriptSrc .= " 'unsafe-eval'";
