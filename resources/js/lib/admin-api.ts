@@ -125,6 +125,27 @@ export async function saveVoiceSettings(
     return parseJson<{ message: string }>(response);
 }
 
+// ── 工具設定（Gemini tools：Google Search / Google Maps）──────
+
+export type ToolsSettings = { search_model: string; map_model: string };
+
+/** 局部更新：只送 tools 區（後端 sometimes 驗證，其餘保留）。 */
+export async function saveToolsSettings(
+    tools: ToolsSettings,
+): Promise<{ message: string }> {
+    const response = await fetch(api.admin.settings(), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tools }),
+    });
+
+    return parseJson<{ message: string }>(response);
+}
+
 /** 文轉語音：回傳 WAV blob（可選 target 先翻再念）。 */
 export async function ttsSynthesize(
     text: string,

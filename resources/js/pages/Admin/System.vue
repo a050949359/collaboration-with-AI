@@ -8,6 +8,7 @@ import {
     mintLiveToken,
     saveAdminSettings,
     saveLlmSettings,
+    saveToolsSettings,
     saveVoiceSettings,
     sttTranscribe,
     testLlmConnection,
@@ -18,6 +19,7 @@ import type {
     ImageSettings,
     LlmSettings,
     LlmTestResult,
+    ToolsSettings,
     VoiceSettings,
 } from '@/lib/admin-api';
 import { api, routes } from '@/lib/routes';
@@ -121,8 +123,8 @@ function onProviderChange(useKey: string) {
     }
 }
 
-// ── AI 模型分頁:文字 / 圖片 / 語音 子 tab ──
-const llmSubTab = ref<'text' | 'image' | 'voice'>('text');
+// ── AI 模型分頁:文字 / 圖片 / 語音 / 工具 子 tab ──
+const llmSubTab = ref<'text' | 'image' | 'voice' | 'tools'>('text');
 
 // 圖片生成(key-based Gemini)的 runtime model：候選清單來自 env、目前值來自 admin_settings。
 const imageModelCatalog = computed<string[]>(
@@ -277,6 +279,52 @@ async function saveVoice() {
             e instanceof AdminApiError ? e.message : '儲存失敗，請稍後再試';
     } finally {
         voiceSaving.value = false;
+    }
+}
+
+// ── 工具設定（Gemini tools：Google Search / Google Maps）──────
+const searchModels = computed<string[]>(
+    () => (page.props.searchModels as string[]) ?? [],
+);
+const mapModels = computed<string[]>(
+    () => (page.props.mapModels as string[]) ?? [],
+);
+const toolsForm = ref<ToolsSettings>({
+    search_model:
+        (page.props.toolsSettings as ToolsSettings | undefined)?.search_model ??
+        '',
+    map_model:
+        (page.props.toolsSettings as ToolsSettings | undefined)?.map_model ??
+        '',
+});
+const searchModelOptions = computed(() =>
+    withCurrent(searchModels.value, toolsForm.value.search_model),
+);
+const mapModelOptions = computed(() =>
+    withCurrent(mapModels.value, toolsForm.value.map_model),
+);
+
+const toolsSaving = ref(false);
+const toolsSaveMsg = ref('');
+const toolsSaveErr = ref('');
+
+async function saveTools() {
+    if (toolsSaving.value) {
+        return;
+    }
+
+    toolsSaving.value = true;
+    toolsSaveMsg.value = '';
+    toolsSaveErr.value = '';
+
+    try {
+        const r = await saveToolsSettings(toolsForm.value);
+        toolsSaveMsg.value = r.message || '工具設定已更新';
+    } catch (e: unknown) {
+        toolsSaveErr.value =
+            e instanceof AdminApiError ? e.message : '儲存失敗，請稍後再試';
+    } finally {
+        toolsSaving.value = false;
     }
 }
 
@@ -952,6 +1000,7 @@ onUnmounted(() => {
                                         { key: 'text', label: '文字' },
                                         { key: 'image', label: '圖片' },
                                         { key: 'voice', label: '語音' },
+                                        { key: 'tools', label: '工具' },
                                     ] as const"
                                     :key="sub.key"
                                     type="button"
@@ -1126,7 +1175,7 @@ onUnmounted(() => {
                             </template>
 
                             <!-- 語音子 tab：TTS / STT / Live model + 內建測試 -->
-                            <template v-else>
+                            <template v-else-if="llmSubTab === 'voice'">
                                 <p
                                     class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
                                 >
@@ -1384,21 +1433,131 @@ onUnmounted(() => {
                                 </div>
                             </template>
 
+                            <!-- 工具子 tab：Gemini tools（Google Search / Google Maps）model -->
+                            <template v-else-if="llmSubTab === 'tools'">
+                                <p
+                                    class="binary-label text-[11px] font-bold tracking-widest text-[var(--binary-outline)] uppercase"
+                                >
+                                    &gt; 工具 model（Google Search / Google Maps
+                                    · grounding · key-based Gemini ·
+                                    儲存後即時生效）
+                                </p>
+                                <div
+                                    class="space-y-4 rounded-none border border-[var(--binary-outline-variant)] bg-[var(--binary-surface-high)] p-5 md:rounded-xl"
+                                >
+                                    <div class="grid gap-4 sm:grid-cols-2">
+                                        <div class="space-y-1.5">
+                                            <label
+                                                class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                                >Google Search model
+                                                <code class="text-[10px]"
+                                                    >google_search</code
+                                                ></label
+                                            >
+                                            <select
+                                                v-model="toolsForm.search_model"
+                                                class="binary-input"
+                                            >
+                                                <option value="">
+                                                    （用 env 預設
+                                                    GEMINI_SEARCH_MODEL）
+                                                </option>
+                                                <option
+                                                    v-for="m in searchModelOptions"
+                                                    :key="m"
+                                                    :value="m"
+                                                >
+                                                    {{ m }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label
+                                                class="binary-label block text-[11px] font-bold text-[var(--binary-outline)] uppercase"
+                                                >Google Maps model
+                                                <code class="text-[10px]"
+                                                    >google_maps</code
+                                                ></label
+                                            >
+                                            <select
+                                                v-model="toolsForm.map_model"
+                                                class="binary-input"
+                                            >
+                                                <option value="">
+                                                    （用 env 預設
+                                                    GEMINI_MAP_MODEL）
+                                                </option>
+                                                <option
+                                                    v-for="m in mapModelOptions"
+                                                    :key="m"
+                                                    :value="m"
+                                                >
+                                                    {{ m }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <p
+                                        class="text-[10px] text-[var(--binary-outline)]"
+                                    >
+                                        對外 API：POST /api/v1/ai/tools/search
+                                        用 Google Search model、/map 用 Google
+                                        Maps model；留空＝退回對應 env
+                                        預設。Google Maps 為 preview，免費 key
+                                        不回傳互動地圖 widget token。
+                                    </p>
+
+                                    <div
+                                        class="flex flex-wrap items-center justify-end gap-4"
+                                    >
+                                        <span
+                                            v-if="toolsSaveErr"
+                                            class="text-xs text-[var(--binary-tertiary)]"
+                                            >{{ toolsSaveErr }}</span
+                                        >
+                                        <span
+                                            v-if="toolsSaveMsg"
+                                            class="text-xs text-[var(--binary-primary)]"
+                                            >{{ toolsSaveMsg }}</span
+                                        >
+                                        <button
+                                            type="button"
+                                            class="binary-button"
+                                            :disabled="toolsSaving"
+                                            @click="saveTools"
+                                        >
+                                            {{
+                                                toolsSaving
+                                                    ? '儲存中...'
+                                                    : '儲存工具設定'
+                                            }}
+                                            <span aria-hidden="true">-></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+
                             <p
-                                v-if="llmSubTab !== 'voice' && llmSaveErr"
+                                v-if="
+                                    !['voice', 'tools'].includes(llmSubTab) &&
+                                    llmSaveErr
+                                "
                                 class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
                             >
                                 {{ llmSaveErr }}
                             </p>
                             <p
-                                v-if="llmSubTab !== 'voice' && llmSaveMsg"
+                                v-if="
+                                    !['voice', 'tools'].includes(llmSubTab) &&
+                                    llmSaveMsg
+                                "
                                 class="border border-[var(--binary-primary-container)]/20 bg-[var(--binary-primary-container)]/10 px-4 py-3 text-sm text-[var(--binary-primary)]"
                             >
                                 {{ llmSaveMsg }}
                             </p>
 
                             <div
-                                v-if="llmSubTab !== 'voice'"
+                                v-if="!['voice', 'tools'].includes(llmSubTab)"
                                 class="flex justify-end"
                             >
                                 <button

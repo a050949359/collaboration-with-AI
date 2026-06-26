@@ -103,6 +103,21 @@ return [
             explode(',', (string) env('GEMINI_TTS_VOICES', 'Kore,Puck,Zephyr,Charon,Fenrir,Leda,Aoede,Orus,Callirrhoe,Autonoe,Enceladus,Iapetus')),
         ))),
 
+        // Gemini tools（grounding 功能用 · generateContent + tools）。Google Search / Google Maps 各自獨立 model，
+        // 皆可被 admin_settings.tools.{search_model,map_model} 覆寫。Search 一般免費 key 即可；
+        // Map 為 preview，可能需付費方案／綁定 Maps key（故 model 與候選清單各自獨立）。
+        'search_model' => env('GEMINI_SEARCH_MODEL', 'gemini-2.5-flash'),
+        'map_model' => env('GEMINI_MAP_MODEL', 'gemini-2.5-flash'),
+        // System 頁 model 候選清單（逗號分隔 env，Search / Map 各一份）。
+        'search_models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GEMINI_SEARCH_MODELS', 'gemini-2.5-flash,gemini-2.5-pro')),
+        ))),
+        'map_models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GEMINI_MAP_MODELS', 'gemini-2.5-flash,gemini-2.5-pro')),
+        ))),
+
         // 語音轉文（STT · interactions API）。model 可被 admin_settings.stt.model 覆寫。
         // gemini-2.5-flash 實測穩定回 200；gemini-3.5-flash 目前常回 500「high demand」（容量不穩），列為次選。
         'stt_model' => env('GEMINI_STT_MODEL', 'gemini-2.5-flash'),
