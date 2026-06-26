@@ -61,8 +61,8 @@ class AddContentSecurityPolicy
             "img-src 'self' data: https://*.googleusercontent.com",
             // 同源 ws-lab/gacha 由 'self' 涵蓋；Gemini Live wss；地球儀的 world-atlas JSON。
             "connect-src 'self' wss://generativelanguage.googleapis.com https://cdn.jsdelivr.net",
-            // Turnstile widget iframe。
-            'frame-src https://challenges.cloudflare.com',
+            // 'self'：mini-orch 嵌自己的 dashboard iframe（同源）；Turnstile widget iframe。
+            "frame-src 'self' https://challenges.cloudflare.com",
             // 防 clickjacking：只允許自家頁面 iframe 本站，擋外部嵌入。
             "frame-ancestors 'self'",
             "base-uri 'self'",
