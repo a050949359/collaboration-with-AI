@@ -76,7 +76,7 @@ func cmdIndex(args []string) {
 	files, err := hashFiles(dir)
 	check(err)
 	if len(files) == 0 {
-		die("找不到任何 .go 檔：" + dir)
+		die("找不到任何來源檔（.go/.php/.ts/.vue/.js）：" + dir)
 	}
 
 	// 增量：所有 .go 檔雜湊與上次一致就跳過（第一版為整包判斷）

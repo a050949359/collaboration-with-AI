@@ -9,26 +9,19 @@ import (
 	"go/types"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
 
-// buildGraph 是 ingest 層：探索 root 底下所有 Go module，逐個抽取後合併成一張圖。
+// extractGo 是 Go extractor：探索 absRoot 底下所有 Go module，逐個抽取後合併。
 // 節點依 id 去重；邊直接累加（各 module 是獨立 package main，不會有跨 module 亂連的邊）。
-// 之後 PHP/TS extractor 只要各自產出同樣的 []Node/[]Edge 丟進來合併即可，這層不變。
-func buildGraph(root string) ([]Node, []Edge, error) {
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func extractGo(absRoot string) ([]Node, []Edge, error) {
 	mods, err := findGoModules(absRoot)
 	if err != nil {
 		return nil, nil, err
 	}
 	if len(mods) == 0 {
-		return nil, nil, fmt.Errorf("在 %s 底下找不到任何 Go module（需有 go.mod）", root)
+		return nil, nil, nil // 沒有 Go module 不是錯誤（可能是純 PHP/TS 專案）
 	}
 
 	var nodes []Node
@@ -49,7 +42,7 @@ func buildGraph(root string) ([]Node, []Edge, error) {
 			nodes = append(nodes, n)
 		}
 		edges = append(edges, me...)
-		fmt.Fprintf(os.Stderr, "  · %s：%d 節點、%d 邊\n", relOrSelf(absRoot, mod), len(mn), len(me))
+		fmt.Fprintf(os.Stderr, "  · [go] %s：%d 節點、%d 邊\n", relOrSelf(absRoot, mod), len(mn), len(me))
 	}
 	return nodes, edges, nil
 }
@@ -66,8 +59,7 @@ func findGoModules(absRoot string) ([]string, error) {
 			return err
 		}
 		if fi.IsDir() {
-			switch fi.Name() {
-			case "vendor", ".git", "node_modules":
+			if skipDirName(fi.Name()) {
 				return filepath.SkipDir
 			}
 			return nil
@@ -225,13 +217,12 @@ func hashFiles(root string) (map[string]string, error) {
 			return err
 		}
 		if fi.IsDir() {
-			switch fi.Name() {
-			case "vendor", ".git", "node_modules":
+			if skipDirName(fi.Name()) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if !strings.HasSuffix(path, ".go") {
+		if !isSourceFile(path) {
 			return nil
 		}
 		b, err := os.ReadFile(path)
