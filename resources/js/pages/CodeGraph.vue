@@ -311,12 +311,15 @@ async function render3d() {
 
     fg3d.width(el.clientWidth).height(el.clientHeight);
     fg3d.graphData({ nodes: N, links: L });
+    fg3d.resumeAnimation(); // 從 2D 切回時恢復 render loop（新建實例時為 no-op）
 }
 
 function renderActive() {
     if (mode3d.value) {
         render3d();
     } else {
+        // 切到 2D：暫停 3D 的 Three.js render loop，省 GPU/CPU（實例仍留著、切回即恢復）
+        fg3d?.pauseAnimation();
         render();
     }
 }

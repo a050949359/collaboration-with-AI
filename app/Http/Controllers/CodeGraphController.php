@@ -34,10 +34,13 @@ class CodeGraphController extends Controller
                 'lang' => $this->langOf($n->file),
             ]);
 
-        // 邊用 source/target（對齊 d3 慣例）；只留兩端都在節點集內的邊
+        // 邊用 source/target（對齊 d3 慣例）；只留兩端都在節點集內的邊。
+        // 依 (from,to,type) 去重：同一對多個呼叫點只留一條（取最高 confidence），
+        // 減少 payload 與 D3 佈局的冗餘連線；per-call-site 明細仍保留在 edges 表。
         $ids = $nodes->pluck('id')->flip();
         $edges = $conn->table('edges')
-            ->select('from_id', 'to_id', 'type', 'confidence')
+            ->select('from_id', 'to_id', 'type', DB::raw('MAX(confidence) as confidence'))
+            ->groupBy('from_id', 'to_id', 'type')
             ->get()
             ->filter(fn ($e) => $ids->has($e->from_id) && $ids->has($e->to_id))
             ->map(fn ($e) => [
