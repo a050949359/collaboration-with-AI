@@ -13,6 +13,10 @@
  *   - 尚未做：$obj->m() 需型別推斷、繼承/trait 帶入的方法解析（會被內部過濾丟棄，低估非誤報）
  */
 
+// PHP 的 warning/notice/deprecation 一律導去 stderr（Go 端已接到父 stderr），
+// 否則會混進 stdout 污染 JSON、害 Go 的 json.Unmarshal 失敗、整包 PHP 抽取掛掉。
+ini_set('display_errors', 'stderr');
+
 $root = $argv[1] ?? getcwd();
 $autoload = $argv[2] ?? '';
 if ($autoload === '' || ! is_file($autoload)) {
