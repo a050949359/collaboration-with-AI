@@ -129,6 +129,39 @@ function resolveCallee(expr) {
   return null;
 }
 
+// api.X.Y(...) → 後端 URL（依 routes.ts 單一來源）。回正規化路徑（${..} → *），否則 null。
+function apiUrl(call) {
+  const callee = call.expression;
+  if (!ts.isPropertyAccessExpression(callee)) return null;
+  // 找根識別字，須為從 lib/routes 匯入的 `api`
+  let root = callee;
+  while (ts.isPropertyAccessExpression(root.expression)) root = root.expression;
+  const rootId = root.expression;
+  if (!ts.isIdentifier(rootId) || rootId.text !== 'api') return null;
+  let rsym = checker.getSymbolAtLocation(rootId);
+  // api 是從 lib/routes 匯入的 → 解 alias 才能追到真正宣告檔
+  if (rsym && rsym.flags & ts.SymbolFlags.Alias) rsym = checker.getAliasedSymbol(rsym);
+  const rdecl = rsym && rsym.getDeclarations() && rsym.getDeclarations()[0];
+  if (!rdecl || !rdecl.getSourceFile().fileName.includes('lib/routes')) return null;
+  // 解析葉節點屬性 → 其箭頭函式 → 回傳的 URL 字面值
+  const lsym = checker.getSymbolAtLocation(callee.name);
+  const pd = lsym && lsym.getDeclarations() && lsym.getDeclarations()[0];
+  if (!pd || !ts.isPropertyAssignment(pd)) return null;
+  return urlFromArrow(pd.initializer);
+}
+
+function urlFromArrow(init) {
+  if (!init || !ts.isArrowFunction(init)) return null;
+  const b = init.body;
+  if (ts.isStringLiteral(b) || ts.isNoSubstitutionTemplateLiteral(b)) return b.text;
+  if (ts.isTemplateExpression(b)) {
+    let s = b.head.text;
+    for (const span of b.templateSpans) s += '*' + span.literal.text; // ${..} → *
+    return s;
+  }
+  return null;
+}
+
 for (const fileName of tsFiles) {
   const sf = program.getSourceFile(fileName);
   if (!sf) continue;
@@ -172,19 +205,19 @@ for (const fileName of tsFiles) {
 
     // ---- 呼叫 ----
     if (ts.isCallExpression(node) && funcStack.length) {
-      let target = node.expression;
-      if (ts.isPropertyAccessExpression(target)) target = target.name;
-      const to = resolveCallee(target);
-      if (to) {
-        const from = funcStack[funcStack.length - 1];
-        edges.push({
-          from,
-          to,
-          type: 'CALLS',
-          confidence: 1.0,
-          file: relOf(fileName),
-          line: lineOf(fileName, node, sf),
-        });
+      const from = funcStack[funcStack.length - 1];
+      const line = lineOf(fileName, node, sf);
+      const url = apiUrl(node); // api.X.Y() → 後端 URL（HTTP_CALLS）
+      if (url) {
+        // 目標先記成 HTTPURL 佔位，Go linker 再對應到 route 節點
+        edges.push({ from, to: 'HTTPURL ' + url, type: 'HTTP_CALLS', confidence: 0.9, file: relOf(fileName), line });
+      } else {
+        let target = node.expression;
+        if (ts.isPropertyAccessExpression(target)) target = target.name;
+        const to = resolveCallee(target);
+        if (to) {
+          edges.push({ from, to, type: 'CALLS', confidence: 1.0, file: relOf(fileName), line });
+        }
       }
     }
 
@@ -195,8 +228,10 @@ for (const fileName of tsFiles) {
   visit(sf);
 }
 
-// 只留指向內部已定義節點的邊
-const edgesOut = edges.filter((e) => nodes.has(e.to));
+// 只留指向內部已定義節點的邊；HTTP_CALLS 的 HTTPURL 佔位保留給 Go linker 解析
+const edgesOut = edges.filter(
+  (e) => e.type === 'HTTP_CALLS' || nodes.has(e.to),
+);
 
 process.stdout.write(
   JSON.stringify({ nodes: Array.from(nodes.values()), edges: edgesOut })

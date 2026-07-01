@@ -41,8 +41,9 @@ const LANG_COLOR: Record<string, string> = {
     ts: '#22d3ee',
     other: '#9ca3af',
 };
-// route 節點與 HANDLES 邊的特別色（route→handler，與呼叫邊區分）
+// route 節點與 HANDLES 邊的特別色（route→handler）；HTTP_CALLS（前端→route）另一色
 const ROUTE_COLOR = '#f0a020';
+const HTTP_COLOR = '#58a6ff';
 
 const svgRef = ref<SVGSVGElement | null>(null);
 const loading = ref(true);
@@ -186,10 +187,12 @@ function render() {
         .attr('stroke', (d) =>
             d.type === 'HANDLES'
                 ? ROUTE_COLOR
-                : 'var(--binary-outline-variant)',
+                : d.type === 'HTTP_CALLS'
+                  ? HTTP_COLOR
+                  : 'var(--binary-outline-variant)',
         )
-        .attr('stroke-width', (d) => (d.type === 'HANDLES' ? 1.5 : 1))
-        .attr('stroke-dasharray', (d) => (d.type === 'HANDLES' ? '4,3' : null));
+        .attr('stroke-width', (d) => (d.type === 'CALLS' ? 1 : 1.5))
+        .attr('stroke-dasharray', (d) => (d.type === 'CALLS' ? null : '4,3'));
 
     const node = g
         .append('g')

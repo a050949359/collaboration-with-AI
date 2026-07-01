@@ -22,8 +22,10 @@ if ($autoload === '' || ! is_file($autoload)) {
 require $autoload;
 
 use PhpParser\Node;
+use PhpParser\Node\Expr\ArrowFunction;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ClassConstFetch;
+use PhpParser\Node\Expr\Closure;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
@@ -56,6 +58,8 @@ final class Extractor extends NodeVisitorAbstract
     private array $funcStack = [];
     private array $propTypeStack = []; // 每層 class：屬性名→型別 FQN（含建構子提升）
     private array $paramTypeStack = []; // 每層 func/method：變數名→型別 FQN
+    private array $prefixStack = []; // route group 前綴堆疊（Route::prefix(..)->group）
+    private array $groupPrefix = []; // closure object id → 該 group 的前綴
     private string $file = '';
 
     public function setFile(string $f): void { $this->file = $f; }
@@ -133,6 +137,50 @@ final class Extractor extends NodeVisitorAbstract
         if ($node instanceof StaticCall) {
             $this->detectRoute($node);
         }
+
+        // ---- route group 前綴：Route::prefix(..)->group(closure) ----
+        if ($node instanceof MethodCall && $node->name instanceof Identifier
+            && $node->name->toString() === 'group') {
+            $this->registerGroup($node);
+        }
+        if (($node instanceof Closure || $node instanceof ArrowFunction)
+            && isset($this->groupPrefix[spl_object_id($node)])) {
+            $this->prefixStack[] = $this->groupPrefix[spl_object_id($node)];
+        }
+    }
+
+    // 記錄 ->group(closure) 的前綴：從鏈上找 prefix('x')，關聯到那個 closure。
+    private function registerGroup(MethodCall $node): void
+    {
+        $closure = null;
+        foreach ($node->getArgs() as $a) {
+            if ($a->value instanceof Closure || $a->value instanceof ArrowFunction) {
+                $closure = $a->value;
+                break;
+            }
+        }
+        if ($closure === null) {
+            return;
+        }
+        $this->groupPrefix[spl_object_id($closure)] = $this->chainPrefix($node->var);
+    }
+
+    // 沿方法鏈往回找所有 prefix('x')，串成前綴（Route::middleware(..)->prefix('v1')->group 也涵蓋）。
+    private function chainPrefix(?Node $cur): string
+    {
+        $parts = [];
+        while ($cur !== null) {
+            if (($cur instanceof MethodCall || $cur instanceof StaticCall)
+                && $cur->name instanceof Identifier && $cur->name->toString() === 'prefix') {
+                $args = $cur->getArgs();
+                if (isset($args[0]) && $args[0]->value instanceof String_) {
+                    array_unshift($parts, trim($args[0]->value->value, '/'));
+                }
+            }
+            $cur = $cur instanceof MethodCall ? $cur->var : null; // StaticCall(Route::) 為根，停
+        }
+
+        return implode('/', array_filter($parts, fn ($p) => $p !== ''));
     }
 
     // 認出 Route::verb('uri', [Ctrl::class,'m']) / Route::verb('uri', Ctrl::class)
@@ -158,6 +206,16 @@ final class Extractor extends NodeVisitorAbstract
             return;
         }
         $uri = $args[0]->value->value;
+        // 套用 group 前綴（Route::prefix(..)->group）
+        $prefix = implode('/', array_filter($this->prefixStack, fn ($p) => $p !== ''));
+        if ($prefix !== '') {
+            $uri = '/'.$prefix.$uri;
+        }
+        // api.php 的路由由框架加 /api 前綴（檔案內看不到）；補上以對得上前端 fetch URL
+        if (str_ends_with($this->file, 'routes/api.php')) {
+            $uri = '/api'.$uri;
+        }
+        $uri = preg_replace('#/+#', '/', $uri); // 收斂重複斜線
         $routeId = strtoupper($verb).' '.$uri;
         $this->addNode($routeId, 'route', $uri, $node->getStartLine());
         $this->edge($routeId, $handler, 1.0, $node->getStartLine(), 'HANDLES');
@@ -270,6 +328,9 @@ final class Extractor extends NodeVisitorAbstract
         } elseif ($node instanceof ClassMethod || $node instanceof Function_) {
             array_pop($this->funcStack);
             array_pop($this->paramTypeStack);
+        } elseif (($node instanceof Closure || $node instanceof ArrowFunction)
+            && isset($this->groupPrefix[spl_object_id($node)])) {
+            array_pop($this->prefixStack);
         }
     }
 }

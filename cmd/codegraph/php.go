@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -64,7 +65,41 @@ func buildGraph(root string) ([]Node, []Edge, error) {
 		seen[n.ID] = true
 		nodes = append(nodes, n)
 	}
-	return nodes, allEdges, nil
+
+	// 跨界 linker：把 TS 端的 HTTP_CALLS 佔位（HTTPURL <path>）對應到後端 route 節點
+	edges := resolveHTTPCalls(nodes, allEdges)
+	return nodes, edges, nil
+}
+
+// resolveHTTPCalls：前端 api.*() 產生的 HTTPURL 佔位邊，用正規化 URL 對應到 route 節點
+// （route uri 的 {param} 與前端的 ${..}→* 都化為 *）。配不上的丟棄。
+func resolveHTTPCalls(nodes []Node, edges []Edge) []Edge {
+	re := regexp.MustCompile(`\{[^}]*\}`)
+	routes := map[string][]string{}
+	for _, n := range nodes {
+		if n.Type == "route" {
+			routes[re.ReplaceAllString(n.Name, "*")] = append(routes[re.ReplaceAllString(n.Name, "*")], n.ID)
+		}
+	}
+	out := make([]Edge, 0, len(edges))
+	matched, dropped := 0, 0
+	for _, e := range edges {
+		if e.Type == "HTTP_CALLS" && strings.HasPrefix(e.To, "HTTPURL ") {
+			ids := routes[strings.TrimPrefix(e.To, "HTTPURL ")]
+			if len(ids) == 0 {
+				dropped++
+				continue
+			}
+			for _, id := range ids {
+				out = append(out, Edge{From: e.From, To: id, Type: "HTTP_CALLS", Confidence: e.Confidence, File: e.File, Line: e.Line})
+				matched++
+			}
+			continue
+		}
+		out = append(out, e)
+	}
+	fmt.Fprintf(os.Stderr, "  · [link] HTTP_CALLS 配對 %d、未配對丟棄 %d\n", matched, dropped)
+	return out
 }
 
 // extractPHP：找 root 下的 .php，exec 內嵌的 extract.php（需 php + nikic/php-parser），解析 JSON。
