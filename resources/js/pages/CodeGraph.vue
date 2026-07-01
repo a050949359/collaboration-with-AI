@@ -424,11 +424,14 @@ onUnmounted(() => {
                     v-else-if="!indexed"
                     class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-xs text-[var(--binary-outline)]"
                 >
-                    <p>尚未建立索引。</p>
+                    <p>尚未建立索引：需要 codegraph.db</p>
                     <code
                         class="rounded bg-[var(--binary-surface-high)] px-2 py-1 text-[var(--binary-text-muted)]"
-                        >go run ./cmd/codegraph index .</code
+                        >database/codegraph.db</code
                     >
+                    <p class="text-[var(--binary-outline)]">
+                        在開發機執行 codegraph index 產生後放到此路徑
+                    </p>
                 </div>
                 <svg v-show="!mode3d" ref="svgRef" class="h-full w-full" />
                 <div

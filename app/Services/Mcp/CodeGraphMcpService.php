@@ -37,7 +37,9 @@ class CodeGraphMcpService implements McpToolServiceInterface
     public function call(string $name, array $args, mixed $id): JsonResponse
     {
         if (! $this->indexed()) {
-            return $this->text($id, 'codegraph 尚未建立索引(找不到 SQLite db)。請先在 repo 根目錄執行 `cmd/codegraph/codegraph index .`。', true);
+            $path = config('database.connections.codegraph.database');
+
+            return $this->text($id, "codegraph 尚未建立索引:需要 {$path}(此處不存在)。請在開發機執行 codegraph index 產生後放到該路徑(或 scp 過來);主機端不編譯/不 index。", true);
         }
 
         try {
