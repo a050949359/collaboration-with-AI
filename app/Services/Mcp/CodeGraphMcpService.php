@@ -160,7 +160,10 @@ class CodeGraphMcpService implements McpToolServiceInterface
         }
 
         $target = array_fill_keys($toIds, true);
-        $maxDepth = (int) ($args['depth'] ?? 0); // <=0 = 不限深度
+        // 未指定或 <=0 → 寬鬆預設 25（realistic 呼叫鏈遠淺於此，含跨語言）：
+        // 防病態大圖無路徑時遍歷整個連通分量；要更深可顯式帶大 depth。
+        $depthArg = (int) ($args['depth'] ?? 0);
+        $maxDepth = $depthArg > 0 ? $depthArg : 25;
         $parent = [];                            // to_id => from_id（重建路徑用）
         $visited = array_fill_keys($fromIds, true);
         $frontier = $fromIds;
@@ -371,7 +374,7 @@ class CodeGraphMcpService implements McpToolServiceInterface
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'from' => ['type' => 'string', 'description' => '起點符號(呼叫端)'],
                     'to' => ['type' => 'string', 'description' => '終點符號(被呼叫端)'],
-                    'depth' => ['type' => 'integer', 'description' => '最大追溯深度,省略或 <=0 = 不限'],
+                    'depth' => ['type' => 'integer', 'description' => '最大追溯深度,省略或 <=0 = 預設 25(足夠含跨語言深鏈,防病態大圖)'],
                 ], 'required' => ['from', 'to']],
             ],
             [

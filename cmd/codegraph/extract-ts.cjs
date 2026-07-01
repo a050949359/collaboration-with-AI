@@ -99,7 +99,7 @@ function addNode(id, type, name, fileName, node, sf) {
 // 由宣告節點導出穩定 id（定義端與呼叫解析端共用同一規則 → 對得起來）
 function declId(decl) {
   const sf = decl.getSourceFile();
-  if (!internal.has(sf.fileName)) return null; // 外部（node_modules / lib.d.ts）
+  if (!sf || !internal.has(sf.fileName)) return null; // 外部（node_modules / lib.d.ts）或合成節點（無 SourceFile）
   const rel = relOf(sf.fileName);
   if (ts.isFunctionDeclaration(decl) && decl.name) return `${rel}:${decl.name.text}`;
   if (ts.isMethodDeclaration(decl) && decl.name) {

@@ -114,11 +114,22 @@ async function fetchGraph() {
 
     try {
         const res = await fetch(api.codegraph.graph());
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
         const data = await res.json();
         indexed.value = data.indexed;
         allNodes.value = data.nodes ?? [];
         allEdges.value = data.edges ?? [];
         stats.value = data.stats?.lang ?? {};
+    } catch (e) {
+        // 網路斷線 / 500 / 非 JSON：降級為空圖，不讓 loading 卡住或 console 爆未捕捉錯誤
+        console.error('CodeGraph 載入失敗：', e);
+        indexed.value = false;
+        allNodes.value = [];
+        allEdges.value = [];
     } finally {
         loading.value = false;
     }
@@ -347,6 +358,11 @@ onMounted(() => {
 });
 onUnmounted(() => {
     simulation?.stop();
+
+    // 清掉 debounce timer：250ms 內離頁時避免它在已卸載的 refs 上觸發 renderActive
+    if (rerenderTimer) {
+        clearTimeout(rerenderTimer);
+    }
 
     if (fg3d?._destructor) {
         fg3d._destructor();

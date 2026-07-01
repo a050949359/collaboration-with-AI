@@ -20,49 +20,57 @@ class CodeGraphController extends Controller
             return response()->json(['indexed' => false, 'nodes' => [], 'edges' => [], 'stats' => new \stdClass]);
         }
 
-        $conn = DB::connection('codegraph');
+        // db 是外部產出的 artifact（CI index 後下載）；檔在但損毀/缺表/截斷時
+        // 查詢會拋例外——降級回 indexed:false 而非讓公開端點 500。
+        try {
+            $conn = DB::connection('codegraph');
 
-        $nodes = $conn->table('nodes')
-            ->select('id', 'type', 'name', 'file', 'line')
-            ->get()
-            ->map(fn ($n) => [
-                'id' => $n->id,
-                'type' => $n->type,
-                'name' => $n->name,
-                'file' => $n->file,
-                'line' => $n->line,
-                'lang' => $this->langOf($n->file),
+            $nodes = $conn->table('nodes')
+                ->select('id', 'type', 'name', 'file', 'line')
+                ->get()
+                ->map(fn ($n) => [
+                    'id' => $n->id,
+                    'type' => $n->type,
+                    'name' => $n->name,
+                    'file' => $n->file,
+                    'line' => $n->line,
+                    'lang' => $this->langOf($n->file),
+                ]);
+
+            // 邊用 source/target（對齊 d3 慣例）；只留兩端都在節點集內的邊。
+            // 依 (from,to,type) 去重：同一對多個呼叫點只留一條（取最高 confidence），
+            // 減少 payload 與 D3 佈局的冗餘連線；per-call-site 明細仍保留在 edges 表。
+            $ids = $nodes->pluck('id')->flip();
+            $edges = $conn->table('edges')
+                ->select('from_id', 'to_id', 'type', DB::raw('MAX(confidence) as confidence'))
+                ->groupBy('from_id', 'to_id', 'type')
+                ->get()
+                ->filter(fn ($e) => $ids->has($e->from_id) && $ids->has($e->to_id))
+                ->map(fn ($e) => [
+                    'source' => $e->from_id,
+                    'target' => $e->to_id,
+                    'type' => $e->type,
+                    'confidence' => (float) $e->confidence,
+                ])
+                ->values();
+
+            $stats = [
+                'nodes' => $nodes->count(),
+                'edges' => $edges->count(),
+                'lang' => $nodes->groupBy('lang')->map->count(),
+            ];
+
+            return response()->json([
+                'indexed' => true,
+                'nodes' => $nodes->values(),
+                'edges' => $edges,
+                'stats' => $stats,
             ]);
+        } catch (\Throwable $e) {
+            report($e);
 
-        // 邊用 source/target（對齊 d3 慣例）；只留兩端都在節點集內的邊。
-        // 依 (from,to,type) 去重：同一對多個呼叫點只留一條（取最高 confidence），
-        // 減少 payload 與 D3 佈局的冗餘連線；per-call-site 明細仍保留在 edges 表。
-        $ids = $nodes->pluck('id')->flip();
-        $edges = $conn->table('edges')
-            ->select('from_id', 'to_id', 'type', DB::raw('MAX(confidence) as confidence'))
-            ->groupBy('from_id', 'to_id', 'type')
-            ->get()
-            ->filter(fn ($e) => $ids->has($e->from_id) && $ids->has($e->to_id))
-            ->map(fn ($e) => [
-                'source' => $e->from_id,
-                'target' => $e->to_id,
-                'type' => $e->type,
-                'confidence' => (float) $e->confidence,
-            ])
-            ->values();
-
-        $stats = [
-            'nodes' => $nodes->count(),
-            'edges' => $edges->count(),
-            'lang' => $nodes->groupBy('lang')->map->count(),
-        ];
-
-        return response()->json([
-            'indexed' => true,
-            'nodes' => $nodes->values(),
-            'edges' => $edges,
-            'stats' => $stats,
-        ]);
+            return response()->json(['indexed' => false, 'nodes' => [], 'edges' => [], 'stats' => new \stdClass]);
+        }
     }
 
     private function langOf(string $file): string
