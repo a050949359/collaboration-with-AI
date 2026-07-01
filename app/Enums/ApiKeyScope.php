@@ -8,6 +8,7 @@ enum ApiKeyScope: string
     case MemoryMcp = 'memory:mcp';
     case AgydMcp = 'agyd:mcp';
     case RagMcp = 'rag:mcp';
+    case CodegraphMcp = 'codegraph:mcp';
 
     public function adminOnly(): bool
     {
