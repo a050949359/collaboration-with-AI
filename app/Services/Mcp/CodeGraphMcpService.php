@@ -21,7 +21,7 @@ use Throwable;
  */
 class CodeGraphMcpService implements McpToolServiceInterface
 {
-    private const TOOLS = ['codegraph_search', 'codegraph_callers', 'codegraph_callees', 'codegraph_impact', 'codegraph_get_node'];
+    private const TOOLS = ['codegraph_search', 'codegraph_callers', 'codegraph_callees', 'codegraph_impact', 'codegraph_trace_call_path', 'codegraph_get_node'];
 
     /** 跨語言連通的邊型別;callers/callees/impact 只沿這些邊走。 */
     private const CALL_EDGES = ['CALLS', 'HANDLES', 'HTTP_CALLS'];
@@ -46,6 +46,7 @@ class CodeGraphMcpService implements McpToolServiceInterface
                 'codegraph_callers' => $this->callers($id, $args),
                 'codegraph_callees' => $this->callees($id, $args),
                 'codegraph_impact' => $this->impact($id, $args),
+                'codegraph_trace_call_path' => $this->traceCallPath($id, $args),
                 'codegraph_get_node' => $this->getNode($id, $args),
                 default => $this->text($id, "Unknown tool: $name", true),
             };
@@ -143,6 +144,81 @@ class CodeGraphMcpService implements McpToolServiceInterface
         ]);
     }
 
+    /** 追一條呼叫路徑:from 是怎麼(經幾層)呼叫到 to 的。正向 BFS 找最短路。 */
+    private function traceCallPath(mixed $id, array $args): JsonResponse
+    {
+        $fromIds = $this->resolve((string) ($args['from'] ?? ''));
+        $toIds = $this->resolve((string) ($args['to'] ?? ''));
+        if ($fromIds === [] || $toIds === []) {
+            return $this->json($id, [
+                'from' => $args['from'] ?? '', 'to' => $args['to'] ?? '',
+                'from_matched' => $fromIds, 'to_matched' => $toIds,
+                'found' => false, 'path' => [],
+            ]);
+        }
+
+        $target = array_fill_keys($toIds, true);
+        $maxDepth = (int) ($args['depth'] ?? 0); // <=0 = 不限深度
+        $parent = [];                            // to_id => from_id（重建路徑用）
+        $visited = array_fill_keys($fromIds, true);
+        $frontier = $fromIds;
+        $hit = null;
+
+        // 起點本身就是終點的情況(from 與 to 命中同一節點)
+        foreach ($fromIds as $fid) {
+            if (isset($target[$fid])) {
+                $hit = $fid;
+                break;
+            }
+        }
+
+        for ($depth = 1; $hit === null && $frontier !== []; $depth++) {
+            if ($maxDepth > 0 && $depth > $maxDepth) {
+                break;
+            }
+            $next = [];
+            foreach ($this->forwardEdges($frontier) as $e) {
+                if (isset($visited[$e->to_id])) {
+                    continue;
+                }
+                $visited[$e->to_id] = true;
+                $parent[$e->to_id] = $e->from_id;
+                if (isset($target[$e->to_id])) {
+                    $hit = $e->to_id;
+                    break 2;
+                }
+                $next[] = $e->to_id;
+            }
+            $frontier = $next;
+        }
+
+        if ($hit === null) {
+            return $this->json($id, [
+                'from' => $args['from'] ?? '', 'to' => $args['to'] ?? '',
+                'from_matched' => $fromIds, 'to_matched' => $toIds,
+                'found' => false, 'path' => [],
+            ]);
+        }
+
+        // 從命中的終點沿 parent 回溯到起點,再反轉成 from→to 順序
+        $chain = [$hit];
+        while (isset($parent[$chain[0]])) {
+            array_unshift($chain, $parent[$chain[0]]);
+        }
+
+        // 依 $chain 順序 hydrate 節點細節(whereIn 不保序,故先建 id→node map)
+        $byId = $this->conn()->table('nodes')->whereIn('id', $chain)->get()->keyBy('id');
+        $path = array_map(fn ($nid) => $this->shapeOne($byId[$nid]), $chain);
+
+        return $this->json($id, [
+            'from' => $args['from'] ?? '', 'to' => $args['to'] ?? '',
+            'from_matched' => $fromIds, 'to_matched' => $toIds,
+            'found' => true,
+            'hops' => \count($chain) - 1,
+            'path' => $path,
+        ]);
+    }
+
     /** 取單一節點細節(by id / qualified / name)。 */
     private function getNode(mixed $id, array $args): JsonResponse
     {
@@ -185,6 +261,21 @@ class CodeGraphMcpService implements McpToolServiceInterface
             ->distinct()
             ->orderBy('n.qualified')
             ->select('n.id', 'n.type', 'n.name', 'n.qualified', 'n.file', 'n.line')
+            ->get();
+    }
+
+    /**
+     * 正向邊(from_id IN $ids):回 {from_id,to_id} 對,供 trace_call_path 重建路徑。
+     *
+     * @param  array<int, string>  $ids
+     * @return Collection<int, object>
+     */
+    private function forwardEdges(array $ids)
+    {
+        return $this->conn()->table('edges')
+            ->whereIn('type', self::CALL_EDGES)
+            ->whereIn('from_id', $ids)
+            ->select('from_id', 'to_id')
             ->get();
     }
 
@@ -268,6 +359,15 @@ class CodeGraphMcpService implements McpToolServiceInterface
                     'symbol' => $symbol,
                     'depth' => ['type' => 'integer', 'description' => '最大追溯深度,省略或 <=0 = 不限'],
                 ], 'required' => ['symbol']],
+            ],
+            [
+                'name' => 'codegraph_trace_call_path',
+                'description' => 'from 是怎麼(經哪幾層)呼叫到 to 的:正向 BFS 找最短呼叫路徑,回沿途節點序列(from→to)與 hops。found=false 表示在深度內無路徑(可能真無關,或被 depth 限制)。用來理解「這兩個東西是怎麼牽連的」。',
+                'inputSchema' => ['type' => 'object', 'properties' => [
+                    'from' => ['type' => 'string', 'description' => '起點符號(呼叫端)'],
+                    'to' => ['type' => 'string', 'description' => '終點符號(被呼叫端)'],
+                    'depth' => ['type' => 'integer', 'description' => '最大追溯深度,省略或 <=0 = 不限'],
+                ], 'required' => ['from', 'to']],
             ],
             [
                 'name' => 'codegraph_get_node',
