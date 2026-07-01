@@ -35,6 +35,7 @@ Route::prefix('app')->group(function () {
     Route::inertia('/gacha', 'Gacha')->name('gacha');
     Route::inertia('/task', 'Task')->name('task');
     Route::inertia('/memory', 'MemoryGraph')->name('memory');
+    Route::inertia('/codegraph', 'CodeGraph')->name('codegraph');
     Route::inertia('/computer-vision', 'ComputerVision')->name('computer-vision');
     Route::inertia('/gesture', 'GestureRecognition')->name('gesture');
     Route::inertia('/rag', 'Rag')->name('rag')->middleware('auth:sanctum');

@@ -49,6 +49,23 @@ jobs:
       # - name: Tests
       #   run: ./vendor/bin/phpunit
 
+      # codegraph 結構圖：在 GitHub-hosted runner 上 index（記憶體夠，VPS 不 index），
+      # 產出 database/codegraph.db 以 artifact 傳給 deploy job 落到 VPS。
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Index codegraph
+        run: bash scripts/codegraph-index.sh
+
+      - name: Upload codegraph db
+        uses: actions/upload-artifact@v4
+        with:
+          name: codegraph-db
+          path: database/codegraph.db
+          retention-days: 1
+
   deploy:
     needs: ci
     runs-on: self-hosted
@@ -57,7 +74,15 @@ jobs:
       - name: Deploy (local shell)
         run: |
           cd /var/www/collaboration-with-AI
-          git pull 
+          git pull
           composer install --no-interaction --prefer-dist --optimize-autoloader
           npm i
           npm run build
+
+      # ci 在 GitHub-hosted 產好的結構圖 db，下載落到 VPS（VPS 不 index）。
+      # db 為 gitignored，git pull 不會覆蓋；此步為最終、確保是最新快照。
+      - name: Fetch codegraph db
+        uses: actions/download-artifact@v4
+        with:
+          name: codegraph-db
+          path: /var/www/collaboration-with-AI/database

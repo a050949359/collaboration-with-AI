@@ -31,6 +31,7 @@ use App\Http\Controllers\Aviation\CityPreviewController;
 use App\Http\Controllers\Aviation\CitySearchController;
 use App\Http\Controllers\Aviation\CountryController;
 use App\Http\Controllers\Aviation\NearbyAirportController;
+use App\Http\Controllers\CodeGraphController;
 use App\Http\Controllers\Gacha\GachaCardController;
 use App\Http\Controllers\Gacha\GachaDeckController;
 use App\Http\Controllers\Gacha\GachaRoomController;
@@ -40,6 +41,7 @@ use App\Http\Controllers\Line\LineAboutTokenController;
 use App\Http\Controllers\Line\LineArticleController;
 use App\Http\Controllers\Line\LineFriendController;
 use App\Http\Controllers\Mcp\AgydMcpController;
+use App\Http\Controllers\Mcp\CodeGraphMcpController;
 use App\Http\Controllers\Mcp\MemoryMcpController;
 use App\Http\Controllers\Mcp\RagMcpController;
 use App\Http\Controllers\Mcp\TaskMcpController;
@@ -328,9 +330,13 @@ Route::post('/mcp/task', [TaskMcpController::class, 'handle'])->middleware(['aut
 Route::post('/mcp/memory', [MemoryMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:memory:mcp']);
 Route::post('/mcp/agyd', [AgydMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:agyd:mcp']);
 Route::post('/mcp/rag', [RagMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:rag:mcp']);
+Route::post('/mcp/codegraph', [CodeGraphMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:codegraph:mcp']);
 
 // agyd daemon callback（接收 ZIP，以 AGYD_SECRET 驗證）
 Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->middleware('throttle:10,1');
+
+// codegraph 靜態程式碼結構圖（公開，唯讀；repo 本身即 public）
+Route::get('/codegraph/graph', [CodeGraphController::class, 'index']);
 
 // Memory graph REST（公開）
 Route::get('/memory/graph', [MemoryGraphController::class, 'index']);
