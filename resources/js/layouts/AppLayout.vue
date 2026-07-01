@@ -189,7 +189,8 @@ const defaultNavLinks = computed((): NavLink[] => {
             icon: 'tools',
             active:
                 path.startsWith(routes.task()) ||
-                path.startsWith(routes.memory()),
+                path.startsWith(routes.memory()) ||
+                path.startsWith(routes.codegraph()),
             children: [
                 {
                     label: 'Task',
@@ -202,6 +203,12 @@ const defaultNavLinks = computed((): NavLink[] => {
                     href: routes.memory(),
                     icon: 'memory',
                     active: path.startsWith(routes.memory()),
+                },
+                {
+                    label: 'CodeGraph',
+                    href: routes.codegraph(),
+                    icon: 'codegraph',
+                    active: path.startsWith(routes.codegraph()),
                 },
             ],
         },

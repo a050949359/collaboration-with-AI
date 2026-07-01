@@ -81,6 +81,7 @@ export default defineConfigWithVueTs(
             'node_modules',
             'tmp',
             'public',
+            'cmd',
             'bootstrap/ssr',
             'tailwind.config.js',
             'vite.config.ts',

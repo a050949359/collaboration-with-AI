@@ -695,6 +695,37 @@ defineProps<{ name: string; size?: number }>();
             />
         </template>
 
+        <!-- codegraph (call graph — DAG of nodes) -->
+        <template v-else-if="name === 'codegraph'">
+            <line
+                class="stroke-default"
+                x1="16"
+                y1="8"
+                x2="9"
+                y2="20"
+                stroke-width="1.2"
+            />
+            <line
+                class="stroke-default"
+                x1="16"
+                y1="8"
+                x2="23"
+                y2="20"
+                stroke-width="1.2"
+            />
+            <line
+                class="stroke-default"
+                x1="9"
+                y1="20"
+                x2="23"
+                y2="20"
+                stroke-width="1.2"
+            />
+            <circle class="fill-default" cx="16" cy="7" r="2.6" />
+            <circle class="fill-default" cx="8.5" cy="21" r="2.6" />
+            <circle class="fill-default" cx="23.5" cy="21" r="2.6" />
+        </template>
+
         <!-- edge (edge detection — framed contour) -->
         <template v-else-if="name === 'edge'">
             <rect

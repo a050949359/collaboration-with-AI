@@ -9,6 +9,7 @@ use App\Http\Controllers\Agyd\AgydReceiveController;
 use App\Http\Controllers\Ai\ToolsController;
 use App\Http\Controllers\Ai\VoiceController;
 use App\Http\Controllers\ApiKey\UserApiKeyController;
+use App\Http\Controllers\CodeGraphController;
 use App\Http\Controllers\Article\ArticleBrowseController;
 use App\Http\Controllers\Article\ArticleCommentController;
 use App\Http\Controllers\Article\ArticleEditController;
@@ -331,6 +332,9 @@ Route::post('/mcp/rag', [RagMcpController::class, 'handle'])->middleware(['auth.
 
 // agyd daemon callback（接收 ZIP，以 AGYD_SECRET 驗證）
 Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->middleware('throttle:10,1');
+
+// codegraph 靜態程式碼結構圖（公開，唯讀；repo 本身即 public）
+Route::get('/codegraph/graph', [CodeGraphController::class, 'index']);
 
 // Memory graph REST（公開）
 Route::get('/memory/graph', [MemoryGraphController::class, 'index']);

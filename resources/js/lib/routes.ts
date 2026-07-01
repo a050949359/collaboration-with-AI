@@ -63,6 +63,9 @@ export const routes = {
     // Memory Graph
     memory: () => `${WEB_PREFIX}/memory`,
 
+    // CodeGraph（靜態程式碼結構圖，唯讀視覺化）
+    codegraph: () => `${WEB_PREFIX}/codegraph`,
+
     // Computer Vision Lab（CV 下拉群組）
     computerVision: () => `${WEB_PREFIX}/computer-vision`, // 邊緣偵測
     gesture: () => `${WEB_PREFIX}/gesture`, // 手勢辨識
@@ -100,6 +103,9 @@ export const api = {
     },
 
     mcp: () => '/api/mcp',
+    codegraph: {
+        graph: () => '/api/codegraph/graph',
+    },
     memory: {
         graph: () => '/api/memory/graph',
         geo: () => '/api/memory/observations/geo',

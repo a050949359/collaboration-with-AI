@@ -6,13 +6,17 @@
 > 靈感來自 `DeusData/codebase-memory-mcp`，但砍掉外殼（158 語言 / UI / Cypher engine / C 單 binary），
 > 只留核心，並改用**各語言原生 parser**（非 Tree-Sitter）以拿到型別、做精準 call resolution。
 
-## 現況（第一刀）
+## 現況
 
-- **只支援 Go**、純 CLI、獨立 SQLite、尚未接 MCP。
-- Go extractor 用 `go/packages`+`go/types`：method call 靠 receiver 型別精準解析，**confidence 1.0、零猜測**。
+- **支援 Go / PHP / TS-Vue 三語言**、純 CLI + 內建視覺化 serve、獨立 SQLite、尚未接 MCP。
+- **每語言用原生 parser**（非 Tree-Sitter，為拿型別做精準 call resolution）：
+  - **Go**：`go/packages`+`go/types`，method call 靠 receiver 型別，confidence 1.0、零猜測（in-process）。
+  - **PHP**：`nikic/php-parser` + NameResolver，抽 class/method/function（FQN）；邊涵蓋 new/靜態/函式/`$this->method`，並用建構子提升+typed 屬性/參數解析 `$this->service->method()`（Laravel DI）。
+  - **TS/Vue**：TS Compiler API（TypeChecker 精準跨檔解析）+ `@vue/compiler-sfc` 抽 `<script setup>`。
 - 只記專案內部的 CALLS 邊（stdlib/第三方/builtin 自動濾除）。
-- **多 module 一次掃**：`index` 給的目錄若含多個 go.mod（如 `cmd/`），會自動探索全部、合併成一張圖（節點 id 依 module 限定、檔案路徑相對掃描根，不撞名）。
-- **分層設計**：extractor（產 `[]Node/[]Edge`）與 ingest（`buildGraph` 合併多來源）拆開 → 之後 PHP/TS extractor 只要吐同樣的東西丟進 `buildGraph` 即可，這層不改。
+- **多來源一次掃**：`index` 給的目錄自動探索所有 Go module + 掃 .php + .ts/.vue，合併成一張圖；節點 id 依語言各自命名不撞名。
+- **分層設計**：各語言 extractor（產 `[]Node/[]Edge`）與 ingest（`buildGraph` 合併）拆開，下游儲存/查詢語言無關。
+- **只讀原始碼副檔名**（.go/.php/.ts/.vue/.js），排除 node_modules/vendor/public/storage 等；只存結構（名稱+關係），不碰 .env/金鑰、不存原始碼內容、零網路。
 
 ## 用法
 

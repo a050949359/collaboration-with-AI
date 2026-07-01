@@ -44,6 +44,14 @@ return [
             'transaction_mode' => 'DEFERRED',
         ],
 
+        // codegraph 的靜態程式碼結構圖（由 cmd/codegraph index 產生，唯讀）
+        'codegraph' => [
+            'driver' => 'sqlite',
+            'database' => env('CODEGRAPH_DB', database_path('codegraph.db')),
+            'prefix' => '',
+            'foreign_key_constraints' => false,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
