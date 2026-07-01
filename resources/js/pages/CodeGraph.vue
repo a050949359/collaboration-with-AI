@@ -46,8 +46,10 @@ const ROUTE_COLOR = '#f0a020';
 const HTTP_COLOR = '#58a6ff';
 
 const svgRef = ref<SVGSVGElement | null>(null);
+const graph3dRef = ref<HTMLDivElement | null>(null);
 const loading = ref(true);
 const indexed = ref(true);
+const mode3d = ref(false);
 const allNodes = ref<CNode[]>([]);
 const allEdges = ref<CEdge[]>([]);
 const stats = ref<Record<string, number>>({});
@@ -62,6 +64,11 @@ const langOn = ref<Record<string, boolean>>({
 const query = ref('');
 
 let simulation: Simulation<CNode, undefined> | null = null;
+// 3D：動態載入 3d-force-graph（含 Three.js），只有切到 3D 才載，2D 使用者零負擔
+
+let ForceGraph3D: any = null;
+
+let fg3d: any = null;
 
 const nodeById = computed(() => {
     const m = new Map<string, CNode>();
@@ -116,7 +123,7 @@ async function fetchGraph() {
         loading.value = false;
     }
 
-    render();
+    renderActive();
 }
 
 function filteredGraph(): { nodes: CNode[]; edges: CEdge[] } {
@@ -258,21 +265,77 @@ function render() {
         });
 }
 
+// 3D：用 3d-force-graph（Three.js）渲染同一份資料，node/edge 配色與 2D 一致。
+async function render3d() {
+    const el = graph3dRef.value;
+
+    if (!el) {
+        return;
+    }
+
+    if (!ForceGraph3D) {
+        ForceGraph3D = (await import('3d-force-graph')).default;
+    }
+
+    const { nodes, edges } = filteredGraph();
+    const N = nodes.map((n) => ({ ...n }));
+    const byId = new Set(N.map((n) => n.id));
+    const L = edges
+        .filter((e) => byId.has(e.source) && byId.has(e.target))
+        .map((e) => ({ source: e.source, target: e.target, type: e.type }));
+
+    if (!fg3d) {
+        fg3d = ForceGraph3D()(el)
+            .backgroundColor('rgba(0,0,0,0)')
+            .nodeLabel((n: CNode) => `${n.id}\n${n.file}:${n.line}`)
+            .nodeColor((n: CNode) =>
+                n.type === 'route'
+                    ? ROUTE_COLOR
+                    : (LANG_COLOR[n.lang] ?? LANG_COLOR.other),
+            )
+            .linkColor((l: { type: string }) =>
+                l.type === 'HANDLES'
+                    ? ROUTE_COLOR
+                    : l.type === 'HTTP_CALLS'
+                      ? HTTP_COLOR
+                      : '#5b6270',
+            )
+            .linkOpacity(0.5)
+            .linkDirectionalArrowLength(2.5)
+            .linkDirectionalArrowRelPos(1)
+            .onNodeClick((n: CNode) => {
+                selected.value =
+                    allNodes.value.find((x) => x.id === n.id) ?? null;
+            });
+    }
+
+    fg3d.width(el.clientWidth).height(el.clientHeight);
+    fg3d.graphData({ nodes: N, links: L });
+}
+
+function renderActive() {
+    if (mode3d.value) {
+        render3d();
+    } else {
+        render();
+    }
+}
+
 let rerenderTimer: ReturnType<typeof setTimeout> | null = null;
 watch(
-    [langOn, query],
+    [langOn, query, mode3d],
     () => {
         if (rerenderTimer) {
             clearTimeout(rerenderTimer);
         }
 
-        rerenderTimer = setTimeout(render, 250);
+        rerenderTimer = setTimeout(renderActive, 250);
     },
     { deep: true },
 );
 
 function onResize() {
-    render();
+    renderActive();
 }
 
 onMounted(() => {
@@ -281,6 +344,11 @@ onMounted(() => {
 });
 onUnmounted(() => {
     simulation?.stop();
+
+    if (fg3d?._destructor) {
+        fg3d._destructor();
+    }
+
     window.removeEventListener('resize', onResize);
 });
 </script>
@@ -330,6 +398,13 @@ onUnmounted(() => {
                     >顯示 {{ shownCount }} 節點</span
                 >
                 <button
+                    class="rounded-lg border border-[var(--binary-outline-variant)] px-2.5 py-1 text-xs text-[var(--binary-text-muted)] transition-colors hover:text-[var(--binary-text)]"
+                    :title="mode3d ? '切回 2D' : '切到 3D'"
+                    @click="mode3d = !mode3d"
+                >
+                    {{ mode3d ? '3D' : '2D' }}
+                </button>
+                <button
                     class="text-xs text-[var(--binary-outline)] transition-colors hover:text-[var(--binary-text)]"
                     @click="fetchGraph"
                 >
@@ -355,7 +430,12 @@ onUnmounted(() => {
                         >go run ./cmd/codegraph index .</code
                     >
                 </div>
-                <svg ref="svgRef" class="h-full w-full" />
+                <svg v-show="!mode3d" ref="svgRef" class="h-full w-full" />
+                <div
+                    v-show="mode3d"
+                    ref="graph3dRef"
+                    class="h-full w-full"
+                ></div>
 
                 <!-- 節點詳情 -->
                 <div
