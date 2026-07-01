@@ -274,10 +274,13 @@ class CodeGraphMcpService implements McpToolServiceInterface
      */
     private function forwardEdges(array $ids)
     {
-        return $this->conn()->table('edges')
-            ->whereIn('type', self::CALL_EDGES)
-            ->whereIn('from_id', $ids)
-            ->select('from_id', 'to_id')
+        // JOIN nodes on to_id：只走「終點節點存在」的邊(同 neighborRows/impact 語義)，
+        // 根除懸空邊(外部產的 db 可能有,FK 已關閉)——確保 $chain 每個 id 都取得到節點。
+        return $this->conn()->table('edges as e')
+            ->join('nodes as n', 'n.id', '=', 'e.to_id')
+            ->whereIn('e.type', self::CALL_EDGES)
+            ->whereIn('e.from_id', $ids)
+            ->select('e.from_id', 'e.to_id')
             ->get();
     }
 

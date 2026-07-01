@@ -16,14 +16,15 @@ class CodeGraphMcpController extends Controller
         $body = $request->json()->all();
         $method = $body['method'] ?? '';
         $id = $body['id'] ?? null;
-        $params = $body['params'] ?? [];
+        // params/arguments 型別防護：client 亂送非陣列時回乾淨的 JSON-RPC 錯誤而非 500
+        $params = \is_array($body['params'] ?? null) ? $body['params'] : [];
 
         return match ($method) {
             'initialize' => $this->initialize($id),
             'tools/list' => $this->ok($id, ['tools' => $this->service->toolSchemas()]),
             'tools/call' => $this->service->call(
-                $params['name'] ?? '',
-                $params['arguments'] ?? [],
+                \is_string($params['name'] ?? null) ? $params['name'] : '',
+                \is_array($params['arguments'] ?? null) ? $params['arguments'] : [],
                 $id,
             ),
             default => $this->error($id, -32601, 'Method not found'),
