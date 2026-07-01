@@ -166,7 +166,7 @@ func (s *Store) neighborNodes(ids []string, matchCol, pickCol string) ([]Node, e
 	ph, args := placeholders(ids)
 	q := `SELECT DISTINCT n.id,n.type,n.name,n.qualified,n.file,n.line
 		FROM edges e JOIN nodes n ON n.id = e.` + pickCol + `
-		WHERE e.type='CALLS' AND e.` + matchCol + ` IN (` + ph + `)
+		WHERE e.type IN ('CALLS','HANDLES') AND e.` + matchCol + ` IN (` + ph + `)
 		ORDER BY n.qualified`
 	return s.queryNodes(q, args...)
 }

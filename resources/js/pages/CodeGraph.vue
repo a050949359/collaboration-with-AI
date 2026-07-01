@@ -30,6 +30,7 @@ interface CNode {
 interface CEdge {
     source: string;
     target: string;
+    type: string;
     confidence: number;
 }
 
@@ -40,6 +41,8 @@ const LANG_COLOR: Record<string, string> = {
     ts: '#22d3ee',
     other: '#9ca3af',
 };
+// route 節點與 HANDLES 邊的特別色（route→handler，與呼叫邊區分）
+const ROUTE_COLOR = '#f0a020';
 
 const svgRef = ref<SVGSVGElement | null>(null);
 const loading = ref(true);
@@ -153,7 +156,7 @@ function render() {
     const byId = new Map(N.map((n) => [n.id, n]));
     const L = edges
         .filter((e) => byId.has(e.source) && byId.has(e.target))
-        .map((e) => ({ source: e.source, target: e.target }));
+        .map((e) => ({ source: e.source, target: e.target, type: e.type }));
 
     const deg = new Map<string, number>();
 
@@ -176,12 +179,17 @@ function render() {
 
     const link = g
         .append('g')
-        .attr('stroke', 'var(--binary-outline-variant)')
-        .attr('stroke-opacity', 0.5)
+        .attr('stroke-opacity', 0.6)
         .selectAll('line')
         .data(L)
         .join('line')
-        .attr('stroke-width', 1);
+        .attr('stroke', (d) =>
+            d.type === 'HANDLES'
+                ? ROUTE_COLOR
+                : 'var(--binary-outline-variant)',
+        )
+        .attr('stroke-width', (d) => (d.type === 'HANDLES' ? 1.5 : 1))
+        .attr('stroke-dasharray', (d) => (d.type === 'HANDLES' ? '4,3' : null));
 
     const node = g
         .append('g')
@@ -189,7 +197,11 @@ function render() {
         .data(N)
         .join('circle')
         .attr('r', (d) => 3 + Math.min(9, deg.get(d.id) ?? 0))
-        .attr('fill', (d) => LANG_COLOR[d.lang] ?? LANG_COLOR.other)
+        .attr('fill', (d) =>
+            d.type === 'route'
+                ? ROUTE_COLOR
+                : (LANG_COLOR[d.lang] ?? LANG_COLOR.other),
+        )
         .attr('stroke', 'var(--binary-background)')
         .attr('stroke-width', 1)
         .style('cursor', 'pointer')

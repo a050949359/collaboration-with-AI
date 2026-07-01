@@ -22,6 +22,8 @@ if ($autoload === '' || ! is_file($autoload)) {
 require $autoload;
 
 use PhpParser\Node;
+use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
@@ -31,6 +33,7 @@ use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\NullableType;
+use PhpParser\Node\Scalar\String_;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Enum_;
@@ -68,13 +71,13 @@ final class Extractor extends NodeVisitorAbstract
         ];
     }
 
-    private function edge(string $from, string $to, float $conf, int $line): void
+    private function edge(string $from, string $to, float $conf, int $line, string $type = 'CALLS'): void
     {
         if ($from === '' || $to === '') {
             return;
         }
         $this->edges[] = [
-            'from' => $from, 'to' => $to, 'type' => 'CALLS',
+            'from' => $from, 'to' => $to, 'type' => $type,
             'confidence' => $conf, 'file' => $this->file, 'line' => $line,
         ];
     }
@@ -125,6 +128,70 @@ final class Extractor extends NodeVisitorAbstract
                 $this->resolveMethodCall($from, $node);
             }
         }
+
+        // ---- 路由定義（HANDLES；不限在函式內，routes/*.php 為頂層）----
+        if ($node instanceof StaticCall) {
+            $this->detectRoute($node);
+        }
+    }
+
+    // 認出 Route::verb('uri', [Ctrl::class,'m']) / Route::verb('uri', Ctrl::class)
+    // → route 節點 + HANDLES 邊（route → 該 controller method）。
+    private function detectRoute(StaticCall $node): void
+    {
+        if (! ($node->class instanceof Name) || ! ($node->name instanceof Identifier)) {
+            return;
+        }
+        if ($this->classShort($node->class->toString()) !== 'Route') {
+            return;
+        }
+        $verb = strtolower($node->name->toString());
+        if (! in_array($verb, ['get', 'post', 'put', 'patch', 'delete', 'options', 'any'], true)) {
+            return;
+        }
+        $args = $node->getArgs();
+        if (count($args) < 2 || ! ($args[0]->value instanceof String_)) {
+            return;
+        }
+        $handler = $this->extractHandler($args[1]->value);
+        if ($handler === null) {
+            return;
+        }
+        $uri = $args[0]->value->value;
+        $routeId = strtoupper($verb).' '.$uri;
+        $this->addNode($routeId, 'route', $uri, $node->getStartLine());
+        $this->edge($routeId, $handler, 1.0, $node->getStartLine(), 'HANDLES');
+    }
+
+    // 從路由的 handler 參數取 controller method FQN。
+    private function extractHandler(Node $v): ?string
+    {
+        // [Ctrl::class, 'method']
+        if ($v instanceof Array_) {
+            $items = $v->items;
+            if (count($items) >= 2 && $items[0] !== null && $items[1] !== null) {
+                $c = $items[0]->value;
+                $m = $items[1]->value;
+                if ($c instanceof ClassConstFetch && $c->class instanceof Name && $m instanceof String_) {
+                    return $c->class->toString().'::'.$m->value;
+                }
+            }
+
+            return null;
+        }
+        // Ctrl::class（單一 invokable controller）
+        if ($v instanceof ClassConstFetch && $v->class instanceof Name) {
+            return $v->class->toString().'::__invoke';
+        }
+
+        return null;
+    }
+
+    private function classShort(string $fqn): string
+    {
+        $p = strrpos($fqn, '\\');
+
+        return $p === false ? $fqn : substr($fqn, $p + 1);
     }
 
     // $obj->method() 解析：$this→本類別；typed 參數/區域變數；$this->typedProp。

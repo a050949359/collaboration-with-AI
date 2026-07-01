@@ -37,12 +37,13 @@ class CodeGraphController extends Controller
         // 邊用 source/target（對齊 d3 慣例）；只留兩端都在節點集內的邊
         $ids = $nodes->pluck('id')->flip();
         $edges = $conn->table('edges')
-            ->select('from_id', 'to_id', 'confidence')
+            ->select('from_id', 'to_id', 'type', 'confidence')
             ->get()
             ->filter(fn ($e) => $ids->has($e->from_id) && $ids->has($e->to_id))
             ->map(fn ($e) => [
                 'source' => $e->from_id,
                 'target' => $e->to_id,
+                'type' => $e->type,
                 'confidence' => (float) $e->confidence,
             ])
             ->values();
