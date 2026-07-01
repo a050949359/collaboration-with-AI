@@ -1,0 +1,1015 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 2
+			path: app/Http/Controllers/Article/ArticleBrowseController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Article\\ArticleComment\:\:\$can_edit\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Article/ArticleCommentController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\Article\\ArticleComment\)\: void given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Article/ArticleCommentController.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Http/Controllers/Article/ArticleEditController.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Http/Controllers/Article/ArticleGenerationController.php
+
+		-
+			message: '#^Cannot call method diffInHours\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Auth/ChangePasswordController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Laravel\\Sanctum\\PersonalAccessToken\>\:\:map\(\) expects callable\(Laravel\\Sanctum\\PersonalAccessToken, int\)\: array\{id\: int, name\: string, device_id\: string\|null, last_used_at\: Carbon\\CarbonImmutable\|null, expires_at\: Carbon\\CarbonImmutable\|null, created_at\: Carbon\\CarbonImmutable\|null, is_current\: bool\}, Closure\(App\\Models\\PersonalAccessToken\)\: array\{id\: int, name\: string, device_id\: string\|null, last_used_at\: Carbon\\CarbonImmutable\|null, expires_at\: Carbon\\CarbonImmutable\|null, created_at\: Carbon\\CarbonImmutable\|null, is_current\: bool\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/DeviceController.php
+
+		-
+			message: '#^Cannot call method isFuture\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Auth/LoginController.php
+
+		-
+			message: '#^Call to an undefined method Laravel\\Socialite\\Contracts\\Provider\:\:stateless\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Auth/SocialAccountController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Auth\\SocialAccountController\:\:denyRegistration\(\) never returns Illuminate\\Http\\JsonResponse so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Http/Controllers/Auth/SocialAccountController.php
+
+		-
+			message: '#^Parameter \#2 \$message of method App\\Http\\Controllers\\Aviation\\CitySearchController\:\:success\(\) expects string, int given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Aviation/CitySearchController.php
+
+		-
+			message: '#^Relation ''cards'' is not found in App\\Models\\Gacha\\GachaDeck model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Gacha/GachaDeckController.php
+
+		-
+			message: '#^Relation ''deck'' is not found in App\\Models\\Gacha\\GachaRoom model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Gacha/GachaRoomController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>cards" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Gacha/GachaRoomController.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Http/Controllers/HomeController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Line/LineFriendController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Line/LineFriendController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:socialAccounts\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Line/LineFriendController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of static method Illuminate\\Database\\Connection\:\:transaction\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Line/LineFriendController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Mcp/MemoryGraphController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Mcp/MemoryGraphController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Mcp\\McpObservation\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Mcp/MemoryGraphController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Mcp\\McpRelation\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Mcp/MemoryGraphController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:exceptDefaultType\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Mcp/MemoryObservationController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$chunk_index\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Rag/DocumentController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Rag/DocumentController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$context\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Rag/DocumentController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$embedding\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Rag/DocumentController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$user_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Rag/DocumentController.php
+
+		-
+			message: '#^Offset ''loaded'' does not exist on array\{document\: App\\Models\\Rag\\Document, chunks\: int, diff\: array\{unchanged\: int, added\: int, removed\: int\}\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Http/Controllers/Rag/DocumentController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Rag/DocumentController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rag\\KnowledgeBase\:\:\$committed_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Rag/KnowledgeBaseController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rag\\KnowledgeBase\:\:\$draft_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Rag/KnowledgeBaseController.php
+
+		-
+			message: '#^Anonymous function should return array\{id\: int, name\: string, collection\: string, embedding_model\: string, dimensions\: int, vector_count\: int, documents\: Illuminate\\Support\\Collection\<int, array\{drive_file_id\: string, name\: string, status\: ''committed''\|''dirty''\|''draft'', chunk_count\: int\<0, max\>, committed_chunk_count\: int\|null, committed_at\: string\|null\}\>\} but returns array\{id\: int, name\: string, collection\: string, embedding_model\: string, dimensions\: int, vector_count\: int, documents\: Illuminate\\Support\\Collection\<int, array\{drive_file_id\: string, name\: string, status\: ''committed''\|''dirty''\|''draft'', chunk_count\: int\<0, max\>, committed_chunk_count\: int\|null, committed_at\: string\|null\}\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Rag/KnowledgeBaseController.php
+
+		-
+			message: '#^Offset ''collections'' on array\{collection\: string, count\: int, collections\: array\<string, int\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Rag/KnowledgeBaseController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Rag\\KnowledgeBase\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Rag/KnowledgeBaseController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Rag\\KnowledgeBase\>\:\:map\(\) expects callable\(App\\Models\\Rag\\KnowledgeBase, int\)\: array\{id\: int, name\: string, collection\: string, embedding_model\: string, dimensions\: int, vector_count\: int, documents\: Illuminate\\Support\\Collection\<int, array\{drive_file_id\: string, name\: string, status\: ''committed''\|''dirty''\|''draft'', chunk_count\: int\<0, max\>, committed_chunk_count\: int\|null, committed_at\: string\|null\}\>\}, Closure\(App\\Models\\Rag\\KnowledgeBase\)\: array\{id\: int, name\: string, collection\: string, embedding_model\: string, dimensions\: int, vector_count\: int, documents\: Illuminate\\Support\\Collection\<int, array\{drive_file_id\: string, name\: string, status\: ''committed''\|''dirty''\|''draft'', chunk_count\: int\<0, max\>, committed_chunk_count\: int\|null, committed_at\: string\|null\}\>\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Rag/KnowledgeBaseController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{drive_file_id\: string, name\: string, status\: ''committed''\|''dirty''\|''draft'', chunk_count\: int\<0, max\>, committed_chunk_count\: int\|null, committed_at\: string\|null\}, Closure\(App\\Models\\Rag\\Document\)\: array\{drive_file_id\: string, name\: string, status\: ''committed''\|''dirty''\|''draft'', chunk_count\: int\<0, max\>, committed_chunk_count\: int\|null, committed_at\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Rag/KnowledgeBaseController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Rag/KnowledgeBaseController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Story/CharacterController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/Story/StorySessionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$turn_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Story/StorySessionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Story/StorySessionController.php
+
+		-
+			message: '#^Property App\\Http\\Controllers\\Story\\StorySessionController\:\:\$story is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Http/Controllers/Story/StorySessionController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>turn_order" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Story/StorySessionController.php
+
+		-
+			message: '#^Relation ''passenger'' is not found in App\\Models\\Travel\\Booking model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Travel/BookingController.php
+
+		-
+			message: '#^Relation ''payments'' is not found in App\\Models\\Travel\\Booking model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Travel/BookingController.php
+
+		-
+			message: '#^Relation ''tour'' is not found in App\\Models\\Travel\\Booking model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Travel/BookingController.php
+
+		-
+			message: '#^Relation ''bookings'' is not found in App\\Models\\Travel\\Passenger model\.$#'
+			identifier: larastan.relationExistence
+			count: 6
+			path: app/Http/Controllers/Travel/PassengerController.php
+
+		-
+			message: '#^Relation ''companionOf'' is not found in App\\Models\\Travel\\Passenger model\.$#'
+			identifier: larastan.relationExistence
+			count: 4
+			path: app/Http/Controllers/Travel/PassengerController.php
+
+		-
+			message: '#^Parameter \#1 \$user of static method Illuminate\\Support\\Facades\\Auth\:\:setUser\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Middleware/AuthenticateWithApiKey.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirlineResource\:\:\$alias_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirlineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirlineResource\:\:\$alias_zh_tw\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirlineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirlineResource\:\:\$iata\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirlineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirlineResource\:\:\$icao\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirlineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirlineResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirlineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirlineResource\:\:\$name_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirlineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirlineResource\:\:\$name_zh_tw\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirlineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirlineResource\:\:\$nationality\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirlineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$continent\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$distance_km\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$elevation_ft\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$gps_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$home_link\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$iata_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$icao_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$ident\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$iso_country\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$iso_region\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$latitude_deg\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$longitude_deg\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$municipality\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$scheduled_service\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\AirportResource\:\:\$wikipedia_link\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/AirportResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CityResource\:\:\$name_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CityResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CityResource\:\:\$name_zh_tw\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CityResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CityResource\:\:\$population\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CityResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CountryResource\:\:\$alpha3\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CountryResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CountryResource\:\:\$capital\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CountryResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CountryResource\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CountryResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CountryResource\:\:\$is_recognized\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CountryResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CountryResource\:\:\$name_en\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CountryResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CountryResource\:\:\$name_zh_tw\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CountryResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CountryResource\:\:\$numeric\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CountryResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Aviation\\CountryResource\:\:\$phone_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Aviation/CountryResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Jobs/DispatchLineArticleReadyWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/DispatchLineArticleReadyWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$socialAccounts\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/DispatchLineArticleReadyWebhookJob.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Jobs/GenerateArticleContentJob.php
+
+		-
+			message: '#^Call to function is_string\(\) with \*NEVER\* will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Jobs/GenerateArticleContentJob.php
+
+		-
+			message: '#^Method App\\Jobs\\GenerateArticleContentJob\:\:sanitizeForStorage\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Jobs/GenerateArticleContentJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Jobs/Story/StoryOrchestrateJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$turn_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/Story/StoryOrchestrateJob.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>turn_order" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Jobs/Story/StoryOrchestrateJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/Story/StorySegmentJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$holder\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/Story/StorySegmentJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Jobs/Story/StorySegmentJob.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Jobs/Story/StorySegmentJob.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Story\\StorySegment\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Jobs/Story/StorySegmentJob.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Jobs/Story/StorySegmentJob.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Jobs/Story/StorySegmentJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/Story/StoryStateJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$holder\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/Story/StoryStateJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Jobs/Story/StoryStateJob.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Jobs/Story/StoryStateJob.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Jobs/Story/StoryStateJob.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Jobs/Story/StoryStateJob.php
+
+		-
+			message: '#^Type App\\Models\\ApiKey\\UserApiKey in generic type Illuminate\\Database\\Eloquent\\Factories\\HasFactory\<App\\Models\\ApiKey\\UserApiKey\> in PHPDoc tag @use is not subtype of template type TFactory of Illuminate\\Database\\Eloquent\\Factories\\Factory of trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory\.$#'
+			identifier: generics.notSubtype
+			count: 1
+			path: app/Models/ApiKey/UserApiKey.php
+
+		-
+			message: '#^Class App\\Models\\Article\\User not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Models/Article/Article.php
+
+		-
+			message: '#^Parameter \#1 \$related of method Illuminate\\Database\\Eloquent\\Model\:\:belongsTo\(\) expects class\-string\<Illuminate\\Database\\Eloquent\\Model\>, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/Article/Article.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:ofType\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Models/Mcp/McpObservation.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Story/StorySession.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$turn_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Story/StorySession.php
+
+		-
+			message: '#^Method App\\Models\\Story\\StorySession\:\:advanceToNextCharacter\(\) should return App\\Models\\Story\\StoryCharacter\|null but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/Story/StorySession.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>turn_order" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Story/StorySession.php
+
+		-
+			message: '#^Class App\\Models\\Airports\\Airports not found\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Models/Travel/BookingFlight.php
+
+		-
+			message: '#^Parameter \#1 \$related of method Illuminate\\Database\\Eloquent\\Model\:\:belongsTo\(\) expects class\-string\<Illuminate\\Database\\Eloquent\\Model\>, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Models/Travel/BookingFlight.php
+
+		-
+			message: '#^Class App\\Models\\Airports\\Airports not found\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Models/Travel/TourFlight.php
+
+		-
+			message: '#^Parameter \#1 \$related of method Illuminate\\Database\\Eloquent\\Model\:\:belongsTo\(\) expects class\-string\<Illuminate\\Database\\Eloquent\\Model\>, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Models/Travel/TourFlight.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$password_hash\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Models/User.php
+
+		-
+			message: '#^Called ''skip'' on Laravel collection, but could have been retrieved as a query\.$#'
+			identifier: larastan.noUnnecessaryCollectionCall
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Parameter \#1 \$callback of static method Illuminate\\Auth\\Notifications\\VerifyEmail\:\:toMailUsing\(\) expects Closure\(mixed, string\)\: \(Illuminate\\Contracts\\Mail\\Mailable\|Illuminate\\Notifications\\Messages\\MailMessage\), Closure\(mixed, mixed\)\: App\\Notifications\\VerifyEmailNotification given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Right side of && is always true\.$#'
+			identifier: booleanAnd.rightAlwaysTrue
+			count: 1
+			path: app/Services/AI/Gemini/GeminiChatService.php
+
+		-
+			message: '#^Right side of && is always true\.$#'
+			identifier: booleanAnd.rightAlwaysTrue
+			count: 1
+			path: app/Services/AI/Nvidia/NvidiaChatService.php
+
+		-
+			message: '#^Right side of && is always true\.$#'
+			identifier: booleanAnd.rightAlwaysTrue
+			count: 1
+			path: app/Services/AI/Ollama/OllamaChatService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Travel\\Tour\:\:\$bookings\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Export/TourExportService.php
+
+		-
+			message: '#^Relation ''bookings'' is not found in App\\Models\\Travel\\Tour model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/Export/TourExportService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Mcp/MemoryMcpService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Mcp/MemoryMcpService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/Mcp/MemoryMcpService.php
+
+		-
+			message: '#^Anonymous function should return array\{id\: int, name\: string, type\: string, observations\: Illuminate\\Support\\Collection\<int, array\{id\: mixed, content\: mixed\}\>\} but returns array\{id\: int, name\: string, type\: string, observations\: Illuminate\\Support\\Collection\<int, array\{id\: int, content\: mixed\}\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Mcp/MemoryMcpService.php
+
+		-
+			message: '#^Anonymous function should return array\{name\: string, type\: string, observations\: Illuminate\\Support\\Collection\<int, array\{id\: mixed, content\: mixed\}\>\} but returns array\{name\: string, type\: string, observations\: Illuminate\\Support\\Collection\<int, array\{id\: int, content\: mixed\}\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Mcp/MemoryMcpService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:ofDefaultType\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Mcp/MemoryMcpService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Mcp\\McpRelation\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/Mcp/MemoryMcpService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Services/Mcp/MemoryMcpService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$chunk_index\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Mcp/RagMcpService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Mcp/RagMcpService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$context\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Mcp/RagMcpService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$embedding\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Mcp/RagMcpService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Mcp/RagMcpService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Mcp/RagMcpService.php
+
+		-
+			message: '#^Offset ''loaded'' does not exist on array\{document\: App\\Models\\Rag\\Document, chunks\: int, diff\: array\{unchanged\: int, added\: int, removed\: int\}\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Services/Mcp/RagMcpService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/Mcp/RagMcpService.php
+
+		-
+			message: '#^Parameter \#1 \$document of method App\\Services\\Mcp\\RagMcpService\:\:chunkList\(\) expects App\\Models\\Rag\\Document, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Mcp/RagMcpService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$expires_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Rag/LockService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$lock_token\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/Rag/LockService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$locked_by\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/Rag/LockService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isExpired\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Services/Rag/LockService.php
+
+		-
+			message: '#^Method App\\Services\\Rag\\LockService\:\:verify\(\) should return App\\Models\\Rag\\Lock but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Rag/LockService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$chunk_index\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$context\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$embedded_at\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$embedding\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$modified_time\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:collectionName\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:embeddableText\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Offset ''content'' on array\{id\: string, content\: string, similarity\: float, metadata\: array\<string, string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Offset ''metadata'' on array\{id\: string, content\: string, similarity\: float, metadata\: array\<string, string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{chunk_index\: int, content\: string, similarity\: float\}, Closure\(App\\Models\\Rag\\Chunk\)\: array\{chunk_index\: int, content\: string, similarity\: float\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{content\: string, context\: string\|null, embedding\: array\<int, float\>\|null, embedded_at\: Illuminate\\Support\\Carbon\|null\}, Closure\(App\\Models\\Rag\\Chunk\)\: array\{content\: string, context\: string\|null, embedding\: array\<int, float\>\|null, embedded_at\: Illuminate\\Support\\Carbon\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, content\: string, embedding\: array\<int, float\>\|null, metadata\: array\{file_id\: string, file_name\: string, chunk_index\: int\}\}, Closure\(App\\Models\\Rag\\Chunk\)\: array\{id\: string, content\: string, embedding\: array\<int, float\>\|null, metadata\: array\{file_id\: string, file_name\: string, chunk_index\: int\}\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: string, Closure\(App\\Models\\Rag\\Chunk\)\: string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, string\>\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Services/Rag/RagService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_by\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Task/TaskService.php
+
+		-
+			message: '#^Method App\\Services\\Task\\TaskService\:\:addItem\(\) should return App\\Models\\TaskItem but returns Illuminate\\Database\\Eloquent\\Model\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Task/TaskService.php
