@@ -238,6 +238,8 @@ npm run lint:check   # ESLint + Prettier check（不寫入）
 - `POST /api/mcp/task` — Task 工具（需要 `task:mcp` scope key，任何登入者可自行建立）
 - `POST /api/mcp/memory` — 知識圖譜工具（需要 admin 建立的 `memory:mcp` scope key，讀寫皆同）
 - `POST /api/mcp/agyd` — agyd daemon 工具（需要 admin 建立的 `agyd:mcp` scope key）
+- `POST /api/mcp/rag` — RAG 知識庫工具（需要 `rag:mcp` scope key）
+- `POST /api/mcp/codegraph` — 程式碼結構圖工具（唯讀；需要 `codegraph:mcp` scope key，任何登入者可自建）
 
 ### agyd daemon 系統
 **架構**：Claude → Laravel MCP（`/api/mcp/agyd`）→ ZeroTier → Go HTTP daemon（本地微型主機）
@@ -249,10 +251,10 @@ daemon 完成工作後 ZIP 靜態產出，POST 回 `POST /api/agyd/upload/{task_
 
 **Heartbeat**：daemon 定期寫 Redis key（ZeroTier 直連），Laravel 讀 key 判斷在線狀態（`agyd:heartbeat`）。
 
-### 本機 CLI（cmd/memctl、cmd/taskctl、cmd/agydctl）
+### 本機 CLI（cmd/memctl、cmd/taskctl、cmd/agydctl、cmd/codegraphctl）
 打上述 MCP server 的精簡 Go CLI client，取代冗長 curl、也免 native MCP 連線常駐（省 token）。
-> 📄 **完整說明（用途、何時用、位置、build、token 解析）見 `~/.claude/cli-docs/memctl.md` 與 `taskctl.md`**（隨 release 安裝至全域 `~/.claude`，任何專案皆可參考）。
-> **用法一律以 binary 不帶參數印出的 usage 為準**（`taskctl` / `memctl` / `agydctl`），不需讀 source code。`agydctl` 同類但尚未支援專屬 env（僅 `MCP_TOKEN` / 檔案）。
+> 📄 **完整說明（用途、何時用、位置、build、token 解析）見 `~/.claude/cli-docs/memctl.md`、`taskctl.md`、`codegraphctl.md`**（隨 release 安裝至全域 `~/.claude`，任何專案皆可參考）。
+> **用法一律以 binary 不帶參數印出的 usage 為準**（`taskctl` / `memctl` / `agydctl` / `codegraphctl`），不需讀 source code。`codegraphctl` 支援專屬 env `MCP_CODEGRAPH_TOKEN`（查某專案的程式碼結構關係：callers/impact/依賴鏈）；`agydctl` 同類但尚未支援專屬 env（僅 `MCP_TOKEN` / 檔案）。
 
 ### 跨專案知識圖譜
 知識圖譜用於記錄**跨機器、跨專案**的持久性知識（entity/relation/observation）。

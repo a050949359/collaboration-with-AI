@@ -37,6 +37,7 @@ check_results.txt
 /cmd/memctl/memctl
 /cmd/taskctl/taskctl
 /cmd/agydctl/agydctl
+/cmd/codegraphctl/codegraphctl
 /cmd/vecgen/vecgen
 /cmd/sse-lab/sse-lab
 /cmd/codegraph/codegraph
