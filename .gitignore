@@ -31,7 +31,6 @@ check_results.txt
 # ws-lab
 /storage/app/ws-lab
 /storage/app/ws-lab.pid
-/cmd/ws-lab/go.sum
 /cmd/ws-lab/ws-lab
 /tmp/
 /cmd/memctl/memctl
@@ -44,5 +43,4 @@ check_results.txt
 /cmd/codegraph/*.db
 /database/codegraph.db
 /cmd/micro-heartbeat/micro-heartbeat
-/cmd/micro-heartbeat/go.sum
 /cmd/micro-heartbeat/micro-heartbeat.env
