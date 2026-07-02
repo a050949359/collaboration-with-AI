@@ -46,6 +46,9 @@ jobs:
       - name: Build Assets
         run: npm run build
 
+      - name: Static Analysis (larastan)
+        run: composer analyse
+
       # - name: Tests
       #   run: ./vendor/bin/phpunit
 

@@ -37,16 +37,19 @@ class Document extends Model
         ];
     }
 
+    /** @return BelongsTo<KnowledgeBase, $this> */
     public function knowledgeBase(): BelongsTo
     {
         return $this->belongsTo(KnowledgeBase::class, 'knowledge_base_id');
     }
 
+    /** @return HasMany<Chunk, $this> */
     public function chunks(): HasMany
     {
         return $this->hasMany(Chunk::class, 'document_id')->orderBy('chunk_index');
     }
 
+    /** @return HasOne<Lock, $this> */
     public function lock(): HasOne
     {
         return $this->hasOne(Lock::class, 'document_id');

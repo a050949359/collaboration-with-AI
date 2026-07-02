@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property string $embedding_model
  * @property int $dimensions
+ * @property-read int $committed_count 由 KnowledgeBaseController withCount 別名注入
+ * @property-read int $draft_count 由 KnowledgeBaseController withCount 別名注入
  */
 class KnowledgeBase extends Model
 {
@@ -35,11 +37,13 @@ class KnowledgeBase extends Model
         return sprintf('%s__%s__%d', $this->name, $this->embedding_model, $this->dimensions);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    /** @return HasMany<Document, $this> */
     public function documents(): HasMany
     {
         return $this->hasMany(Document::class, 'knowledge_base_id');

@@ -4,9 +4,10 @@ namespace App\Models\Travel;
 
 use App\Enums\TourType;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'code', 'name', 'type', 'duration',
@@ -23,13 +24,15 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 class Tour extends Model
 {
     use HasFactory;
+
     protected $casts = [
-        'type'           => TourType::class,
+        'type' => TourType::class,
         'departure_date' => 'date',
-        'return_date'    => 'date',
+        'return_date' => 'date',
     ];
 
-    public function bookings()
+    /** @return HasMany<Booking, $this> */
+    public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }

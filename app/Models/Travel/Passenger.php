@@ -2,21 +2,25 @@
 
 namespace App\Models\Travel;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['name', 'email', 'phone'])]
 class Passenger extends Model
 {
     use HasFactory;
 
-    public function bookings()
+    /** @return HasMany<Booking, $this> */
+    public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }
 
-    public function companionOf()
+    /** @return BelongsToMany<Booking, $this> */
+    public function companionOf(): BelongsToMany
     {
         return $this->belongsToMany(Booking::class, 'booking_companions');
     }

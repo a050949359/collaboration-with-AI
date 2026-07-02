@@ -32,11 +32,13 @@ class Lock extends Model
         return $this->expires_at->isPast();
     }
 
+    /** @return BelongsTo<Document, $this> */
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'document_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function holder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'locked_by');

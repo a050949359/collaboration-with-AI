@@ -4,7 +4,6 @@ namespace App\Models\ApiKey;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -21,9 +20,6 @@ use Illuminate\Support\Carbon;
 #[Fillable(['user_id', 'name', 'scopes', 'api_key_hash', 'revoked_at'])]
 class UserApiKey extends Model
 {
-    /** @use HasFactory<UserApiKey> */
-    use HasFactory;
-
     protected $table = 'user_api_keys';
 
     protected $hidden = ['api_key_hash'];
@@ -38,6 +34,7 @@ class UserApiKey extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

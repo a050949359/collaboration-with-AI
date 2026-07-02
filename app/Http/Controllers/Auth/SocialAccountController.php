@@ -32,7 +32,7 @@ class SocialAccountController extends Controller
 
             $email = $socialUser->getEmail();
 
-            if (!$email) {
+            if (! $email) {
                 return response()->json([
                     'message' => ucfirst($provider).' 回傳資料缺少 email，無法建立帳號',
                 ], 422);
@@ -41,8 +41,8 @@ class SocialAccountController extends Controller
             $user = User::firstOrNew(['email' => $email]);
 
             // 帳號不存在 = 首次登入即「自行註冊」；後台關閉註冊時擋下，僅放行既有帳號。
-            if (!$user->exists) {
-                if (!AppSettings::bool('allow_registration', true)) {
+            if (! $user->exists) {
+                if (! AppSettings::bool('allow_registration', true)) {
                     return $this->denyRegistration();
                 }
 
@@ -93,7 +93,7 @@ class SocialAccountController extends Controller
      * 關閉註冊時，OAuth 新帳號被擋：不發 token，跳回首頁並帶 auth_error，
      * 前端 AppLayout 讀到後顯示「暫停開放註冊」toast。
      */
-    private function denyRegistration(): JsonResponse|RedirectResponse
+    private function denyRegistration(): RedirectResponse
     {
         $query = http_build_query(['auth_error' => 'registration_closed']);
         $frontendUrl = config('services.social_auth.frontend_url');

@@ -178,7 +178,7 @@ class CodeGraphMcpService implements McpToolServiceInterface
         }
 
         for ($depth = 1; $hit === null && $frontier !== []; $depth++) {
-            if ($maxDepth > 0 && $depth > $maxDepth) {
+            if ($depth > $maxDepth) {   // $maxDepth 必 ≥1（166 行預設 25），故無需再檢查 > 0
                 break;
             }
             $next = [];

@@ -148,7 +148,7 @@ class MemoryMcpService implements McpToolServiceInterface
             'id' => $e->id,
             'name' => $e->name,
             'type' => $e->type,
-            'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'content' => $o->content]),
+            'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'content' => $o->content])->all(),
         ]);
 
         $relQuery = McpRelation::with('from', 'to');
@@ -186,7 +186,7 @@ class MemoryMcpService implements McpToolServiceInterface
             ->map(fn ($e) => [
                 'name' => $e->name,
                 'type' => $e->type,
-                'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'content' => $o->content]),
+                'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'content' => $o->content])->all(),
             ]);
 
         return $this->text($id, json_encode($entities, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));

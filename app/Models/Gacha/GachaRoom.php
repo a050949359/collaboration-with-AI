@@ -3,6 +3,7 @@
 namespace App\Models\Gacha;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GachaRoom extends Model
 {
@@ -16,7 +17,8 @@ class GachaRoom extends Model
         return $this->hasMany(GachaPlayer::class, 'room_id');
     }
 
-    public function deck()
+    /** @return BelongsTo<GachaDeck, $this> */
+    public function deck(): BelongsTo
     {
         return $this->belongsTo(GachaDeck::class, 'deck_id');
     }

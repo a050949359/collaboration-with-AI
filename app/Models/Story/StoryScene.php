@@ -18,6 +18,7 @@ class StoryScene extends Model
         'first_visited_at' => 'datetime',
     ];
 
+    /** @return BelongsTo<StorySession, $this> */
     public function session(): BelongsTo
     {
         return $this->belongsTo(StorySession::class, 'session_id');

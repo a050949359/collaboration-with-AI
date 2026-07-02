@@ -3,10 +3,10 @@
 namespace App\Models\Travel;
 
 use App\Enums\CabinClass;
-use App\Models\Airports\Airports;
+use App\Models\Aviation\Airports;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 
 #[Fillable([
     'tour_id', 'flight_number', 'cabin_class',
@@ -16,10 +16,11 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 class TourFlight extends Model
 {
     use HasFactory;
+
     protected $casts = [
-        'cabin_class'    => CabinClass::class,
+        'cabin_class' => CabinClass::class,
         'departure_time' => 'datetime',
-        'arrival_time'   => 'datetime',
+        'arrival_time' => 'datetime',
     ];
 
     public function tour()

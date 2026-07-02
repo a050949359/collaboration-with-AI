@@ -14,16 +14,19 @@ class McpEntity extends Model
 {
     protected $fillable = ['name', 'type'];
 
+    /** @return HasMany<McpObservation, $this> */
     public function observations(): HasMany
     {
         return $this->hasMany(McpObservation::class, 'entity_id');
     }
 
+    /** @return HasMany<McpRelation, $this> */
     public function relationsFrom(): HasMany
     {
         return $this->hasMany(McpRelation::class, 'from_entity_id');
     }
 
+    /** @return HasMany<McpRelation, $this> */
     public function relationsTo(): HasMany
     {
         return $this->hasMany(McpRelation::class, 'to_entity_id');

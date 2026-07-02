@@ -13,7 +13,6 @@ use App\Models\Story\StoryCharacter;
 use App\Models\Story\StoryItem;
 use App\Models\Story\StorySegment;
 use App\Models\Story\StorySession;
-use App\Services\Story\LlmStoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,8 +20,6 @@ use Illuminate\Validation\ValidationException;
 
 class StorySessionController extends Controller
 {
-    public function __construct(private LlmStoryService $story) {}
-
     public function index(): JsonResponse
     {
         $sessions = StorySession::select(['id', 'title', 'status', 'content_rating', 'next_advance_at', 'updated_at'])
@@ -41,40 +38,40 @@ class StorySessionController extends Controller
         }
 
         $session = StorySession::create([
-            'title'                    => $request->string('title')->toString(),
-            'setting'                  => $request->array('setting'),
-            'world_state'              => $request->input('setting.opening', ''),
+            'title' => $request->string('title')->toString(),
+            'setting' => $request->array('setting'),
+            'world_state' => $request->input('setting.opening', ''),
             'advance_interval_minutes' => $request->integer('advance_interval_minutes', 30),
-            'rounds_per_advance'       => $request->integer('rounds_per_advance', 1),
-            'content_rating'           => $request->string('content_rating', StoryContentRating::General->value)->toString(),
+            'rounds_per_advance' => $request->integer('rounds_per_advance', 1),
+            'content_rating' => $request->string('content_rating', StoryContentRating::General->value)->toString(),
         ]);
 
         foreach ($request->array('characters') as $index => $char) {
             StoryCharacter::create([
-                'session_id'   => $session->id,
-                'name'         => $char['name'],
-                'persona'      => $char['persona'],
-                'type'         => $char['type'] ?? StoryCharacterType::Llm->value,
+                'session_id' => $session->id,
+                'name' => $char['name'],
+                'persona' => $char['persona'],
+                'type' => $char['type'] ?? StoryCharacterType::Llm->value,
                 'model_config' => $char['model_config'] ?? null,
-                'turn_order'   => $index,
-                'is_narrator'  => $char['is_narrator'] ?? true,
+                'turn_order' => $index,
+                'is_narrator' => $char['is_narrator'] ?? true,
             ]);
         }
 
         foreach ((array) $request->input('items', []) as $item) {
             $holderCharacter = null;
-            if (!empty($item['holder'])) {
+            if (! empty($item['holder'])) {
                 $holderCharacter = $session->characters()
                     ->where('name', $item['holder'])
                     ->first();
             }
 
             StoryItem::create([
-                'session_id'          => $session->id,
-                'name'                => $item['name'],
-                'description'         => $item['description'],
+                'session_id' => $session->id,
+                'name' => $item['name'],
+                'description' => $item['description'],
                 'holder_character_id' => $holderCharacter?->id,
-                'is_preset'           => true,
+                'is_preset' => true,
             ]);
         }
 
@@ -115,7 +112,7 @@ class StorySessionController extends Controller
 
         if ($newStatus === StorySessionStatus::Active && $session->status === StorySessionStatus::Paused) {
             $session->update([
-                'status'          => StorySessionStatus::Active,
+                'status' => StorySessionStatus::Active,
                 'next_advance_at' => now()->addMinutes($session->advance_interval_minutes),
             ]);
 
@@ -124,10 +121,10 @@ class StorySessionController extends Controller
             $currentMaxTurn = $session->segments()->max('turn_number') ?? 0;
 
             $session->update([
-                'status'                 => StorySessionStatus::Active,
-                'needs_complete'         => true,
+                'status' => StorySessionStatus::Active,
+                'needs_complete' => true,
                 'complete_deadline_turn' => $currentMaxTurn + 20,
-                'next_advance_at'        => now()->addMinutes($session->advance_interval_minutes),
+                'next_advance_at' => now()->addMinutes($session->advance_interval_minutes),
             ]);
 
             StoryOrchestrateJob::dispatch($session->id);
@@ -153,10 +150,10 @@ class StorySessionController extends Controller
         $turnNumber = $session->segments()->max('turn_number') + 1;
 
         $segment = StorySegment::create([
-            'session_id'       => $session->id,
-            'character_id'     => $current->id,
-            'content'          => $request->string('content')->toString(),
-            'turn_number'      => $turnNumber,
+            'session_id' => $session->id,
+            'character_id' => $current->id,
+            'content' => $request->string('content')->toString(),
+            'turn_number' => $turnNumber,
             'is_player_written' => true,
         ]);
 
