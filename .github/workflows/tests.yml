@@ -54,15 +54,19 @@ jobs:
 
       # codegraph 結構圖：在 GitHub-hosted runner 上 index（記憶體夠，VPS 不 index），
       # 產出 database/codegraph.db 以 artifact 傳給 deploy job 落到 VPS。
+      # 只在 push（main）跑：db 僅 deploy job 使用，PR 時 index 是浪費。
       - name: Setup Go
+        if: github.event_name == 'push'
         uses: actions/setup-go@v5
         with:
           go-version: '1.26'
 
       - name: Index codegraph
+        if: github.event_name == 'push'
         run: bash scripts/codegraph-index.sh
 
       - name: Upload codegraph db
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: codegraph-db
