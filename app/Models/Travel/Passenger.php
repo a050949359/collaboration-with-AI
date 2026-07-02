@@ -14,13 +14,13 @@ class Passenger extends Model
     use HasFactory;
 
     /** @return HasMany<Booking, $this> */
-    public function bookings()
+    public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }
 
     /** @return BelongsToMany<Booking, $this> */
-    public function companionOf()
+    public function companionOf(): BelongsToMany
     {
         return $this->belongsToMany(Booking::class, 'booking_companions');
     }

@@ -22,37 +22,37 @@ class Booking extends Model
     protected $casts = ['status' => BookingStatus::class];
 
     /** @return BelongsTo<Passenger, $this> */
-    public function passenger()
+    public function passenger(): BelongsTo
     {
         return $this->belongsTo(Passenger::class);
     }
 
     /** @return BelongsTo<Tour, $this> */
-    public function tour()
+    public function tour(): BelongsTo
     {
         return $this->belongsTo(Tour::class);
     }
 
     /** @return HasMany<BookingFlight, $this> */
-    public function flights()
+    public function flights(): HasMany
     {
         return $this->hasMany(BookingFlight::class);
     }
 
     /** @return HasMany<BookingHotel, $this> */
-    public function hotels()
+    public function hotels(): HasMany
     {
         return $this->hasMany(BookingHotel::class);
     }
 
     /** @return BelongsToMany<Passenger, $this> */
-    public function companions()
+    public function companions(): BelongsToMany
     {
         return $this->belongsToMany(Passenger::class, 'booking_companions')->withTimestamps();
     }
 
     /** @return HasMany<BookingPayment, $this> */
-    public function payments()
+    public function payments(): HasMany
     {
         return $this->hasMany(BookingPayment::class);
     }

@@ -18,7 +18,7 @@ class GachaRoom extends Model
     }
 
     /** @return BelongsTo<GachaDeck, $this> */
-    public function deck()
+    public function deck(): BelongsTo
     {
         return $this->belongsTo(GachaDeck::class, 'deck_id');
     }
