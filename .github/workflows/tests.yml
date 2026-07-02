@@ -69,7 +69,7 @@ jobs:
 
       - name: Upload codegraph db
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: codegraph-db
           path: database/codegraph.db
@@ -91,7 +91,7 @@ jobs:
       # ci 在 GitHub-hosted 產好的結構圖 db，下載落到 VPS（VPS 不 index）。
       # db 為 gitignored，git pull 不會覆蓋；此步為最終、確保是最新快照。
       - name: Fetch codegraph db
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: codegraph-db
           path: /var/www/collaboration-with-AI/database
