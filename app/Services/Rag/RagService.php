@@ -152,7 +152,7 @@ class RagService
     /**
      * 以 Drive file_id 產生草稿(自動解析檔案後設資料)。
      *
-     * @return array{document: Document, chunks: int, diff: array{unchanged: int, added: int, removed: int}}
+     * @return array{document: Document, chunks: int, diff: array{unchanged: int, added: int, removed: int}, loaded: bool}
      */
     public function proposeDraftByFileId(KnowledgeBase $kb, string $driveFileId, bool $force = false): array
     {

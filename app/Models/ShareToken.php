@@ -11,10 +11,11 @@ class ShareToken extends Model
 
     protected $casts = [
         'expires_at' => 'datetime',
-        'max_uses'   => 'integer',
+        'max_uses' => 'integer',
         'uses_count' => 'integer',
     ];
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -33,6 +34,7 @@ class ShareToken extends Model
         if ($this->max_uses !== null && $this->uses_count >= $this->max_uses) {
             return false;
         }
+
         return true;
     }
 

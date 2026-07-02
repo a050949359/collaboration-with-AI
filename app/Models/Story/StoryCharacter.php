@@ -22,20 +22,23 @@ class StoryCharacter extends Model
 
     protected $casts = [
         'model_config' => 'array',
-        'is_narrator'  => 'boolean',
-        'type'         => StoryCharacterType::class,
+        'is_narrator' => 'boolean',
+        'type' => StoryCharacterType::class,
     ];
 
+    /** @return BelongsTo<StorySession, $this> */
     public function session(): BelongsTo
     {
         return $this->belongsTo(StorySession::class, 'session_id');
     }
 
+    /** @return HasMany<StorySegment, $this> */
     public function segments(): HasMany
     {
         return $this->hasMany(StorySegment::class, 'character_id');
     }
 
+    /** @return HasMany<StoryItem, $this> */
     public function heldItems(): HasMany
     {
         return $this->hasMany(StoryItem::class, 'holder_character_id');

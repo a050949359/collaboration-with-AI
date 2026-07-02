@@ -28,6 +28,7 @@ class McpObservation extends Model
         return ['type' => ObservationType::class];
     }
 
+    /** @return BelongsTo<McpEntity, $this> */
     public function entity(): BelongsTo
     {
         return $this->belongsTo(McpEntity::class, 'entity_id');

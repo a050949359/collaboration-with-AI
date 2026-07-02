@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\PersonalAccessToken;
-use App\Notifications\VerifyEmailNotification;
 use App\Services\AI\Contracts\GeneratesArticleContent;
 use App\Services\AI\Contracts\GeneratesArticleImage;
 use App\Services\AI\Contracts\GeneratesImage;
@@ -22,7 +21,6 @@ use App\Services\AI\LlmManager;
 use App\Services\AI\VertexGeminiArticleService;
 use App\Services\AI\VertexImageGenerationService;
 use Carbon\CarbonImmutable;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -58,10 +56,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
         $this->configureDefaults();
-
-        VerifyEmail::toMailUsing(function ($notifiable, $url) {
-            return new VerifyEmailNotification($url);
-        });
     }
 
     /**

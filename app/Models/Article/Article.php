@@ -2,11 +2,15 @@
 
 namespace App\Models\Article;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property list<string>|null $tags cast 為 array（larastan 讀不到 casts() 的 array cast，需明標）
+ */
 #[Fillable([
     'user_id',
     'created_via',
@@ -39,6 +43,7 @@ class Article extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

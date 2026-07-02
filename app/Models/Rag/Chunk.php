@@ -54,6 +54,7 @@ class Chunk extends Model
         return $driveFileId.'#'.$this->chunk_index;
     }
 
+    /** @return BelongsTo<Document, $this> */
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'document_id');

@@ -4,27 +4,28 @@ namespace App\Models\Story;
 
 use App\Enums\StoryContentRating;
 use App\Enums\StorySessionStatus;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @property int              $id
- * @property string           $title
- * @property array            $setting
- * @property string           $world_state
- * @property int|null         $current_character_id
- * @property int              $advance_interval_minutes
- * @property int              $rounds_per_advance
- * @property int              $rounds_without_progress
+ * @property int $id
+ * @property string $title
+ * @property array $setting
+ * @property string $world_state
+ * @property int|null $current_character_id
+ * @property int $advance_interval_minutes
+ * @property int $rounds_per_advance
+ * @property int $rounds_without_progress
  * @property StorySessionStatus $status
  * @property StoryContentRating $content_rating
- * @property \Carbon\Carbon|null $next_advance_at
- * @property bool             $needs_event
- * @property string|null      $pending_scene_location
- * @property int|null         $state_last_turn
- * @property bool             $needs_complete
- * @property int|null         $complete_deadline_turn
+ * @property Carbon|null $next_advance_at
+ * @property bool $needs_event
+ * @property string|null $pending_scene_location
+ * @property int|null $state_last_turn
+ * @property bool $needs_complete
+ * @property int|null $complete_deadline_turn
  */
 class StorySession extends Model
 {
@@ -47,34 +48,39 @@ class StorySession extends Model
     ];
 
     protected $casts = [
-        'setting'        => 'array',
-        'next_advance_at'  => 'datetime',
-        'needs_event'      => 'boolean',
-        'needs_complete'   => 'boolean',
+        'setting' => 'array',
+        'next_advance_at' => 'datetime',
+        'needs_event' => 'boolean',
+        'needs_complete' => 'boolean',
         'content_rating' => StoryContentRating::class,
-        'status'         => StorySessionStatus::class,
+        'status' => StorySessionStatus::class,
     ];
 
+    /** @return HasMany<StoryCharacter, $this> */
     public function characters(): HasMany
     {
         return $this->hasMany(StoryCharacter::class, 'session_id')->orderBy('turn_order');
     }
 
+    /** @return HasMany<StorySegment, $this> */
     public function segments(): HasMany
     {
         return $this->hasMany(StorySegment::class, 'session_id')->orderBy('turn_number');
     }
 
+    /** @return HasMany<StoryItem, $this> */
     public function items(): HasMany
     {
         return $this->hasMany(StoryItem::class, 'session_id');
     }
 
+    /** @return HasMany<StoryScene, $this> */
     public function scenes(): HasMany
     {
         return $this->hasMany(StoryScene::class, 'session_id');
     }
 
+    /** @return BelongsTo<StoryCharacter, $this> */
     public function currentCharacter(): BelongsTo
     {
         return $this->belongsTo(StoryCharacter::class, 'current_character_id');

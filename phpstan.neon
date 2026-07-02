@@ -6,3 +6,49 @@ parameters:
     level: 5
     paths:
         - app
+
+    # PHPDoc 型別視為「提示非保證」：不把 is_array()/?? 等防禦性檢查判為多餘。
+    # 本專案通篇防禦性寫法（守呼叫方/外部資料違反宣告型別），符合此立場。
+    # 原生型別確定的 always-true（如 int<1,max> > 0）仍會照抓。
+    treatPhpDocTypesAsCertain: false
+
+    # 刻意、永久的忽略（與 baseline 的「待修債」不同）：
+    # 以下 nullsafe.neverNull 都是誤報——?-> 是正確的防護，phpstan 卻誤判左側絕不為 null。
+    ignoreErrors:
+        # larastan 靜態分析讀不到 DB，把「可空外鍵的 belongsTo」當成非 null relation。
+        # 這些 relation 的外鍵確實可空（runtime 真的會是 null），?-> 必須保留。
+        -
+            identifier: nullsafe.neverNull
+            paths:
+                - app/Http/Controllers/Gacha/GachaRoomController.php    # $room->deck 可為 null
+                - app/Http/Controllers/Story/StorySessionController.php # $session->currentCharacter 可為 null
+                - app/Jobs/Story/StoryOrchestrateJob.php                # $segment->character 可為 null
+                - app/Jobs/Story/StorySegmentJob.php                    # $segment->character 可為 null
+                - app/Jobs/Story/StoryStateJob.php                      # $segment->character 可為 null
+                - app/Models/Story/StorySession.php                     # $this->currentCharacter 可為 null
+        # 非 relation 的可空來源：$request->enum() 參數缺漏回 null、陣列 key 可能不存在回 null。
+        -
+            identifier: nullsafe.neverNull
+            paths:
+                - app/Http/Controllers/Story/CharacterController.php    # $request->enum() 可回 null
+                - app/Http/Controllers/Rag/KnowledgeBaseController.php  # $statusByKb[$id] key 可能不存在
+
+        # Socialite ->stateless()：存在於具體 Two\AbstractProvider(runtime 正常)，
+        # 但 Contracts\Provider 介面未宣告，phpstan 只看到介面型別故誤報。
+        -
+            message: '#Call to an undefined method Laravel\\Socialite\\Contracts\\Provider::stateless\(\)#'
+            path: app/Http/Controllers/Auth/SocialAccountController.php
+
+        # model query scope（scopeOfType/scopeOfDefaultType 確實存在）：larastan 在泛型
+        # Builder（scope 內呼叫 scope、whereHas 閉包）上認不出 scope，runtime 正常。
+        -
+            identifier: method.notFound
+            paths:
+                - app/Models/Mcp/McpObservation.php                     # scopeOfDefaultType 內呼叫 ->ofType()
+                - app/Services/Mcp/MemoryMcpService.php                 # whereHas 閉包內 ->ofDefaultType()
+
+        # Sanctum 自訂 token model：usePersonalAccessTokenModel 已註冊 App\Models\PersonalAccessToken，
+        # 但 HasApiTokens trait 的 tokens() @return 寫死基底型別，map() callback 型別故誤報。
+        -
+            message: '#\$callback of method Illuminate\\Database\\Eloquent\\Collection<int,Laravel\\Sanctum\\PersonalAccessToken>::map\(\)#'
+            path: app/Http/Controllers/Auth/DeviceController.php

@@ -13,10 +13,11 @@ class TaskItem extends Model
     {
         return [
             'is_done' => 'boolean',
-            'sort'    => 'integer',
+            'sort' => 'integer',
         ];
     }
 
+    /** @return BelongsTo<Task, $this> */
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);

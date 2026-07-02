@@ -4,8 +4,8 @@ namespace App\Models;
 
 use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -23,16 +23,18 @@ class Task extends Model
     protected function casts(): array
     {
         return [
-            'sort'   => 'integer',
+            'sort' => 'integer',
             'status' => TaskStatus::class,
         ];
     }
 
+    /** @return HasMany<TaskItem, $this> */
     public function items(): HasMany
     {
         return $this->hasMany(TaskItem::class)->orderBy('sort');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

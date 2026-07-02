@@ -106,7 +106,7 @@ class KnowledgeBaseController extends Controller
                 'chunk_count' => $d->chunks_count,
                 'committed_chunk_count' => $d->committed_chunk_count,
                 'committed_at' => $d->committed_at?->toIso8601String(),
-            ]),
+            ])->all(),
         ]);
 
         return response()->json(['data' => $data]);

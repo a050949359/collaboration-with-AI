@@ -6,7 +6,6 @@ use App\Enums\ArticleLanguage;
 use App\Enums\ArticleStyle;
 use App\Enums\ArticleTopic;
 use App\Models\Article\Article;
-use App\Jobs\DispatchLineArticleReadyWebhookJob;
 use App\Services\AI\Contracts\GeneratesArticleContent;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -16,7 +15,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Throwable;
 
-class GenerateArticleContentJob implements ShouldQueue, ShouldBeUnique
+class GenerateArticleContentJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -31,8 +30,7 @@ class GenerateArticleContentJob implements ShouldQueue, ShouldBeUnique
         public ArticleLanguage $language,
         public ArticleStyle $style,
         public ?string $extraPrompt = null,
-    ) {
-    }
+    ) {}
 
     public function uniqueId(): string
     {
@@ -43,7 +41,7 @@ class GenerateArticleContentJob implements ShouldQueue, ShouldBeUnique
     {
         $article = Article::find($this->articleId);
 
-        if (!$article) {
+        if (! $article) {
             return;
         }
 
@@ -53,14 +51,13 @@ class GenerateArticleContentJob implements ShouldQueue, ShouldBeUnique
             $this->style->instruction(),
         );
 
-
         $article->update([
-            'title'                => $result['title'],
-            'content'              => $result['content'],
-            'summary'              => $result['summary'],
-            'tags'                 => $this->buildGenerationTags($article),
-            'content_status'       => 'completed',
-            'content_error'        => null,
+            'title' => $result['title'],
+            'content' => $result['content'],
+            'summary' => $result['summary'],
+            'tags' => $this->buildGenerationTags($article),
+            'content_status' => 'completed',
+            'content_error' => null,
             'content_generated_at' => now(),
         ]);
 
@@ -73,13 +70,13 @@ class GenerateArticleContentJob implements ShouldQueue, ShouldBeUnique
     {
         $article = Article::find($this->articleId);
 
-        if (!$article) {
+        if (! $article) {
             return;
         }
 
         $article->update([
             'content_status' => 'failed',
-            'content_error'  => $exception->getMessage(),
+            'content_error' => $exception->getMessage(),
         ]);
     }
 
@@ -99,39 +96,6 @@ class GenerateArticleContentJob implements ShouldQueue, ShouldBeUnique
         }
 
         return implode("\n", $parts);
-    }
-
-    private function sanitizeUtf8(string $text): string
-    {
-        if ($text === '') {
-            return '';
-        }
-
-        $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $text);
-
-        if ($converted === false) {
-            return '';
-        }
-
-        return $converted;
-    }
-
-    private function sanitizeForStorage(string $text): string
-    {
-        $cleaned = $this->sanitizeUtf8($text);
-
-        if ($cleaned === '') {
-            return '';
-        }
-
-        // Keep \n/\r/\t, remove other ASCII and C1 control characters.
-        $cleaned = (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\x{80}-\x{9F}]/u', '', $cleaned);
-        // Remove Unicode format/private-use/surrogate characters that often appear as odd glyphs.
-        $cleaned = (string) preg_replace('/[\p{Cf}\p{Co}\p{Cs}]/u', '', $cleaned);
-        // Remove Unicode replacement character (U+FFFD), often shown as "�".
-        $cleaned = str_replace("\u{FFFD}", '', $cleaned);
-
-        return trim($cleaned);
     }
 
     /**
@@ -164,6 +128,4 @@ class GenerateArticleContentJob implements ShouldQueue, ShouldBeUnique
 
         return array_values(array_unique([...$existingTags, ...$optionTags]));
     }
-
-    
 }

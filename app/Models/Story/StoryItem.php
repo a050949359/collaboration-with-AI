@@ -20,11 +20,13 @@ class StoryItem extends Model
         'is_preset' => 'boolean',
     ];
 
+    /** @return BelongsTo<StorySession, $this> */
     public function session(): BelongsTo
     {
         return $this->belongsTo(StorySession::class, 'session_id');
     }
 
+    /** @return BelongsTo<StoryCharacter, $this> */
     public function holder(): BelongsTo
     {
         return $this->belongsTo(StoryCharacter::class, 'holder_character_id');

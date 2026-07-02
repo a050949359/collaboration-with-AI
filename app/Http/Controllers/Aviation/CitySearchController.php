@@ -16,22 +16,22 @@ class CitySearchController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'city_name'    => ['required', 'string', 'max:100'],
+            'city_name' => ['required', 'string', 'max:100'],
             'wikidata_qid' => ['required', 'string', 'regex:/^Q\d+$/'],
             'country_code' => ['required', 'string', 'size:2'],
         ]);
 
         $job = CitySearchJob::create([
-            'city_name'    => $request->city_name,
+            'city_name' => $request->city_name,
             'wikidata_qid' => $request->wikidata_qid,
             'country_code' => strtoupper($request->country_code),
-            'status'       => 'pending',
+            'status' => 'pending',
             'submitted_by' => $request->user()->id,
         ]);
 
         SearchCityJob::dispatch($job->id);
 
-        return $this->success(['job_id' => $job->id], 202);
+        return $this->success(['job_id' => $job->id], code: 202);
     }
 
     public function show(Request $request, int $id): JsonResponse
@@ -42,14 +42,14 @@ class CitySearchController extends Controller
             ->firstOrFail();
 
         return $this->success([
-            'id'           => $job->id,
-            'city_name'    => $job->city_name,
+            'id' => $job->id,
+            'city_name' => $job->city_name,
             'wikidata_qid' => $job->wikidata_qid,
             'country_code' => $job->country_code,
-            'status'       => $job->status,
-            'error'        => $job->error,
-            'city'         => $job->city,
-            'created_at'   => $job->created_at,
+            'status' => $job->status,
+            'error' => $job->error,
+            'city' => $job->city,
+            'created_at' => $job->created_at,
         ]);
     }
 
@@ -60,20 +60,20 @@ class CitySearchController extends Controller
         ]);
 
         $jobs = CitySearchJob::where('submitted_by', $request->user()->id)
-            ->when($request->country_code, fn($q) => $q->where('country_code', strtoupper($request->country_code)))
+            ->when($request->country_code, fn ($q) => $q->where('country_code', strtoupper($request->country_code)))
             ->with('city')
             ->latest()
             ->limit(50)
             ->get()
-            ->map(fn($job) => [
-                'id'           => $job->id,
-                'city_name'    => $job->city_name,
+            ->map(fn ($job) => [
+                'id' => $job->id,
+                'city_name' => $job->city_name,
                 'wikidata_qid' => $job->wikidata_qid,
                 'country_code' => $job->country_code,
-                'status'       => $job->status,
-                'error'        => $job->error,
-                'city'         => $job->city,
-                'created_at'   => $job->created_at,
+                'status' => $job->status,
+                'error' => $job->error,
+                'city' => $job->city,
+                'created_at' => $job->created_at,
             ]);
 
         return $this->success($jobs);
