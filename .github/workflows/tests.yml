@@ -57,9 +57,11 @@ jobs:
       # 只在 push（main）跑：db 僅 deploy job 使用，PR 時 index 是浪費。
       - name: Setup Go
         if: github.event_name == 'push'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.26'
+          # go.sum 分散在各 cmd/*/ 子模組，指定路徑 setup-go 才算得出快取 key
+          cache-dependency-path: cmd/**/go.sum
 
       - name: Index codegraph
         if: github.event_name == 'push'
