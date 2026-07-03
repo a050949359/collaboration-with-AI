@@ -30,7 +30,7 @@ codegraph impact  <symbol>  [--db path] [--depth n]   # 改它會連帶影響誰
 codegraph search  <pattern> [--db path]               # 模糊找符號
 ```
 
-`symbol` 可給簡名（`Broadcast`）、限定名或 id（`(*sse-lab.Broadcaster).Broadcast`）。
+`symbol` 可給簡名（`Broadcast`）、限定名或 id（`(*ticket-rush.Broadcaster).Broadcast`）。
 查詢輸出 JSON（供 LLM 消費）；db 預設 `codegraph.db`。
 
 ## MCP `/api/mcp/codegraph`（省 token 的兌現點）

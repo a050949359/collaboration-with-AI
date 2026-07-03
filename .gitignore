@@ -38,7 +38,7 @@ check_results.txt
 /cmd/agydctl/agydctl
 /cmd/codegraphctl/codegraphctl
 /cmd/vecgen/vecgen
-/cmd/sse-lab/sse-lab
+/cmd/ticket-rush/ticket-rush
 /cmd/codegraph/codegraph
 /cmd/codegraph/*.db
 /database/codegraph.db
