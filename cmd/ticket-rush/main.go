@@ -168,8 +168,20 @@ type snapshot struct {
 	Queue     []string     `json:"queue"`
 }
 
+// readModel：讀側物化視圖。寫權威在 publish 時「一次」把各分段序列化好、算好 hash、組好 manifest；
+// 讀端（HTTP handler / manifest 廣播）直接吐 bytes，零序列化、零 hash 成本（真正的讀寫分離）。
+type readModel struct {
+	manifest   string // 已組好的 manifest JSON（type + 各段 hash）
+	summary    []byte // 已序列化的 summary 分段
+	summaryTag string // 其 ETag（內容雜湊）
+	winners    []byte
+	winnersTag string
+	queuePages [][]byte // 候補各頁 bytes
+	pageTags   []string // 各頁 ETag
+}
+
 // projection：讀側物化視圖，寫權威更新、讀端無鎖讀取
-var projection atomic.Pointer[snapshot]
+var projection atomic.Pointer[readModel]
 
 const queuePageSize = 50 // 候補分頁大小
 
@@ -179,15 +191,16 @@ func hashStr(b []byte) string {
 	return fmt.Sprintf("%016x", h.Sum64())
 }
 
-// segments：把 snapshot 切成可獨立定址的分段 JSON
+// buildReadModel：把 snapshot 切段、序列化、算 hash、組 manifest——全部只做一次（在寫端）。
 //   - summary：共享彙總（remaining / queueLen / soldOut），最常被讀、可被 CDN 快取
 //   - winners：目前持票者（≤ totalTickets）
 //   - queuePages：候補名單分頁（無界資料，切頁；候補為空也給 page 0）
-func segments(s snapshot) (summary, winners []byte, queuePages [][]byte) {
-	summary, _ = json.Marshal(map[string]any{
+func buildReadModel(s snapshot) readModel {
+	summary, _ := json.Marshal(map[string]any{
 		"remaining": s.Remaining, "queueLen": len(s.Queue), "soldOut": s.Remaining <= 0,
 	})
-	winners, _ = json.Marshal(s.Winners)
+	winners, _ := json.Marshal(s.Winners)
+	var pages [][]byte
 	for i := 0; i < len(s.Queue); i += queuePageSize {
 		end := i + queuePageSize
 		if end > len(s.Queue) {
@@ -196,33 +209,33 @@ func segments(s snapshot) (summary, winners []byte, queuePages [][]byte) {
 		p, _ := json.Marshal(map[string]any{
 			"page": i / queuePageSize, "pageSize": queuePageSize, "total": len(s.Queue), "names": s.Queue[i:end],
 		})
-		queuePages = append(queuePages, p)
+		pages = append(pages, p)
 	}
-	if len(queuePages) == 0 { // 候補為空也給 page 0，讓前端能讀到「空隊列」
+	if len(pages) == 0 { // 候補為空也給 page 0，讓前端能讀到「空隊列」
 		p, _ := json.Marshal(map[string]any{
 			"page": 0, "pageSize": queuePageSize, "total": 0, "names": []string{},
 		})
-		queuePages = append(queuePages, p)
+		pages = append(pages, p)
 	}
-	return
-}
-
-// manifestEvent：合流後對外廣播的版本清單，只帶各段內容雜湊（O(頁數)，不含資料本身）
-func manifestEvent(s snapshot) string {
-	summary, winners, pages := segments(s)
-	ph := make([]string, len(pages))
+	pageTags := make([]string, len(pages))
 	for i, p := range pages {
-		ph[i] = hashStr(p)
+		pageTags[i] = hashStr(p)
 	}
-	out, _ := json.Marshal(map[string]any{
-		"type": "manifest", "summary": hashStr(summary), "winners": hashStr(winners), "queuePages": ph,
+	rm := readModel{
+		summary: summary, summaryTag: hashStr(summary),
+		winners: winners, winnersTag: hashStr(winners),
+		queuePages: pages, pageTags: pageTags,
+	}
+	manifest, _ := json.Marshal(map[string]any{
+		"type": "manifest", "summary": rm.summaryTag, "winners": rm.winnersTag, "queuePages": pageTags,
 	})
-	return string(out)
+	rm.manifest = string(manifest)
+	return rm
 }
 
-// serveSegment：以內容雜湊當 ETag，支援 If-None-Match → 304（讓分段可被 CDN / 瀏覽器快取）
-func serveSegment(w http.ResponseWriter, r *http.Request, body []byte) {
-	etag := `"` + hashStr(body) + `"`
+// serveSegment：吐預先算好的分段 bytes，用預算的 hash 當 ETag；If-None-Match → 304（可被 CDN 快取）
+func serveSegment(w http.ResponseWriter, r *http.Request, body []byte, tag string) {
+	etag := `"` + tag + `"`
 	w.Header().Set("ETag", etag)
 	w.Header().Set("Cache-Control", "no-cache") // 可快取，但每次需 revalidate
 	if r.Header.Get("If-None-Match") == etag {
@@ -231,6 +244,22 @@ func serveSegment(w http.ResponseWriter, r *http.Request, body []byte) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(body)
+}
+
+// nameCmd：把「讀 name → 空則 400 → 送進 ch（或 ctx 取消）」這個重複的指令 handler 收斂成一個
+func nameCmd(ch chan string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Query().Get("name")
+		if name == "" {
+			http.Error(w, "name required", http.StatusBadRequest)
+			return
+		}
+		select {
+		case ch <- name:
+			w.WriteHeader(http.StatusNoContent)
+		case <-r.Context().Done():
+		}
+	}
 }
 
 // ---- 搶票 / 退票 / 候補：單一消費者，併發請求天然被串行化，不會超賣 ----
@@ -313,8 +342,8 @@ func ticketStore(
 	ticksSinceManifest := 0 // 對帳心跳計數：每 ~5s 送一次 manifest，補救 Broadcast 丟掉終局 manifest
 	// publish：更新讀側物化視圖並標記待廣播；manifest 由 ticker 一次送出（合流）
 	publish := func() {
-		s := snap()
-		projection.Store(&s)
+		rm := buildReadModel(snap()) // 寫端一次序列化好，讀端零成本
+		projection.Store(&rm)
 		dirty = true
 	}
 
@@ -463,7 +492,7 @@ func ticketStore(
 			// 合流：異動時送 manifest；另每 ~5s 送一次對帳心跳，
 			// 防「終局 manifest 被 Broadcast 丟包後系統轉 idle」造成慢連線永久 stale
 			if dirty || ticksSinceManifest >= 20 {
-				msgCh <- manifestEvent(*projection.Load())
+				msgCh <- projection.Load().manifest
 				dirty = false
 				ticksSinceManifest = 0
 			}
@@ -488,7 +517,8 @@ func main() {
 	go b.Run(ctx)
 
 	// 讀側物化視圖起始值（空狀態），讓 ticketStore 尚未動作前的讀端也有東西可讀
-	projection.Store(&snapshot{Remaining: totalTickets, Winners: []winnerView{}, Queue: []string{}})
+	initRM := buildReadModel(snapshot{Remaining: totalTickets, Winners: []winnerView{}, Queue: []string{}})
+	projection.Store(&initRM)
 
 	buyCh := make(chan string)
 	releaseCh := make(chan string)
@@ -538,7 +568,7 @@ func main() {
 		}()
 
 		// 連上線立刻送目前 manifest，前端據此拉取各分段（連線對帳）
-		fmt.Fprintf(w, "data: %s\n\n", manifestEvent(*projection.Load()))
+		fmt.Fprintf(w, "data: %s\n\n", projection.Load().manifest)
 		flusher.Flush()
 
 		for {
@@ -568,15 +598,15 @@ func main() {
 
 	// ---- 讀側分段：各段帶 ETag（內容雜湊）；前端依 manifest 只 GET 變動的段 ----
 	mux.HandleFunc("/state/summary", func(w http.ResponseWriter, r *http.Request) {
-		summary, _, _ := segments(*projection.Load())
-		serveSegment(w, r, summary)
+		rm := projection.Load()
+		serveSegment(w, r, rm.summary, rm.summaryTag)
 	})
 	mux.HandleFunc("/state/winners", func(w http.ResponseWriter, r *http.Request) {
-		_, winners, _ := segments(*projection.Load())
-		serveSegment(w, r, winners)
+		rm := projection.Load()
+		serveSegment(w, r, rm.winners, rm.winnersTag)
 	})
 	mux.HandleFunc("/state/queue", func(w http.ResponseWriter, r *http.Request) {
-		_, _, pages := segments(*projection.Load())
+		rm := projection.Load()
 		p := 0
 		if q := r.URL.Query().Get("page"); q != "" {
 			var err error
@@ -585,64 +615,18 @@ func main() {
 				return
 			}
 		}
-		if p < 0 || p >= len(pages) {
+		if p < 0 || p >= len(rm.queuePages) {
 			http.Error(w, "page out of range", http.StatusNotFound)
 			return
 		}
-		serveSegment(w, r, pages[p])
+		serveSegment(w, r, rm.queuePages[p], rm.pageTags[p])
 	})
 
-	mux.HandleFunc("/buy", func(w http.ResponseWriter, r *http.Request) {
-		buyer := r.URL.Query().Get("name")
-		if buyer == "" {
-			http.Error(w, "name required", http.StatusBadRequest) // 空名會撞掉 ticketStore 的唯一鍵
-			return
-		}
-		select {
-		case buyCh <- buyer:
-			w.WriteHeader(http.StatusNoContent)
-		case <-r.Context().Done():
-		}
-	})
-
-	mux.HandleFunc("/release", func(w http.ResponseWriter, r *http.Request) {
-		name := r.URL.Query().Get("name")
-		if name == "" {
-			http.Error(w, "name required", http.StatusBadRequest)
-			return
-		}
-		select {
-		case releaseCh <- name:
-			w.WriteHeader(http.StatusNoContent)
-		case <-r.Context().Done():
-		}
-	})
-
-	mux.HandleFunc("/leave", func(w http.ResponseWriter, r *http.Request) {
-		name := r.URL.Query().Get("name")
-		if name == "" {
-			http.Error(w, "name required", http.StatusBadRequest)
-			return
-		}
-		select {
-		case leaveCh <- name:
-			w.WriteHeader(http.StatusNoContent)
-		case <-r.Context().Done():
-		}
-	})
-
-	mux.HandleFunc("/pay", func(w http.ResponseWriter, r *http.Request) {
-		name := r.URL.Query().Get("name")
-		if name == "" {
-			http.Error(w, "name required", http.StatusBadRequest)
-			return
-		}
-		select {
-		case payCh <- name:
-			w.WriteHeader(http.StatusNoContent)
-		case <-r.Context().Done():
-		}
-	})
+	// 搶票 / 退票 / 離開候補 / 付款：都是「name → 送對應 channel」，收斂成 nameCmd
+	mux.HandleFunc("/buy", nameCmd(buyCh)) // 空名會撞掉 ticketStore 唯一鍵 → nameCmd 內 400
+	mux.HandleFunc("/release", nameCmd(releaseCh))
+	mux.HandleFunc("/leave", nameCmd(leaveCh))
+	mux.HandleFunc("/pay", nameCmd(payCh))
 
 	mux.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
 		select {
