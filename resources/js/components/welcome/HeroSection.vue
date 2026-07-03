@@ -55,9 +55,7 @@ const categories = [
             <p
                 class="mt-6 max-w-2xl text-sm leading-relaxed text-[var(--binary-text-muted)] md:text-2xl"
             >
-                這是我的技術展示站——把原本就會的技術，透過與 AI
-                協作快速上線、補齊細節，做成能在線上實際點開操作的 demo。AI
-                負責加速，架構與取捨由我決定。
+                能動手玩的全端 demo 合集。AI 加速實作，我負責架構與取捨。
                 <span
                     class="binary-label ml-1 text-xs text-[var(--binary-outline)]"
                     >by LLM &amp; ohya</span
