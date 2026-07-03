@@ -536,7 +536,9 @@ func main() {
 				if !ok {
 					return
 				}
-				fmt.Fprintf(w, "data: %s\n\n", msg)
+				if _, err := fmt.Fprintf(w, "data: %s\n\n", msg); err != nil {
+					return // 客戶端已斷線 → 立即結束、跑 defer 註銷
+				}
 				flusher.Flush()
 			case <-r.Context().Done():
 				return
@@ -566,7 +568,11 @@ func main() {
 		_, _, pages := segments(*projection.Load())
 		p := 0
 		if q := r.URL.Query().Get("page"); q != "" {
-			p, _ = strconv.Atoi(q)
+			var err error
+			if p, err = strconv.Atoi(q); err != nil {
+				http.Error(w, "invalid page parameter", http.StatusBadRequest)
+				return
+			}
 		}
 		if p < 0 || p >= len(pages) {
 			http.Error(w, "page out of range", http.StatusNotFound)
@@ -578,7 +584,8 @@ func main() {
 	mux.HandleFunc("/buy", func(w http.ResponseWriter, r *http.Request) {
 		buyer := r.URL.Query().Get("name")
 		if buyer == "" {
-			buyer = "匿名"
+			http.Error(w, "name required", http.StatusBadRequest) // 空名會撞掉 ticketStore 的唯一鍵
+			return
 		}
 		select {
 		case buyCh <- buyer:
@@ -635,8 +642,16 @@ func main() {
 	})
 
 	addr := ":8099"
+	// 刻意不設 WriteTimeout：SSE 是長連線串流，設了會被硬切斷。
+	// 用 ReadHeaderTimeout 擋 Slowloris、IdleTimeout 收沒在用的 keep-alive 連線。
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
 	fmt.Println("Listening on http://localhost" + addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		fmt.Println("server error:", err)
 	}
 }
@@ -738,7 +753,14 @@ const indexHTML = `<!doctype html>
   function pushLine(feedEl, cls, text) {
     const div = document.createElement('div');
     div.className = 'ln';
-    div.innerHTML = '<span class="t">' + nowTime() + '</span><span class="' + cls + '">' + text + '</span>';
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 't';
+    timeSpan.textContent = nowTime();
+    const msgSpan = document.createElement('span');
+    msgSpan.className = cls;      // cls 由我方控制（safe）；text 含使用者名字 → 用 textContent 防 XSS
+    msgSpan.textContent = text;
+    div.appendChild(timeSpan);
+    div.appendChild(msgSpan);
     feedEl.appendChild(div);
     feedEl.scrollTop = feedEl.scrollHeight;
   }
@@ -747,10 +769,11 @@ const indexHTML = `<!doctype html>
     const card = document.createElement('div');
     card.className = 'card buyer';
     card.innerHTML =
-      '<div class="chead"><span class="cname">' + name + '</span><span class="badge">待命</span></div>' +
+      '<div class="chead"><span class="cname"></span><span class="badge">待命</span></div>' +
       '<button class="buyBtn">搶票</button>' +
       '<button class="altBtn ghost" style="display:none">退票</button>' +
       '<div class="feed"></div>';
+    card.querySelector('.cname').textContent = name; // 用 textContent 賦值，不拼進 innerHTML
     const b = {
       name,
       cardEl: card,
