@@ -310,6 +310,7 @@ func ticketStore(
 	}
 
 	dirty := false
+	ticksSinceManifest := 0 // 對帳心跳計數：每 ~5s 送一次 manifest，補救 Broadcast 丟掉終局 manifest
 	// publish：更新讀側物化視圖並標記待廣播；manifest 由 ticker 一次送出（合流）
 	publish := func() {
 		s := snap()
@@ -458,9 +459,13 @@ func ticketStore(
 				}
 			}
 
-			if dirty { // 合流：一個 tick 內累積的異動，只送一則 manifest
+			ticksSinceManifest++
+			// 合流：異動時送 manifest；另每 ~5s 送一次對帳心跳，
+			// 防「終局 manifest 被 Broadcast 丟包後系統轉 idle」造成慢連線永久 stale
+			if dirty || ticksSinceManifest >= 20 {
 				msgCh <- manifestEvent(*projection.Load())
 				dirty = false
+				ticksSinceManifest = 0
 			}
 
 		case <-resetCh:
@@ -768,6 +773,7 @@ const indexHTML = `<!doctype html>
     div.appendChild(timeSpan);
     div.appendChild(msgSpan);
     feedEl.appendChild(div);
+    while (feedEl.childElementCount > 100) feedEl.removeChild(feedEl.firstChild); // feed 行數上限，避免 DOM 無限長
     feedEl.scrollTop = feedEl.scrollHeight;
   }
 
@@ -816,19 +822,28 @@ const indexHTML = `<!doctype html>
     spectatorFeed = card.querySelector('.feed');
   }
 
+  let addInFlight = 0; // 併發保留名額，避免快速連點在 await 空窗期一起衝破 MAX
   async function addBuyer() {
-    if (buyers.length >= MAX) return;
-    // 跟 server 要一個全域唯一的編號 → 跨分頁接續往上加、不與別的分頁撞名
-    const { id } = await fetch('/join', { method: 'POST' }).then(r => r.json());
-    buyers.push(makeBuyerCard('買家' + id));
-    if (spectatorFeed) grid.appendChild(spectatorFeed.closest('.card')); // 觀眾永遠排最後
-    refreshButtons();
-    renderCards(); // 依當前狀態套用新卡（如售完時顯示「加入候補」）
+    if (buyers.length + addInFlight >= MAX) return;
+    addInFlight++;
+    try {
+      // 跟 server 要一個全域唯一的編號 → 跨分頁接續往上加、不與別的分頁撞名
+      const { id } = await fetch('/join', { method: 'POST' }).then(r => r.json());
+      buyers.push(makeBuyerCard('買家' + id));
+      if (spectatorFeed) grid.appendChild(spectatorFeed.closest('.card')); // 觀眾永遠排最後
+      refreshButtons();
+      renderCards(); // 依當前狀態套用新卡（如售完時顯示「加入候補」）
+    } finally {
+      addInFlight--;
+    }
   }
 
   function removeBuyer() {
     if (buyers.length <= 1) return; // 至少留 1 個
     const b = buyers.pop();
+    // 通知 server 釋放，否則被刪的持票/候補者會孤立、票源到 reset 才回收
+    if (b.state === 'waiting') leave(b.name);
+    else if (b.state === 'queued' || b.state === 'open' || b.state === 'paying') release(b.name);
     b.cardEl.remove();
     refreshButtons();
   }
@@ -860,24 +875,25 @@ const indexHTML = `<!doctype html>
 
   async function onManifest(m) {
     const jobs = [];
+    // 各段：只有 fetch 成功才 commit 該段的 hash；失敗則 hash 不動 → 下一個 manifest 會重抓（自癒）
     if (m.summary !== seg.summary) {
       jobs.push(fetchJSON('/state/summary').then(d => {
-        if (d) { state.remaining = d.remaining; state.queueLen = d.queueLen; }
-        seg.summary = m.summary;
+        if (d) { state.remaining = d.remaining; state.queueLen = d.queueLen; seg.summary = m.summary; }
       }));
     }
     if (m.winners !== seg.winners) {
-      jobs.push(fetchJSON('/state/winners').then(d => { state.winners = d || []; seg.winners = m.winners; }));
+      jobs.push(fetchJSON('/state/winners').then(d => { if (d) { state.winners = d; seg.winners = m.winners; } }));
     }
     const pages = m.queuePages || [];
     for (let p = 0; p < pages.length; p++) {
       if (pages[p] !== seg.queuePages[p]) {
-        jobs.push(fetchJSON('/state/queue?page=' + p).then(d => { state.queuePages[p] = d ? d.names : []; }));
+        const i = p, h = pages[p];
+        jobs.push(fetchJSON('/state/queue?page=' + i).then(d => { if (d) { state.queuePages[i] = d.names; seg.queuePages[i] = h; } }));
       }
     }
     await Promise.all(jobs);
-    state.queuePages.length = pages.length;                            // 頁數變少時截斷
-    seg.queuePages = pages.slice();
+    state.queuePages.length = pages.length;                            // 頁數變少 → 截斷（消失的頁不需再抓）
+    seg.queuePages.length = pages.length;
     renderCards();
   }
 
@@ -945,8 +961,9 @@ const indexHTML = `<!doctype html>
         b.badgeEl.className = 'badge late';
       } else if (b.state === 'open' && b.payDeadline) {
         const s = Math.max(0, Math.ceil((b.payDeadline - now) / 1000));
-        b.badgeEl.textContent = '🕐 待付款 ' + s + 's';
+        b.badgeEl.textContent = s > 0 ? ('🕐 待付款 ' + s + 's') : '⏳ 逾時處理中…';
         b.badgeEl.className = 'badge pay';
+        if (s <= 0) b.btnEl.disabled = true; // hold 已過期就禁按付款（server 也會拒，避免誤導）
       } else if (b.state === 'paying' && b.payDeadline) {
         const s = Math.max(0, Math.ceil((b.payDeadline - now) / 1000));
         b.badgeEl.textContent = s > 0 ? ('💳 付款中 ' + s + 's') : '💳 完成中…';
@@ -974,7 +991,7 @@ const indexHTML = `<!doctype html>
     const m = JSON.parse(e.data);
     switch (m.type) {
       case 'presence': onlineEl.textContent = m.online; return;
-      case 'manifest': mfChain = mfChain.then(() => onManifest(m)); return; // 串行處理，舊 manifest 不覆寫新狀態
+      case 'manifest': mfChain = mfChain.then(() => onManifest(m)).catch(() => {}); return; // 串行 + 吞錯：一次 fetch 失敗不凍結整條 chain
       case 'info':     buyers.forEach(b => { b.justReleased = false; }); clearFeeds(); feedLine(m, 'msg info'); return; // 重置：狀態由後續 manifest 帶回
       case 'ticket':   feedLine(m, 'msg win'); return;                  // 以下皆為敘事 feed 行
       case 'waitlist': feedLine(m, 'msg wait'); return;
