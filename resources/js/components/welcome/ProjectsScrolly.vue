@@ -18,31 +18,35 @@ const VH_PER_PROJECT = 65;
 const rootRef = ref<HTMLElement | null>(null);
 const imgRef = ref<HTMLElement | null>(null);
 const textRef = ref<HTMLElement | null>(null);
-const stripRefs = ref<HTMLElement[]>([]);
+const stripRefs = ref<(HTMLElement | null)[]>([]);
 const activeIndex = ref(0);
 // 目前專案在自身捲動區間內的偏移（-0.5〜0.5）→ 圖片微視差
 const parallax = ref(0);
 
 const total = computed(() => props.projects.length);
-const active = computed(() => props.projects[activeIndex.value]);
+// projects 為空時回 null，template 以 v-if 跳過渲染
+const active = computed<Project | null>(
+    () => props.projects[activeIndex.value] ?? null,
+);
 // 奇偶交錯：偶數 index 文字在左、圖在右，奇數相反
 const isEven = computed(() => activeIndex.value % 2 === 0);
-const digits = computed(() => active.value.id.split(''));
+const digits = computed(() => active.value?.id.split('') ?? []);
 
 function setStripRef(el: unknown, i: number) {
-    if (el instanceof HTMLElement) {
-        stripRefs.value[i] = el;
-    }
+    // 元素卸載時 Vue 會傳 null → 清除舊引用
+    stripRefs.value[i] = el instanceof HTMLElement ? el : null;
 }
 
 // 背景大編號逐位滾動（odometer）到目前專案的 id
 function rollDigits() {
     digits.value.forEach((d, i) => {
         const el = stripRefs.value[i];
+        const num = Number(d);
 
         if (el) {
             animate(el, {
-                translateY: `${-Number(d)}em`,
+                // 非數字字元回退至 0，避免 translateY(NaNem)
+                translateY: `${Number.isNaN(num) ? 0 : -num}em`,
                 duration: 800,
                 ease: 'outExpo',
             });
@@ -151,6 +155,7 @@ function jumpTo(i: number) {
         :style="{ height: total * VH_PER_PROJECT + 'vh' }"
     >
         <div
+            v-if="active"
             class="sticky top-16 flex h-[calc(100vh-4rem)] items-center overflow-hidden"
         >
             <!-- 背景大編號（odometer 逐位滾動）：釘在固定角落，不隨奇偶換邊 -->
