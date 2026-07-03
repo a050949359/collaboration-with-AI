@@ -518,7 +518,13 @@ func main() {
 		w.Header().Set("Connection", "keep-alive")
 
 		client := make(chan string, 50)
-		b.regCh <- client
+		select {
+		case b.regCh <- client: // 包 select：broadcaster 已收攤 / 客戶端已斷線就不硬送，避免 goroutine 卡死
+		case <-b.done:
+			return
+		case <-r.Context().Done():
+			return
+		}
 		defer func() {
 			select {
 			case b.unregCh <- client:
@@ -846,6 +852,7 @@ const indexHTML = `<!doctype html>
   // ---- 讀側：SSE 只送合流後的 manifest（各段 hash）；前端比對後只 GET 變動的分段 ----
   const seg = { summary: '', winners: '', queuePages: [] };            // 上次看到的各段 hash
   const state = { remaining: 5, queueLen: 0, winners: [], queuePages: [] };
+  let mfChain = Promise.resolve();                                     // 串行處理 manifest，避免亂序覆寫
 
   function fetchJSON(url) {
     return fetch(url).then(r => (r.ok ? r.json() : null));
@@ -967,7 +974,7 @@ const indexHTML = `<!doctype html>
     const m = JSON.parse(e.data);
     switch (m.type) {
       case 'presence': onlineEl.textContent = m.online; return;
-      case 'manifest': onManifest(m); return;                           // 版本清單 → 只拉變動的分段
+      case 'manifest': mfChain = mfChain.then(() => onManifest(m)); return; // 串行處理，舊 manifest 不覆寫新狀態
       case 'info':     buyers.forEach(b => { b.justReleased = false; }); clearFeeds(); feedLine(m, 'msg info'); return; // 重置：狀態由後續 manifest 帶回
       case 'ticket':   feedLine(m, 'msg win'); return;                  // 以下皆為敘事 feed 行
       case 'waitlist': feedLine(m, 'msg wait'); return;
