@@ -266,7 +266,9 @@
         position: relative;
         background-color: rgba(22, 29, 24, 0.75);
         backdrop-filter: blur(20px);
-        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+        /* 陰影抽成變數：需要疊加自訂光暈時用 var() 組合，不會蓋掉主題陰影 */
+        --binary-glass-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--binary-glass-shadow);
         isolation: isolate;
     }
 
@@ -427,9 +429,8 @@
         background-color: rgba(232, 233, 223, 0.85);
         backdrop-filter: blur(24px);
         -webkit-backdrop-filter: blur(24px);
-        box-shadow:
-            0 1px 0 rgba(26, 28, 25, 0.08),
-            0 8px 24px rgba(26, 28, 25, 0.06);
+        --binary-glass-shadow:
+            0 1px 0 rgba(26, 28, 25, 0.08), 0 8px 24px rgba(26, 28, 25, 0.06);
     }
 
     [data-theme='ink-zen'] .binary-glass::after {

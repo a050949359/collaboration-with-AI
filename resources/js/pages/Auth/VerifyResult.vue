@@ -49,7 +49,7 @@ if (status === 'success') {
         >
             <div
                 class="binary-glass w-full max-w-xl rounded-[2rem] px-10 py-12"
-                :style="`box-shadow:0 8px 32px 0 color-mix(in srgb, ${info.color} 13%, transparent)`"
+                :style="`box-shadow: var(--binary-glass-shadow), 0 8px 32px 0 color-mix(in srgb, ${info.color} 13%, transparent)`"
             >
                 <h2
                     class="mb-4 text-[2rem] font-bold"
