@@ -13,9 +13,16 @@ interface CNode {
     file: string;
     line: number;
     lang: string;
+    // 力導向模擬期間由 force-graph 掛上的座標/動量/固定點
     x?: number;
     y?: number;
     z?: number;
+    vx?: number;
+    vy?: number;
+    vz?: number;
+    fx?: number | null;
+    fy?: number | null;
+    fz?: number | null;
 }
 interface CEdge {
     source: string;
@@ -75,24 +82,39 @@ function refreshThemeColors() {
     );
 }
 
-// 支援 #rrggbb 與 rgb()/rgba()（rgba 的話與原 alpha 相乘）
+// 支援 #rrggbb / #rrggbbaa 與 rgb()/rgba()（逗號舊語法或「r g b / a」新語法），
+// 有原 alpha 就相乘。生產 CSS 會被 Lightning CSS 壓成 #rrggbbaa，一定要吃得下
 function withAlpha(color: string, alpha: number): string {
-    if (color.startsWith('#') && color.length === 7) {
-        return (
-            color +
-            Math.round(alpha * 255)
-                .toString(16)
-                .padStart(2, '0')
-        );
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+
+        if (hex.length !== 6 && hex.length !== 8) {
+            return color;
+        }
+
+        const base = hex.length === 8 ? parseInt(hex.slice(6), 16) / 255 : 1;
+        const a = Math.round(base * alpha * 255)
+            .toString(16)
+            .padStart(2, '0');
+
+        return `#${hex.slice(0, 6)}${a}`;
     }
 
-    const m = color.match(/rgba?\(([^)]+)\)/);
+    const m = color.match(/^rgba?\(([^)]+)\)$/i);
 
     if (m) {
-        const parts = m[1].split(',').map((s) => s.trim());
-        const base = parts.length === 4 ? parseFloat(parts[3]) : 1;
+        const parts = m[1].split(/[\s,/]+/).filter(Boolean);
 
-        return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${base * alpha})`;
+        if (parts.length >= 3) {
+            const rawA = parts[3];
+            const base = rawA
+                ? rawA.endsWith('%')
+                    ? parseFloat(rawA) / 100
+                    : parseFloat(rawA)
+                : 1;
+
+            return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${base * alpha})`;
+        }
     }
 
     return color;
@@ -262,8 +284,8 @@ function render2d() {
     const { nodes, edges } = filteredGraph();
     shownCount.value = nodes.length;
 
-    // 沿用上一輪的座標與速度，過濾條件改變時圖不會整個重新炸開
-    const prev = new Map<string, CNode & { vx?: number; vy?: number }>();
+    // 沿用上一輪的座標/速度/固定點，過濾或 resize 時圖不會整個重新炸開
+    const prev = new Map<string, CNode>();
 
     if (fg2d) {
         for (const n of fg2d.graphData().nodes) {
@@ -274,7 +296,17 @@ function render2d() {
     const N = nodes.map((n) => {
         const p = prev.get(n.id);
 
-        return p ? { ...n, x: p.x, y: p.y, vx: p.vx, vy: p.vy } : { ...n };
+        return p
+            ? {
+                  ...n,
+                  x: p.x,
+                  y: p.y,
+                  vx: p.vx,
+                  vy: p.vy,
+                  fx: p.fx,
+                  fy: p.fy,
+              }
+            : { ...n };
     });
     const byId = new Set(N.map((n) => n.id));
     const L = edges
@@ -429,7 +461,34 @@ async function render3d() {
 
     const { nodes, edges } = filteredGraph();
     shownCount.value = nodes.length;
-    const N = nodes.map((n) => ({ ...n }));
+
+    // 與 2D 相同：沿用前次座標/動量/固定點，過濾或 resize 時不整圖重排
+    const prev = new Map<string, CNode>();
+
+    if (fg3d) {
+        for (const n of fg3d.graphData().nodes) {
+            prev.set(n.id, n);
+        }
+    }
+
+    const N = nodes.map((n) => {
+        const p = prev.get(n.id);
+
+        return p
+            ? {
+                  ...n,
+                  x: p.x,
+                  y: p.y,
+                  z: p.z,
+                  vx: p.vx,
+                  vy: p.vy,
+                  vz: p.vz,
+                  fx: p.fx,
+                  fy: p.fy,
+                  fz: p.fz,
+              }
+            : { ...n };
+    });
     const byId = new Set(N.map((n) => n.id));
     const L = edges
         .filter((e) => byId.has(e.source) && byId.has(e.target))
@@ -473,13 +532,14 @@ async function render3d() {
 
                 // 鏡頭平滑飛向點選的節點
                 if (n.x != null && n.y != null && n.z != null) {
-                    const dist = Math.hypot(n.x, n.y, n.z) || 1;
+                    const dist = Math.hypot(n.x, n.y, n.z);
+                    // 節點在原點時比例縮放仍是 (0,0,0)，相機與 lookAt
+                    // 重合是 Three.js 的奇異點，改放固定距離外
                     const ratio = 1 + 90 / dist;
-                    fg3d.cameraPosition(
-                        { x: n.x * ratio, y: n.y * ratio, z: n.z * ratio },
-                        { x: n.x, y: n.y, z: n.z },
-                        800,
-                    );
+                    const pos = dist
+                        ? { x: n.x * ratio, y: n.y * ratio, z: n.z * ratio }
+                        : { x: 0, y: 0, z: 90 };
+                    fg3d.cameraPosition(pos, { x: n.x, y: n.y, z: n.z }, 800);
                 }
             })
             .onBackgroundClick(() => {
@@ -530,8 +590,14 @@ function onResize() {
 onMounted(() => {
     fetchGraph();
     window.addEventListener('resize', onResize);
-    // 換主題（data-theme 變更）時更新 canvas 用色
-    themeObserver = new MutationObserver(refreshThemeColors);
+    // 換主題（data-theme 變更）時更新 canvas 用色。
+    // 2D 引擎冷卻後 autoPauseRedraw 會停止重繪，重設 accessor 標記 needsRedraw 補畫一幀；
+    // 3D 的 material 建立後不會重新求值，同樣重設 nodeColor 觸發
+    themeObserver = new MutationObserver(() => {
+        refreshThemeColors();
+        fg2d?.linkColor(fg2d.linkColor());
+        fg3d?.nodeColor(fg3d.nodeColor());
+    });
     themeObserver.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ['data-theme'],
