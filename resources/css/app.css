@@ -61,15 +61,16 @@
         --binary-text-muted: #d7c2b9;
     }
 
+    /* 宣紙調降亮版：整組面板較原稿壓暗 ~5-8%，保留墨色與層級關係 */
     [data-theme='ink-zen'] {
-        --binary-background: #f9faf4;
-        --binary-surface-dim: rgba(217, 219, 213, 0.7);
-        --binary-surface: rgba(237, 238, 232, 0.7);
-        --binary-surface-lowest: rgba(255, 255, 255, 0.7);
-        --binary-surface-low: rgba(243, 244, 238, 0.7);
-        --binary-surface-container: rgba(237, 238, 232, 0.3);
-        --binary-surface-high: rgba(231, 233, 227, 0.7);
-        --binary-surface-highest: rgba(226, 227, 221, 0.7);
+        --binary-background: #e7e7dc;
+        --binary-surface-dim: rgba(202, 204, 195, 0.7);
+        --binary-surface: rgba(224, 225, 216, 0.7);
+        --binary-surface-lowest: rgba(246, 246, 238, 0.7);
+        --binary-surface-low: rgba(230, 231, 222, 0.7);
+        --binary-surface-container: rgba(224, 225, 216, 0.3);
+        --binary-surface-high: rgba(218, 220, 211, 0.7);
+        --binary-surface-highest: rgba(212, 213, 204, 0.7);
         --binary-primary: #050505;
         --binary-primary-container: #474746;
         --binary-primary-fixed: #6b6d6a;
@@ -77,9 +78,9 @@
         --binary-tertiary: #ba1a1a;
         --binary-toast-accent: #a62c21;
         --binary-toast-mark: '●';
-        --binary-on-primary-container: #f9faf4;
+        --binary-on-primary-container: #f4f4ea;
         --binary-outline: rgba(116, 120, 120, 0.55);
-        --binary-outline-variant: rgba(196, 199, 199, 0.5);
+        --binary-outline-variant: rgba(184, 187, 182, 0.55);
         --binary-text: #3a3c39;
         --binary-text-muted: #606360;
     }
@@ -126,7 +127,7 @@
         background:
             radial-gradient(
                 ellipse at bottom left,
-                rgba(26, 28, 25, 0.04),
+                rgba(26, 28, 25, 0.05),
                 transparent 40%
             ),
             var(--binary-background);
@@ -376,7 +377,7 @@
     }
 
     [data-theme='ink-zen'] {
-        --binary-accent-card-bg: rgba(249, 250, 244, 0.75);
+        --binary-accent-card-bg: rgba(230, 231, 221, 0.75);
     }
 
     .binary-accent-card {
@@ -415,15 +416,15 @@
     }
 
     [data-theme='ink-zen'] .binary-ghost-button {
-        background-color: rgba(226, 227, 221, 0.72);
+        background-color: rgba(212, 213, 204, 0.72);
     }
 
     [data-theme='ink-zen'] .binary-ghost-button:hover {
-        background-color: rgba(217, 219, 213, 0.92);
+        background-color: rgba(202, 204, 195, 0.92);
     }
 
     [data-theme='ink-zen'] .binary-glass {
-        background-color: rgba(249, 250, 244, 0.85);
+        background-color: rgba(232, 233, 223, 0.85);
         backdrop-filter: blur(24px);
         -webkit-backdrop-filter: blur(24px);
         box-shadow:
@@ -445,15 +446,15 @@
     }
 
     [data-theme='ink-zen'] .binary-card {
-        background-color: rgba(237, 238, 232, 0.7);
+        background-color: rgba(224, 225, 216, 0.7);
     }
 
     [data-theme='ink-zen'] .binary-card-raised {
-        background-color: rgba(231, 233, 227, 0.7);
+        background-color: rgba(218, 220, 211, 0.7);
     }
 
     [data-theme='ink-zen'] .binary-panel {
-        background-color: rgba(237, 238, 232, 0.7);
+        background-color: rgba(224, 225, 216, 0.7);
     }
 }
 
