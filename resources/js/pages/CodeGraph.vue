@@ -71,8 +71,20 @@ const theme = {
 
 function refreshThemeColors() {
     const cs = getComputedStyle(document.documentElement);
-    const get = (name: string, fallback: string) =>
-        cs.getPropertyValue(name).trim() || fallback;
+    // 借 canvas fillStyle 的序列化把任意 CSS 色（oklch/color-mix/…）
+    // 標準化成 #hex 或 rgba()，withAlpha 才保證解析得動；只在換主題時跑一次
+    const ctx = document.createElement('canvas').getContext('2d');
+    const get = (name: string, fallback: string) => {
+        const raw = cs.getPropertyValue(name).trim() || fallback;
+
+        if (!ctx) {
+            return raw;
+        }
+
+        ctx.fillStyle = raw;
+
+        return ctx.fillStyle;
+    };
     theme.primary = get('--binary-primary', theme.primary);
     theme.background = get('--binary-background', theme.background);
     theme.textMuted = get('--binary-text-muted', theme.textMuted);
@@ -432,7 +444,8 @@ function render2d() {
                 selected.value = null;
             })
             .onEngineStop(() => {
-                if (!didFit) {
+                // fg2d 判空：離頁瞬間卸載後才觸發的話避免炸 TypeError
+                if (!didFit && fg2d) {
                     didFit = true;
                     fg2d.zoomToFit(400, 60);
                 }
