@@ -86,7 +86,7 @@ async function submit() {
             </p>
         </div>
 
-        <div class="mt-8 border-t border-[rgba(59,75,55,0.18)] pt-8">
+        <div class="mt-8 border-t border-[var(--binary-outline-variant)] pt-8">
             <div class="flex items-center gap-2 text-sm">
                 <span class="text-[var(--binary-text-muted)]"
                     >想起密碼了？</span

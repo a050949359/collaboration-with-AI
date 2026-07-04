@@ -314,7 +314,8 @@
 .bg-veil {
     position: absolute;
     inset: 0;
-    background: rgba(249, 250, 244, 0.55);
+    /* 紙色半透明紗：直接從主題底色衍生，調紙色時自動跟 */
+    background: color-mix(in srgb, var(--binary-background) 50%, transparent);
 }
 
 .birds-svg {
