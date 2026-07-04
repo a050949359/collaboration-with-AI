@@ -1,16 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import {
-    forceCenter,
-    forceCollide,
-    forceLink,
-    forceManyBody,
-    forceSimulation,
-    drag as d3drag,
-    select,
-    zoom,
-} from 'd3';
-import type { Simulation } from 'd3';
+import { forceCollide } from 'd3';
+import ForceGraph from 'force-graph';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
@@ -22,10 +13,16 @@ interface CNode {
     file: string;
     line: number;
     lang: string;
+    // 力導向模擬期間由 force-graph 掛上的座標/動量/固定點
     x?: number;
     y?: number;
+    z?: number;
+    vx?: number;
+    vy?: number;
+    vz?: number;
     fx?: number | null;
     fy?: number | null;
+    fz?: number | null;
 }
 interface CEdge {
     source: string;
@@ -34,7 +31,7 @@ interface CEdge {
     confidence: number;
 }
 
-// 語言配色（D3 視覺化特定色，CLAUDE.md 允許的例外）
+// 語言配色（Canvas/WebGL 視覺化特定色，CLAUDE.md 允許的例外）
 const LANG_COLOR: Record<string, string> = {
     go: '#6bdc9f',
     php: '#a78bfa',
@@ -45,7 +42,7 @@ const LANG_COLOR: Record<string, string> = {
 const ROUTE_COLOR = '#f0a020';
 const HTTP_COLOR = '#58a6ff';
 
-const svgRef = ref<SVGSVGElement | null>(null);
+const graph2dRef = ref<HTMLDivElement | null>(null);
 const graph3dRef = ref<HTMLDivElement | null>(null);
 const loading = ref(true);
 const indexed = ref(true);
@@ -63,12 +60,108 @@ const langOn = ref<Record<string, boolean>>({
 });
 const query = ref('');
 
-let simulation: Simulation<CNode, undefined> | null = null;
+// Canvas/WebGL 吃不了 CSS 變數，主題色取計算值後存這裡；
+// 2D 每幀重繪都讀這份，換主題時（MutationObserver）即時生效
+const theme = {
+    primary: '#6bdc9f',
+    background: '#0b100d',
+    textMuted: '#a5d1b4',
+    outlineVariant: 'rgba(165, 209, 180, 0.15)',
+};
+
+function refreshThemeColors() {
+    const cs = getComputedStyle(document.documentElement);
+    // 借 canvas fillStyle 的序列化把任意 CSS 色（oklch/color-mix/…）
+    // 標準化成 #hex 或 rgba()，withAlpha 才保證解析得動；只在換主題時跑一次
+    const ctx = document.createElement('canvas').getContext('2d');
+    const get = (name: string, fallback: string) => {
+        const raw = cs.getPropertyValue(name).trim() || fallback;
+
+        if (!ctx) {
+            return raw;
+        }
+
+        ctx.fillStyle = raw;
+
+        return ctx.fillStyle;
+    };
+    theme.primary = get('--binary-primary', theme.primary);
+    theme.background = get('--binary-background', theme.background);
+    theme.textMuted = get('--binary-text-muted', theme.textMuted);
+    theme.outlineVariant = get(
+        '--binary-outline-variant',
+        theme.outlineVariant,
+    );
+}
+
+// 支援 #rrggbb / #rrggbbaa 與 rgb()/rgba()（逗號舊語法或「r g b / a」新語法），
+// 有原 alpha 就相乘。生產 CSS 會被 Lightning CSS 壓成 #rrggbbaa，一定要吃得下
+function withAlpha(color: string, alpha: number): string {
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+
+        if (hex.length !== 6 && hex.length !== 8) {
+            return color;
+        }
+
+        const base = hex.length === 8 ? parseInt(hex.slice(6), 16) / 255 : 1;
+        const a = Math.round(base * alpha * 255)
+            .toString(16)
+            .padStart(2, '0');
+
+        return `#${hex.slice(0, 6)}${a}`;
+    }
+
+    const m = color.match(/^rgba?\(([^)]+)\)$/i);
+
+    if (m) {
+        const parts = m[1].split(/[\s,/]+/).filter(Boolean);
+
+        if (parts.length >= 3) {
+            const rawA = parts[3];
+            const base = rawA
+                ? rawA.endsWith('%')
+                    ? parseFloat(rawA) / 100
+                    : parseFloat(rawA)
+                : 1;
+
+            return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${base * alpha})`;
+        }
+    }
+
+    return color;
+}
+
+function esc(s: string): string {
+    return s.replace(
+        /[&<>]/g,
+        (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!,
+    );
+}
+
+// graphData 餵入後 link 的 source/target 會被換成節點物件
+function endId(v: string | CNode): string {
+    return typeof v === 'string' ? v : v.id;
+}
+
+// 2D：force-graph（canvas 渲染，節點多也順）。
+// 實例的 accessor 建立時綁定，每幀重繪會重新求值，
+// 所以 hover / 選取 / 度數這些狀態放 module scope、直接改就會反映到畫面。
+let fg2d: any = null;
+let deg2d = new Map<string, number>();
+let adj2d = new Map<string, Set<string>>();
+let hover2d: string | null = null;
+let labelCutoff = 3;
+let didFit = false;
+
 // 3D：動態載入 3d-force-graph（含 Three.js），只有切到 3D 才載，2D 使用者零負擔
 
 let ForceGraph3D: any = null;
 
 let fg3d: any = null;
+let deg3d = new Map<string, number>();
+
+let themeObserver: MutationObserver | null = null;
 
 const nodeById = computed(() => {
     const m = new Map<string, CNode>();
@@ -109,6 +202,12 @@ function shortName(id: string): string {
     return nodeById.value.get(id)?.name ?? id;
 }
 
+function nodeColor(n: CNode): string {
+    return n.type === 'route'
+        ? ROUTE_COLOR
+        : (LANG_COLOR[n.lang] ?? LANG_COLOR.other);
+}
+
 async function fetchGraph() {
     loading.value = true;
 
@@ -134,6 +233,7 @@ async function fetchGraph() {
         loading.value = false;
     }
 
+    didFit = false; // 新資料佈局完成後 zoomToFit 一次
     renderActive();
 }
 
@@ -156,124 +256,208 @@ function filteredGraph(): { nodes: CNode[]; edges: CEdge[] } {
 
 const shownCount = ref(0);
 
-function render() {
-    const el = svgRef.value;
+function buildDegAdj(L: { source: string; target: string }[]): {
+    deg: Map<string, number>;
+    adj: Map<string, Set<string>>;
+} {
+    const deg = new Map<string, number>();
+    const adj = new Map<string, Set<string>>();
+
+    for (const e of L) {
+        deg.set(e.source, (deg.get(e.source) ?? 0) + 1);
+        deg.set(e.target, (deg.get(e.target) ?? 0) + 1);
+
+        if (!adj.has(e.source)) {
+            adj.set(e.source, new Set());
+        }
+
+        if (!adj.has(e.target)) {
+            adj.set(e.target, new Set());
+        }
+
+        adj.get(e.source)!.add(e.target);
+        adj.get(e.target)!.add(e.source);
+    }
+
+    return { deg, adj };
+}
+
+function radius2d(id: string): number {
+    return 3 + Math.min(9, deg2d.get(id) ?? 0);
+}
+
+function render2d() {
+    const el = graph2dRef.value;
 
     if (!el) {
         return;
     }
 
-    if (simulation) {
-        simulation.stop();
-    }
-
     const { nodes, edges } = filteredGraph();
     shownCount.value = nodes.length;
 
-    // d3 會改寫節點物件，複製一份避免污染 ref
-    const N: CNode[] = nodes.map((n) => ({ ...n }));
-    const byId = new Map(N.map((n) => [n.id, n]));
+    // 沿用上一輪的座標/速度/固定點，過濾或 resize 時圖不會整個重新炸開
+    const prev = new Map<string, CNode>();
+
+    if (fg2d) {
+        for (const n of fg2d.graphData().nodes) {
+            prev.set(n.id, n);
+        }
+    }
+
+    const N = nodes.map((n) => {
+        const p = prev.get(n.id);
+
+        return p
+            ? {
+                  ...n,
+                  x: p.x,
+                  y: p.y,
+                  vx: p.vx,
+                  vy: p.vy,
+                  fx: p.fx,
+                  fy: p.fy,
+              }
+            : { ...n };
+    });
+    const byId = new Set(N.map((n) => n.id));
     const L = edges
         .filter((e) => byId.has(e.source) && byId.has(e.target))
         .map((e) => ({ source: e.source, target: e.target, type: e.type }));
 
-    const deg = new Map<string, number>();
+    ({ deg: deg2d, adj: adj2d } = buildDegAdj(L));
 
-    for (const e of L) {
-        deg.set(e.source, (deg.get(e.source) ?? 0) + 1);
-        deg.set(e.target, (deg.get(e.target) ?? 0) + 1);
+    // 高度數節點（前 ~30 名，至少度數 3）常駐顯示名稱標籤
+    const degVals = N.map((n) => deg2d.get(n.id) ?? 0).sort((a, b) => b - a);
+    labelCutoff = Math.max(3, degVals[Math.min(29, degVals.length - 1)] ?? 3);
+
+    refreshThemeColors();
+
+    if (!fg2d) {
+        fg2d = new ForceGraph(el) as any;
+        fg2d.backgroundColor('rgba(0,0,0,0)')
+            .nodeLabel(
+                (n: CNode) =>
+                    `<div style="font-size:11px;line-height:1.4"><b>${esc(n.name)}</b><br/><span style="opacity:.7">${esc(n.file)}:${n.line}</span></div>`,
+            )
+            .nodeCanvasObject(
+                (
+                    n: CNode & { x: number; y: number },
+                    ctx: CanvasRenderingContext2D,
+                    scale: number,
+                ) => {
+                    const r = radius2d(n.id);
+                    const lit =
+                        !hover2d ||
+                        n.id === hover2d ||
+                        (adj2d.get(hover2d)?.has(n.id) ?? false);
+                    ctx.globalAlpha = lit ? 1 : 0.12;
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
+                    ctx.fillStyle = nodeColor(n);
+                    ctx.fill();
+
+                    // 選取光圈（螢幕上恆定 2px 寬）
+                    if (n.id === selected.value?.id) {
+                        ctx.strokeStyle = theme.primary;
+                        ctx.lineWidth = 2 / scale;
+                        ctx.beginPath();
+                        ctx.arc(n.x, n.y, r + 3 / scale, 0, 2 * Math.PI);
+                        ctx.stroke();
+                    }
+
+                    // hub 常駐標籤；hover 時被聚焦的節點（自己+鄰居）也顯示
+                    const hoverLit = hover2d !== null && lit;
+                    const showLabel =
+                        hoverLit ||
+                        ((deg2d.get(n.id) ?? 0) >= labelCutoff && scale > 0.4);
+
+                    if (showLabel) {
+                        const size = 11 / scale;
+                        ctx.font = `${size}px sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        const y = n.y - r - 3 / scale;
+                        ctx.lineWidth = 3 / scale;
+                        ctx.strokeStyle = theme.background;
+                        ctx.strokeText(n.name, n.x, y);
+                        ctx.fillStyle = theme.textMuted;
+                        ctx.fillText(n.name, n.x, y);
+                    }
+
+                    ctx.globalAlpha = 1;
+                },
+            )
+            .nodePointerAreaPaint(
+                (
+                    n: CNode & { x: number; y: number },
+                    color: string,
+                    ctx: CanvasRenderingContext2D,
+                ) => {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, radius2d(n.id) + 2, 0, 2 * Math.PI);
+                    ctx.fill();
+                },
+            )
+            .linkColor(
+                (l: {
+                    source: string | CNode;
+                    target: string | CNode;
+                    type: string;
+                }) => {
+                    const base =
+                        l.type === 'HANDLES'
+                            ? ROUTE_COLOR
+                            : l.type === 'HTTP_CALLS'
+                              ? HTTP_COLOR
+                              : theme.outlineVariant;
+
+                    if (!hover2d) {
+                        return base;
+                    }
+
+                    return endId(l.source) === hover2d ||
+                        endId(l.target) === hover2d
+                        ? base
+                        : withAlpha(base, 0.06);
+                },
+            )
+            .linkWidth((l: { type: string }) => (l.type === 'CALLS' ? 1 : 1.5))
+            .linkLineDash((l: { type: string }) =>
+                l.type === 'CALLS' ? null : [4, 3],
+            )
+            .linkDirectionalParticles((l: { type: string }) =>
+                l.type === 'CALLS' ? 0 : 2,
+            )
+            .linkDirectionalParticleWidth(2)
+            .linkDirectionalParticleSpeed(0.006)
+            .onNodeHover((n: CNode | null) => {
+                hover2d = n?.id ?? null;
+                el.style.cursor = n ? 'pointer' : '';
+            })
+            .onNodeClick((n: CNode) => {
+                selected.value =
+                    allNodes.value.find((x) => x.id === n.id) ?? null;
+            })
+            .onBackgroundClick(() => {
+                selected.value = null;
+            })
+            .onEngineStop(() => {
+                // fg2d 判空：離頁瞬間卸載後才觸發的話避免炸 TypeError
+                if (!didFit && fg2d) {
+                    didFit = true;
+                    fg2d.zoomToFit(400, 60);
+                }
+            });
+        fg2d.d3Force('charge')?.strength(-70);
+        fg2d.d3Force('link')?.distance(45);
+        fg2d.d3Force('collide', forceCollide(11));
     }
 
-    const svg = select(el);
-    svg.selectAll('*').remove();
-    const width = el.clientWidth || 800;
-    const height = el.clientHeight || 600;
-
-    const g = svg.append('g');
-    svg.call(
-        zoom<SVGSVGElement, unknown>()
-            .scaleExtent([0.1, 4])
-            .on('zoom', (ev) => g.attr('transform', ev.transform)),
-    );
-
-    const link = g
-        .append('g')
-        .attr('stroke-opacity', 0.6)
-        .selectAll('line')
-        .data(L)
-        .join('line')
-        .attr('stroke', (d) =>
-            d.type === 'HANDLES'
-                ? ROUTE_COLOR
-                : d.type === 'HTTP_CALLS'
-                  ? HTTP_COLOR
-                  : 'var(--binary-outline-variant)',
-        )
-        .attr('stroke-width', (d) => (d.type === 'CALLS' ? 1 : 1.5))
-        .attr('stroke-dasharray', (d) => (d.type === 'CALLS' ? null : '4,3'));
-
-    const node = g
-        .append('g')
-        .selectAll<SVGCircleElement, CNode>('circle')
-        .data(N)
-        .join('circle')
-        .attr('r', (d) => 3 + Math.min(9, deg.get(d.id) ?? 0))
-        .attr('fill', (d) =>
-            d.type === 'route'
-                ? ROUTE_COLOR
-                : (LANG_COLOR[d.lang] ?? LANG_COLOR.other),
-        )
-        .attr('stroke', 'var(--binary-background)')
-        .attr('stroke-width', 1)
-        .style('cursor', 'pointer')
-        .on('click', (_ev, d) => {
-            selected.value = allNodes.value.find((n) => n.id === d.id) ?? null;
-        });
-
-    node.append('title').text((d) => `${d.id}\n${d.file}:${d.line}`);
-
-    node.call(
-        d3drag<SVGCircleElement, CNode>()
-            .on('start', (ev, d) => {
-                if (!ev.active) {
-                    simulation?.alphaTarget(0.3).restart();
-                }
-
-                d.fx = d.x;
-                d.fy = d.y;
-            })
-            .on('drag', (ev, d) => {
-                d.fx = ev.x;
-                d.fy = ev.y;
-            })
-            .on('end', (ev, d) => {
-                if (!ev.active) {
-                    simulation?.alphaTarget(0);
-                }
-
-                d.fx = null;
-                d.fy = null;
-            }),
-    );
-
-    simulation = forceSimulation<CNode>(N)
-        .force(
-            'link',
-            forceLink<CNode, { source: string; target: string }>(L)
-                .id((d) => d.id)
-                .distance(45)
-                .strength(0.35),
-        )
-        .force('charge', forceManyBody().strength(-70))
-        .force('center', forceCenter(width / 2, height / 2))
-        .force('collide', forceCollide(11))
-        .on('tick', () => {
-            link.attr('x1', (d) => (d.source as unknown as CNode).x!)
-                .attr('y1', (d) => (d.source as unknown as CNode).y!)
-                .attr('x2', (d) => (d.target as unknown as CNode).x!)
-                .attr('y2', (d) => (d.target as unknown as CNode).y!);
-            node.attr('cx', (d) => d.x!).attr('cy', (d) => d.y!);
-        });
+    fg2d.width(el.clientWidth).height(el.clientHeight);
+    fg2d.graphData({ nodes: N, links: L });
+    fg2d.resumeAnimation(); // 從 3D 切回時恢復 render loop（新建實例時為 no-op）
 }
 
 // 3D：用 3d-force-graph（Three.js）渲染同一份資料，node/edge 配色與 2D 一致。
@@ -289,20 +473,55 @@ async function render3d() {
     }
 
     const { nodes, edges } = filteredGraph();
-    const N = nodes.map((n) => ({ ...n }));
+    shownCount.value = nodes.length;
+
+    // 與 2D 相同：沿用前次座標/動量/固定點，過濾或 resize 時不整圖重排
+    const prev = new Map<string, CNode>();
+
+    if (fg3d) {
+        for (const n of fg3d.graphData().nodes) {
+            prev.set(n.id, n);
+        }
+    }
+
+    const N = nodes.map((n) => {
+        const p = prev.get(n.id);
+
+        return p
+            ? {
+                  ...n,
+                  x: p.x,
+                  y: p.y,
+                  z: p.z,
+                  vx: p.vx,
+                  vy: p.vy,
+                  vz: p.vz,
+                  fx: p.fx,
+                  fy: p.fy,
+                  fz: p.fz,
+              }
+            : { ...n };
+    });
     const byId = new Set(N.map((n) => n.id));
     const L = edges
         .filter((e) => byId.has(e.source) && byId.has(e.target))
         .map((e) => ({ source: e.source, target: e.target, type: e.type }));
 
+    ({ deg: deg3d } = buildDegAdj(L));
+    refreshThemeColors();
+
     if (!fg3d) {
-        fg3d = ForceGraph3D()(el)
-            .backgroundColor('rgba(0,0,0,0)')
-            .nodeLabel((n: CNode) => `${n.id}\n${n.file}:${n.line}`)
+        fg3d = new ForceGraph3D(el);
+        fg3d.backgroundColor('rgba(0,0,0,0)')
+            .nodeLabel(
+                (n: CNode) =>
+                    `<div style="font-size:11px;line-height:1.4"><b>${esc(n.name)}</b><br/><span style="opacity:.7">${esc(n.file)}:${n.line}</span></div>`,
+            )
+            .nodeResolution(12)
+            .nodeOpacity(0.9)
+            .nodeVal((n: CNode) => 1 + Math.min(10, deg3d.get(n.id) ?? 0))
             .nodeColor((n: CNode) =>
-                n.type === 'route'
-                    ? ROUTE_COLOR
-                    : (LANG_COLOR[n.lang] ?? LANG_COLOR.other),
+                n.id === selected.value?.id ? theme.primary : nodeColor(n),
             )
             .linkColor((l: { type: string }) =>
                 l.type === 'HANDLES'
@@ -311,12 +530,33 @@ async function render3d() {
                       ? HTTP_COLOR
                       : '#5b6270',
             )
-            .linkOpacity(0.5)
+            .linkOpacity(0.45)
+            .linkWidth((l: { type: string }) => (l.type === 'CALLS' ? 0 : 1))
             .linkDirectionalArrowLength(2.5)
             .linkDirectionalArrowRelPos(1)
+            .linkDirectionalParticles((l: { type: string }) =>
+                l.type === 'CALLS' ? 0 : 2,
+            )
+            .linkDirectionalParticleWidth(1.6)
+            .linkDirectionalParticleSpeed(0.006)
             .onNodeClick((n: CNode) => {
                 selected.value =
                     allNodes.value.find((x) => x.id === n.id) ?? null;
+
+                // 鏡頭平滑飛向點選的節點
+                if (n.x != null && n.y != null && n.z != null) {
+                    const dist = Math.hypot(n.x, n.y, n.z);
+                    // 節點在原點時比例縮放仍是 (0,0,0)，相機與 lookAt
+                    // 重合是 Three.js 的奇異點，改放固定距離外
+                    const ratio = 1 + 90 / dist;
+                    const pos = dist
+                        ? { x: n.x * ratio, y: n.y * ratio, z: n.z * ratio }
+                        : { x: 0, y: 0, z: 90 };
+                    fg3d.cameraPosition(pos, { x: n.x, y: n.y, z: n.z }, 800);
+                }
+            })
+            .onBackgroundClick(() => {
+                selected.value = null;
             });
     }
 
@@ -326,12 +566,13 @@ async function render3d() {
 }
 
 function renderActive() {
+    // 兩個實例都常駐（切換即恢復），只讓當前模式跑 render loop，省 GPU/CPU
     if (mode3d.value) {
+        fg2d?.pauseAnimation();
         render3d();
     } else {
-        // 切到 2D：暫停 3D 的 Three.js render loop，省 GPU/CPU（實例仍留著、切回即恢復）
         fg3d?.pauseAnimation();
-        render();
+        render2d();
     }
 }
 
@@ -348,6 +589,13 @@ watch(
     { deep: true },
 );
 
+// 2D 是每幀重繪、選取光圈自動更新；3D 的 material 需要重新觸發 nodeColor
+watch(selected, () => {
+    if (fg3d && mode3d.value) {
+        fg3d.nodeColor(fg3d.nodeColor());
+    }
+});
+
 function onResize() {
     renderActive();
 }
@@ -355,19 +603,33 @@ function onResize() {
 onMounted(() => {
     fetchGraph();
     window.addEventListener('resize', onResize);
+    // 換主題（data-theme 變更）時更新 canvas 用色。
+    // 2D 引擎冷卻後 autoPauseRedraw 會停止重繪，重設 accessor 標記 needsRedraw 補畫一幀；
+    // 3D 的 material 建立後不會重新求值，同樣重設 nodeColor 觸發
+    themeObserver = new MutationObserver(() => {
+        refreshThemeColors();
+        fg2d?.linkColor(fg2d.linkColor());
+        fg3d?.nodeColor(fg3d.nodeColor());
+    });
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme'],
+    });
 });
 onUnmounted(() => {
-    simulation?.stop();
-
     // 清掉 debounce timer：250ms 內離頁時避免它在已卸載的 refs 上觸發 renderActive
     if (rerenderTimer) {
         clearTimeout(rerenderTimer);
     }
 
-    if (fg3d?._destructor) {
-        fg3d._destructor();
-    }
+    fg2d?._destructor?.();
+    fg3d?._destructor?.();
 
+    // module 變數跨頁面存活，不歸零的話重進頁面會拿到已銷毀的實例
+    fg2d = null;
+    fg3d = null;
+
+    themeObserver?.disconnect();
     window.removeEventListener('resize', onResize);
 });
 </script>
@@ -380,9 +642,9 @@ onUnmounted(() => {
             <div
                 class="flex flex-wrap items-center gap-3 border-b border-[var(--binary-outline-variant)] px-4 py-3"
             >
-                <h1 class="text-sm font-semibold text-[var(--binary-text)]">
-                    CodeGraph
-                    <span class="text-[var(--binary-outline)]"
+                <h1 class="text-sm font-semibold">
+                    <span class="text-gradient-primary">CodeGraph</span>
+                    <span class="ml-1 text-[var(--binary-outline)]"
                         >程式碼結構圖</span
                     >
                 </h1>
@@ -416,15 +678,35 @@ onUnmounted(() => {
                 <span class="text-xs text-[var(--binary-outline)]"
                     >顯示 {{ shownCount }} 節點</span
                 >
-                <button
-                    class="rounded-lg border border-[var(--binary-outline-variant)] px-2.5 py-1 text-xs text-[var(--binary-text-muted)] transition-colors hover:text-[var(--binary-text)]"
-                    :title="mode3d ? '切回 2D' : '切到 3D'"
-                    @click="mode3d = !mode3d"
+                <div
+                    class="flex overflow-hidden rounded-lg border border-[var(--binary-outline-variant)] text-xs"
                 >
-                    {{ mode3d ? '3D' : '2D' }}
-                </button>
+                    <button
+                        class="px-2.5 py-1 transition-colors"
+                        :class="
+                            !mode3d
+                                ? 'bg-[var(--binary-surface-high)] font-semibold text-[var(--binary-primary)]'
+                                : 'text-[var(--binary-text-muted)] hover:text-[var(--binary-text)]'
+                        "
+                        @click="mode3d = false"
+                    >
+                        2D
+                    </button>
+                    <button
+                        class="px-2.5 py-1 transition-colors"
+                        :class="
+                            mode3d
+                                ? 'bg-[var(--binary-surface-high)] font-semibold text-[var(--binary-primary)]'
+                                : 'text-[var(--binary-text-muted)] hover:text-[var(--binary-text)]'
+                        "
+                        @click="mode3d = true"
+                    >
+                        3D
+                    </button>
+                </div>
                 <button
-                    class="text-xs text-[var(--binary-outline)] transition-colors hover:text-[var(--binary-text)]"
+                    class="text-xs text-[var(--binary-outline)] transition-all duration-300 hover:rotate-180 hover:text-[var(--binary-text)]"
+                    title="重新載入"
                     @click="fetchGraph"
                 >
                     ↺
@@ -433,11 +715,31 @@ onUnmounted(() => {
 
             <!-- 圖 -->
             <div class="relative min-h-0 flex-1">
+                <!-- 中央微光暈，給圖一點景深 -->
+                <div
+                    class="pointer-events-none absolute inset-0"
+                    style="
+                        background: radial-gradient(
+                            ellipse at center,
+                            color-mix(
+                                in srgb,
+                                var(--binary-primary) 6%,
+                                transparent
+                            ),
+                            transparent 70%
+                        );
+                    "
+                ></div>
                 <div
                     v-if="loading"
-                    class="absolute inset-0 flex items-center justify-center text-xs text-[var(--binary-outline)]"
+                    class="absolute inset-0 flex flex-col items-center justify-center gap-3"
                 >
-                    載入中…
+                    <div
+                        class="h-7 w-7 animate-spin rounded-full border-2 border-[var(--binary-outline-variant)] border-t-[var(--binary-primary)]"
+                    ></div>
+                    <span class="text-xs text-[var(--binary-outline)]"
+                        >載入中…</span
+                    >
                 </div>
                 <div
                     v-else-if="!indexed"
@@ -452,12 +754,73 @@ onUnmounted(() => {
                         在開發機執行 codegraph index 產生後放到此路徑
                     </p>
                 </div>
-                <svg v-show="!mode3d" ref="svgRef" class="h-full w-full" />
+                <div
+                    v-show="!mode3d"
+                    ref="graph2dRef"
+                    class="h-full w-full"
+                ></div>
                 <div
                     v-show="mode3d"
                     ref="graph3dRef"
                     class="h-full w-full"
                 ></div>
+
+                <!-- 邊類型圖例 -->
+                <div
+                    v-if="!loading && indexed"
+                    class="binary-glass absolute bottom-4 left-4 z-10 space-y-1.5 rounded-xl border border-[var(--binary-outline-variant)] px-3 py-2 text-[10px] text-[var(--binary-text-muted)]"
+                >
+                    <div class="flex items-center gap-2">
+                        <svg width="22" height="6" class="shrink-0">
+                            <line
+                                x1="1"
+                                y1="3"
+                                x2="21"
+                                y2="3"
+                                stroke="var(--binary-outline)"
+                                stroke-width="1.5"
+                            />
+                        </svg>
+                        內部呼叫
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg width="22" height="6" class="shrink-0">
+                            <line
+                                x1="1"
+                                y1="3"
+                                x2="21"
+                                y2="3"
+                                :stroke="ROUTE_COLOR"
+                                stroke-width="1.5"
+                                stroke-dasharray="4,3"
+                            />
+                        </svg>
+                        route → handler
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg width="22" height="6" class="shrink-0">
+                            <line
+                                x1="1"
+                                y1="3"
+                                x2="21"
+                                y2="3"
+                                :stroke="HTTP_COLOR"
+                                stroke-width="1.5"
+                                stroke-dasharray="4,3"
+                            />
+                        </svg>
+                        前端 → API
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="flex w-[22px] shrink-0 justify-center">
+                            <span
+                                class="h-2 w-2 rounded-full"
+                                :style="`background:${ROUTE_COLOR}`"
+                            ></span>
+                        </span>
+                        route 節點
+                    </div>
+                </div>
 
                 <!-- 節點詳情 -->
                 <div
@@ -467,7 +830,7 @@ onUnmounted(() => {
                     <div class="mb-2 flex items-start justify-between gap-2">
                         <span
                             class="h-2.5 w-2.5 shrink-0 translate-y-1 rounded-full"
-                            :style="`background:${LANG_COLOR[selected.lang]}`"
+                            :style="`background:${nodeColor(selected)}`"
                         ></span>
                         <span
                             class="flex-1 font-semibold break-all text-[var(--binary-text)]"
@@ -483,10 +846,14 @@ onUnmounted(() => {
                     <p class="mb-1 break-all text-[var(--binary-text-muted)]">
                         {{ selected.id }}
                     </p>
-                    <p class="mb-3 text-[var(--binary-outline)]">
-                        {{ selected.type }} · {{ selected.file }}:{{
-                            selected.line
-                        }}
+                    <p class="mb-3 flex flex-wrap items-center gap-1.5">
+                        <span
+                            class="rounded bg-[var(--binary-surface-container)] px-1.5 py-0.5 text-[10px] text-[var(--binary-text-muted)]"
+                            >{{ selected.type }}</span
+                        >
+                        <span class="break-all text-[var(--binary-outline)]"
+                            >{{ selected.file }}:{{ selected.line }}</span
+                        >
                     </p>
 
                     <p class="binary-label mb-1 text-[10px] uppercase">
