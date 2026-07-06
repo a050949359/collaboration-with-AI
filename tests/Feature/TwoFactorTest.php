@@ -159,6 +159,19 @@ class TwoFactorTest extends TestCase
         $this->assertTrue($user->fresh()->two_factor_enabled);
     }
 
+    /** 密碼管理器情境：兩欄同時送出時擇一有效即可（密碼錯要 fallback 驗 OTP）。 */
+    public function test_disable_falls_back_to_code_when_password_wrong(): void
+    {
+        [$user, $secret] = $this->userWithTwoFactor();
+
+        $this->actingAs($user)->postJson('/api/auth/2fa/disable', [
+            'password' => 'wrong-password',
+            'code' => $this->totp->code($secret),
+        ])->assertOk();
+
+        $this->assertNull($user->fresh()->two_factor_secret);
+    }
+
     public function test_disable_when_not_enabled_fails(): void
     {
         $user = User::factory()->create();

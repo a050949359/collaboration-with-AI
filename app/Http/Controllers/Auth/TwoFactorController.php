@@ -20,7 +20,7 @@ class TwoFactorController extends Controller
     }
 
     /** 產生新 secret 進入 pending 狀態，回傳 otpauth URI 供前端畫 QR。 */
-    public function enable(Request $request): JsonResponse
+    public function enable(): JsonResponse
     {
         /** @var User $user */
         $user = Auth::user();
@@ -63,8 +63,8 @@ class TwoFactorController extends Controller
         }
 
         $user->two_factor_confirmed_at = now();
-        $user->save();
 
+        // generateFor 內部的 save 會一併寫入 confirmed_at（同一物件），合併為一次寫入
         $codes = $this->recoveryCodes->generateFor($user);
 
         return response()->json([
@@ -128,10 +128,11 @@ class TwoFactorController extends Controller
         ]);
 
         $password = $request->string('password')->toString();
-        if ($password !== '' && $user->password !== null) {
-            return Hash::check($password, $user->password);
+        if ($password !== '' && $user->password !== null && Hash::check($password, $user->password)) {
+            return true;
         }
 
+        // 密碼未提供或不符時 fallback 驗 OTP：擇一有效即可（密碼管理器可能同時自動填入兩欄）
         $code = $request->string('code')->toString();
         if ($code !== '' && $user->two_factor_secret !== null) {
             return $this->totp->verify($user->two_factor_secret, $code) !== null;

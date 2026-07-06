@@ -12,6 +12,7 @@ import {
     regenerateRecoveryCodesWithApi,
 } from '../../lib/auth-api';
 import { encryptPassword } from '../../lib/crypto';
+import type { TwoFactorCredentialPayload } from '../../types';
 
 const { t } = useI18n();
 const { user } = useAuth();
@@ -147,9 +148,16 @@ async function submitCredential() {
     credentialLoading.value = true;
 
     try {
-        const payload = credential.password
-            ? { password: await encryptPassword(credential.password) }
-            : { code: credential.code };
+        // 兩欄皆填就都送（後端擇一有效即可），避免密碼管理器自動填入造成誤判
+        const payload: TwoFactorCredentialPayload = {};
+
+        if (credential.password) {
+            payload.password = await encryptPassword(credential.password);
+        }
+
+        if (credential.code) {
+            payload.code = credential.code;
+        }
 
         if (credentialMode.value === 'disable') {
             await disableTwoFactorWithApi(payload);
@@ -228,7 +236,7 @@ async function submitCredential() {
                     {{ t('profile.twofa_regenerate') }}
                 </button>
                 <button
-                    class="rounded border border-red-500/30 px-4 py-2 text-xs text-red-400 transition-colors hover:bg-red-500/10"
+                    class="rounded border border-[var(--binary-tertiary)]/30 px-4 py-2 text-xs text-[var(--binary-tertiary)] transition-colors hover:bg-[var(--binary-tertiary)]/10"
                     type="button"
                     @click="openCredentialModal('disable')"
                 >
@@ -277,7 +285,7 @@ async function submitCredential() {
                     />
                     <p
                         v-if="fieldErrors.code?.length"
-                        class="text-xs text-red-300"
+                        class="text-xs text-[var(--binary-tertiary)]"
                     >
                         {{ fieldErrors.code[0] }}
                     </p>
@@ -348,7 +356,7 @@ async function submitCredential() {
 
         <p
             v-if="generalError"
-            class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
+            class="border border-[var(--binary-tertiary)]/20 bg-[var(--binary-tertiary)]/10 px-4 py-3 text-sm text-[var(--binary-tertiary)]"
         >
             {{ generalError }}
         </p>
@@ -405,7 +413,10 @@ async function submitCredential() {
                         placeholder="000000"
                     />
                 </div>
-                <div v-if="credentialError" class="mb-3 text-xs text-red-400">
+                <div
+                    v-if="credentialError"
+                    class="mb-3 text-xs text-[var(--binary-tertiary)]"
+                >
                     {{ credentialError }}
                 </div>
                 <div class="flex gap-2">
