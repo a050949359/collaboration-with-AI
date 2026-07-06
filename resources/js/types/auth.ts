@@ -4,6 +4,7 @@ export type User = {
     email: string;
     avatar?: string;
     email_verified_at: string | null;
+    two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
@@ -47,6 +48,23 @@ export type ChangePasswordPayload = {
     current_password: string;
     password: string;
     password_confirmation: string;
+};
+
+export type TwoFactorEnableResponse = {
+    secret: string;
+    otpauth_uri: string;
+};
+
+export type TwoFactorConfirmResponse = {
+    message: string;
+    recovery_codes: string[];
+    user: User;
+};
+
+/** 停用 / 重生備援碼的憑證：password（RSA 加密後）或 TOTP code 擇一。 */
+export type TwoFactorCredentialPayload = {
+    password?: string;
+    code?: string;
 };
 
 export type AuthApiResponse = {

@@ -22,6 +22,7 @@ use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\PublicKeyController;
 use App\Http\Controllers\Auth\RegistController;
 use App\Http\Controllers\Auth\SocialAccountController;
+use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Aviation\AirlineController;
 use App\Http\Controllers\Aviation\AirportController;
@@ -90,6 +91,14 @@ Route::group(['prefix' => 'auth'], function () {
         Route::delete('/devices/{id}', [DeviceController::class, 'destroy']);
         Route::post('/change-password', [ChangePasswordController::class, 'change'])->middleware(DecryptPasswordFields::class);
         Route::patch('/name', [ProfileController::class, 'updateName']);
+
+        // TOTP 兩步驟驗證（confirm 較寬：6 位數碼可暴力猜測，但 window ±1 下 10/min 命中率可忽略）
+        Route::prefix('2fa')->group(function () {
+            Route::post('/enable', [TwoFactorController::class, 'enable'])->middleware('throttle:6,1');
+            Route::post('/confirm', [TwoFactorController::class, 'confirm'])->middleware('throttle:10,1');
+            Route::post('/disable', [TwoFactorController::class, 'disable'])->middleware([DecryptPasswordFields::class, 'throttle:6,1']);
+            Route::post('/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])->middleware([DecryptPasswordFields::class, 'throttle:6,1']);
+        });
 
         // 點擊信件連結後觸發
         Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)

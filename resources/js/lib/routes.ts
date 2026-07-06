@@ -100,6 +100,12 @@ export const api = {
         resetPassword: () => '/api/auth/reset-password',
         changePassword: () => '/api/auth/change-password',
         updateName: () => '/api/auth/name',
+        twoFactor: {
+            enable: () => '/api/auth/2fa/enable',
+            confirm: () => '/api/auth/2fa/confirm',
+            disable: () => '/api/auth/2fa/disable',
+            recoveryCodes: () => '/api/auth/2fa/recovery-codes',
+        },
     },
 
     mcp: () => '/api/mcp',
