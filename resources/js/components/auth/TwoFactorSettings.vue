@@ -17,7 +17,12 @@ import type { TwoFactorCredentialPayload } from '../../types';
 const { t } = useI18n();
 const { user } = useAuth();
 
-const enabled = computed(() => !!user.value?.two_factor_enabled);
+// confirm 成功後先以本地旗標標記啟用：顯示備援碼期間不可觸發 router.reload
+//（頁面非 persistent layout，assets 版本不匹配時 reload 會整頁重載，一次性備援碼就此蒸發）
+const confirmedLocally = ref(false);
+const enabled = computed(
+    () => !!user.value?.two_factor_enabled || confirmedLocally.value,
+);
 
 // idle：顯示狀態；qr：掃描綁定 + 輸入 OTP；codes：一次性顯示備援碼
 const phase = ref<'idle' | 'qr' | 'codes'>('idle');
@@ -86,8 +91,9 @@ async function submitConfirm() {
     try {
         const res = await confirmTwoFactorWithApi({ code: otpCode.value });
         recoveryCodes.value = res.recovery_codes;
+        confirmedLocally.value = true;
         phase.value = 'codes';
-        router.reload({ only: ['auth'] });
+        // auth reload 延後到 finishCodes：備援碼只顯示這一次，期間不能冒任何重繪風險
     } catch (error) {
         if (error instanceof AuthApiError) {
             generalError.value = Object.keys(error.fieldErrors).length
@@ -116,6 +122,7 @@ async function copyCodes() {
 function finishCodes() {
     recoveryCodes.value = [];
     phase.value = 'idle';
+    router.reload({ only: ['auth'] });
 }
 
 // ── 停用 / 重生備援碼（需密碼或 OTP 擇一） ─────────────────────
@@ -162,6 +169,7 @@ async function submitCredential() {
         if (credentialMode.value === 'disable') {
             await disableTwoFactorWithApi(payload);
             showCredentialModal.value = false;
+            confirmedLocally.value = false;
             phase.value = 'idle';
             router.reload({ only: ['auth'] });
         } else {
