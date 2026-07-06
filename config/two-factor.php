@@ -26,4 +26,10 @@ return [
         'redeem_max_failures' => 10,
         'redeem_failure_ttl' => 3600, // 秒
     ],
+
+    // 登入二階段 challenge（密碼過了之後、憑 OTP 換 token 前的暫存狀態）
+    'challenge' => [
+        'ttl' => (int) env('TWO_FACTOR_CHALLENGE_TTL', 300), // 秒
+        'max_attempts' => 5, // 連錯即作廢，強迫回到密碼階段
+    ],
 ];

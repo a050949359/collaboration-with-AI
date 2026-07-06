@@ -73,4 +73,12 @@ export type AuthApiResponse = {
     token?: string;
     access_token?: string;
     redirect?: string;
+    // 帳號已啟用 2FA：不含 token，改帶 challenge_token 進入二階段
+    two_factor_required?: boolean;
+    challenge_token?: string;
+};
+
+export type TwoFactorChallengePayload = {
+    challenge_token: string;
+    code: string;
 };
