@@ -5,6 +5,10 @@ import type {
     LoginPayload,
     RegisterPayload,
     ResetPasswordPayload,
+    TwoFactorConfirmResponse,
+    TwoFactorCredentialPayload,
+    TwoFactorEnableResponse,
+    User,
     ValidationErrors,
 } from '@/types';
 import { api } from './routes';
@@ -118,4 +122,34 @@ export async function resetPasswordWithApi(payload: ResetPasswordPayload) {
 
 export async function changePasswordWithApi(payload: ChangePasswordPayload) {
     return request<{ message?: string }>(api.auth.changePassword(), payload);
+}
+
+export async function enableTwoFactorWithApi() {
+    return request<TwoFactorEnableResponse>(api.auth.twoFactor.enable(), {});
+}
+
+export async function confirmTwoFactorWithApi(payload: { code: string }) {
+    return request<TwoFactorConfirmResponse>(
+        api.auth.twoFactor.confirm(),
+        payload,
+    );
+}
+
+// payload.password 需先經 encryptPassword() RSA 加密
+export async function disableTwoFactorWithApi(
+    payload: TwoFactorCredentialPayload,
+) {
+    return request<{ message?: string; user?: User }>(
+        api.auth.twoFactor.disable(),
+        payload,
+    );
+}
+
+export async function regenerateRecoveryCodesWithApi(
+    payload: TwoFactorCredentialPayload,
+) {
+    return request<{ recovery_codes: string[] }>(
+        api.auth.twoFactor.recoveryCodes(),
+        payload,
+    );
 }

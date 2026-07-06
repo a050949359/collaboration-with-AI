@@ -25,19 +25,34 @@ use Laravel\Sanctum\NewAccessToken;
  * @property CarbonInterface|null $email_verified_at
  * @property CarbonInterface|null $locked_until
  * @property CarbonInterface|null $password_changed_at
+ * @property CarbonInterface|null $two_factor_confirmed_at
+ * @property string|null $two_factor_secret
+ * @property array<int, string>|null $two_factor_recovery_codes
+ * @property-read bool $two_factor_enabled
  */
 #[Fillable(['name', 'email', 'password', 'role'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $appends = ['avatar', 'has_google_account'];
+    protected $appends = ['avatar', 'has_google_account', 'two_factor_enabled'];
 
     public function getHasGoogleAccountAttribute(): bool
     {
         return $this->socialAccounts()->where('provider', 'google')->exists();
+    }
+
+    public function getTwoFactorEnabledAttribute(): bool
+    {
+        return $this->two_factor_confirmed_at !== null;
+    }
+
+    /** 已產生 secret 但尚未通過 OTP 確認（綁定進行中）。 */
+    public function hasPendingTwoFactor(): bool
+    {
+        return $this->two_factor_secret !== null && $this->two_factor_confirmed_at === null;
     }
 
     public function isAdmin(): bool
@@ -57,6 +72,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'locked_until' => 'datetime',
             'password_changed_at' => 'datetime',
             'password' => 'hashed',
+            'two_factor_secret' => 'encrypted',
+            // 存 bcrypt hash 陣列（不可逆，故不需再 encrypted）
+            'two_factor_recovery_codes' => 'array',
+            'two_factor_confirmed_at' => 'datetime',
         ];
     }
 

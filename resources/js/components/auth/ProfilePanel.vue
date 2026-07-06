@@ -7,11 +7,12 @@ import { useAuth } from '../../composables/useAuth';
 import { AuthApiError, changePasswordWithApi } from '../../lib/auth-api';
 import { encryptPassword } from '../../lib/crypto';
 import { api, routes } from '../../lib/routes';
+import TwoFactorSettings from './TwoFactorSettings.vue';
 
 const { t } = useI18n();
 const { user, isAdmin } = useAuth();
 
-const activeTab = ref<'name' | 'password' | 'apikey'>('name');
+const activeTab = ref<'name' | 'password' | '2fa' | 'apikey'>('name');
 
 // ── API-KEY ──────────────────────────────────────────────────
 interface ApiKeyScopeOption {
@@ -338,7 +339,7 @@ async function submit() {
     <!-- Tab bar -->
     <div class="flex border-b border-[var(--binary-outline-variant)]">
         <button
-            v-for="tab in ['name', 'password', 'apikey'] as const"
+            v-for="tab in ['name', 'password', '2fa', 'apikey'] as const"
             :key="tab"
             type="button"
             class="binary-label px-4 py-2.5 text-[10px] font-bold tracking-widest uppercase transition-colors"
@@ -354,7 +355,9 @@ async function submit() {
                     ? t('profile.tab_rename')
                     : tab === 'password'
                       ? t('profile.tab_password')
-                      : 'API-KEY'
+                      : tab === '2fa'
+                        ? '2FA'
+                        : 'API-KEY'
             }}
         </button>
     </div>
@@ -622,6 +625,9 @@ async function submit() {
                 <span aria-hidden="true">-></span>
             </button>
         </form>
+
+        <!-- 2FA -->
+        <TwoFactorSettings v-if="activeTab === '2fa'" />
 
         <!-- API-KEY -->
         <div v-if="activeTab === 'apikey'">

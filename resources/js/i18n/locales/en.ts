@@ -222,6 +222,34 @@ export default {
         name_updated: 'Name updated',
         name_update_failed: 'Update failed',
         password_updated: 'Password updated successfully',
+        twofa_title: 'Two-Factor Authentication (TOTP)',
+        twofa_status_on: 'Enabled',
+        twofa_status_off: 'Disabled',
+        twofa_intro:
+            'Add a second layer of security: after entering your password, a 6-digit code from your authenticator app (Google Authenticator, 1Password, etc.) is required.',
+        twofa_enable: 'Enable 2FA',
+        twofa_enabling: 'Generating...',
+        twofa_scan_hint:
+            'Scan the QR code with your authenticator app, then enter the 6-digit code to confirm.',
+        twofa_manual_hint: "Can't scan? Enter this key manually:",
+        twofa_code_label: 'Verification code',
+        twofa_confirm: 'Confirm & enable',
+        twofa_confirming: 'Verifying...',
+        twofa_cancel: 'Cancel',
+        twofa_codes_hint:
+            'Recovery codes — shown only once. Each code works once; save them somewhere safe.',
+        twofa_codes_saved: "I've saved them",
+        twofa_copy_all: 'Copy all',
+        twofa_regenerate: 'Regenerate recovery codes',
+        twofa_disable: 'Disable 2FA',
+        twofa_credential_hint:
+            'Confirm your identity with your password, a verification code, or a recovery code (any one).',
+        twofa_credential_password: 'Password',
+        twofa_credential_code: 'Verification / recovery code',
+        twofa_credential_required:
+            'Enter your password, a verification code, or a recovery code',
+        twofa_credential_submit: 'Confirm',
+        twofa_error_failed: 'Operation failed, please try again later',
     },
     task: {
         head_title: 'Task',
