@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Auth\RecoveryCodeService;
 use App\Services\Auth\TotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -21,8 +22,13 @@ class TwoFactorChallengeTest extends TestCase
     {
         parent::setUp();
         $this->totp = app(TotpService::class);
-        // 測試環境非 local：turnstile 會真打 Cloudflare、RSA 無 pem，兩者皆非本測試對象
-        $this->withoutMiddleware([DecryptPasswordFields::class, VerifyTurnstile::class]);
+        // 測試環境非 local：turnstile 會真打 Cloudflare、RSA 無 pem，兩者皆非本測試對象；
+        // throttle（challenge 5/min）也 bypass，連錯作廢由 challenge 自身的 max_attempts 把關
+        $this->withoutMiddleware([
+            DecryptPasswordFields::class,
+            VerifyTurnstile::class,
+            ThrottleRequests::class,
+        ]);
     }
 
     /** @return array{0: User, 1: string, 2: array<int, string>} user / secret / recovery codes */
