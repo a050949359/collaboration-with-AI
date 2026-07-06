@@ -54,7 +54,13 @@ class RecoveryCodeService
             return false;
         }
 
-        $code = strtoupper(preg_replace('/\s+/', '', $code) ?? '');
+        // 正規化：大寫、去掉字元集外的符號（空白/破折號等）；
+        // hash 是對 XXXXX-XXXXX 格式做的，剛好 10 碼時補回中間的破折號
+        $code = strtoupper(preg_replace('/[^A-Za-z2-7]/', '', $code) ?? '');
+        $blockLength = (int) config('two-factor.recovery.block_length', 5);
+        if (strlen($code) === $blockLength * 2) {
+            $code = substr($code, 0, $blockLength).'-'.substr($code, $blockLength);
+        }
 
         foreach ($hashes as $index => $hash) {
             if (Hash::check($code, $hash)) {
