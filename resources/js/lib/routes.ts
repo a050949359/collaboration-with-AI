@@ -101,6 +101,7 @@ export const api = {
         changePassword: () => '/api/auth/change-password',
         updateName: () => '/api/auth/name',
         twoFactor: {
+            challenge: () => '/api/auth/2fa/challenge',
             enable: () => '/api/auth/2fa/enable',
             confirm: () => '/api/auth/2fa/confirm',
             disable: () => '/api/auth/2fa/disable',

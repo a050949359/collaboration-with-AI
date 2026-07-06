@@ -298,6 +298,15 @@ onMounted(() => {
     // OAuth 註冊被擋時 callback 會帶 ?auth_error 跳回首頁，這裡轉成 toast 並清掉 query。
     const params = new URLSearchParams(window.location.search);
 
+    // OAuth 帳號開了 2FA：callback 帶 #two_factor_challenge（hash fragment，
+    // 不會送到伺服器）跳回，開登入抽屜讓 LoginForm 接手（由 LoginForm 讀取並清掉）。
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+
+    if (hashParams.get('two_factor_challenge')) {
+        authDrawerTab.value = 'login';
+        authDrawerOpen.value = true;
+    }
+
     if (params.get('auth_error') === 'registration_closed') {
         showToast(t('auth.registration_closed'), 'error');
         params.delete('auth_error');

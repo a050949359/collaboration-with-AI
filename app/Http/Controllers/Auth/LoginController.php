@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Auth\Concerns\IssuesAuthTokens;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
+use App\Services\Auth\TwoFactorChallengeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 /**
@@ -15,10 +17,12 @@ use Illuminate\Support\Facades\Auth;
  */
 class LoginController extends Controller
 {
+    use IssuesAuthTokens;
+
     private const MAX_ATTEMPTS     = 5;
     private const LOCKOUT_MINUTES  = 15;
 
-    public function login(LoginRequest $request): JsonResponse
+    public function login(LoginRequest $request, TwoFactorChallengeService $challenges): JsonResponse
     {
         $credentials = $request->only('email', 'password');
         $remember = $request->boolean('remember');
@@ -55,25 +59,18 @@ class LoginController extends Controller
         $deviceId   = $request->validated('device_id');
         $deviceName = $request->validated('device_name');
 
-        // 3. 刪除同裝置的舊 Token（web 以 name='web' 定位，mobile 以 device_id 定位）
-        if ($deviceId) {
-            $user->tokens()->where('device_id', $deviceId)->delete();
-        } else {
-            $user->tokens()->where('name', 'web')->whereNull('device_id')->delete();
+        // 2.5 已啟用 2FA：密碼正確仍不發 token，改發 challenge（限時憑 OTP/備援碼換 token）。
+        //     api 群組無 StartSession，Auth::attempt 的 session 只存在記憶體不落地，此回應不含任何可用憑證。
+        if ($user->two_factor_enabled) {
+            return response()->json([
+                'two_factor_required' => true,
+                'challenge_token' => $challenges->create($user, $remember, $deviceId, $deviceName),
+                'message' => '請輸入兩步驟驗證碼',
+            ]);
         }
 
-        // 4. 建立新 Token（90 天有效期）
-        $tokenName = $deviceName ?? ($deviceId ? 'mobile' : 'web');
-        $plainText = $user->createToken($tokenName, deviceId: $deviceId)->plainTextToken;
-        $minutes   = $remember ? 60 * 24 * 7 : 0;
-
-        return response()->json([
-            'message'      => '登入成功',
-            'user'         => $user,
-            'access_token' => $plainText,
-            'token_type'   => 'Bearer',
-            'redirect'     => route('home'),
-        ])->cookie('auth_token', $plainText, $minutes, '/', null, app()->isProduction(), true, false, 'Lax');
+        // 3. 發 token + cookie（與 2FA challenge 通過後共用同一套發放邏輯）
+        return $this->issueToken($user, $remember, $deviceId, $deviceName);
     }
 
     public function logout(): JsonResponse
