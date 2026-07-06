@@ -33,23 +33,23 @@ const challengeToken = ref('');
 const challengeCode = ref('');
 const useRecovery = ref(false);
 
-// OAuth 帳號開了 2FA：callback 帶 ?two_factor_challenge 跳回，直接進二階段
+// OAuth 帳號開了 2FA：callback 帶 #two_factor_challenge（hash fragment）跳回，
+// 直接進二階段；讀取後立刻從 URL 清掉，token 不殘留
 onMounted(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('two_factor_challenge');
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const token = hashParams.get('two_factor_challenge');
 
     if (token) {
         challengeToken.value = token;
         phase.value = 'challenge';
-        params.delete('two_factor_challenge');
+
+        const params = new URLSearchParams(window.location.search);
         params.delete('provider');
         const qs = params.toString();
         window.history.replaceState(
             {},
             '',
-            window.location.pathname +
-                (qs ? `?${qs}` : '') +
-                window.location.hash,
+            window.location.pathname + (qs ? `?${qs}` : ''),
         );
     }
 });

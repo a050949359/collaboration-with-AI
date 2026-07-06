@@ -98,20 +98,23 @@ class SocialAccountController extends Controller
     /**
      * OAuth 帳號開了 2FA：帶 two_factor_challenge 跳回前端，
      * AppLayout 讀到後開登入抽屜、LoginForm 直接進入 OTP 輸入階段。
+     * token 走 hash fragment（#）而非 query：fragment 不會被送到伺服器，
+     * 不進 access log、不進 Referer，瀏覽器歷史外洩面也較小。
      */
     private function redirectToTwoFactorChallenge(string $provider, string $challengeToken): RedirectResponse
     {
-        $query = http_build_query(['provider' => $provider, 'two_factor_challenge' => $challengeToken]);
+        $suffix = '?'.http_build_query(['provider' => $provider])
+            .'#'.http_build_query(['two_factor_challenge' => $challengeToken]);
         $frontendUrl = config('services.social_auth.frontend_url');
         $redirectPath = config('services.social_auth.redirect_path', '/login');
 
         if (is_string($frontendUrl) && $frontendUrl !== '') {
             $target = rtrim($frontendUrl, '/').'/'.ltrim((string) $redirectPath, '/');
 
-            return redirect()->away($target.'?'.$query);
+            return redirect()->away($target.$suffix);
         }
 
-        return redirect()->to(route('home').'?'.$query);
+        return redirect()->to(route('home').$suffix);
     }
 
     /**
