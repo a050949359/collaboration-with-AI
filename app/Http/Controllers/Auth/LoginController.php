@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Auth\Concerns\IssuesAuthTokens;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\Auth;
  */
 class LoginController extends Controller
 {
+    use IssuesAuthTokens;
+
     private const MAX_ATTEMPTS     = 5;
     private const LOCKOUT_MINUTES  = 15;
 
@@ -66,25 +69,8 @@ class LoginController extends Controller
             ]);
         }
 
-        // 3. 刪除同裝置的舊 Token（web 以 name='web' 定位，mobile 以 device_id 定位）
-        if ($deviceId) {
-            $user->tokens()->where('device_id', $deviceId)->delete();
-        } else {
-            $user->tokens()->where('name', 'web')->whereNull('device_id')->delete();
-        }
-
-        // 4. 建立新 Token（90 天有效期）
-        $tokenName = $deviceName ?? ($deviceId ? 'mobile' : 'web');
-        $plainText = $user->createToken($tokenName, deviceId: $deviceId)->plainTextToken;
-        $minutes   = $remember ? 60 * 24 * 7 : 0;
-
-        return response()->json([
-            'message'      => '登入成功',
-            'user'         => $user,
-            'access_token' => $plainText,
-            'token_type'   => 'Bearer',
-            'redirect'     => route('home'),
-        ])->cookie('auth_token', $plainText, $minutes, '/', null, app()->isProduction(), true, false, 'Lax');
+        // 3. 發 token + cookie（與 2FA challenge 通過後共用同一套發放邏輯）
+        return $this->issueToken($user, $remember, $deviceId, $deviceName);
     }
 
     public function logout(): JsonResponse

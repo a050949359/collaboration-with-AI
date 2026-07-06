@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Auth\Concerns\IssuesAuthTokens;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\RecoveryCodeService;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Hash;
 
 class TwoFactorController extends Controller
 {
+    use IssuesAuthTokens;
+
     public function __construct(
         private readonly TotpService $totp,
         private readonly RecoveryCodeService $recoveryCodes,
@@ -69,28 +72,6 @@ class TwoFactorController extends Controller
         }
 
         return $this->challenges->verifyTotpOnce($user, $compact);
-    }
-
-    /** 發正式 token + auth_token cookie（與 LoginController 成功路徑同款）。 */
-    private function issueToken(User $user, bool $remember, ?string $deviceId, ?string $deviceName): JsonResponse
-    {
-        if ($deviceId) {
-            $user->tokens()->where('device_id', $deviceId)->delete();
-        } else {
-            $user->tokens()->where('name', 'web')->whereNull('device_id')->delete();
-        }
-
-        $tokenName = $deviceName ?? ($deviceId ? 'mobile' : 'web');
-        $plainText = $user->createToken($tokenName, deviceId: $deviceId)->plainTextToken;
-        $minutes = $remember ? 60 * 24 * 7 : 0;
-
-        return response()->json([
-            'message' => '登入成功',
-            'user' => $user,
-            'access_token' => $plainText,
-            'token_type' => 'Bearer',
-            'redirect' => route('home'),
-        ])->cookie('auth_token', $plainText, $minutes, '/', null, app()->isProduction(), true, false, 'Lax');
     }
 
     /** 產生新 secret 進入 pending 狀態，回傳 otpauth URI 供前端畫 QR。 */

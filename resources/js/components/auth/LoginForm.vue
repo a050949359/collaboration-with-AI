@@ -349,7 +349,9 @@ async function submitChallenge() {
 
         <button
             class="binary-button"
-            :disabled="isSubmitting || challengeCode.length < 6"
+            :disabled="
+                isSubmitting || challengeCode.length < (useRecovery ? 10 : 6)
+            "
             type="submit"
         >
             {{
