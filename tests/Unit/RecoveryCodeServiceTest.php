@@ -67,6 +67,16 @@ class RecoveryCodeServiceTest extends TestCase
         $this->assertTrue($this->service->redeem($user, ' '.strtolower($codes[1]).' '));
     }
 
+    /** 使用者省略破折號輸入（XXXXXXXXXX）也應能兌換。 */
+    public function test_redeem_accepts_code_without_dash(): void
+    {
+        $user = User::factory()->create();
+        $codes = $this->service->generateFor($user);
+
+        $this->assertTrue($this->service->redeem($user, str_replace('-', '', $codes[0])));
+        $this->assertCount(7, $user->fresh()->two_factor_recovery_codes);
+    }
+
     public function test_redeem_fails_without_codes(): void
     {
         $user = User::factory()->create();
