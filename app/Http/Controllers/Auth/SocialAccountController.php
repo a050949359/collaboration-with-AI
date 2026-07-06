@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\TwoFactorChallengeService;
 use App\Support\AppSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,7 +24,7 @@ class SocialAccountController extends Controller
         return Socialite::driver($provider)->stateless()->with(['prompt' => 'select_account'])->redirect();
     }
 
-    public function callback(string $provider): JsonResponse|RedirectResponse
+    public function callback(string $provider, TwoFactorChallengeService $challenges): JsonResponse|RedirectResponse
     {
         abort_unless(in_array($provider, self::SUPPORTED_PROVIDERS, true), 404);
 
@@ -62,6 +63,11 @@ class SocialAccountController extends Controller
                 ]
             );
 
+            // 已啟用 2FA：不發 token，帶 challenge token 跳回前端，由登入抽屜完成二階段
+            if ($user->two_factor_enabled) {
+                return $this->redirectToTwoFactorChallenge($provider, $challenges->create($user));
+            }
+
             $user->tokens()->where('name', 'web')->whereNull('device_id')->delete();
             $token = $user->createToken('web')->plainTextToken;
 
@@ -87,6 +93,25 @@ class SocialAccountController extends Controller
                 'message' => ucfirst($provider).' 登入失敗',
             ], 500);
         }
+    }
+
+    /**
+     * OAuth 帳號開了 2FA：帶 two_factor_challenge 跳回前端，
+     * AppLayout 讀到後開登入抽屜、LoginForm 直接進入 OTP 輸入階段。
+     */
+    private function redirectToTwoFactorChallenge(string $provider, string $challengeToken): RedirectResponse
+    {
+        $query = http_build_query(['provider' => $provider, 'two_factor_challenge' => $challengeToken]);
+        $frontendUrl = config('services.social_auth.frontend_url');
+        $redirectPath = config('services.social_auth.redirect_path', '/login');
+
+        if (is_string($frontendUrl) && $frontendUrl !== '') {
+            $target = rtrim($frontendUrl, '/').'/'.ltrim((string) $redirectPath, '/');
+
+            return redirect()->away($target.'?'.$query);
+        }
+
+        return redirect()->to(route('home').'?'.$query);
     }
 
     /**

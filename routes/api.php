@@ -79,6 +79,8 @@ Route::group(['prefix' => 'auth'], function () {
     Route::get('/key', PublicKeyController::class);
     Route::post('/register', [RegistController::class, 'register'])->middleware([EnsureRegistrationOpen::class, DecryptPasswordFields::class, 'turnstile', 'throttle:5,1']);
     Route::post('/login', [LoginController::class, 'login'])->middleware([DecryptPasswordFields::class, 'turnstile', 'throttle:10,1']);
+    // 登入二階段（公開：憑 challenge token 換正式 token；連錯 5 次 challenge 即作廢）
+    Route::post('/2fa/challenge', [TwoFactorController::class, 'challenge'])->middleware('throttle:10,1');
     Route::post('/forgot-password', [ForgotPasswordController::class, 'sendLink'])->middleware('throttle:5,1');
     Route::post('/reset-password', [ForgotPasswordController::class, 'reset'])->middleware(DecryptPasswordFields::class);
     Route::get('/{provider}/redirect', [SocialAccountController::class, 'redirect'])->where(['provider' => 'google']);

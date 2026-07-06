@@ -5,6 +5,7 @@ import type {
     LoginPayload,
     RegisterPayload,
     ResetPasswordPayload,
+    TwoFactorChallengePayload,
     TwoFactorConfirmResponse,
     TwoFactorCredentialPayload,
     TwoFactorEnableResponse,
@@ -122,6 +123,13 @@ export async function resetPasswordWithApi(payload: ResetPasswordPayload) {
 
 export async function changePasswordWithApi(payload: ChangePasswordPayload) {
     return request<{ message?: string }>(api.auth.changePassword(), payload);
+}
+
+// 登入二階段：憑 challenge token + OTP/備援碼換正式 token
+export async function challengeTwoFactorWithApi(
+    payload: TwoFactorChallengePayload,
+) {
+    return request<AuthApiResponse>(api.auth.twoFactor.challenge(), payload);
 }
 
 export async function enableTwoFactorWithApi() {

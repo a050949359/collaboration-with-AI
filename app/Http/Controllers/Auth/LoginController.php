@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
+use App\Services\Auth\TwoFactorChallengeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 /**
@@ -18,7 +19,7 @@ class LoginController extends Controller
     private const MAX_ATTEMPTS     = 5;
     private const LOCKOUT_MINUTES  = 15;
 
-    public function login(LoginRequest $request): JsonResponse
+    public function login(LoginRequest $request, TwoFactorChallengeService $challenges): JsonResponse
     {
         $credentials = $request->only('email', 'password');
         $remember = $request->boolean('remember');
@@ -54,6 +55,16 @@ class LoginController extends Controller
 
         $deviceId   = $request->validated('device_id');
         $deviceName = $request->validated('device_name');
+
+        // 2.5 已啟用 2FA：密碼正確仍不發 token，改發 challenge（限時憑 OTP/備援碼換 token）。
+        //     api 群組無 StartSession，Auth::attempt 的 session 只存在記憶體不落地，此回應不含任何可用憑證。
+        if ($user->two_factor_enabled) {
+            return response()->json([
+                'two_factor_required' => true,
+                'challenge_token' => $challenges->create($user, $remember, $deviceId, $deviceName),
+                'message' => '請輸入兩步驟驗證碼',
+            ]);
+        }
 
         // 3. 刪除同裝置的舊 Token（web 以 name='web' 定位，mobile 以 device_id 定位）
         if ($deviceId) {
