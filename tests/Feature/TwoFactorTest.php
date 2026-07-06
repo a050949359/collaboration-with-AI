@@ -159,6 +159,19 @@ class TwoFactorTest extends TestCase
         $this->assertTrue($user->fresh()->two_factor_enabled);
     }
 
+    /** 無密碼 + 手機遺失情境：備援碼可作為停用 2FA 的憑證（用掉即作廢）。 */
+    public function test_disable_with_recovery_code(): void
+    {
+        [$user] = $this->userWithTwoFactor();
+        $codes = app(RecoveryCodeService::class)->generateFor($user);
+
+        $this->actingAs($user)->postJson('/api/auth/2fa/disable', [
+            'code' => $codes[0],
+        ])->assertOk();
+
+        $this->assertNull($user->fresh()->two_factor_secret);
+    }
+
     /** 密碼管理器情境：兩欄同時送出時擇一有效即可（密碼錯要 fallback 驗 OTP）。 */
     public function test_disable_falls_back_to_code_when_password_wrong(): void
     {

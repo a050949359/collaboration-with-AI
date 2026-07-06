@@ -243,10 +243,11 @@ export default {
         twofa_regenerate: 'Regenerate recovery codes',
         twofa_disable: 'Disable 2FA',
         twofa_credential_hint:
-            'Confirm your identity with your password or a current verification code (either one).',
+            'Confirm your identity with your password, a verification code, or a recovery code (any one).',
         twofa_credential_password: 'Password',
-        twofa_credential_code: 'Verification code',
-        twofa_credential_required: 'Enter your password or a verification code',
+        twofa_credential_code: 'Verification / recovery code',
+        twofa_credential_required:
+            'Enter your password, a verification code, or a recovery code',
         twofa_credential_submit: 'Confirm',
         twofa_error_failed: 'Operation failed, please try again later',
     },

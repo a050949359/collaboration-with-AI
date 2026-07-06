@@ -3,6 +3,7 @@
 namespace App\Services\Auth;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -38,12 +39,18 @@ class RecoveryCodeService
 
     /**
      * 驗證並作廢：命中即從 hash 陣列移除該碼並儲存。
-     * 本階段尚未接登入流程，先備妥供未來 challenge 使用。
+     * per-user 失敗計數超過上限時直接拒絕（不跑 bcrypt），
+     * 阻斷「持有密碼 + 多 IP」的 CPU 耗盡攻擊。
      */
     public function redeem(User $user, string $code): bool
     {
         $hashes = $user->two_factor_recovery_codes;
         if (!is_array($hashes) || $hashes === []) {
+            return false;
+        }
+
+        $failKey = "2fa:redeem-fails:{$user->getKey()}";
+        if ((int) Cache::get($failKey, 0) >= (int) config('two-factor.recovery.redeem_max_failures', 10)) {
             return false;
         }
 
@@ -54,10 +61,15 @@ class RecoveryCodeService
                 unset($hashes[$index]);
                 $user->two_factor_recovery_codes = array_values($hashes);
                 $user->save();
+                Cache::forget($failKey);
 
                 return true;
             }
         }
+
+        // add 只在 key 不存在時建立（同時設 TTL），increment 保留剩餘 TTL
+        Cache::add($failKey, 0, (int) config('two-factor.recovery.redeem_failure_ttl', 3600));
+        Cache::increment($failKey);
 
         return false;
     }

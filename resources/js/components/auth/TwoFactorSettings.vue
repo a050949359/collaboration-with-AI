@@ -416,8 +416,7 @@ async function submitCredential() {
                         v-model="credential.code"
                         class="binary-input w-full font-mono text-sm"
                         type="text"
-                        inputmode="numeric"
-                        maxlength="6"
+                        maxlength="11"
                         placeholder="000000"
                     />
                 </div>

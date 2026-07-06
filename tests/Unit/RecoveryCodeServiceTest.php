@@ -73,4 +73,38 @@ class RecoveryCodeServiceTest extends TestCase
 
         $this->assertFalse($this->service->redeem($user, 'AAAAA-AAAAA'));
     }
+
+    /** per-user 失敗上限：超過後連正確的碼也直接拒絕（CPU 耗盡防護）。 */
+    public function test_redeem_is_blocked_after_max_failures(): void
+    {
+        $user = User::factory()->create();
+        $codes = $this->service->generateFor($user);
+        $max = (int) config('two-factor.recovery.redeem_max_failures');
+
+        for ($i = 0; $i < $max; $i++) {
+            $this->assertFalse($this->service->redeem($user, 'AAAAA-AAAAA'));
+        }
+
+        $this->assertFalse($this->service->redeem($user, $codes[0]), '達上限後正確碼也應被拒絕');
+    }
+
+    /** 成功 redeem 會重置失敗計數。 */
+    public function test_successful_redeem_resets_failure_counter(): void
+    {
+        $user = User::factory()->create();
+        $codes = $this->service->generateFor($user);
+        $max = (int) config('two-factor.recovery.redeem_max_failures');
+
+        for ($i = 0; $i < $max - 1; $i++) {
+            $this->service->redeem($user, 'AAAAA-AAAAA');
+        }
+
+        $this->assertTrue($this->service->redeem($user, $codes[0]));
+
+        // 計數已重置：再累積 max-1 次失敗後，正確碼仍可通過
+        for ($i = 0; $i < $max - 1; $i++) {
+            $this->service->redeem($user->fresh(), 'AAAAA-AAAAA');
+        }
+        $this->assertTrue($this->service->redeem($user->fresh(), $codes[1]));
+    }
 }

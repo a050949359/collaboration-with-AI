@@ -117,8 +117,10 @@ class TwoFactorController extends Controller
     }
 
     /**
-     * 敏感操作憑證：password（RSA 加密送來，DecryptPasswordFields 已解密）或 TOTP code 擇一。
-     * 純 Google 社群帳號可能無密碼，OTP 本身即第二因子持有證明。
+     * 敏感操作憑證：password（RSA 加密送來，DecryptPasswordFields 已解密）、
+     * TOTP code 或備援碼，擇一有效即可。
+     * 純 Google 社群帳號可能無密碼；手機遺失者只剩備援碼可證明身分
+     * （否則無密碼 + 無手機的使用者將永遠無法停用 2FA 重新綁定）。
      */
     private function verifyCredential(Request $request, User $user): bool
     {
@@ -132,10 +134,17 @@ class TwoFactorController extends Controller
             return true;
         }
 
-        // 密碼未提供或不符時 fallback 驗 OTP：擇一有效即可（密碼管理器可能同時自動填入兩欄）
+        // 密碼未提供或不符時 fallback 驗 code：擇一有效即可（密碼管理器可能同時自動填入兩欄）
         $code = $request->string('code')->toString();
         if ($code !== '' && $user->two_factor_secret !== null) {
-            return $this->totp->verify($user->two_factor_secret, $code) !== null;
+            $compact = preg_replace('/\s+/', '', $code) ?? '';
+
+            // 含 '-' 或超過 6 碼視為備援碼（XXXXX-XXXXX），其餘走 TOTP
+            if (str_contains($compact, '-') || strlen($compact) > 6) {
+                return $this->recoveryCodes->redeem($user, $compact);
+            }
+
+            return $this->totp->verify($user->two_factor_secret, $compact) !== null;
         }
 
         return false;

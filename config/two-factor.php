@@ -19,5 +19,11 @@ return [
         'count' => 8,
         'block_length' => 5,
         'blocks' => 2, // 格式 XXXXX-XXXXX
+
+        // per-user 驗證失敗上限：超過即直接拒絕、不再跑 bcrypt。
+        // redeem 一次最壞 8 次 Hash::check（~2s CPU），per-IP throttle 擋不住
+        // 「持有密碼 + 撒 IP」的 CPU 耗盡攻擊，以受害帳號為 key 計數才能斷根。
+        'redeem_max_failures' => 10,
+        'redeem_failure_ttl' => 3600, // 秒
     ],
 ];
