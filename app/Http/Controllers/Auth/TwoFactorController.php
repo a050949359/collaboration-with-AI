@@ -65,10 +65,10 @@ class TwoFactorController extends Controller
         $compact = preg_replace('/\s+/', '', $code) ?? '';
 
         if (str_contains($compact, '-') || strlen($compact) > 6) {
-            return $this->recoveryCodes->redeem($user, $code);
+            return $this->recoveryCodes->redeem($user, $compact);
         }
 
-        return $this->challenges->verifyTotpOnce($user, $code);
+        return $this->challenges->verifyTotpOnce($user, $compact);
     }
 
     /** 發正式 token + auth_token cookie（與 LoginController 成功路徑同款）。 */

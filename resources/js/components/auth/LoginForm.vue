@@ -252,7 +252,7 @@ async function submitChallenge() {
 
         <p
             v-if="generalError"
-            class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
+            class="border border-[var(--binary-tertiary)]/20 bg-[var(--binary-tertiary)]/10 px-4 py-3 text-sm text-[var(--binary-tertiary)]"
         >
             {{ generalError }}
         </p>
@@ -342,7 +342,7 @@ async function submitChallenge() {
 
         <p
             v-if="generalError"
-            class="border border-red-400/20 bg-red-950/20 px-4 py-3 text-sm text-red-200"
+            class="border border-[var(--binary-tertiary)]/20 bg-[var(--binary-tertiary)]/10 px-4 py-3 text-sm text-[var(--binary-tertiary)]"
         >
             {{ generalError }}
         </p>
