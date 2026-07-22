@@ -60,5 +60,19 @@
         "@rollup/rollup-linux-x64-gnu": "4.9.5",
         "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
         "lightningcss-linux-x64-gnu": "^1.29.1"
+    },
+    "overrides": {
+        "typescript-eslint": {
+            "brace-expansion": "^5.0.7"
+        },
+        "eslint-plugin-import": {
+            "brace-expansion": "^1.1.16"
+        },
+        "vue-tsc": {
+            "brace-expansion": "^2.1.2"
+        },
+        "@google/genai": {
+            "protobufjs": "^7.6.5"
+        }
     }
 }
