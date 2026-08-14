@@ -199,11 +199,11 @@ class TerritoryMcpService implements McpToolServiceInterface
         return [
             [
                 'name' => 'create_entity',
-                'description' => '建立行政區/國家節點。name 全域唯一；若同名節點已存在則直接回傳，不重複建立。type 為自由字串（慣例：country、province、city、special_ward、traditional_authority），不用來推斷層級深度，只作顯示用途。',
+                'description' => '建立行政區/國家節點。name 全域唯一，慣例一律填 Wikidata QID（如 Q90），不要填人類可讀的地名——同名地點在世界上極常見（美國有 30+ 個 Springfield、法國巴黎跟美國德州都有 Paris），用顯示名稱當唯一鍵會把不同地點誤判成同一筆。QID 由 Wikidata 保證全域唯一，天然解決這個問題。建立後應立即用 add_observation 補一條 "label: <人類可讀名稱>" 的觀察，顯示名稱查詢靠 search_nodes 比對 observation 內容。type 為自由字串（慣例：country、province、city、special_ward、traditional_authority），不用來推斷層級深度，只作顯示用途。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'name' => ['type' => 'string', 'description' => '節點唯一名稱，例如 Taiwan、Taipei'],
+                        'name' => ['type' => 'string', 'description' => '節點唯一識別碼，填 Wikidata QID，例如 Q865（Taiwan）、Q1867（Taipei）'],
                         'type' => ['type' => 'string', 'description' => '節點類型，例如 country、province、city、special_ward、traditional_authority'],
                     ],
                     'required' => ['name', 'type'],
@@ -214,18 +214,18 @@ class TerritoryMcpService implements McpToolServiceInterface
                 'description' => '刪除指定節點，並 cascade 刪除該節點的所有 observations 和 relations，操作不可復原。',
                 'inputSchema' => [
                     'type' => 'object',
-                    'properties' => ['name' => ['type' => 'string']],
+                    'properties' => ['name' => ['type' => 'string', 'description' => 'Wikidata QID']],
                     'required' => ['name'],
                 ],
             ],
             [
                 'name' => 'add_observation',
-                'description' => '對節點附加一條文字觀察，用於記錄人口、座標、wikidata_qid、資料可信度等事實。同一節點可有多條觀察。',
+                'description' => '對節點附加一條文字觀察，用於記錄人類可讀名稱（label: ...）、人口、座標、資料可信度等事實。同一節點可有多條觀察。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'entity_name' => ['type' => 'string', 'description' => '目標節點名稱'],
-                        'content' => ['type' => 'string', 'description' => '觀察內容文字'],
+                        'entity_name' => ['type' => 'string', 'description' => '目標節點的 Wikidata QID'],
+                        'content' => ['type' => 'string', 'description' => '觀察內容文字，例如 "label: Paris"'],
                     ],
                     'required' => ['entity_name', 'content'],
                 ],
@@ -245,8 +245,8 @@ class TerritoryMcpService implements McpToolServiceInterface
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'from' => ['type' => 'string', 'description' => '來源節點名稱（子節點）'],
-                        'to' => ['type' => 'string', 'description' => '目標節點名稱（父節點）'],
+                        'from' => ['type' => 'string', 'description' => '來源節點的 Wikidata QID（子節點）'],
+                        'to' => ['type' => 'string', 'description' => '目標節點的 Wikidata QID（父節點）'],
                         'relation_type' => ['type' => 'string', 'description' => '關係類型，慣例：part_of'],
                     ],
                     'required' => ['from', 'to', 'relation_type'],
@@ -258,8 +258,8 @@ class TerritoryMcpService implements McpToolServiceInterface
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'from' => ['type' => 'string'],
-                        'to' => ['type' => 'string'],
+                        'from' => ['type' => 'string', 'description' => 'Wikidata QID'],
+                        'to' => ['type' => 'string', 'description' => 'Wikidata QID'],
                         'relation_type' => ['type' => 'string'],
                     ],
                     'required' => ['from', 'to', 'relation_type'],
@@ -271,13 +271,13 @@ class TerritoryMcpService implements McpToolServiceInterface
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'entity_name' => ['type' => 'string', 'description' => '只看特定節點的子圖（選填）'],
+                        'entity_name' => ['type' => 'string', 'description' => '只看特定節點的子圖，填 Wikidata QID（選填）'],
                     ],
                 ],
             ],
             [
                 'name' => 'search_nodes',
-                'description' => '以關鍵字搜尋節點，比對範圍包含節點名稱、type 及所有 observation 內容。適合在不確定節點名稱時先查詢再操作。',
+                'description' => '以關鍵字搜尋節點，比對範圍包含節點名稱（QID）、type 及所有 observation 內容（含 label）。因為 name 存的是 QID 不是地名，用人類可讀名稱找節點時應該用這個工具（例如搜尋 "Paris"）取得對應的 QID，再用 QID 呼叫其他工具。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
