@@ -17,6 +17,11 @@ class TerritoryMcpService implements McpToolServiceInterface
 
     private const READ_TOOLS = ['read_graph', 'search_nodes'];
 
+    // 未指定 entity_name 時 read_graph 的匯出上限；search_nodes 的搜尋結果上限。
+    private const UNSCOPED_GRAPH_LIMIT = 200;
+
+    private const SEARCH_LIMIT = 50;
+
     public function canHandle(string $name): bool
     {
         return \in_array($name, [...self::WRITE_TOOLS, ...self::READ_TOOLS]);
@@ -46,6 +51,9 @@ class TerritoryMcpService implements McpToolServiceInterface
         if (! $name || ! $type) {
             return $this->text($id, 'name and type are required.', true);
         }
+        if (! preg_match('/^Q\d+$/', $name)) {
+            return $this->text($id, "name must be a Wikidata QID (e.g. Q90), got: {$name}", true);
+        }
         $entity = TerritoryEntity::firstOrCreate(['name' => $name], ['type' => $type]);
 
         return $this->text($id, json_encode($entity, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
@@ -53,7 +61,7 @@ class TerritoryMcpService implements McpToolServiceInterface
 
     private function deleteEntity(mixed $id, array $args): JsonResponse
     {
-        $entity = TerritoryEntity::where('name', $args['name'] ?? '')->first();
+        $entity = TerritoryEntity::where('name', trim($args['name'] ?? ''))->first();
         if (! $entity) {
             return $this->text($id, 'Entity not found.', true);
         }
@@ -64,7 +72,7 @@ class TerritoryMcpService implements McpToolServiceInterface
 
     private function addObservation(mixed $id, array $args): JsonResponse
     {
-        $entity = TerritoryEntity::where('name', $args['entity_name'] ?? '')->first();
+        $entity = TerritoryEntity::where('name', trim($args['entity_name'] ?? ''))->first();
         if (! $entity) {
             return $this->text($id, 'Entity not found.', true);
         }
@@ -90,8 +98,8 @@ class TerritoryMcpService implements McpToolServiceInterface
 
     private function createRelation(mixed $id, array $args): JsonResponse
     {
-        $from = TerritoryEntity::where('name', $args['from'] ?? '')->first();
-        $to = TerritoryEntity::where('name', $args['to'] ?? '')->first();
+        $from = TerritoryEntity::where('name', trim($args['from'] ?? ''))->first();
+        $to = TerritoryEntity::where('name', trim($args['to'] ?? ''))->first();
         if (! $from) {
             return $this->text($id, "Entity '{$args['from']}' not found.", true);
         }
@@ -119,16 +127,20 @@ class TerritoryMcpService implements McpToolServiceInterface
 
     private function deleteRelation(mixed $id, array $args): JsonResponse
     {
-        $from = TerritoryEntity::where('name', $args['from'] ?? '')->first();
-        $to = TerritoryEntity::where('name', $args['to'] ?? '')->first();
+        $from = TerritoryEntity::where('name', trim($args['from'] ?? ''))->first();
+        $to = TerritoryEntity::where('name', trim($args['to'] ?? ''))->first();
         if (! $from || ! $to) {
             return $this->text($id, 'Entity not found.', true);
+        }
+        $relationType = trim($args['relation_type'] ?? '');
+        if (! $relationType) {
+            return $this->text($id, 'relation_type is required.', true);
         }
 
         $deleted = TerritoryRelation::where([
             'from_entity_id' => $from->id,
             'to_entity_id' => $to->id,
-            'relation_type' => $args['relation_type'] ?? '',
+            'relation_type' => $relationType,
         ])->delete();
 
         return $this->text($id, $deleted ? 'Relation deleted.' : 'Relation not found.');
@@ -138,11 +150,14 @@ class TerritoryMcpService implements McpToolServiceInterface
 
     private function readGraph(mixed $id, array $args): JsonResponse
     {
-        $entityName = $args['entity_name'] ?? null;
+        $entityName = trim($args['entity_name'] ?? '') ?: null;
 
         $entityQuery = TerritoryEntity::with('observations');
         if ($entityName) {
             $entityQuery->where('name', $entityName);
+        } else {
+            // 未指定 entity_name = 匯出整張圖；資料量成長後（批次匯入行政區）避免一次載入全表 OOM。
+            $entityQuery->limit(self::UNSCOPED_GRAPH_LIMIT);
         }
         $entities = $entityQuery->get()->map(fn ($e) => [
             'id' => $e->id,
@@ -174,14 +189,17 @@ class TerritoryMcpService implements McpToolServiceInterface
         if (! $query) {
             return $this->text($id, 'query is required.', true);
         }
+        // 跳脫 LIKE 萬用字元，避免 query 本身含 % / _ 時被當成萬用字元造成非預期配對。
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query);
 
         $entities = TerritoryEntity::with('observations')
-            ->where(function ($q) use ($query) {
+            ->where(function ($q) use ($escaped) {
                 // OR 條件包進巢狀 closure，避免日後加 where/全域 scope 時運算子優先級拆錯分組
-                $q->where('name', 'like', "%{$query}%")
-                    ->orWhere('type', 'like', "%{$query}%")
-                    ->orWhereHas('observations', fn ($sub) => $sub->where('content', 'like', "%{$query}%"));
+                $q->where('name', 'like', "%{$escaped}%")
+                    ->orWhere('type', 'like', "%{$escaped}%")
+                    ->orWhereHas('observations', fn ($sub) => $sub->where('content', 'like', "%{$escaped}%"));
             })
+            ->limit(self::SEARCH_LIMIT)
             ->get()
             ->map(fn ($e) => [
                 'name' => $e->name,
@@ -267,7 +285,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name' => 'read_graph',
-                'description' => '讀取行政區知識圖譜，回傳 entities（含 observations）與 relations。指定 entity_name 時只回傳該節點及與其相連的 relations；不指定則回傳完整圖。',
+                'description' => '讀取行政區知識圖譜，回傳 entities（含 observations）與 relations。指定 entity_name 時只回傳該節點及與其相連的 relations；不指定則回傳完整圖，但為避免資料量成長後 OOM，未指定時最多回傳 200 個節點（非完整快照）。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -277,7 +295,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name' => 'search_nodes',
-                'description' => '以關鍵字搜尋節點，比對範圍包含節點名稱（QID）、type 及所有 observation 內容（含 label）。因為 name 存的是 QID 不是地名，用人類可讀名稱找節點時應該用這個工具（例如搜尋 "Paris"）取得對應的 QID，再用 QID 呼叫其他工具。',
+                'description' => '以關鍵字搜尋節點，比對範圍包含節點名稱（QID）、type 及所有 observation 內容（含 label）。因為 name 存的是 QID 不是地名，用人類可讀名稱找節點時應該用這個工具（例如搜尋 "Paris"）取得對應的 QID，再用 QID 呼叫其他工具。最多回傳 50 筆，結果過多時請縮小關鍵字。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
