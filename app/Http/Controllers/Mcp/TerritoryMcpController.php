@@ -13,20 +13,21 @@ class TerritoryMcpController extends Controller
 
     public function handle(Request $request): JsonResponse
     {
-        $body   = $request->json()->all();
+        $body = $request->json()->all();
         $method = $body['method'] ?? '';
-        $id     = $body['id'] ?? null;
-        $params = $body['params'] ?? [];
+        $id = $body['id'] ?? null;
+        // params/arguments 型別防護：client 亂送非陣列時回乾淨的 JSON-RPC 錯誤而非 500
+        $params = \is_array($body['params'] ?? null) ? $body['params'] : [];
 
         return match ($method) {
-            'initialize'  => $this->initialize($id),
-            'tools/list'  => $this->ok($id, ['tools' => $this->service->toolSchemas()]),
-            'tools/call'  => $this->service->call(
-                                $params['name'] ?? '',
-                                $params['arguments'] ?? [],
-                                $id,
-                            ),
-            default       => $this->error($id, -32601, 'Method not found'),
+            'initialize' => $this->initialize($id),
+            'tools/list' => $this->ok($id, ['tools' => $this->service->toolSchemas()]),
+            'tools/call' => $this->service->call(
+                \is_string($params['name'] ?? null) ? $params['name'] : '',
+                \is_array($params['arguments'] ?? null) ? $params['arguments'] : [],
+                $id,
+            ),
+            default => $this->error($id, -32601, 'Method not found'),
         };
     }
 
@@ -34,8 +35,8 @@ class TerritoryMcpController extends Controller
     {
         return $this->ok($id, [
             'protocolVersion' => '2024-11-05',
-            'capabilities'    => ['tools' => new \stdClass()],
-            'serverInfo'      => ['name' => 'collab-territory', 'version' => '1.0.0'],
+            'capabilities' => ['tools' => new \stdClass],
+            'serverInfo' => ['name' => 'collab-territory', 'version' => '1.0.0'],
         ]);
     }
 

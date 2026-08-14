@@ -87,7 +87,12 @@ class TerritoryMcpService implements McpToolServiceInterface
 
     private function removeObservation(mixed $id, array $args): JsonResponse
     {
-        $obs = TerritoryObservation::find($args['id'] ?? null);
+        // Eloquent find() 遇陣列會走 findMany() 回傳 Collection（恆真），不是 model-or-null，
+        // 用 is_int 先擋掉，避免非整數 id（例如陣列）繞過下面的「not found」判斷。
+        if (! \is_int($args['id'] ?? null)) {
+            return $this->text($id, 'id must be an integer.', true);
+        }
+        $obs = TerritoryObservation::find($args['id']);
         if (! $obs) {
             return $this->text($id, 'Observation not found.', true);
         }
@@ -116,12 +121,11 @@ class TerritoryMcpService implements McpToolServiceInterface
             'to_entity_id' => $to->id,
             'relation_type' => $relationType,
         ]);
-        $rel->load('from', 'to');
 
         return $this->text($id, json_encode([
-            'from' => $rel->from->name,
+            'from' => $from->name,
             'relation_type' => $rel->relation_type,
-            'to' => $rel->to->name,
+            'to' => $to->name,
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
