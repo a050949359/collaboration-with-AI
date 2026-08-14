@@ -170,6 +170,8 @@ class TerritoryMcpService implements McpToolServiceInterface
         if ($entityName) {
             $entityIds = $entities->pluck('id');
             $relQuery->whereIn('from_entity_id', $entityIds)->orWhereIn('to_entity_id', $entityIds);
+        } else {
+            $relQuery->limit(self::UNSCOPED_GRAPH_LIMIT);
         }
         $relations = $relQuery->get()->map(fn ($r) => [
             'from' => $r->from->name,
