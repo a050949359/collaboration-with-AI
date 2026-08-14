@@ -103,13 +103,6 @@
 | Amber | `amber` | `BlobBackground` | 邊框流光 | 深色，橙紫漸層 |
 | Ink Zen | `ink-zen` | `BirdFlockBackground` | 毛筆筆觸 | 淺色，水墨 |
 
-### Countries.vue 架構
-- mainTab：`cities` | `jobs`
-- cities tab 右側：選國家後顯示城市 grid
-  - 已驗證用戶另有 sub-tab `list` / `add`
-  - `add` sub-tab：輸入城市名搜尋，country_code 來自 `selectedCountry.value.code`（不需使用者再選國家）
-- jobs tab：全寬，顯示所有 SearchCityJob，輪詢直到完成
-
 ---
 
 ## .env 重要變數
@@ -135,12 +128,6 @@
 # 機場/航空資料補全
 php artisan airports:enrich
 php artisan airlines:enrich
-
-# 國家資料匯入
-php artisan import:countries --fetch   # 抓 Wikidata
-php artisan import:countries           # 寫入 DB
-
-# ★ import:cities 已棄用（城市改由使用者 UI 搜尋加入）
 ```
 
 ---
@@ -240,6 +227,7 @@ npm run lint:check   # ESLint + Prettier check（不寫入）
 - `POST /api/mcp/agyd` — agyd daemon 工具（需要 admin 建立的 `agyd:mcp` scope key）
 - `POST /api/mcp/rag` — RAG 知識庫工具（需要 `rag:mcp` scope key）
 - `POST /api/mcp/codegraph` — 程式碼結構圖工具（唯讀；需要 `codegraph:mcp` scope key，任何登入者可自建）
+- `POST /api/mcp/territory` — 行政區/國家知識圖譜工具（需要 admin 建立的 `territory:mcp` scope key；取代舊版 `Aviation\City`/`Country` 公開網頁功能，資料整理寫入走開發端，非終端使用者）
 
 ### agyd daemon 系統
 **架構**：Claude → Laravel MCP（`/api/mcp/agyd`）→ ZeroTier → Go HTTP daemon（本地微型主機）

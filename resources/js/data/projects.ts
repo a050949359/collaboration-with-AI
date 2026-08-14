@@ -37,14 +37,12 @@ export const galleryProjects: Project[] = [
         title: 'Global Aviation & Geo Intelligence',
         description: [
             '機場：洲別／類型統計儀表板，加一顆能點國家即時查詢、標大頭針的 D3 互動地球。',
-            '航空公司與國家：用 Wikidata 批次匯入，自動補中文名與 ISO 代碼。',
-            '城市：即時搜尋候選、非同步寫入，查詢 API 有每分鐘限流。',
+            '航空公司：用 Wikidata 批次匯入，自動補中文名與 ISO 代碼。',
+            '查詢 API 有每分鐘限流。',
         ],
         tags: [
             'Airports',
             'Airlines',
-            'Countries',
-            'Cities',
             'Wikidata',
             'D3 Globe',
             'Queue',

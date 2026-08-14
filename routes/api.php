@@ -27,10 +27,6 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Aviation\AirlineController;
 use App\Http\Controllers\Aviation\AirportController;
 use App\Http\Controllers\Aviation\AirportStatsController;
-use App\Http\Controllers\Aviation\CityController;
-use App\Http\Controllers\Aviation\CityPreviewController;
-use App\Http\Controllers\Aviation\CitySearchController;
-use App\Http\Controllers\Aviation\CountryController;
 use App\Http\Controllers\Aviation\NearbyAirportController;
 use App\Http\Controllers\CodeGraphController;
 use App\Http\Controllers\Gacha\GachaCardController;
@@ -46,6 +42,7 @@ use App\Http\Controllers\Mcp\CodeGraphMcpController;
 use App\Http\Controllers\Mcp\MemoryMcpController;
 use App\Http\Controllers\Mcp\RagMcpController;
 use App\Http\Controllers\Mcp\TaskMcpController;
+use App\Http\Controllers\Mcp\TerritoryMcpController;
 use App\Http\Controllers\MiniOrch\MiniOrchController;
 use App\Http\Controllers\Rag\DocumentController as RagDocumentController;
 use App\Http\Controllers\Rag\KnowledgeBaseController as RagKnowledgeBaseController;
@@ -157,22 +154,6 @@ Route::prefix('v1/airports')->middleware('throttle:60,1')->group(function () {
 
 Route::prefix('v1/airlines')->middleware('throttle:60,1')->group(function () {
     Route::get('/', [AirlineController::class, 'index']);
-});
-
-Route::prefix('v1/countries')->middleware('throttle:60,1')->group(function () {
-    Route::get('/', [CountryController::class, 'index']);
-    Route::get('/{code}', [CountryController::class, 'show']);
-});
-
-Route::prefix('v1/cities')->middleware('throttle:60,1')->group(function () {
-    Route::get('/', [CityController::class, 'index']);
-    Route::get('/preview', CityPreviewController::class)->middleware('throttle:20,1');
-});
-
-Route::prefix('v1/cities/search')->middleware(['auth:sanctum', 'verified', 'throttle:30,1'])->group(function () {
-    Route::get('/', [CitySearchController::class, 'index']);
-    Route::post('/', [CitySearchController::class, 'store']);
-    Route::get('/{id}', [CitySearchController::class, 'show']);
 });
 
 Route::prefix('line/friends')->group(function () {
@@ -343,6 +324,7 @@ Route::post('/mcp/memory', [MemoryMcpController::class, 'handle'])->middleware([
 Route::post('/mcp/agyd', [AgydMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:agyd:mcp']);
 Route::post('/mcp/rag', [RagMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:rag:mcp']);
 Route::post('/mcp/codegraph', [CodeGraphMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:codegraph:mcp']);
+Route::post('/mcp/territory', [TerritoryMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:territory:mcp']);
 
 // agyd daemon callback（接收 ZIP，以 AGYD_SECRET 驗證）
 Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->middleware('throttle:10,1');
