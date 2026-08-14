@@ -36,9 +36,6 @@ export const routes = {
     // Airlines
     airlines: () => `${WEB_PREFIX}/airlines`,
 
-    // Countries
-    countries: () => `${WEB_PREFIX}/countries`,
-
     // About
     about: () => `${WEB_PREFIX}/about`,
 
@@ -199,20 +196,6 @@ export const api = {
 
     airlines: {
         index: () => '/api/v1/airlines',
-    },
-
-    countries: {
-        index: () => '/api/v1/countries',
-        show: (code: string) => `/api/v1/countries/${code}`,
-    },
-
-    cities: {
-        index: () => '/api/v1/cities',
-        preview: () => '/api/v1/cities/preview',
-        search: {
-            index: () => '/api/v1/cities/search',
-            show: (id: number) => `/api/v1/cities/search/${id}`,
-        },
     },
 
     miniOrch: {

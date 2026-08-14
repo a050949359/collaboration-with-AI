@@ -56,8 +56,7 @@ const defaultNavLinks = computed((): NavLink[] => {
     const path = page.url;
     const aviationActive =
         path.startsWith(routes.airports()) ||
-        path.startsWith(routes.airlines()) ||
-        path.startsWith(routes.countries());
+        path.startsWith(routes.airlines());
 
     return [
         {
@@ -83,12 +82,6 @@ const defaultNavLinks = computed((): NavLink[] => {
                     href: routes.airlines(),
                     icon: 'airlines',
                     active: path.startsWith(routes.airlines()),
-                },
-                {
-                    label: t('articles.nav.countries'),
-                    href: routes.countries(),
-                    icon: 'countries',
-                    active: path.startsWith(routes.countries()),
                 },
             ],
         },

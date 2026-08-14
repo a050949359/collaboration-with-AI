@@ -156,60 +156,6 @@ defineProps<{ name: string; size?: number }>();
             </g>
         </template>
 
-        <!-- countries -->
-        <template v-else-if="name === 'countries'">
-            <circle
-                class="stroke-default"
-                cx="16"
-                cy="16"
-                r="10"
-                stroke-width="1.5"
-            />
-            <g class="anim-globe-rot">
-                <ellipse
-                    class="stroke-default"
-                    cx="16"
-                    cy="16"
-                    rx="10"
-                    ry="3.4"
-                    stroke-width="1.5"
-                />
-                <ellipse
-                    class="stroke-default"
-                    cx="16"
-                    cy="16"
-                    rx="3.4"
-                    ry="10"
-                    stroke-width="1.5"
-                />
-                <line
-                    class="stroke-default"
-                    x1="16"
-                    y1="6"
-                    x2="16"
-                    y2="26"
-                    stroke-width="1.5"
-                    opacity="0.5"
-                />
-            </g>
-            <ellipse
-                class="stroke-default anim-orbit"
-                cx="16"
-                cy="16"
-                rx="13"
-                ry="4.4"
-                stroke-width="1"
-                stroke-dasharray="2 2"
-                opacity="0.45"
-            />
-            <circle
-                class="fill-default anim-orbit-dot"
-                cx="16"
-                cy="16"
-                r="1.6"
-            />
-        </template>
-
         <!-- about -->
         <template v-else-if="name === 'about'">
             <circle

@@ -9,11 +9,12 @@ enum ApiKeyScope: string
     case AgydMcp = 'agyd:mcp';
     case RagMcp = 'rag:mcp';
     case CodegraphMcp = 'codegraph:mcp';
+    case TerritoryMcp = 'territory:mcp';
 
     public function adminOnly(): bool
     {
         return match ($this) {
-            self::MemoryMcp, self::AgydMcp => true,
+            self::MemoryMcp, self::AgydMcp, self::TerritoryMcp => true,
             default => false,
         };
     }
