@@ -51,6 +51,7 @@ use App\Http\Controllers\Story\StorySessionController;
 use App\Http\Controllers\Story\StorySetupController;
 use App\Http\Controllers\Task\TaskController;
 use App\Http\Controllers\Task\TaskItemController;
+use App\Http\Controllers\Territory\TerritoryObservationJobController;
 use App\Http\Middleware\DecryptPasswordFields;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureImageFeatureEnabled;
@@ -325,6 +326,14 @@ Route::post('/mcp/agyd', [AgydMcpController::class, 'handle'])->middleware(['aut
 Route::post('/mcp/rag', [RagMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:rag:mcp']);
 Route::post('/mcp/codegraph', [CodeGraphMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:codegraph:mcp']);
 Route::post('/mcp/territory', [TerritoryMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:territory:mcp']);
+
+// territory 匯入腳本用：add_observation 非冪等，改走 Laravel queue（伺服器端自己重試/補全），
+// 不像上面 MCP 工具用 api-key scope，這裡沿用一般 admin session/token 驗證
+Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('territory/observation-jobs')->group(function () {
+    Route::post('/', [TerritoryObservationJobController::class, 'store']);
+    Route::get('/', [TerritoryObservationJobController::class, 'index']);
+    Route::get('/{id}', [TerritoryObservationJobController::class, 'show']);
+});
 
 // agyd daemon callback（接收 ZIP，以 AGYD_SECRET 驗證）
 Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->middleware('throttle:10,1');
