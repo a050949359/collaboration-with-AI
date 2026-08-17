@@ -96,6 +96,14 @@ class TerritoryMcpService implements McpToolServiceInterface
             return $this->text($id, "entity_name must be a Wikidata QID (e.g. Q90), got: {$entityName}", true);
         }
 
+        $entity = TerritoryEntity::where('name', $entityName)->first();
+        if (! $entity) {
+            return $this->text($id, 'Entity not found.', true);
+        }
+        if ($entity->type === 'country') {
+            return $this->text($id, 'refresh_observations only supports subdivision-layer entities, not country nodes.', true);
+        }
+
         $job = TerritoryObservationJob::queue($entityName, Auth::id());
 
         return $this->text($id, json_encode(['job_id' => $job->id, 'status' => $job->status], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
@@ -183,7 +191,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             'id' => $e->id,
             'name' => $e->name,
             'type' => $e->type,
-            'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'content' => $o->content])->all(),
+            'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'type' => $o->type, 'content' => $o->content])->all(),
         ]);
 
         $relQuery = TerritoryRelation::with('from', 'to');
@@ -226,7 +234,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             ->map(fn ($e) => [
                 'name' => $e->name,
                 'type' => $e->type,
-                'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'content' => $o->content])->all(),
+                'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'type' => $o->type, 'content' => $o->content])->all(),
             ]);
 
         return $this->text($id, json_encode($entities, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
