@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Territory;
 
+use App\Enums\Territory\ObservationJobStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Territory\TerritoryObservationJob;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class TerritoryObservationJobController extends Controller
 {
@@ -41,7 +43,7 @@ class TerritoryObservationJobController extends Controller
     public function index(Request $request): JsonResponse
     {
         $request->validate([
-            'status' => ['nullable', 'string', 'in:pending,processing,success,failed'],
+            'status' => ['nullable', Rule::enum(ObservationJobStatus::class)],
         ]);
 
         $jobs = TerritoryObservationJob::where('submitted_by', $request->user()->id)

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\Territory\ObservationJobStatus;
 use App\Enums\Territory\SubdivisionObservationType;
 use App\Models\Territory\TerritoryEntity;
 use App\Models\Territory\TerritoryObservationJob;
@@ -34,44 +35,44 @@ class WriteTerritoryObservationJob implements ShouldQueue
             return;
         }
 
-        $job->update(['status' => 'processing']);
+        $job->update(['status' => ObservationJobStatus::Processing]);
 
         try {
             $entity = TerritoryEntity::where('name', $job->entity_name)->first();
             if (! $entity) {
-                $job->update(['status' => 'failed', 'error' => "Entity '{$job->entity_name}' not found"]);
+                $job->update(['status' => ObservationJobStatus::Failed, 'error' => "Entity '{$job->entity_name}' not found"]);
 
                 return;
             }
 
             $fields = $this->fetchFromWikidata($job->entity_name);
             if ($fields === null) {
-                $job->update(['status' => 'failed', 'error' => 'No data returned from Wikidata']);
+                $job->update(['status' => ObservationJobStatus::Failed, 'error' => 'No data returned from Wikidata']);
 
                 return;
             }
 
-            // 整批 delete+create 包在同一個 transaction：job 執行到一半被殺掉不會留下
-            // 半套的觀察資料；配合 (entity_id, type) 的 unique 約束，同一 entity 併發執行
-            // 也不會產生重複 type。
+            // 整批包在同一個 transaction：job 執行到一半被殺掉不會留下半套的觀察資料。
+            // 用 updateOrCreate（而非 delete+create）逐 type 單行原子操作，避免「刪除後、
+            // 插入前」的空檔——雖然 TerritoryObservationJob::queue() 已經擋掉同一 entity
+            // 被兩個 job 同時處理，這裡的原子性主要是防 job 執行到一半被殺掉留下半套資料。
             DB::transaction(function () use ($entity, $fields) {
                 foreach ($fields as $type => $value) {
                     // 同一 entity 同一 type 只留最新值，讓這個 job 可以安全重跑（補資料/刷新資料）。
-                    $entity->observations()->where('type', $type)->delete();
-                    $entity->observations()->create(['type' => $type, 'content' => $value]);
+                    $entity->observations()->updateOrCreate(['type' => $type], ['content' => $value]);
                 }
             });
 
-            $job->update(['status' => 'success']);
+            $job->update(['status' => ObservationJobStatus::Success]);
         } catch (Throwable $e) {
-            $job->update(['status' => 'failed', 'error' => $e->getMessage()]);
+            $job->update(['status' => ObservationJobStatus::Failed, 'error' => $e->getMessage()]);
         }
     }
 
     public function failed(Throwable $exception): void
     {
         TerritoryObservationJob::where('id', $this->jobId)
-            ->update(['status' => 'failed', 'error' => $exception->getMessage()]);
+            ->update(['status' => ObservationJobStatus::Failed, 'error' => $exception->getMessage()]);
     }
 
     /** @return array<string, string>|null type => value，空值欄位已濾除 */
