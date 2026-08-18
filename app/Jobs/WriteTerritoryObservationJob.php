@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -50,11 +51,16 @@ class WriteTerritoryObservationJob implements ShouldQueue
                 return;
             }
 
-            foreach ($fields as $type => $value) {
-                // 同一 entity 同一 type 只留最新值，讓這個 job 可以安全重跑（補資料/刷新資料）。
-                $entity->observations()->where('type', $type)->delete();
-                $entity->observations()->create(['type' => $type, 'content' => $value]);
-            }
+            // 整批 delete+create 包在同一個 transaction：job 執行到一半被殺掉不會留下
+            // 半套的觀察資料；配合 (entity_id, type) 的 unique 約束，同一 entity 併發執行
+            // 也不會產生重複 type。
+            DB::transaction(function () use ($entity, $fields) {
+                foreach ($fields as $type => $value) {
+                    // 同一 entity 同一 type 只留最新值，讓這個 job 可以安全重跑（補資料/刷新資料）。
+                    $entity->observations()->where('type', $type)->delete();
+                    $entity->observations()->create(['type' => $type, 'content' => $value]);
+                }
+            });
 
             $job->update(['status' => 'success']);
         } catch (Throwable $e) {

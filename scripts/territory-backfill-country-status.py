@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""territory-backfill-country-status.py — 一次性 backfill：對已經匯入 territory MCP 的
-259 個國家 entity，各補一條 status observation（sovereign / dependency / dissolved / unclaimed）。
+"""territory-backfill-country-status.py — 一次性 backfill：補齊「status 欄位加入
+territory-import-countries.py 之前」就已匯入 territory MCP 的國家 entity，各補一條
+status observation（sovereign / dependency / dissolved / unclaimed）。
 
-背景：territory-import-countries.py 原本只寫了 recognized: yes/no（布林值），沒有區分
-「依附其他國家的屬地」跟「已解體的歷史政權」這兩種完全不同的 is_recognized=no。
-這支腳本只負責補這一條 observation，不會重跑 create_entity 或其他 8 條既有欄位
+背景：territory-import-countries.py 最初只寫了 recognized: yes/no（布林值），沒有區分
+「依附其他國家的屬地」跟「已解體的歷史政權」這兩種完全不同的 is_recognized=no；
+後來 build_observations() 已經補上 status 欄位（見該腳本），所以新匯入的國家不需要
+這支腳本。這支腳本只用來補那批舊資料的 status，不會重跑 create_entity 或其他既有欄位
 （避免重複寫入——add_observation 不是冪等的，重跑這支腳本會產生重複 status，
 所以只該執行一次；如果真的需要重跑，先用 remove_observation 清掉舊的 status）。
 
