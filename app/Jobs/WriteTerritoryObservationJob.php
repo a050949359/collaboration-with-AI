@@ -46,7 +46,9 @@ class WriteTerritoryObservationJob implements ShouldQueue
             }
 
             $fields = $this->fetchFromWikidata($job->entity_name);
-            if ($fields === null) {
+            // empty()（非單純 === null）：bindings 存在但濾完全空值也視為「沒抓到資料」失敗，
+            // 否則下面的 whereNotIn('type', []) 會變成 where 1=1，把這個 entity 的觀察資料全刪光。
+            if (empty($fields)) {
                 $job->update(['status' => ObservationJobStatus::Failed, 'error' => 'No data returned from Wikidata']);
 
                 return;
@@ -57,6 +59,10 @@ class WriteTerritoryObservationJob implements ShouldQueue
             // 插入前」的空檔——雖然 TerritoryObservationJob::queue() 已經擋掉同一 entity
             // 被兩個 job 同時處理，這裡的原子性主要是防 job 執行到一半被殺掉留下半套資料。
             DB::transaction(function () use ($entity, $fields) {
+                // 先清掉「這次 Wiki 沒抓到值」的舊 type：避免欄位在 Wikidata 上被移除後，
+                // 舊的觀察資料一直殘留在這個 entity 底下變成過時資訊。
+                $entity->observations()->whereNotIn('type', array_keys($fields))->delete();
+
                 foreach ($fields as $type => $value) {
                     // 同一 entity 同一 type 只留最新值，讓這個 job 可以安全重跑（補資料/刷新資料）。
                     $entity->observations()->updateOrCreate(['type' => $type], ['content' => $value]);
