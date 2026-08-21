@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：8 / 259 完成**
+**進度：21 / 259 完成**
 
 ## 已完成
 
@@ -17,8 +17,21 @@
 | Vietnam | Q881 | 2026-08-21 | 34（Q26575 Thái Nguyên 暫無 observation,待最後統一補） |
 | Malaysia | Q833 | 2026-08-21 | 16 |
 | Philippines | Q928 | 2026-08-21 | 18（Q13650/Calabarzon 因 Wikidata 缺英文 label 被 agy 誤拒，手動補上） |
+| Indonesia | Q252 | 2026-08-21 | 38（4 個已廢除歷史省份正確排除） |
+| China | Q148 | 2026-08-21 | 33（含 Hong Kong/Macau，兩者沿用 country layer 既有的 type=country，只新增 part_of 關係） |
+| Hong Kong | Q8646 | 2026-08-21 | — （China 的 dependency，本身即節點，非獨立跑 subdivision import；已隨 China 那批建 part_of） |
+| Macau | Q14773 | 2026-08-21 | — （同上，China 的 dependency） |
+| India | Q668 | 2026-08-21 | 36（3 個已廢除/非第一層行政區正確排除，含 2019 改制前的舊 Jammu and Kashmir 邦） |
+| Australia | Q408 | 2026-08-21 | 16（6 州 + 7 external territory + 3 mainland territory） |
+| United States | Q30 | 2026-08-21 | 56（50 州 + 5 territory + DC federal_district） |
+| United Kingdom | Q145 | 2026-08-21 | 4（Scotland/England/Northern Ireland/Wales） |
+| France | Q142 | 2026-08-21 | 25（Clipperton Island 這次被 agy 合理拒絕，無人島環礁行政性質存疑，未強制補） |
+| Germany | Q183 | 2026-08-21 | 16（3 個 1952 年前已廢除的舊西德邦正確排除） |
+| Italy | Q38 | 2026-08-21 | 20（15 region + 5 autonomous_region） |
+| Spain | Q29 | 2026-08-21 | 19（plazas de soberanía 正確拒絕，領土泛稱非單一行政區） |
+| Netherlands（Kingdom, Q29999） | Q29999 | 2026-08-21 | 4，全數手動處理（本地 countries 表 NL 對應 Q29999 非 Q55，需用王國 QID 查；Aruba/Curaçao/Sint Maarten 沿用既有 type=country 只補 part_of；Q55 荷蘭本土全新建 type=country，P297 為 deprecated rank 故無 recognized/status/notes，符合預期） |
 
-## 待處理（251）
+## 待處理（238）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -35,7 +48,6 @@
 | Armenia | Q399 | AM | ⬜ |
 | Aruba | Q21203 | AW | ⬜ |
 | Ascension | Q31890709 | AC | ⬜ |
-| Australia | Q408 | AU | ⬜ |
 | Austria | Q40 | AT | ⬜ |
 | Azerbaijan | Q227 | AZ | ⬜ |
 | Bahrain | Q398 | BH | ⬜ |
@@ -98,14 +110,12 @@
 | Federated States of Micronesia | Q702 | FM | ⬜ |
 | Fiji | Q712 | FJ | ⬜ |
 | Finland | Q33 | FI | ⬜ |
-| France | Q142 | FR | ⬜ |
 | French Guiana | Q3769 | GF | ⬜ |
 | French Polynesia | Q30971 | PF | ⬜ |
 | French Southern and Antarctic Lands | Q129003 | TF | ⬜ |
 | Gabon | Q1000 | GA | ⬜ |
 | Georgia | Q230 | GE | ⬜ |
 | German Democratic Republic | Q16957 | DD | ⬜ |
-| Germany | Q183 | DE | ⬜ |
 | Ghana | Q117 | GH | ⬜ |
 | Gibraltar | Q1410 | GI | ⬜ |
 | Greece | Q41 | GR | ⬜ |
@@ -121,24 +131,19 @@
 | Haiti | Q790 | HT | ⬜ |
 | Heard Island and McDonald Islands | Q131198 | HM | ⬜ |
 | Honduras | Q783 | HN | ⬜ |
-| Hong Kong | Q8646 | HK | ⬜ |
 | Hungary | Q28 | HU | ⬜ |
 | Iceland | Q189 | IS | ⬜ |
-| India | Q668 | IN | ⬜ |
-| Indonesia | Q252 | ID | ⬜ |
 | Iran | Q794 | IR | ⬜ |
 | Iraq | Q796 | IQ | ⬜ |
 | Ireland | Q27 | IE | ⬜ |
 | Isle of Man | Q9676 | IM | ⬜ |
 | Israel | Q801 | IL | ⬜ |
-| Italy | Q38 | IT | ⬜ |
 | Ivory Coast | Q1008 | CI | ⬜ |
 | Jamaica | Q766 | JM | ⬜ |
 | Jersey | Q785 | JE | ⬜ |
 | Jordan | Q810 | JO | ⬜ |
 | Kazakhstan | Q232 | KZ | ⬜ |
 | Kenya | Q114 | KE | ⬜ |
-| Kingdom of the Netherlands | Q29999 | NL | ⬜ |
 | Kiribati | Q710 | KI | ⬜ |
 | Kosovo | Q1246 | XK | ⬜ |
 | Kuwait | Q817 | KW | ⬜ |
@@ -152,7 +157,6 @@
 | Liechtenstein | Q347 | LI | ⬜ |
 | Lithuania | Q37 | LT | ⬜ |
 | Luxembourg | Q32 | LU | ⬜ |
-| Macau | Q14773 | MO | ⬜ |
 | Madagascar | Q1019 | MG | ⬜ |
 | Malawi | Q1020 | MW | ⬜ |
 | Maldives | Q826 | MV | ⬜ |
@@ -194,7 +198,6 @@
 | Panama | Q804 | PA | ⬜ |
 | Papua New Guinea | Q691 | PG | ⬜ |
 | Paraguay | Q733 | PY | ⬜ |
-| People's Republic of China | Q148 | CN | ⬜ |
 | Peru | Q419 | PE | ⬜ |
 | Pitcairn Islands | Q35672 | PN | ⬜ |
 | Poland | Q36 | PL | ⬜ |
@@ -229,7 +232,6 @@
 | South Africa | Q258 | ZA | ⬜ |
 | South Georgia and the South Sandwich Islands | Q35086 | GS | ⬜ |
 | South Sudan | Q958 | SS | ⬜ |
-| Spain | Q29 | ES | ⬜ |
 | Sri Lanka | Q854 | LK | ⬜ |
 | Sudan | Q1049 | SD | ⬜ |
 | Suriname | Q730 | SR | ⬜ |
@@ -257,8 +259,6 @@
 | Uganda | Q1036 | UG | ⬜ |
 | Ukraine | Q212 | UA | ⬜ |
 | United Arab Emirates | Q878 | AE | ⬜ |
-| United Kingdom | Q145 | GB | ⬜ |
-| United States | Q30 | US | ⬜ |
 | United States Minor Outlying Islands | Q16645 | UM | ⬜ |
 | United States Virgin Islands | Q11703 | VI | ⬜ |
 | Uruguay | Q77 | UY | ⬜ |
