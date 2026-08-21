@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：6 / 259 完成**
+**進度：7 / 259 完成**
 
 ## 已完成
 
@@ -15,8 +15,9 @@
 | Thailand | Q869 | 2026-08-21 | 77 |
 | Singapore | Q334 | 2026-08-21 | 5 |
 | Vietnam | Q881 | 2026-08-21 | 34（Q26575 Thái Nguyên 暫無 observation,待最後統一補） |
+| Malaysia | Q833 | 2026-08-21 | 16 |
 
-## 待處理（253）
+## 待處理（252）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -153,7 +154,6 @@
 | Macau | Q14773 | MO | ⬜ |
 | Madagascar | Q1019 | MG | ⬜ |
 | Malawi | Q1020 | MW | ⬜ |
-| Malaysia | Q833 | MY | ⬜ |
 | Maldives | Q826 | MV | ⬜ |
 | Mali | Q912 | ML | ⬜ |
 | Malta | Q233 | MT | ⬜ |
