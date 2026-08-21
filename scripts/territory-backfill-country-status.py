@@ -47,7 +47,7 @@ def main() -> int:
             continue
 
         is_error, text = call_tool(
-            endpoint, token, "add_observation", {"entity_name": country["qid"], "content": f"status: {status}"}
+            endpoint, token, "add_observation", {"entity_name": country["qid"], "type": "status", "content": status}
         )
         if is_error:
             print(f"  {country['code']} ({country['qid']}) add_observation failed: {text}", file=sys.stderr)

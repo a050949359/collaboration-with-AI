@@ -84,7 +84,8 @@ class TerritoryMcpService implements McpToolServiceInterface
         if (! $content) {
             return $this->text($id, 'content is required.', true);
         }
-        $obs = $entity->observations()->create(['content' => $content]);
+        $type = trim($args['type'] ?? '') ?: 'desc';
+        $obs = $entity->observations()->create(['content' => $content, 'type' => $type]);
 
         return $this->text($id, json_encode($obs, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
@@ -268,12 +269,13 @@ class TerritoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name' => 'add_observation',
-                'description' => '對節點附加一條文字觀察，用於記錄人類可讀名稱（label: ...）、人口、座標、資料可信度等事實。同一節點可有多條觀察。',
+                'description' => '對節點附加一條觀察，用於記錄人類可讀名稱、人口、座標、資料可信度等事實。type 是這條觀察的分類鍵（例如 "label_en"、"capital"、"status"），content 只放值本身（不要自己把 key 塞進 content 字串）；同一節點同一個 type 只能有一條（DB 有 unique(entity_id, type) 約束），重複呼叫同一 type 會失敗，需要更新請先 remove_observation 再重新 add。不填 type 時預設 "desc"（自由文字，可重複）。同一節點可有多條不同 type 的觀察。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
                         'entity_name' => ['type' => 'string', 'description' => '目標節點的 Wikidata QID'],
-                        'content' => ['type' => 'string', 'description' => '觀察內容文字，例如 "label: Paris"'],
+                        'content' => ['type' => 'string', 'description' => '觀察內容的值本身，例如 "Paris"（不要寫成 "label: Paris"）'],
+                        'type' => ['type' => 'string', 'description' => '分類鍵，例如 "label_en"、"capital"、"status"；不填預設 "desc"'],
                     ],
                     'required' => ['entity_name', 'content'],
                 ],

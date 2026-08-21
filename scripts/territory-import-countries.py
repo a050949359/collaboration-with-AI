@@ -10,7 +10,7 @@
   2. 讀本機 database/database.sqlite 的 countries 表（唯讀，不動這張表）。
   3. 對每一列，用 code 查出對應 QID，呼叫遠端 POST /api/mcp/territory：
        create_entity(name=QID, type="country")
-       add_observation(entity_name=QID, content="label_en: ...") 等最多 9 條
+       add_observation(entity_name=QID, type="label_en", content="...") 等最多 9 條
 
 不使用 Laravel bootstrap：純 stdlib（sqlite3 + urllib），可以在任何裝了 python3 的機器上跑，
 只要能連到 Wikidata 與 territory MCP 端點即可。
@@ -33,6 +33,7 @@ PAUSE_SECONDS = 30
 
 
 def build_observations(country: dict) -> list:
+    """回傳 [(type, content), ...]，type 對應 app/Enums/Territory/CountryObservationType.php 的 case value。"""
     fields = [
         ("label_en", country.get("name_en")),
         ("label_zh_tw", country.get("name_zh_tw")),
@@ -45,7 +46,7 @@ def build_observations(country: dict) -> list:
         ("status", country_status(country.get("code"), country.get("is_recognized"))),
         ("notes", country.get("notes")),
     ]
-    return [f"{key}: {value}" for key, value in fields if value]
+    return [(key, value) for key, value in fields if value]
 
 
 def main() -> int:
@@ -76,12 +77,12 @@ def main() -> int:
             print(f"  {code} ({qid}) create_entity failed: {text}", file=sys.stderr)
             continue
 
-        for content in build_observations(country):
+        for obs_type, content in build_observations(country):
             is_error, text = call_tool(
-                endpoint, token, "add_observation", {"entity_name": qid, "content": content}
+                endpoint, token, "add_observation", {"entity_name": qid, "type": obs_type, "content": content}
             )
             if is_error:
-                print(f"  {code} ({qid}) add_observation failed ({content!r}): {text}", file=sys.stderr)
+                print(f"  {code} ({qid}) add_observation({obs_type}) failed ({content!r}): {text}", file=sys.stderr)
 
         created += 1
         if created % PAUSE_EVERY_N_COUNTRIES == 0:

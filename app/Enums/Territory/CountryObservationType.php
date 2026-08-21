@@ -5,12 +5,12 @@ namespace App\Enums\Territory;
 /**
  * 國家層 territory_observations.type 的合法值。
  *
- * ⚠️ 這幾個 key 目前只是 territory-import-countries.py 的 build_observations()
- * 拿來組 `"key: value"` 字串塞進 content 用的慣例，**還沒接到這裡的 type 欄位**——
- * add_observation 目前不接受 type 參數，一律落在 model 預設值 type='desc'。
- * 也就是說 `TerritoryObservation::where('type', 'iso_code')` 目前查不到任何國家資料，
- * 要等手動 backfill（把 content 的 "key: value" 拆成 type+content）跑完才會對得上。
- * 這是刻意的：這次改動只處理行政區層，國家層維持原樣，這個 enum 先定義合法值待用。
+ * ⚠️ `add_observation` 現在接受 type 參數了（territory-import-countries.py 的
+ * build_observations() 已改成回傳 (type, content) tuple），新寫入會正確落在對應的
+ * type 欄位。但正式站既有的 259 個國家資料是改動之前寫的，還是 content 塞
+ * "key: value"、type 全部是 'desc' 的舊格式——要等手動 backfill（把 content 拆成
+ * type+content）跑完，`TerritoryObservation::where('type', 'iso_code')` 才會對舊資料
+ * 也生效。新寫入的國家不受影響，一律是對的。
  *
  * 前 7 個（LabelEn ~ PhoneCode）對應 Wikidata property 於下方註記——
  * 用 Taiwan(Q865)/US(Q30)/Nauru(Q697，小國代表)/Seychelles(Q1042)/Senegal(Q1041)
