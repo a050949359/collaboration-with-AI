@@ -101,9 +101,6 @@ class TerritoryMcpService implements McpToolServiceInterface
         if (! $entity) {
             return $this->text($id, 'Entity not found.', true);
         }
-        if ($entity->type === 'country') {
-            return $this->text($id, 'refresh_observations only supports subdivision-layer entities, not country nodes.', true);
-        }
 
         $job = TerritoryObservationJob::queue($entityName, Auth::id());
 
@@ -282,11 +279,11 @@ class TerritoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name' => 'refresh_observations',
-                'description' => '只適用於「國家以下第一層行政區」節點（province/state/special_municipality 這類，不適用 country 節點）。不是直接寫入，而是建一筆 job 丟進 Laravel queue，由伺服器端非同步對這個 QID 重新查一次 Wikidata（label/description/instance_of/座標/人口/面積），依欄位分別建立/更新對應的 observation（同一節點同一種欄位只留最新值，可安全對同一節點重複呼叫來刷新資料）。立即回傳 job_id，實際寫入結果要晚一點才會反映在 read_graph/search_nodes。',
+                'description' => '不是直接寫入，而是建一筆 job 丟進 Laravel queue，由伺服器端非同步對這個 QID 重新查一次 Wikidata，依欄位分別建立/更新對應的 observation（同一節點同一種欄位只留最新值，可安全對同一節點重複呼叫來刷新資料）。country 節點跟其他節點（行政區）欄位不同：country 查 label_en/label_zh_tw/iso_code/alpha3/numeric/capital/phone_code/population/continent，並額外用查到的 iso_code 比對本機 countries 表補上 recognized/status/notes；行政區查 label/description/instance_of/座標/人口/面積。立即回傳 job_id，實際寫入結果要晚一點才會反映在 read_graph/search_nodes。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'entity_name' => ['type' => 'string', 'description' => '目標行政區節點的 Wikidata QID'],
+                        'entity_name' => ['type' => 'string', 'description' => '目標節點的 Wikidata QID'],
                     ],
                     'required' => ['entity_name'],
                 ],

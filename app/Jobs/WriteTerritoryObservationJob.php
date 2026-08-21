@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\Territory\CountryObservationType;
 use App\Enums\Territory\ObservationJobStatus;
 use App\Enums\Territory\SubdivisionObservationType;
 use App\Models\Territory\TerritoryEntity;
@@ -15,9 +16,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
-// 只服務行政區層（territory-import-subdivisions.py）。國家層的 observation 有一部分
-// 不是 Wikidata 查得到的（recognized/status/notes 是本地判斷），不適用「伺服器自己
-// 打 Wiki 補齊」這套，國家層既有資料改用手動 backfill 處理，不走這個 job。
+// 依 entity 的 type 分流：country 節點打國家版 SPARQL + 讀本機 countries 表補
+// recognized/status/notes；其餘（行政區層）打行政區版 SPARQL。兩者都是伺服器自己
+// 重新查一次 Wikidata，呼叫端（territory-import-*.py）只需要傳 entity_name 觸發。
 class WriteTerritoryObservationJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -25,6 +26,12 @@ class WriteTerritoryObservationJob implements ShouldQueue
     private const SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql';
 
     private const USER_AGENT = 'collaboration-with-AI/1.0 (haroldchen@besttour.com.tw)';
+
+    // countries 表已退役、僅供這裡讀取 recognized/status/notes 這三個非 Wikidata 欄位；
+    // 對照 scripts/territory_lib.py 的 DISSOLVED_CODES/UNCLAIMED_CODES，兩邊要保持同步。
+    private const DISSOLVED_CODES = ['DD', 'YU', 'AN', 'PC'];
+
+    private const UNCLAIMED_CODES = ['AQ'];
 
     public function __construct(public int $jobId) {}
 
@@ -45,7 +52,10 @@ class WriteTerritoryObservationJob implements ShouldQueue
                 return;
             }
 
-            $fields = $this->fetchFromWikidata($job->entity_name);
+            $fields = $entity->type === 'country'
+                ? $this->fetchCountryFields($job->entity_name)
+                : $this->fetchSubdivisionFields($job->entity_name);
+
             // empty()（非單純 === null）：bindings 存在但濾完全空值也視為「沒抓到資料」失敗，
             // 否則下面的 whereNotIn('type', []) 會變成 where 1=1，把這個 entity 的觀察資料全刪光。
             if (empty($fields)) {
@@ -82,7 +92,7 @@ class WriteTerritoryObservationJob implements ShouldQueue
     }
 
     /** @return array<string, string>|null type => value，空值欄位已濾除 */
-    private function fetchFromWikidata(string $qid): ?array
+    private function fetchSubdivisionFields(string $qid): ?array
     {
         $sparql = <<<SPARQL
 SELECT ?label ?desc ?coords ?population ?area
@@ -103,17 +113,8 @@ GROUP BY ?label ?desc ?coords ?population ?area
 LIMIT 1
 SPARQL;
 
-        $response = Http::withHeaders([
-            'Accept' => 'application/sparql-results+json',
-            'User-Agent' => self::USER_AGENT,
-        ])->timeout(20)->get(self::SPARQL_ENDPOINT, ['query' => $sparql, 'format' => 'json']);
-
-        if (! $response->successful()) {
-            return null;
-        }
-
-        $b = $response->json('results.bindings.0');
-        if (empty($b)) {
+        $b = $this->querySparql($sparql);
+        if ($b === null) {
             return null;
         }
 
@@ -127,5 +128,86 @@ SPARQL;
         ];
 
         return array_filter($fields, fn ($v) => $v !== null && $v !== '');
+    }
+
+    /** @return array<string, string>|null type => value，空值欄位已濾除 */
+    private function fetchCountryFields(string $qid): ?array
+    {
+        $sparql = <<<SPARQL
+SELECT ?labelEn ?labelZhTw ?iso2 ?iso3 ?isoNum ?capitalLabel ?callingCode ?population ?continentLabel
+WHERE {
+  OPTIONAL { wd:{$qid} rdfs:label ?labelEn . FILTER(LANG(?labelEn) = "en") }
+  OPTIONAL { wd:{$qid} rdfs:label ?labelZhTw . FILTER(LANG(?labelZhTw) = "zh-tw") }
+  OPTIONAL { wd:{$qid} wdt:P297 ?iso2 }
+  OPTIONAL { wd:{$qid} wdt:P298 ?iso3 }
+  OPTIONAL { wd:{$qid} wdt:P299 ?isoNum }
+  OPTIONAL { wd:{$qid} wdt:P36 ?capital }
+  OPTIONAL { wd:{$qid} wdt:P474 ?callingCode }
+  OPTIONAL { wd:{$qid} wdt:P1082 ?population }
+  OPTIONAL { wd:{$qid} wdt:P30 ?continent }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+LIMIT 1
+SPARQL;
+
+        $b = $this->querySparql($sparql);
+        if ($b === null) {
+            return null;
+        }
+
+        $fields = [
+            CountryObservationType::LabelEn->value => $b['labelEn']['value'] ?? null,
+            CountryObservationType::LabelZhTw->value => $b['labelZhTw']['value'] ?? null,
+            CountryObservationType::IsoCode->value => $b['iso2']['value'] ?? null,
+            CountryObservationType::Alpha3->value => $b['iso3']['value'] ?? null,
+            CountryObservationType::Numeric->value => $b['isoNum']['value'] ?? null,
+            CountryObservationType::Capital->value => $b['capitalLabel']['value'] ?? null,
+            CountryObservationType::PhoneCode->value => $b['callingCode']['value'] ?? null,
+            CountryObservationType::Population->value => $b['population']['value'] ?? null,
+            CountryObservationType::Continent->value => $b['continentLabel']['value'] ?? null,
+        ];
+
+        // recognized/status/notes 不是 Wikidata 查得到的，來自本機已退役的 countries 表——
+        // 用上面查到的 iso2 code 去對應那張表的一列，找不到就跳過這三個欄位，不影響其他欄位。
+        $iso2 = $b['iso2']['value'] ?? null;
+        if ($iso2) {
+            $country = DB::table('countries')->where('code', $iso2)->first();
+            if ($country) {
+                $fields[CountryObservationType::Recognized->value] = $country->is_recognized ? 'yes' : 'no';
+                $fields[CountryObservationType::Status->value] = $this->countryStatus($iso2, (bool) $country->is_recognized);
+                $fields[CountryObservationType::Notes->value] = $country->notes;
+            }
+        }
+
+        return array_filter($fields, fn ($v) => $v !== null && $v !== '');
+    }
+
+    private function countryStatus(string $code, bool $isRecognized): string
+    {
+        if (\in_array($code, self::DISSOLVED_CODES, true)) {
+            return 'dissolved';
+        }
+        if (\in_array($code, self::UNCLAIMED_CODES, true)) {
+            return 'unclaimed';
+        }
+
+        return $isRecognized ? 'sovereign' : 'dependency';
+    }
+
+    /** @return array<string, mixed>|null 第一筆 binding，查詢失敗或無結果回傳 null */
+    private function querySparql(string $sparql): ?array
+    {
+        $response = Http::withHeaders([
+            'Accept' => 'application/sparql-results+json',
+            'User-Agent' => self::USER_AGENT,
+        ])->timeout(20)->get(self::SPARQL_ENDPOINT, ['query' => $sparql, 'format' => 'json']);
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $b = $response->json('results.bindings.0');
+
+        return empty($b) ? null : $b;
     }
 }
