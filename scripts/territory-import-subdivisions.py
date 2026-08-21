@@ -35,6 +35,7 @@ import json
 import re
 import subprocess
 import sys
+import unicodedata
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -161,7 +162,10 @@ def judge_candidates(country_qid: str, country_name: str, candidates: list) -> d
 
 def sanitize_type(raw_type: str) -> str:
     # agy 應該已經回傳小寫底線格式，這裡只是防呆（避免多餘空白/大寫/標點混進去）。
-    cleaned = re.sub(r"[^a-zA-Z0-9]+", "_", (raw_type or "").strip()).strip("_").lower()
+    # 先做 NFKD 正規化 + 只留 ASCII，把重音符號轉成基底字母（例如日文羅馬拼音的 "dō" -> "do"）
+    # 再清理，避免下面的正則表達式把整個重音字元直接砍掉（"dō" 曾經被砍成 "d"）。
+    normalized = unicodedata.normalize("NFKD", raw_type or "").encode("ascii", "ignore").decode("ascii")
+    cleaned = re.sub(r"[^a-zA-Z0-9]+", "_", normalized.strip()).strip("_").lower()
     return cleaned or "subdivision"
 
 
