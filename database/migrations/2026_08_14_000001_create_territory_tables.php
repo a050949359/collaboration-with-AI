@@ -22,9 +22,7 @@ return new class extends Migration
             $table->string('type', 32)->default('desc');
             $table->timestamps();
 
-            // unique（非單純 index）：避免 WriteTerritoryObservationJob 併發跑同一 entity 時，
-            // delete+create 交錯造成同一 type 留下重複列。
-            $table->unique(['entity_id', 'type']);
+            $table->index(['entity_id', 'type']);
         });
 
         Schema::create('territory_relations', function (Blueprint $table) {

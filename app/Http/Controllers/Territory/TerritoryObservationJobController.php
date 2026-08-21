@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Territory;
 
 use App\Enums\Territory\ObservationJobStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Territory\TerritoryEntity;
 use App\Models\Territory\TerritoryObservationJob;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +20,14 @@ class TerritoryObservationJobController extends Controller
         $request->validate([
             'entity_name' => ['required', 'string', 'regex:/^Q\d+$/'],
         ]);
+
+        $entity = TerritoryEntity::where('name', $request->entity_name)->first();
+        if (! $entity) {
+            return $this->error('Entity not found.', 404);
+        }
+        if ($entity->type === 'country') {
+            return $this->error('Observation refresh only supports subdivision-layer entities, not country nodes.', 422);
+        }
 
         $job = TerritoryObservationJob::queue($request->entity_name, $request->user()->id);
 
