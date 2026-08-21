@@ -72,7 +72,9 @@ class WriteTerritoryObservationJob implements ShouldQueue
             DB::transaction(function () use ($entity, $fields) {
                 // 先清掉「這次 Wiki 沒抓到值」的舊 type：避免欄位在 Wikidata 上被移除後，
                 // 舊的觀察資料一直殘留在這個 entity 底下變成過時資訊。
-                $entity->observations()->whereNotIn('type', array_keys($fields))->delete();
+                // 'desc' 排除在外：那是 add_observation 手動加註記的自由格式欄位（不在任何
+                // enum 裡，本來就不該被這裡的自動清理當成「過時的 Wiki 欄位」誤刪。
+                $entity->observations()->whereNotIn('type', [...array_keys($fields), 'desc'])->delete();
 
                 foreach ($fields as $type => $value) {
                     // 同一 entity 同一 type 只留最新值，讓這個 job 可以安全重跑（補資料/刷新資料）。
