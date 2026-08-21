@@ -228,7 +228,7 @@ npm run lint:check   # ESLint + Prettier check（不寫入）
 - `POST /api/mcp/rag` — RAG 知識庫工具（需要 `rag:mcp` scope key）
 - `POST /api/mcp/codegraph` — 程式碼結構圖工具（唯讀；需要 `codegraph:mcp` scope key，任何登入者可自建）
 - `POST /api/mcp/territory` — 行政區/國家知識圖譜工具（需要 admin 建立的 `territory:mcp` scope key；取代舊版 `Aviation\City`/`Country` 公開網頁功能，資料整理寫入走開發端，非終端使用者）
-  - ⚠️ 舊版 `countries`/`cities`/`city_search_jobs` 資料表**刻意保留、未刪除**（避免退役時遺失既有資料），但已無任何程式碼讀寫，屬孤兒表；未來若確定不需要舊資料，可另開 migration drop
+  - ⚠️ 舊版 `countries`/`cities`/`city_search_jobs` 資料表**刻意保留、未刪除**（避免退役時遺失既有資料），`cities`/`city_search_jobs` 已無任何程式碼讀寫；但 `countries` 表仍被讀取（唯讀）：`App\Jobs\WriteTerritoryObservationJob`（國家層 observation 補 recognized/status/notes）與 `territory-import-countries.py`（取得待匯入國家的 QID 清單），不算完全孤兒表；未來若確定不需要舊資料，可另開 migration drop
 
 ### agyd daemon 系統
 **架構**：Claude → Laravel MCP（`/api/mcp/agyd`）→ ZeroTier → Go HTTP daemon（本地微型主機）

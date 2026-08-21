@@ -28,7 +28,8 @@ class WriteTerritoryObservationJob implements ShouldQueue
     private const USER_AGENT = 'collaboration-with-AI/1.0 (haroldchen@besttour.com.tw)';
 
     // countries 表已退役、僅供這裡讀取 recognized/status/notes 這三個非 Wikidata 欄位；
-    // 對照 scripts/territory_lib.py 的 DISSOLVED_CODES/UNCLAIMED_CODES，兩邊要保持同步。
+    // 這份清單是唯一來源（原本 Python 端也有一份同款判斷，country 層改走這支 job 後
+    // Python 那份已刪除，不用再兩邊同步）。
     private const DISSOLVED_CODES = ['DD', 'YU', 'AN', 'PC'];
 
     private const UNCLAIMED_CODES = ['AQ'];
@@ -182,6 +183,15 @@ SPARQL;
         return array_filter($fields, fn ($v) => $v !== null && $v !== '');
     }
 
+    // countries 表混了「現行主權國家」跟「依附其他國家的屬地／已解體的歷史政權」——
+    // is_recognized 只分兩類（yes/no），但 no 底下其實還有兩種完全不同的東西：
+    //   1. 依附其他國家的屬地（香港、Guam、格陵蘭…）：這些之後會在 territory-import-
+    //      subdivisions.py 掃到它們真正的宗主國時，被 agy 判斷成正確的行政區 type、
+    //      掛上 part_of 關係——但因為 create_entity 是 firstOrCreate，已存在的 entity
+    //      type 不會被覆寫，所以這裡先補一個 status observation 說明它「其實是
+    //      dependency」，跟 type 欄位分開。
+    //   2. 真正已解體、不再屬於任何現行國家的歷史政權：不會被任何國家的 P150 掃到，
+    //      需要單獨標記，否則會一直頂著誤導性的 status。
     private function countryStatus(string $code, bool $isRecognized): string
     {
         if (\in_array($code, self::DISSOLVED_CODES, true)) {

@@ -8,11 +8,12 @@ Token 解析優先序：MCP_TERRITORY_TOKEN > MCP_TOKEN > .vscode/mcp.json（從
 比對 url 以 /mcp/territory 結尾的那個 server entry）。
 Base URL 可用 MCP_BASE_URL 覆寫（預設 https://ohya.vip/api/mcp）。
 
-add_observation 不是冪等的，行政區層（territory-import-subdivisions.py）批次補觀察時
-改呼叫 refresh_observations tool（跟其他 tool 共用同一把 api-key）——這個 tool 只丟一個
-job 進 Laravel queue，實際要寫哪些欄位是伺服器端自己重新打一次 Wikidata 決定的，腳本這端
-不用組 content、也不用管冪等性。國家層（territory-import-countries.py）目前仍用同步的
-add_observation，維持現狀不變。
+add_observation 不是冪等的，territory-import-countries.py/territory-import-subdivisions.py
+兩支腳本補觀察時都改呼叫 refresh_observations tool（跟其他 tool 共用同一把 api-key）——
+這個 tool 只丟一個 job 進 Laravel queue，實際要寫哪些欄位（含國家層的 recognized/status/
+notes，見 App\\Jobs\\WriteTerritoryObservationJob）是伺服器端自己重新打一次 Wikidata +
+查本機 countries 表決定的，兩支腳本都只需要傳 entity_name 觸發，不用組 content、
+不用管冪等性。
 """
 
 import json
@@ -107,26 +108,6 @@ def get_countries_with_qid() -> list:
         if qid:
             result.append({**country, "qid": qid})
     return result
-
-
-# countries 表混了「現行主權國家」跟「依附其他國家的屬地／已解體的歷史政權」——
-# is_recognized 只分兩類（yes/no），但 no 底下其實還有兩種完全不同的東西：
-#   1. 依附其他國家的屬地（香港、Guam、格陵蘭…）：這些之後會在 territory-import-subdivisions.py
-#      掃到它們真正的宗主國時，被 agy 判斷成正確的行政區 type、掛上 part_of 關係——
-#      但因為 create_entity 是 firstOrCreate，已存在的 entity type 不會被覆寫，
-#      所以這裡先補一個 status observation 說明它「其實是 dependency」，跟 type 欄位分開。
-#   2. 真正已解體、不再屬於任何現行國家的歷史政權：不會被任何國家的 P150 掃到，
-#      需要單獨標記，否則會一直頂著誤導性的 status。
-DISSOLVED_CODES = {"DD", "YU", "AN", "PC"}  # 東德、南斯拉夫、荷屬安地列斯、太平洋群島託管地
-UNCLAIMED_CODES = {"AQ"}  # 南極洲：國際條約下不屬於任何國家
-
-
-def country_status(code: str, is_recognized) -> str:
-    if code in DISSOLVED_CODES:
-        return "dissolved"
-    if code in UNCLAIMED_CODES:
-        return "unclaimed"
-    return "sovereign" if is_recognized else "dependency"
 
 
 def call_tool(endpoint: str, token: str, name: str, arguments: dict) -> tuple:
