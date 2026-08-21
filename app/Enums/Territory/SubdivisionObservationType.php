@@ -5,7 +5,7 @@ namespace App\Enums\Territory;
 /**
  * 行政區（國家以下第一層）層 territory_observations.type 的合法值。
  *
- * 6 個全部都已接上：`App\Jobs\WriteTerritoryObservationJob::fetchFromWikidata()`
+ * 6 個全部都已接上：`App\Jobs\WriteTerritoryObservationJob::fetchSubdivisionFields()`
  * 在伺服器端對 entity_name 重新打一次 Wikidata SPARQL，一次撈完這 6 個欄位並依
  * type dedup 後寫入。Python 端（territory-import-subdivisions.py）不再組 content，
  * 只呼叫 `refresh_observations(entity_name)` 觸發，實際欄位由伺服器決定。

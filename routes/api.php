@@ -327,8 +327,8 @@ Route::post('/mcp/rag', [RagMcpController::class, 'handle'])->middleware(['auth.
 Route::post('/mcp/codegraph', [CodeGraphMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:codegraph:mcp']);
 Route::post('/mcp/territory', [TerritoryMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:territory:mcp']);
 
-// 目前只給未來 web 介面用（觸發/查詢行政區 observation 刷新 job，實際腳本走上面的
-// refresh_observations MCP tool，用 territory:mcp api-key，不走這裡）。
+// 目前只給未來 web 介面用（觸發/查詢 observation 刷新 job，country/行政區皆可，
+// 實際腳本走上面的 refresh_observations MCP tool，用 territory:mcp api-key，不走這裡）。
 // 不像上面 MCP 工具用 api-key scope，這裡沿用一般 admin session/token 驗證。
 // store() 會 dispatch 一個會打外部 Wikidata API 的 job，throttle 避免被濫用連續觸發。
 Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('territory/observation-jobs')->group(function () {

@@ -25,9 +25,6 @@ class TerritoryObservationJobController extends Controller
         if (! $entity) {
             return $this->error('Entity not found.', 404);
         }
-        if ($entity->type === 'country') {
-            return $this->error('Observation refresh only supports subdivision-layer entities, not country nodes.', 422);
-        }
 
         $job = TerritoryObservationJob::queue($request->entity_name, $request->user()->id);
 
