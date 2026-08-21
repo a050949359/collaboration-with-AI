@@ -4,8 +4,10 @@ namespace App\Services\Mcp;
 
 use App\Models\Territory\TerritoryEntity;
 use App\Models\Territory\TerritoryObservation;
+use App\Models\Territory\TerritoryObservationJob;
 use App\Models\Territory\TerritoryRelation;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 class TerritoryMcpService implements McpToolServiceInterface
 {
@@ -13,6 +15,7 @@ class TerritoryMcpService implements McpToolServiceInterface
         'create_entity', 'delete_entity',
         'add_observation', 'remove_observation',
         'create_relation', 'delete_relation',
+        'refresh_observations',
     ];
 
     private const READ_TOOLS = ['read_graph', 'search_nodes'];
@@ -33,6 +36,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             'create_entity' => $this->createEntity($id, $args),
             'delete_entity' => $this->deleteEntity($id, $args),
             'add_observation' => $this->addObservation($id, $args),
+            'refresh_observations' => $this->refreshObservations($id, $args),
             'remove_observation' => $this->removeObservation($id, $args),
             'create_relation' => $this->createRelation($id, $args),
             'delete_relation' => $this->deleteRelation($id, $args),
@@ -83,6 +87,26 @@ class TerritoryMcpService implements McpToolServiceInterface
         $obs = $entity->observations()->create(['content' => $content]);
 
         return $this->text($id, json_encode($obs, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    }
+
+    private function refreshObservations(mixed $id, array $args): JsonResponse
+    {
+        $entityName = trim($args['entity_name'] ?? '');
+        if (! preg_match('/^Q\d+$/', $entityName)) {
+            return $this->text($id, "entity_name must be a Wikidata QID (e.g. Q90), got: {$entityName}", true);
+        }
+
+        $entity = TerritoryEntity::where('name', $entityName)->first();
+        if (! $entity) {
+            return $this->text($id, 'Entity not found.', true);
+        }
+        if ($entity->type === 'country') {
+            return $this->text($id, 'refresh_observations only supports subdivision-layer entities, not country nodes.', true);
+        }
+
+        $job = TerritoryObservationJob::queue($entityName, Auth::id());
+
+        return $this->text($id, json_encode(['job_id' => $job->id, 'status' => $job->status], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
     private function removeObservation(mixed $id, array $args): JsonResponse
@@ -167,7 +191,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             'id' => $e->id,
             'name' => $e->name,
             'type' => $e->type,
-            'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'content' => $o->content])->all(),
+            'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'type' => $o->type, 'content' => $o->content])->all(),
         ]);
 
         $relQuery = TerritoryRelation::with('from', 'to');
@@ -210,7 +234,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             ->map(fn ($e) => [
                 'name' => $e->name,
                 'type' => $e->type,
-                'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'content' => $o->content])->all(),
+                'observations' => $e->observations->map(fn ($o) => ['id' => $o->id, 'type' => $o->type, 'content' => $o->content])->all(),
             ]);
 
         return $this->text($id, json_encode($entities, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
@@ -252,6 +276,17 @@ class TerritoryMcpService implements McpToolServiceInterface
                         'content' => ['type' => 'string', 'description' => '觀察內容文字，例如 "label: Paris"'],
                     ],
                     'required' => ['entity_name', 'content'],
+                ],
+            ],
+            [
+                'name' => 'refresh_observations',
+                'description' => '只適用於「國家以下第一層行政區」節點（province/state/special_municipality 這類，不適用 country 節點）。不是直接寫入，而是建一筆 job 丟進 Laravel queue，由伺服器端非同步對這個 QID 重新查一次 Wikidata（label/description/instance_of/座標/人口/面積），依欄位分別建立/更新對應的 observation（同一節點同一種欄位只留最新值，可安全對同一節點重複呼叫來刷新資料）。立即回傳 job_id，實際寫入結果要晚一點才會反映在 read_graph/search_nodes。',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'entity_name' => ['type' => 'string', 'description' => '目標行政區節點的 Wikidata QID'],
+                    ],
+                    'required' => ['entity_name'],
                 ],
             ],
             [

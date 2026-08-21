@@ -51,6 +51,7 @@ use App\Http\Controllers\Story\StorySessionController;
 use App\Http\Controllers\Story\StorySetupController;
 use App\Http\Controllers\Task\TaskController;
 use App\Http\Controllers\Task\TaskItemController;
+use App\Http\Controllers\Territory\TerritoryObservationJobController;
 use App\Http\Middleware\DecryptPasswordFields;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureImageFeatureEnabled;
@@ -325,6 +326,16 @@ Route::post('/mcp/agyd', [AgydMcpController::class, 'handle'])->middleware(['aut
 Route::post('/mcp/rag', [RagMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:rag:mcp']);
 Route::post('/mcp/codegraph', [CodeGraphMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:codegraph:mcp']);
 Route::post('/mcp/territory', [TerritoryMcpController::class, 'handle'])->middleware(['auth.apikey', 'apikey.scope:territory:mcp']);
+
+// 目前只給未來 web 介面用（觸發/查詢行政區 observation 刷新 job，實際腳本走上面的
+// refresh_observations MCP tool，用 territory:mcp api-key，不走這裡）。
+// 不像上面 MCP 工具用 api-key scope，這裡沿用一般 admin session/token 驗證。
+// store() 會 dispatch 一個會打外部 Wikidata API 的 job，throttle 避免被濫用連續觸發。
+Route::middleware(['auth:sanctum', EnsureAdmin::class])->prefix('territory/observation-jobs')->group(function () {
+    Route::post('/', [TerritoryObservationJobController::class, 'store'])->middleware('throttle:30,1');
+    Route::get('/', [TerritoryObservationJobController::class, 'index']);
+    Route::get('/{id}', [TerritoryObservationJobController::class, 'show']);
+});
 
 // agyd daemon callback（接收 ZIP，以 AGYD_SECRET 驗證）
 Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->middleware('throttle:10,1');
