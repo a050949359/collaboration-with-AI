@@ -91,7 +91,11 @@ JUDGE_PROMPT_TEMPLATE = """你是一位資深地理／行政區資料審核員�
    （例如 instance_of 是 "city, big city, special municipality" 時，"special municipality" 比
    "city" 更能代表這是第一層行政區，優先選它；沒有明顯行政區性質詞彙時才退回用最基本的 "city"/"state"
    之類）。type 只用小寫、單字或用底線連接的簡短英文（例如 "special_municipality"、"state"、
-   "province"），不要整句話。
+   "province"），不要整句話，**也不要把國名/國籍形容詞包進去**（instance_of 常常是
+   "province of Thailand"、"metropolitan city of South Korea" 這種格式，只取
+   "province"、"metropolitan_city" 這個核心詞，"of Thailand"/"of South Korea" 這段要整個
+   去掉——國家脈絡已經由 create_relation 的 part_of 關係表達，type 裡重複寫國名只會讓同性質
+   的行政區在不同國家之間變成不同 type，破壞跨國比對的一致性）。
 
 ## 輸出格式
 只輸出一個 JSON 物件，不要有其他文字、不要用 markdown code fence 包起來：
