@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：7 / 259 完成**
+**進度：8 / 259 完成**
 
 ## 已完成
 
@@ -16,8 +16,9 @@
 | Singapore | Q334 | 2026-08-21 | 5 |
 | Vietnam | Q881 | 2026-08-21 | 34（Q26575 Thái Nguyên 暫無 observation,待最後統一補） |
 | Malaysia | Q833 | 2026-08-21 | 16 |
+| Philippines | Q928 | 2026-08-21 | 18（Q13650/Calabarzon 因 Wikidata 缺英文 label 被 agy 誤拒，手動補上） |
 
-## 待處理（252）
+## 待處理（251）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -195,7 +196,6 @@
 | Paraguay | Q733 | PY | ⬜ |
 | People's Republic of China | Q148 | CN | ⬜ |
 | Peru | Q419 | PE | ⬜ |
-| Philippines | Q928 | PH | ⬜ |
 | Pitcairn Islands | Q35672 | PN | ⬜ |
 | Poland | Q36 | PL | ⬜ |
 | Portugal | Q45 | PT | ⬜ |
