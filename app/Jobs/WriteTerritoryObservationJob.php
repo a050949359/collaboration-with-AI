@@ -53,7 +53,9 @@ class WriteTerritoryObservationJob implements ShouldQueue
                 return;
             }
 
-            $fields = $entity->type === 'country'
+            // entity->type 是 create_entity 收進來的自由字串（慣例，非 enum 強制），大小寫防呆一下，
+            // 避免 "Country"/"COUNTRY" 這類變體被誤判成行政區、悄悄查錯 SPARQL、寫進錯的欄位組合。
+            $fields = strtolower($entity->type) === 'country'
                 ? $this->fetchCountryFields($job->entity_name)
                 : $this->fetchSubdivisionFields($job->entity_name);
 

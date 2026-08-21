@@ -6,6 +6,7 @@ use App\Models\Territory\TerritoryEntity;
 use App\Models\Territory\TerritoryObservation;
 use App\Models\Territory\TerritoryObservationJob;
 use App\Models\Territory\TerritoryRelation;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
@@ -85,7 +86,12 @@ class TerritoryMcpService implements McpToolServiceInterface
             return $this->text($id, 'content is required.', true);
         }
         $type = trim($args['type'] ?? '') ?: 'desc';
-        $obs = $entity->observations()->create(['content' => $content, 'type' => $type]);
+
+        try {
+            $obs = $entity->observations()->create(['content' => $content, 'type' => $type]);
+        } catch (UniqueConstraintViolationException) {
+            return $this->text($id, "Entity already has an observation of type '{$type}'. Use remove_observation to replace it.", true);
+        }
 
         return $this->text($id, json_encode($obs, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
@@ -245,7 +251,7 @@ class TerritoryMcpService implements McpToolServiceInterface
         return [
             [
                 'name' => 'create_entity',
-                'description' => '建立行政區/國家節點。name 全域唯一，慣例一律填 Wikidata QID（如 Q90），不要填人類可讀的地名——同名地點在世界上極常見（美國有 30+ 個 Springfield、法國巴黎跟美國德州都有 Paris），用顯示名稱當唯一鍵會把不同地點誤判成同一筆。QID 由 Wikidata 保證全域唯一，天然解決這個問題。建立後應立即用 add_observation 補一條 "label: <人類可讀名稱>" 的觀察，顯示名稱查詢靠 search_nodes 比對 observation 內容。type 為自由字串（慣例：country、province、city、special_ward、traditional_authority），不用來推斷層級深度，只作顯示用途。',
+                'description' => '建立行政區/國家節點。name 全域唯一，慣例一律填 Wikidata QID（如 Q90），不要填人類可讀的地名——同名地點在世界上極常見（美國有 30+ 個 Springfield、法國巴黎跟美國德州都有 Paris），用顯示名稱當唯一鍵會把不同地點誤判成同一筆。QID 由 Wikidata 保證全域唯一，天然解決這個問題。建立後應立即呼叫 refresh_observations 觸發伺服器自動補齊 label 等欄位（不要自己用 add_observation 手動補 label，那個工具的 content 現在只放值本身、type 才是分類鍵，例如 type="label_en"，不要把 key 塞進 content 字串），顯示名稱查詢靠 search_nodes 比對 observation 內容。type 為自由字串（慣例：country、province、city、special_ward、traditional_authority），不用來推斷層級深度，只作顯示用途——但 country 這個值目前也是 refresh_observations 用來判斷走國家版還是行政區版 Wikidata 查詢的依據，務必精確填小寫 "country"。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -266,7 +272,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name' => 'add_observation',
-                'description' => '對節點附加一條觀察，用於記錄人類可讀名稱、人口、座標、資料可信度等事實。type 是這條觀察的分類鍵（例如 "label_en"、"capital"、"status"），content 只放值本身（不要自己把 key 塞進 content 字串）；同一節點同一個 type 只能有一條（DB 有 unique(entity_id, type) 約束），重複呼叫同一 type 會失敗，需要更新請先 remove_observation 再重新 add。不填 type 時預設 "desc"（自由文字，可重複）。同一節點可有多條不同 type 的觀察。',
+                'description' => '對節點附加一條觀察，用於記錄人類可讀名稱、人口、座標、資料可信度等事實。type 是這條觀察的分類鍵（例如 "label_en"、"capital"、"status"），content 只放值本身（不要自己把 key 塞進 content 字串）；同一節點同一個 type 只能有一條（DB 有 unique(entity_id, type) 約束），重複呼叫同一 type（含不填 type 時預設的 "desc"）會失敗，需要更新請先 remove_observation 再重新 add。同一節點可有多條「不同」type 的觀察。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
