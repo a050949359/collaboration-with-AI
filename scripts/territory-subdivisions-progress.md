@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：5 / 259 完成**
+**進度：6 / 259 完成**
 
 ## 已完成
 
@@ -14,8 +14,9 @@
 | South Korea | Q884 | 2026-08-21 | 17 |
 | Thailand | Q869 | 2026-08-21 | 77 |
 | Singapore | Q334 | 2026-08-21 | 5 |
+| Vietnam | Q881 | 2026-08-21 | 34（Q26575 Thái Nguyên 暫無 observation,待最後統一補） |
 
-## 待處理（254）
+## 待處理（253）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -265,7 +266,6 @@
 | Vanuatu | Q686 | VU | ⬜ |
 | Vatican City | Q237 | VA | ⬜ |
 | Venezuela | Q717 | VE | ⬜ |
-| Vietnam | Q881 | VN | ⬜ |
 | Wallis and Futuna | Q35555 | WF | ⬜ |
 | Western Sahara | Q6250 | EH | ⬜ |
 | Yemen | Q805 | YE | ⬜ |
