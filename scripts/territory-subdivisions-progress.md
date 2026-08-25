@@ -3,7 +3,11 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：21 / 259 完成**
+**進度：45 / 259 完成**
+
+## ⚠️ 暫緩處理的國家
+
+**Maldives（Q826）**：Wikidata 的 P150（國家→第一層行政區）只回傳 20 個「行政環礁」，但實際現行官方行政架構是 **18 個行政環礁 + 5 個市**（Malé City、Addu City、Fuvahmulah City、Kulhudhuffushi City、Thinadhoo City）。核對發現 Wikidata 對這 5 個市的資料很不完整：只有 Malé（`Q9347`，P31 含明確的 `first-level administrative division`）跟 Addu City（`Q4681407`，獨立城市 entity 但沒有 P150 連到 Maldives）有乾淨的城市 QID；Fuvahmulah 只能對應回舊的環礁 entity（`Q1811116` Gnaviyani Atoll）；Kulhudhuffushi、Thinadhoo 完全沒有城市層級的 entity，只有島嶼 entity。原本 20 個環礁要扣哪 2 個變成 18 個，也需要跟官方資料源核對才能確定，不能用猜的。**尚未寫入任何資料**（只跑過 dry-run）。需要人工找到官方/可靠來源核對完整名單後才能繼續，不要在自動化流程中被跳過或誤選為「下一國」。
 
 ## 已完成
 
@@ -30,8 +34,32 @@
 | Italy | Q38 | 2026-08-21 | 20（15 region + 5 autonomous_region） |
 | Spain | Q29 | 2026-08-21 | 19（plazas de soberanía 正確拒絕，領土泛稱非單一行政區） |
 | Netherlands（Kingdom, Q29999） | Q29999 | 2026-08-21 | 4，全數手動處理（本地 countries 表 NL 對應 Q29999 非 Q55，需用王國 QID 查；Aruba/Curaçao/Sint Maarten 沿用既有 type=country 只補 part_of；Q55 荷蘭本土全新建 type=country，P297 為 deprecated rank 故無 recognized/status/notes，符合預期） |
+| Canada | Q16 | 2026-08-21 | 13（10 省 + 3 地區） |
+| Switzerland | Q39 | 2026-08-21 | 26（22 canton + 4 half_canton） |
+| Turkey | Q43 | 2026-08-21 | 81 |
+| Greece | Q41 | 2026-08-21 | 14（13 administrative_region + Mount Athos autonomous_region） |
+| New Zealand | Q664 | 2026-08-24 | 17（16 自動 + Chatham Islands 手動補；正確 QID 為 Q86771569「Chatham Islands Territory」，非最初誤用的 Q26882619「Chatham Islands Council」——後者是治理機關本體非行政區域，已刪除重建） |
+| Mexico | Q96 | 2026-08-24 | 32 |
+| Egypt | Q79 | 2026-08-24 | 27（1 個已廢除歷史 governorate 正確排除） |
+| United Arab Emirates | Q878 | 2026-08-24 | 7 |
+| Cambodia | Q424 | 2026-08-24 | 24 |
+| Austria | Q40 | 2026-08-24 | 9 |
+| Belgium | Q31 | 2026-08-24 | 6 |
+| Bulgaria | Q219 | 2026-08-24 | 28 |
+| Croatia | Q224 | 2026-08-24 | 21（20 自動 + Zagreb 手動補，county 級直轄市） |
+| Cyprus | Q229 | 2026-08-24 | 6 |
+| Czech Republic | Q213 | 2026-08-24 | 14 |
+| Denmark | Q35 | 2026-08-24 | 5（3 自動 + 2 手動補，agy 誤判「(2007–2026)」有效期標示為不確定；Kingdom of Denmark(Q756617)含 Faroe/Greenland 的王國層暫不處理，見記憶 follow-up 12） |
+| Estonia | Q191 | 2026-08-24 | 15 |
+| Finland | Q33 | 2026-08-24 | 19 |
+| Hungary | Q28 | 2026-08-24 | 19（20 候選扣 1 個真正的二級行政區 Csongrád-Csanád County；agy 該次誤 accept 它、又誤 reject 2 個現行郡，皆已手動修正） |
+| Iceland | Q189 | 2026-08-24 | 8，⚠️ 非官方治理行政區，全數手動寫入（Wikidata P150 對 Iceland 只連到 6 個國會選舉區 kjördæmi，不是行政區；冰島實際上中央政府直轄 ~64 個市鎮，沒有正式的中間行政層級；這 8 個是 ISO 3166-2:IS 統計/分類用區域 IS-1~IS-8，非國家規劃的治理行政區，僅作為本專案「第一層」的替代近似值） |
+| Ireland | Q27 | 2026-08-24 | 31（完整對上現行 31 個地方政府單位。4 傳統省 Leinster/Munster/Connacht/Ulster 正確排除，無治理功能，改以 `traditional_province` observation 記在對應郡上；Dublin/Tipperary 被 agy 正確拒絕為已廢除舊制，手動補上 Dublin 4 郡(Fingal/South Dublin/Dún Laoghaire–Rathdown/Dublin City)+ Tipperary(Q184618，P31 preferred rank 標 former 但地理範圍即現行統一後郡，決定沿用)+ Cork City(Q36647)+ Galway City(Q133862337)——後 2 個一開始誤判「無獨立實體」，其實跟 Dublin City 同屬 `Q13455645` administrative-unit 分類，複查後才找到） |
+| Latvia | Q211 | 2026-08-24 | 41 |
+| Liechtenstein | Q347 | 2026-08-24 | 11（第一次 dry-run 遇到 agy 服務暫時 503，重試後正常） |
+| Lithuania | Q37 | 2026-08-24 | 60（59 自動 + Neringa Municipality Q9305847 手動補，Wikidata 對它完全無 P150）；⚠️ 第一層改用市鎮(savivaldybė)而非傳統的 10 個郡(apskritis)——郡已於 2010 年廢除治理機關(縣長辦公室)，現在只是統計/地理分區，無議會無治理權，性質等同 Ireland 的傳統省；郡資訊之後可比照 Ireland 用 `traditional_province`-style observation 補在各市鎮上，尚未執行 |
 
-## 待處理（238）
+## 待處理（228，另有 1 國暫緩見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -48,13 +76,11 @@
 | Armenia | Q399 | AM | ⬜ |
 | Aruba | Q21203 | AW | ⬜ |
 | Ascension | Q31890709 | AC | ⬜ |
-| Austria | Q40 | AT | ⬜ |
 | Azerbaijan | Q227 | AZ | ⬜ |
 | Bahrain | Q398 | BH | ⬜ |
 | Bangladesh | Q902 | BD | ⬜ |
 | Barbados | Q244 | BB | ⬜ |
 | Belarus | Q184 | BY | ⬜ |
-| Belgium | Q31 | BE | ⬜ |
 | Belize | Q242 | BZ | ⬜ |
 | Benin | Q962 | BJ | ⬜ |
 | Bermuda | Q23635 | BM | ⬜ |
@@ -67,12 +93,9 @@
 | British Indian Ocean Territory | Q43448 | IO | ⬜ |
 | British Virgin Islands | Q25305 | VG | ⬜ |
 | Brunei | Q921 | BN | ⬜ |
-| Bulgaria | Q219 | BG | ⬜ |
 | Burkina Faso | Q965 | BF | ⬜ |
 | Burundi | Q967 | BI | ⬜ |
-| Cambodia | Q424 | KH | ⬜ |
 | Cameroon | Q1009 | CM | ⬜ |
-| Canada | Q16 | CA | ⬜ |
 | Cape Verde | Q1011 | CV | ⬜ |
 | Caribbean Netherlands | Q27561 | BQ | ⬜ |
 | Cayman Islands | Q5785 | KY | ⬜ |
@@ -86,30 +109,23 @@
 | Comoros | Q970 | KM | ⬜ |
 | Cook Islands | Q26988 | CK | ⬜ |
 | Costa Rica | Q800 | CR | ⬜ |
-| Croatia | Q224 | HR | ⬜ |
 | Cuba | Q241 | CU | ⬜ |
 | Curaçao | Q25279 | CW | ⬜ |
-| Cyprus | Q229 | CY | ⬜ |
-| Czech Republic | Q213 | CZ | ⬜ |
 | Democratic Republic of the Congo | Q974 | CD | ⬜ |
-| Denmark | Q35 | DK | ⬜ |
 | Diego Garcia | Q184851 | DG | ⬜ |
 | Djibouti | Q977 | DJ | ⬜ |
 | Dominica | Q784 | DM | ⬜ |
 | Dominican Republic | Q786 | DO | ⬜ |
 | Ecuador | Q736 | EC | ⬜ |
-| Egypt | Q79 | EG | ⬜ |
 | El Salvador | Q792 | SV | ⬜ |
 | Equatorial Guinea | Q983 | GQ | ⬜ |
 | Eritrea | Q986 | ER | ⬜ |
-| Estonia | Q191 | EE | ⬜ |
 | Eswatini | Q1050 | SZ | ⬜ |
 | Ethiopia | Q115 | ET | ⬜ |
 | Falkland Islands | Q9648 | FK | ⬜ |
 | Faroe Islands | Q4628 | FO | ⬜ |
 | Federated States of Micronesia | Q702 | FM | ⬜ |
 | Fiji | Q712 | FJ | ⬜ |
-| Finland | Q33 | FI | ⬜ |
 | French Guiana | Q3769 | GF | ⬜ |
 | French Polynesia | Q30971 | PF | ⬜ |
 | French Southern and Antarctic Lands | Q129003 | TF | ⬜ |
@@ -118,7 +134,6 @@
 | German Democratic Republic | Q16957 | DD | ⬜ |
 | Ghana | Q117 | GH | ⬜ |
 | Gibraltar | Q1410 | GI | ⬜ |
-| Greece | Q41 | GR | ⬜ |
 | Greenland | Q223 | GL | ⬜ |
 | Grenada | Q769 | GD | ⬜ |
 | Guadeloupe | Q17012 | GP | ⬜ |
@@ -131,11 +146,8 @@
 | Haiti | Q790 | HT | ⬜ |
 | Heard Island and McDonald Islands | Q131198 | HM | ⬜ |
 | Honduras | Q783 | HN | ⬜ |
-| Hungary | Q28 | HU | ⬜ |
-| Iceland | Q189 | IS | ⬜ |
 | Iran | Q794 | IR | ⬜ |
 | Iraq | Q796 | IQ | ⬜ |
-| Ireland | Q27 | IE | ⬜ |
 | Isle of Man | Q9676 | IM | ⬜ |
 | Israel | Q801 | IL | ⬜ |
 | Ivory Coast | Q1008 | CI | ⬜ |
@@ -149,17 +161,14 @@
 | Kuwait | Q817 | KW | ⬜ |
 | Kyrgyzstan | Q813 | KG | ⬜ |
 | Laos | Q819 | LA | ⬜ |
-| Latvia | Q211 | LV | ⬜ |
 | Lebanon | Q822 | LB | ⬜ |
 | Lesotho | Q1013 | LS | ⬜ |
 | Liberia | Q1014 | LR | ⬜ |
 | Libya | Q1016 | LY | ⬜ |
-| Liechtenstein | Q347 | LI | ⬜ |
-| Lithuania | Q37 | LT | ⬜ |
 | Luxembourg | Q32 | LU | ⬜ |
 | Madagascar | Q1019 | MG | ⬜ |
 | Malawi | Q1020 | MW | ⬜ |
-| Maldives | Q826 | MV | ⬜ |
+| Maldives | Q826 | MV | ⚠️ 暫緩，見下方說明 |
 | Mali | Q912 | ML | ⬜ |
 | Malta | Q233 | MT | ⬜ |
 | Marshall Islands | Q709 | MH | ⬜ |
@@ -167,7 +176,6 @@
 | Mauritania | Q1025 | MR | ⬜ |
 | Mauritius | Q1027 | MU | ⬜ |
 | Mayotte | Q17063 | YT | ⬜ |
-| Mexico | Q96 | MX | ⬜ |
 | Moldova | Q217 | MD | ⬜ |
 | Monaco | Q235 | MC | ⬜ |
 | Mongolia | Q711 | MN | ⬜ |
@@ -181,7 +189,6 @@
 | Nepal | Q837 | NP | ⬜ |
 | Netherlands Antilles | Q25227 | AN | ⬜ |
 | New Caledonia | Q33788 | NC | ⬜ |
-| New Zealand | Q664 | NZ | ⬜ |
 | Nicaragua | Q811 | NI | ⬜ |
 | Niger | Q1032 | NE | ⬜ |
 | Nigeria | Q1033 | NG | ⬜ |
@@ -237,7 +244,6 @@
 | Suriname | Q730 | SR | ⬜ |
 | Svalbard and Jan Mayen | Q842829 | SJ | ⬜ |
 | Sweden | Q34 | SE | ⬜ |
-| Switzerland | Q39 | CH | ⬜ |
 | Syria | Q858 | SY | ⬜ |
 | São Tomé and Príncipe | Q1039 | ST | ⬜ |
 | Tajikistan | Q863 | TJ | ⬜ |
@@ -252,13 +258,11 @@
 | Tristan da Cunha | Q34625512 | TA | ⬜ |
 | Trust Territory of the Pacific Islands | Q129237 | PC | ⬜ |
 | Tunisia | Q948 | TN | ⬜ |
-| Turkey | Q43 | TR | ⬜ |
 | Turkmenistan | Q874 | TM | ⬜ |
 | Turks and Caicos Islands | Q18221 | TC | ⬜ |
 | Tuvalu | Q672 | TV | ⬜ |
 | Uganda | Q1036 | UG | ⬜ |
 | Ukraine | Q212 | UA | ⬜ |
-| United Arab Emirates | Q878 | AE | ⬜ |
 | United States Minor Outlying Islands | Q16645 | UM | ⬜ |
 | United States Virgin Islands | Q11703 | VI | ⬜ |
 | Uruguay | Q77 | UY | ⬜ |
