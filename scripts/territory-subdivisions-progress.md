@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：45 / 259 完成**
+**進度：68 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
 
@@ -58,16 +58,37 @@
 | Latvia | Q211 | 2026-08-24 | 41 |
 | Liechtenstein | Q347 | 2026-08-24 | 11（第一次 dry-run 遇到 agy 服務暫時 503，重試後正常） |
 | Lithuania | Q37 | 2026-08-24 | 60（59 自動 + Neringa Municipality Q9305847 手動補，Wikidata 對它完全無 P150）；⚠️ 第一層改用市鎮(savivaldybė)而非傳統的 10 個郡(apskritis)——郡已於 2010 年廢除治理機關(縣長辦公室)，現在只是統計/地理分區，無議會無治理權，性質等同 Ireland 的傳統省；郡資訊之後可比照 Ireland 用 `traditional_province`-style observation 補在各市鎮上，尚未執行 |
+| Albania | Q222 | 2026-08-25 | 12 |
+| Andorra | Q228 | 2026-08-25 | 7（7 教區 parish） |
+| Belarus | Q184 | 2026-08-25 | 7（6 州 region + Minsk 首都單獨列 first_level_administrative_division） |
+| Bosnia and Herzegovina | Q225 | 2026-08-25 | 3（Federation of BiH + Republika Srpska 兩實體 + Brčko District 自治區） |
+| Kosovo | Q1246 | 2026-08-25 | 38（29 agy 自動 + 9 手動補：Prizren/Obiliq 因 description 不足被誤拒，Kllokot/Zvečan/North Mitrovica/Novo Brdo/Parteš/Skenderaj/Shtime 這 7 個 Wikidata 完全沒有 P150 連到 Q1246，由使用者提供 QID 逐一核對後手動補齊；Skenderaj(Q2043122) 與已收錄的 Drenas(Q860365) 座標/人口皆不同，確認是兩個不同市鎮非重複資料） |
+| Luxembourg | Q32 | 2026-08-25 | 12 |
+| Malta | Q233 | 2026-08-25 | 6 |
+| Moldova | Q217 | 2026-08-25 | 37（36 自動 + Bălți Municipality 手動補，P31 誤標 second-level 但 description 跟 Chișinău/Bender 一致為 municipality） |
+| Monaco | Q235 | 2026-08-25 | 1（單一 commune，1917 年已合併，符合微型國家常態） |
+| Montenegro | Q236 | 2026-08-25 | 25 |
+| North Macedonia | Q221 | 2026-08-25 | 81（實際為 80 個市鎮 opština + City of Skopje 這個額外協調層；agy 自動接受 71 個（含 City of Skopje 本身）+ 手動補 10 個被誤判為二級行政區的 Skopje 都會區下轄市鎮，這 10 個實際跟其他 70 個同屬 `opština`（Q646793）一級市鎮，City of Skopje 只是協調層非降級容器；另確認 Oslomej/Zajas/Drugovo/Vraneštica 4 個已於 2013 年併入 Kičevo，Wikidata 正確未連結，無需處理） |
+| Norway | Q20 | 2026-08-25 | 18（16 自動 + Oslo 手動補 county 級 + Bouvet Island 手動補 first_level_administrative_division，比照已接受的 Jan Mayen/Svalbard） |
+| Poland | Q36 | 2026-08-25 | 16 |
+| Portugal | Q45 | 2026-08-25 | 20（18 district + Madeira/Azores autonomous_region） |
+| Romania | Q218 | 2026-08-25 | 42（41 county + Bucharest first_level_administrative_division） |
+| Russia | Q159 | 2026-08-25 | 83（85 候選扣 2 個爭議領土 Republic of Crimea/Sevastopol，國際普遍未承認為俄羅斯聯邦主體，正確排除未強制寫入） |
+| San Marino | Q238 | 2026-08-25 | 9 |
+| Serbia | Q403 | 2026-08-25 | 30（含 4 個涉及 Kosovo 領土的 district，是塞爾維亞官方立場上仍主張的行政區劃，與已建立的 Kosovo 國家實體地理重疊，屬政治爭議自然結果，未特別處理） |
+| Slovakia | Q214 | 2026-08-25 | 8 |
+| Slovenia | Q215 | 2026-08-25 | 212（200 municipality + 12 city_municipality，正好對上官方現行市鎮總數） |
+| Sweden | Q34 | 2026-08-25 | 21 |
+| Ukraine | Q212 | 2026-08-25 | 27（24 oblast + Autonomous Republic of Crimea 自動接受，符合國際普遍承認的烏克蘭領土範圍；Kyiv/Sevastopol 兩個特殊地位城市被 agy 誤拒，手動補上，同 Romania Bucharest/Russia Moscow 模式；Kyiv 首次 refresh_observations 出現已知的暫時性空值，重試後正常） |
+| Vatican City | Q237 | 2026-08-25 | 0（Wikidata P150 無任何候選，符合梵蒂岡本身即單一行政單位、無次級行政區的實際狀況，微型國家常態，無需寫入） |
 
-## 待處理（228，另有 1 國暫緩見上方說明）
+## 待處理（190，另有 1 國暫緩見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
 | Afghanistan | Q889 | AF | ⬜ |
-| Albania | Q222 | AL | ⬜ |
 | Algeria | Q262 | DZ | ⬜ |
 | American Samoa | Q16641 | AS | ⬜ |
-| Andorra | Q228 | AD | ⬜ |
 | Angola | Q916 | AO | ⬜ |
 | Anguilla | Q25228 | AI | ⬜ |
 | Antarctica | Q51 | AQ | ⬜ |
@@ -80,13 +101,11 @@
 | Bahrain | Q398 | BH | ⬜ |
 | Bangladesh | Q902 | BD | ⬜ |
 | Barbados | Q244 | BB | ⬜ |
-| Belarus | Q184 | BY | ⬜ |
 | Belize | Q242 | BZ | ⬜ |
 | Benin | Q962 | BJ | ⬜ |
 | Bermuda | Q23635 | BM | ⬜ |
 | Bhutan | Q917 | BT | ⬜ |
 | Bolivia | Q750 | BO | ⬜ |
-| Bosnia and Herzegovina | Q225 | BA | ⬜ |
 | Botswana | Q963 | BW | ⬜ |
 | Bouvet Island | Q23408 | BV | ⬜ |
 | Brazil | Q155 | BR | ⬜ |
@@ -157,7 +176,6 @@
 | Kazakhstan | Q232 | KZ | ⬜ |
 | Kenya | Q114 | KE | ⬜ |
 | Kiribati | Q710 | KI | ⬜ |
-| Kosovo | Q1246 | XK | ⬜ |
 | Kuwait | Q817 | KW | ⬜ |
 | Kyrgyzstan | Q813 | KG | ⬜ |
 | Laos | Q819 | LA | ⬜ |
@@ -165,21 +183,16 @@
 | Lesotho | Q1013 | LS | ⬜ |
 | Liberia | Q1014 | LR | ⬜ |
 | Libya | Q1016 | LY | ⬜ |
-| Luxembourg | Q32 | LU | ⬜ |
 | Madagascar | Q1019 | MG | ⬜ |
 | Malawi | Q1020 | MW | ⬜ |
 | Maldives | Q826 | MV | ⚠️ 暫緩，見下方說明 |
 | Mali | Q912 | ML | ⬜ |
-| Malta | Q233 | MT | ⬜ |
 | Marshall Islands | Q709 | MH | ⬜ |
 | Martinique | Q17054 | MQ | ⬜ |
 | Mauritania | Q1025 | MR | ⬜ |
 | Mauritius | Q1027 | MU | ⬜ |
 | Mayotte | Q17063 | YT | ⬜ |
-| Moldova | Q217 | MD | ⬜ |
-| Monaco | Q235 | MC | ⬜ |
 | Mongolia | Q711 | MN | ⬜ |
-| Montenegro | Q236 | ME | ⬜ |
 | Montserrat | Q13353 | MS | ⬜ |
 | Morocco | Q1028 | MA | ⬜ |
 | Mozambique | Q1029 | MZ | ⬜ |
@@ -195,9 +208,7 @@
 | Niue | Q34020 | NU | ⬜ |
 | Norfolk Island | Q31057 | NF | ⬜ |
 | North Korea | Q423 | KP | ⬜ |
-| North Macedonia | Q221 | MK | ⬜ |
 | Northern Mariana Islands | Q16644 | MP | ⬜ |
-| Norway | Q20 | NO | ⬜ |
 | Oman | Q842 | OM | ⬜ |
 | Pakistan | Q843 | PK | ⬜ |
 | Palau | Q695 | PW | ⬜ |
@@ -207,13 +218,9 @@
 | Paraguay | Q733 | PY | ⬜ |
 | Peru | Q419 | PE | ⬜ |
 | Pitcairn Islands | Q35672 | PN | ⬜ |
-| Poland | Q36 | PL | ⬜ |
-| Portugal | Q45 | PT | ⬜ |
 | Puerto Rico | Q1183 | PR | ⬜ |
 | Qatar | Q846 | QA | ⬜ |
 | Republic of the Congo | Q971 | CG | ⬜ |
-| Romania | Q218 | RO | ⬜ |
-| Russia | Q159 | RU | ⬜ |
 | Rwanda | Q1037 | RW | ⬜ |
 | Réunion | Q17070 | RE | ⬜ |
 | Saint Barthélemy | Q25362 | BL | ⬜ |
@@ -224,16 +231,12 @@
 | Saint Vincent and the Grenadines | Q757 | VC | ⬜ |
 | Saint-Martin | Q126125 | MF | ⬜ |
 | Samoa | Q683 | WS | ⬜ |
-| San Marino | Q238 | SM | ⬜ |
 | Sark | Q3405693 | CQ | ⬜ |
 | Saudi Arabia | Q851 | SA | ⬜ |
 | Senegal | Q1041 | SN | ⬜ |
-| Serbia | Q403 | RS | ⬜ |
 | Seychelles | Q1042 | SC | ⬜ |
 | Sierra Leone | Q1044 | SL | ⬜ |
 | Sint Maarten | Q26273 | SX | ⬜ |
-| Slovakia | Q214 | SK | ⬜ |
-| Slovenia | Q215 | SI | ⬜ |
 | Solomon Islands | Q685 | SB | ⬜ |
 | Somalia | Q1045 | SO | ⬜ |
 | South Africa | Q258 | ZA | ⬜ |
@@ -243,7 +246,6 @@
 | Sudan | Q1049 | SD | ⬜ |
 | Suriname | Q730 | SR | ⬜ |
 | Svalbard and Jan Mayen | Q842829 | SJ | ⬜ |
-| Sweden | Q34 | SE | ⬜ |
 | Syria | Q858 | SY | ⬜ |
 | São Tomé and Príncipe | Q1039 | ST | ⬜ |
 | Tajikistan | Q863 | TJ | ⬜ |
@@ -262,13 +264,11 @@
 | Turks and Caicos Islands | Q18221 | TC | ⬜ |
 | Tuvalu | Q672 | TV | ⬜ |
 | Uganda | Q1036 | UG | ⬜ |
-| Ukraine | Q212 | UA | ⬜ |
 | United States Minor Outlying Islands | Q16645 | UM | ⬜ |
 | United States Virgin Islands | Q11703 | VI | ⬜ |
 | Uruguay | Q77 | UY | ⬜ |
 | Uzbekistan | Q265 | UZ | ⬜ |
 | Vanuatu | Q686 | VU | ⬜ |
-| Vatican City | Q237 | VA | ⬜ |
 | Venezuela | Q717 | VE | ⬜ |
 | Wallis and Futuna | Q35555 | WF | ⬜ |
 | Western Sahara | Q6250 | EH | ⬜ |
