@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：68 / 259 完成**
+**進度：114 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
 
@@ -81,8 +81,54 @@
 | Sweden | Q34 | 2026-08-25 | 21 |
 | Ukraine | Q212 | 2026-08-25 | 27（24 oblast + Autonomous Republic of Crimea 自動接受，符合國際普遍承認的烏克蘭領土範圍；Kyiv/Sevastopol 兩個特殊地位城市被 agy 誤拒，手動補上，同 Romania Bucharest/Russia Moscow 模式；Kyiv 首次 refresh_observations 出現已知的暫時性空值，重試後正常） |
 | Vatican City | Q237 | 2026-08-25 | 0（Wikidata P150 無任何候選，符合梵蒂岡本身即單一行政單位、無次級行政區的實際狀況，微型國家常態，無需寫入） |
+| Antigua and Barbuda | Q781 | 2026-08-25 | 8（6 教區 parish + Barbuda/Redonda 兩個附屬島嶼；Redonda 在正式寫入時被誤拒為「abandoned village」，dry-run 有通過，agy 判斷不穩定，手動補上） |
+| The Bahamas | Q778 | 2026-08-25 | 32（27 自動 + 5 手動補：New Providence/Long Island/Mayaguana/Rum Cay/Moore's Island，Wikidata 只寫成 island 缺 district 標記，但候選總數剛好對上官方 32 個 district，同批 P150 查詢出來的資料完整度不一致） |
+| Barbados | Q244 | 2026-08-25 | 11 |
+| Belize | Q242 | 2026-08-25 | 6 |
+| Costa Rica | Q800 | 2026-08-25 | 7 |
+| Cuba | Q241 | 2026-08-25 | 16（15 省 + Isla de la Juventud 特殊市） |
+| Dominica | Q784 | 2026-08-25 | 10 |
+| Dominican Republic | Q786 | 2026-08-25 | 32（31 省 + Distrito Nacional 首都區） |
+| El Salvador | Q792 | 2026-08-25 | 14 |
+| Grenada | Q769 | 2026-08-25 | 7（6 教區 + Carriacou and Petite Martinique 合併 dependency 手動補：P150 只連到個別島嶼 QID（無行政意義），搜尋後找到正確的官方合併 dependency 實體 Q3044818，P31 含 first-level administrative division） |
+| Guatemala | Q774 | 2026-08-25 | 22 |
+| Haiti | Q790 | 2026-08-25 | 10 |
+| Honduras | Q783 | 2026-08-25 | 18 |
+| Jamaica | Q766 | 2026-08-25 | 14（全數手動建立：P150 只連到 3 個無治理功能的歷史郡 Middlesex/Surrey/Cornwall，現行實際治理單位是 14 個教區，郡未建成 entity，同 Ireland 傳統省處理原則） |
+| Nicaragua | Q811 | 2026-08-25 | 17（15 department + 2 autonomous region） |
+| Panama | Q804 | 2026-08-25 | 13（10 省 + 3 省級 comarca；2 個 corregimiento 等級的 comarca — Kuna de Wargandí/Madugandí — 正確排除，巴拿馬法律上行政位階等同二級行政區，非資料缺口） |
+| Saint Kitts and Nevis | Q763 | 2026-08-25 | 14（9 個 Saint Kitts 教區 + 5 個 Nevis 教區） |
+| Saint Lucia | Q760 | 2026-08-25 | 11（全部統一 type=quarter；Soufrière/Vieux Fort 因 Wikidata 標記不同一度被分到 type=district，刪除重建修正） |
+| Saint Vincent and the Grenadines | Q757 | 2026-08-25 | 6 |
+| Trinidad and Tobago | Q754 | 2026-08-25 | 15（14 自動 + Tobago 自治區手動補；agy 首次判斷把 type 過度泛化為 regional_corporation_or_municipality，依 Wikidata P31 精確分類手動修正 Port of Spain/San Fernando→city、Chaguanas→borough，Point Fortin 本來就對；Arima 因 Wikidata 本身無更細子分類，維持統稱） |
+| Argentina | Q414 | 2026-08-25 | 24（23 省 + Buenos Aires 自治市手動補，P150 未連到 Q1486，P31 含 first-level administrative division，與 Buenos Aires Province 是不同實體） |
+| Bolivia | Q750 | 2026-08-25 | 9 |
+| Brazil | Q155 | 2026-08-25 | 27（25 自動 + Pernambuco/Tocantins 手動補，Wikidata 缺英文 label 顯示成裸 QID 被誤拒，同 Philippines Calabarzon 模式） |
+| Chile | Q298 | 2026-08-25 | 16 |
+| Colombia | Q739 | 2026-08-25 | 33（32 department + Bogotá 首都區） |
+| Ecuador | Q736 | 2026-08-25 | 24（23 自動 + Loja Province 手動補：Wikidata 英文 label 被惡意塗改成粗俗字串，agy 正確識破拒絕，查證其他語言 label 確認真實身分後手動修正） |
+| Guyana | Q734 | 2026-08-25 | 10（部分因 Essequibo 領土爭議標記 disputed territory，但為圭亞那實際治理區域，正確全數接受） |
+| Paraguay | Q733 | 2026-08-25 | 18（17 department + Capital District Asunción） |
+| Peru | Q419 | 2026-08-25 | 26（24 department + Callao 憲制省 + Lima Province 大都會利馬手動補，後者 P150 未連結但 P31 含 first-level administrative division，2002 年地方分權改革後不隸屬 Lima Region 政府，性質類似 Callao） |
+| Suriname | Q730 | 2026-08-25 | 10 |
+| Uruguay | Q77 | 2026-08-25 | 19 |
+| Venezuela | Q717 | 2026-08-25 | 25（23 州 + Capital District + Federal Dependencies；候選數較多首次 agy 呼叫逾時，重試後正常） |
+| Cook Islands | Q26988 | 2026-08-26 | 15（全數手動建立，type=island_council；Wikidata P150/P527 自動查詢完全找不到島嶼資料，經使用者逐一核對 QID 補齊南方群 8 島 + 北方群 7 島，含容易被誤認成小沙洲/Aitutaki 潟湖礁的雜訊排除） |
+| Federated States of Micronesia | Q702 | 2026-08-26 | 4（Chuuk/Kosrae/Pohnpei/Yap；Pohnpei type 一度飄移成 federated_state，已統一為 state） |
+| Fiji | Q712 | 2026-08-26 | 5（4 division + Rotuma 附屬島嶼） |
+| Kiribati | Q710 | 2026-08-26 | 3（全數手動建立：Wikidata P150/P527 皆為 0，改用 Gilbert/Phoenix/Line Islands 三大島群作為第一層近似分類，取代 21 個實際無正式區域層級的島嶼時政；Line Islands 特別注意排除橫跨美國的泛稱實體 Q234796，改用 P17 只標 Kiribati 的 Q31866835） |
+| Marshall Islands | Q709 | 2026-08-26 | 34（29 環礁 + 5 島，正好對上官方結構；28 自動 + 6 手動補：Bikini/Likiep/Utirik/Ujelang/Bikar 因描述或 P31 標記不完整被誤拒，Knox Atoll 則是 Wikidata P150 完全沒連到，由使用者提供 QID 找出） |
+| Nauru | Q697 | 2026-08-26 | 14 |
+| Niue | Q34020 | 2026-08-26 | 14（全數手動建立，type=village；Wikidata P150 為 0，用 P31=human settlement(Q486972)+P17=Niue 組合查詢找到全部 14 個，排除泛稱合併的 Alofi 實體避免與 Alofi North/South 重複計算） |
+| Palau | Q695 | 2026-08-26 | 16（14 自動 + Melekeok/Koror 州手動補：兩個候選被拒的是城鎮/城市本體，非州本體，Q154002/Q527748 分別找到正確 state QID Q12898552/Q189426） |
+| Papua New Guinea | Q691 | 2026-08-26 | 22（20 省 + 首都特區 + Bougainville 自治區） |
+| Samoa | Q683 | 2026-08-26 | 10 |
+| Solomon Islands | Q685 | 2026-08-26 | 10（9 省 + Honiara 首都市手動補，由獨立的 Honiara City Council 治理，不隸屬 Guadalcanal Province） |
+| Tonga | Q678 | 2026-08-26 | 5 |
+| Tuvalu | Q672 | 2026-08-26 | 9（全數手動建立，type=island_council；Wikidata P150 為 0，直接用 P31=human settlement 組合查詢太多雜訊，改用官方 9 島清單逐一搜尋確認） |
+| Vanuatu | Q686 | 2026-08-26 | 6 |
 
-## 待處理（190，另有 1 國暫緩見上方說明）
+## 待處理（144，另有 1 國暫緩見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -92,23 +138,17 @@
 | Angola | Q916 | AO | ⬜ |
 | Anguilla | Q25228 | AI | ⬜ |
 | Antarctica | Q51 | AQ | ⬜ |
-| Antigua and Barbuda | Q781 | AG | ⬜ |
-| Argentina | Q414 | AR | ⬜ |
 | Armenia | Q399 | AM | ⬜ |
 | Aruba | Q21203 | AW | ⬜ |
 | Ascension | Q31890709 | AC | ⬜ |
 | Azerbaijan | Q227 | AZ | ⬜ |
 | Bahrain | Q398 | BH | ⬜ |
 | Bangladesh | Q902 | BD | ⬜ |
-| Barbados | Q244 | BB | ⬜ |
-| Belize | Q242 | BZ | ⬜ |
 | Benin | Q962 | BJ | ⬜ |
 | Bermuda | Q23635 | BM | ⬜ |
 | Bhutan | Q917 | BT | ⬜ |
-| Bolivia | Q750 | BO | ⬜ |
 | Botswana | Q963 | BW | ⬜ |
 | Bouvet Island | Q23408 | BV | ⬜ |
-| Brazil | Q155 | BR | ⬜ |
 | British Indian Ocean Territory | Q43448 | IO | ⬜ |
 | British Virgin Islands | Q25305 | VG | ⬜ |
 | Brunei | Q921 | BN | ⬜ |
@@ -120,31 +160,20 @@
 | Cayman Islands | Q5785 | KY | ⬜ |
 | Central African Republic | Q929 | CF | ⬜ |
 | Chad | Q657 | TD | ⬜ |
-| Chile | Q298 | CL | ⬜ |
 | Christmas Island | Q31063 | CX | ⬜ |
 | Clipperton Island | Q161258 | CP | ⬜ |
 | Cocos (Keeling) Islands | Q36004 | CC | ⬜ |
-| Colombia | Q739 | CO | ⬜ |
 | Comoros | Q970 | KM | ⬜ |
-| Cook Islands | Q26988 | CK | ⬜ |
-| Costa Rica | Q800 | CR | ⬜ |
-| Cuba | Q241 | CU | ⬜ |
 | Curaçao | Q25279 | CW | ⬜ |
 | Democratic Republic of the Congo | Q974 | CD | ⬜ |
 | Diego Garcia | Q184851 | DG | ⬜ |
 | Djibouti | Q977 | DJ | ⬜ |
-| Dominica | Q784 | DM | ⬜ |
-| Dominican Republic | Q786 | DO | ⬜ |
-| Ecuador | Q736 | EC | ⬜ |
-| El Salvador | Q792 | SV | ⬜ |
 | Equatorial Guinea | Q983 | GQ | ⬜ |
 | Eritrea | Q986 | ER | ⬜ |
 | Eswatini | Q1050 | SZ | ⬜ |
 | Ethiopia | Q115 | ET | ⬜ |
 | Falkland Islands | Q9648 | FK | ⬜ |
 | Faroe Islands | Q4628 | FO | ⬜ |
-| Federated States of Micronesia | Q702 | FM | ⬜ |
-| Fiji | Q712 | FJ | ⬜ |
 | French Guiana | Q3769 | GF | ⬜ |
 | French Polynesia | Q30971 | PF | ⬜ |
 | French Southern and Antarctic Lands | Q129003 | TF | ⬜ |
@@ -154,28 +183,21 @@
 | Ghana | Q117 | GH | ⬜ |
 | Gibraltar | Q1410 | GI | ⬜ |
 | Greenland | Q223 | GL | ⬜ |
-| Grenada | Q769 | GD | ⬜ |
 | Guadeloupe | Q17012 | GP | ⬜ |
 | Guam | Q16635 | GU | ⬜ |
-| Guatemala | Q774 | GT | ⬜ |
 | Guernsey | Q25230 | GG | ⬜ |
 | Guinea | Q1006 | GN | ⬜ |
 | Guinea-Bissau | Q1007 | GW | ⬜ |
-| Guyana | Q734 | GY | ⬜ |
-| Haiti | Q790 | HT | ⬜ |
 | Heard Island and McDonald Islands | Q131198 | HM | ⬜ |
-| Honduras | Q783 | HN | ⬜ |
 | Iran | Q794 | IR | ⬜ |
 | Iraq | Q796 | IQ | ⬜ |
 | Isle of Man | Q9676 | IM | ⬜ |
 | Israel | Q801 | IL | ⬜ |
 | Ivory Coast | Q1008 | CI | ⬜ |
-| Jamaica | Q766 | JM | ⬜ |
 | Jersey | Q785 | JE | ⬜ |
 | Jordan | Q810 | JO | ⬜ |
 | Kazakhstan | Q232 | KZ | ⬜ |
 | Kenya | Q114 | KE | ⬜ |
-| Kiribati | Q710 | KI | ⬜ |
 | Kuwait | Q817 | KW | ⬜ |
 | Kyrgyzstan | Q813 | KG | ⬜ |
 | Laos | Q819 | LA | ⬜ |
@@ -187,7 +209,6 @@
 | Malawi | Q1020 | MW | ⬜ |
 | Maldives | Q826 | MV | ⚠️ 暫緩，見下方說明 |
 | Mali | Q912 | ML | ⬜ |
-| Marshall Islands | Q709 | MH | ⬜ |
 | Martinique | Q17054 | MQ | ⬜ |
 | Mauritania | Q1025 | MR | ⬜ |
 | Mauritius | Q1027 | MU | ⬜ |
@@ -198,25 +219,17 @@
 | Mozambique | Q1029 | MZ | ⬜ |
 | Myanmar | Q836 | MM | ⬜ |
 | Namibia | Q1030 | NA | ⬜ |
-| Nauru | Q697 | NR | ⬜ |
 | Nepal | Q837 | NP | ⬜ |
 | Netherlands Antilles | Q25227 | AN | ⬜ |
 | New Caledonia | Q33788 | NC | ⬜ |
-| Nicaragua | Q811 | NI | ⬜ |
 | Niger | Q1032 | NE | ⬜ |
 | Nigeria | Q1033 | NG | ⬜ |
-| Niue | Q34020 | NU | ⬜ |
 | Norfolk Island | Q31057 | NF | ⬜ |
 | North Korea | Q423 | KP | ⬜ |
 | Northern Mariana Islands | Q16644 | MP | ⬜ |
 | Oman | Q842 | OM | ⬜ |
 | Pakistan | Q843 | PK | ⬜ |
-| Palau | Q695 | PW | ⬜ |
 | Palestine | Q219060 | PS | ⬜ |
-| Panama | Q804 | PA | ⬜ |
-| Papua New Guinea | Q691 | PG | ⬜ |
-| Paraguay | Q733 | PY | ⬜ |
-| Peru | Q419 | PE | ⬜ |
 | Pitcairn Islands | Q35672 | PN | ⬜ |
 | Puerto Rico | Q1183 | PR | ⬜ |
 | Qatar | Q846 | QA | ⬜ |
@@ -225,51 +238,38 @@
 | Réunion | Q17070 | RE | ⬜ |
 | Saint Barthélemy | Q25362 | BL | ⬜ |
 | Saint Helena, Ascension and Tristan da Cunha | Q192184 | SH | ⬜ |
-| Saint Kitts and Nevis | Q763 | KN | ⬜ |
-| Saint Lucia | Q760 | LC | ⬜ |
 | Saint Pierre and Miquelon | Q34617 | PM | ⬜ |
-| Saint Vincent and the Grenadines | Q757 | VC | ⬜ |
 | Saint-Martin | Q126125 | MF | ⬜ |
-| Samoa | Q683 | WS | ⬜ |
 | Sark | Q3405693 | CQ | ⬜ |
 | Saudi Arabia | Q851 | SA | ⬜ |
 | Senegal | Q1041 | SN | ⬜ |
 | Seychelles | Q1042 | SC | ⬜ |
 | Sierra Leone | Q1044 | SL | ⬜ |
 | Sint Maarten | Q26273 | SX | ⬜ |
-| Solomon Islands | Q685 | SB | ⬜ |
 | Somalia | Q1045 | SO | ⬜ |
 | South Africa | Q258 | ZA | ⬜ |
 | South Georgia and the South Sandwich Islands | Q35086 | GS | ⬜ |
 | South Sudan | Q958 | SS | ⬜ |
 | Sri Lanka | Q854 | LK | ⬜ |
 | Sudan | Q1049 | SD | ⬜ |
-| Suriname | Q730 | SR | ⬜ |
 | Svalbard and Jan Mayen | Q842829 | SJ | ⬜ |
 | Syria | Q858 | SY | ⬜ |
 | São Tomé and Príncipe | Q1039 | ST | ⬜ |
 | Tajikistan | Q863 | TJ | ⬜ |
 | Tanzania | Q924 | TZ | ⬜ |
-| The Bahamas | Q778 | BS | ⬜ |
 | The Gambia | Q1005 | GM | ⬜ |
 | Timor-Leste | Q574 | TL | ⬜ |
 | Togo | Q945 | TG | ⬜ |
 | Tokelau | Q36823 | TK | ⬜ |
-| Tonga | Q678 | TO | ⬜ |
-| Trinidad and Tobago | Q754 | TT | ⬜ |
 | Tristan da Cunha | Q34625512 | TA | ⬜ |
 | Trust Territory of the Pacific Islands | Q129237 | PC | ⬜ |
 | Tunisia | Q948 | TN | ⬜ |
 | Turkmenistan | Q874 | TM | ⬜ |
 | Turks and Caicos Islands | Q18221 | TC | ⬜ |
-| Tuvalu | Q672 | TV | ⬜ |
 | Uganda | Q1036 | UG | ⬜ |
 | United States Minor Outlying Islands | Q16645 | UM | ⬜ |
 | United States Virgin Islands | Q11703 | VI | ⬜ |
-| Uruguay | Q77 | UY | ⬜ |
 | Uzbekistan | Q265 | UZ | ⬜ |
-| Vanuatu | Q686 | VU | ⬜ |
-| Venezuela | Q717 | VE | ⬜ |
 | Wallis and Futuna | Q35555 | WF | ⬜ |
 | Western Sahara | Q6250 | EH | ⬜ |
 | Yemen | Q805 | YE | ⬜ |
