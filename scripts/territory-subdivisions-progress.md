@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：114 / 259 完成**
+**進度：134 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
 
@@ -127,8 +127,28 @@
 | Tonga | Q678 | 2026-08-26 | 5 |
 | Tuvalu | Q672 | 2026-08-26 | 9（全數手動建立，type=island_council；Wikidata P150 為 0，直接用 P31=human settlement 組合查詢太多雜訊，改用官方 9 島清單逐一搜尋確認） |
 | Vanuatu | Q686 | 2026-08-26 | 6 |
+| Bahrain | Q398 | 2026-08-26 | 4（Capital/Muharraq/Northern/Southern；Central Governorate 已於 2014 年正式廢除（P576 有廢除日期），agy 誤收後刪除排除；Muharraq 的 Wikidata description 被惡意塗改成「governorate of botak」導致誤拒，已手動修正描述後補入） |
+| Iran | Q794 | 2026-08-26 | 31 |
+| Iraq | Q796 | 2026-08-26 | 18（Kurdistan 自治區為跨省上層概念，P150 未連結，不在此次一級行政區清單） |
+| Israel | Q801 | 2026-08-26 | 6（「Judea and Samaria Area」是以色列對約旦河西岸的行政劃分名稱，國際普遍認定為被佔領巴勒斯坦領土，同 Russia/Crimea 政治爭議類型，正確排除未強制寫入） |
+| Jordan | Q810 | 2026-08-26 | 12 |
+| Kuwait | Q817 | 2026-08-26 | 6 |
+| Lebanon | Q822 | 2026-08-26 | 8（6 自動 + Akkar/Baalbek-Hermel 手動補，Wikidata P150 沒連到這兩個 2003/2017 年才新設的省份） |
+| Oman | Q842 | 2026-08-26 | 11 |
+| Palestine | Q219060 | 2026-08-26 | 16（11 西岸 + 5 加薩省；West Bank/Gaza Strip 兩個地理區域泛稱正確排除，非個別行政區） |
+| Qatar | Q846 | 2026-08-26 | 8（5 自動 + Al Wakrah/Al Shahaniya/Al Daayen 手動補：前兩個候選被拒的是城市/聚落本體非市鎮本體，各自找到正確市鎮 QID） |
+| Saudi Arabia | Q851 | 2026-08-26 | 13（全數手動建立；P150 完全查不到真正省份只連到維基百科列表條目，改用 P31 分類代碼 Q15728204 直接查詢找到全部 13 省，排除疑似二級行政區的 Al-Qurayyat） |
+| Syria | Q858 | 2026-08-26 | 14 |
+| Yemen | Q805 | 2026-08-26 | 22 |
+| Kazakhstan | Q232 | 2026-08-26 | 17（14 州 + 3 共和國直轄市；Baikonur 太空發射場屬俄羅斯長期租借代管的特殊安排，正確排除） |
+| Kyrgyzstan | Q813 | 2026-08-26 | 9（全數手動建立；P150 幾乎查不到，改用 P31 分類代碼補齊 7 州 + 2 共和國直轄市 Bishkek/Osh） |
+| Tajikistan | Q863 | 2026-08-26 | 5（3 州 + 中央直轄區 + 首都 Dushanbe） |
+| Turkmenistan | Q874 | 2026-08-26 | 6（5 州 + 首都 Ashgabat） |
+| Uzbekistan | Q265 | 2026-08-26 | 14（12 州 + Karakalpakstan 自治共和國 + 首都 Tashkent） |
+| North Korea | Q423 | 2026-08-26 | 12（9 道 + 平壤直轄市 + 羅先、南浦 2 特級市；南浦被 agy 誤拒，手動補入 special_level_city） |
+| Mongolia | Q711 | 2026-08-27 | 22（21 省 + 首都 Ulaanbaatar） |
 
-## 待處理（144，另有 1 國暫緩見上方說明）
+## 待處理（124，另有 1 國暫緩見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -142,7 +162,6 @@
 | Aruba | Q21203 | AW | ⬜ |
 | Ascension | Q31890709 | AC | ⬜ |
 | Azerbaijan | Q227 | AZ | ⬜ |
-| Bahrain | Q398 | BH | ⬜ |
 | Bangladesh | Q902 | BD | ⬜ |
 | Benin | Q962 | BJ | ⬜ |
 | Bermuda | Q23635 | BM | ⬜ |
@@ -189,19 +208,11 @@
 | Guinea | Q1006 | GN | ⬜ |
 | Guinea-Bissau | Q1007 | GW | ⬜ |
 | Heard Island and McDonald Islands | Q131198 | HM | ⬜ |
-| Iran | Q794 | IR | ⬜ |
-| Iraq | Q796 | IQ | ⬜ |
 | Isle of Man | Q9676 | IM | ⬜ |
-| Israel | Q801 | IL | ⬜ |
 | Ivory Coast | Q1008 | CI | ⬜ |
 | Jersey | Q785 | JE | ⬜ |
-| Jordan | Q810 | JO | ⬜ |
-| Kazakhstan | Q232 | KZ | ⬜ |
 | Kenya | Q114 | KE | ⬜ |
-| Kuwait | Q817 | KW | ⬜ |
-| Kyrgyzstan | Q813 | KG | ⬜ |
 | Laos | Q819 | LA | ⬜ |
-| Lebanon | Q822 | LB | ⬜ |
 | Lesotho | Q1013 | LS | ⬜ |
 | Liberia | Q1014 | LR | ⬜ |
 | Libya | Q1016 | LY | ⬜ |
@@ -213,7 +224,6 @@
 | Mauritania | Q1025 | MR | ⬜ |
 | Mauritius | Q1027 | MU | ⬜ |
 | Mayotte | Q17063 | YT | ⬜ |
-| Mongolia | Q711 | MN | ⬜ |
 | Montserrat | Q13353 | MS | ⬜ |
 | Morocco | Q1028 | MA | ⬜ |
 | Mozambique | Q1029 | MZ | ⬜ |
@@ -225,14 +235,10 @@
 | Niger | Q1032 | NE | ⬜ |
 | Nigeria | Q1033 | NG | ⬜ |
 | Norfolk Island | Q31057 | NF | ⬜ |
-| North Korea | Q423 | KP | ⬜ |
 | Northern Mariana Islands | Q16644 | MP | ⬜ |
-| Oman | Q842 | OM | ⬜ |
 | Pakistan | Q843 | PK | ⬜ |
-| Palestine | Q219060 | PS | ⬜ |
 | Pitcairn Islands | Q35672 | PN | ⬜ |
 | Puerto Rico | Q1183 | PR | ⬜ |
-| Qatar | Q846 | QA | ⬜ |
 | Republic of the Congo | Q971 | CG | ⬜ |
 | Rwanda | Q1037 | RW | ⬜ |
 | Réunion | Q17070 | RE | ⬜ |
@@ -241,7 +247,6 @@
 | Saint Pierre and Miquelon | Q34617 | PM | ⬜ |
 | Saint-Martin | Q126125 | MF | ⬜ |
 | Sark | Q3405693 | CQ | ⬜ |
-| Saudi Arabia | Q851 | SA | ⬜ |
 | Senegal | Q1041 | SN | ⬜ |
 | Seychelles | Q1042 | SC | ⬜ |
 | Sierra Leone | Q1044 | SL | ⬜ |
@@ -253,9 +258,7 @@
 | Sri Lanka | Q854 | LK | ⬜ |
 | Sudan | Q1049 | SD | ⬜ |
 | Svalbard and Jan Mayen | Q842829 | SJ | ⬜ |
-| Syria | Q858 | SY | ⬜ |
 | São Tomé and Príncipe | Q1039 | ST | ⬜ |
-| Tajikistan | Q863 | TJ | ⬜ |
 | Tanzania | Q924 | TZ | ⬜ |
 | The Gambia | Q1005 | GM | ⬜ |
 | Timor-Leste | Q574 | TL | ⬜ |
@@ -264,15 +267,12 @@
 | Tristan da Cunha | Q34625512 | TA | ⬜ |
 | Trust Territory of the Pacific Islands | Q129237 | PC | ⬜ |
 | Tunisia | Q948 | TN | ⬜ |
-| Turkmenistan | Q874 | TM | ⬜ |
 | Turks and Caicos Islands | Q18221 | TC | ⬜ |
 | Uganda | Q1036 | UG | ⬜ |
 | United States Minor Outlying Islands | Q16645 | UM | ⬜ |
 | United States Virgin Islands | Q11703 | VI | ⬜ |
-| Uzbekistan | Q265 | UZ | ⬜ |
 | Wallis and Futuna | Q35555 | WF | ⬜ |
 | Western Sahara | Q6250 | EH | ⬜ |
-| Yemen | Q805 | YE | ⬜ |
 | Yugoslavia | Q36704 | YU | ⬜ |
 | Zambia | Q953 | ZM | ⬜ |
 | Zimbabwe | Q954 | ZW | ⬜ |
