@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：134 / 259 完成**
+**進度：147 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
 
@@ -147,30 +147,37 @@
 | Uzbekistan | Q265 | 2026-08-26 | 14（12 州 + Karakalpakstan 自治共和國 + 首都 Tashkent） |
 | North Korea | Q423 | 2026-08-26 | 12（9 道 + 平壤直轄市 + 羅先、南浦 2 特級市；南浦被 agy 誤拒，手動補入 special_level_city） |
 | Mongolia | Q711 | 2026-08-27 | 22（21 省 + 首都 Ulaanbaatar） |
+| Afghanistan | Q889 | 2026-08-31 | 34 |
+| Armenia | Q399 | 2026-08-31 | 11（10 省 + 首都 Yerevan） |
+| Azerbaijan | Q227 | 2026-08-31 | 69（60 個區 raion 自動接受 + 9 個手動補：Aghdara District 因 2023-12 才重新建制、Wikidata 尚無 P150 連結，另 8 個共和國直轄市 Khankendi/Ganja/Sumgait/Naftalan/Yevlakh/Lankaran/Mingachevir/Shaki 皆被 agy 誤拒為「僅普通城市」，經查 P31 class Q56557664「şəhər：city and type of administrative subdivision of Azerbaijan」確認與 Baku 同層級，手動補入；Shusha 經核對其 P31 僅為普通 city 且 description 明示為 Shusha District 行政中心，正確排除未列入） |
+| Bangladesh | Q902 | 2026-08-31 | 8 |
+| Bhutan | Q917 | 2026-08-31 | 20 |
+| Brunei | Q921 | 2026-08-31 | 4 |
+| Georgia | Q230 | 2026-08-31 | 12（9 個 Mkhare + Tbilisi 自治市 + Adjara/Abkhazia 兩自治共和國；Abkhazia 雖為俄國佔領下實際分離狀態，但國際普遍承認為喬治亞領土，非爭議排除案例） |
+| Laos | Q819 | 2026-08-31 | 18（16 省自動 + Xaisomboun 省因較晚設立、Wikidata 缺 P150 手動補 + 萬象直轄市因描述僅寫 conurbation 被誤拒、經查 P31 確實含 province of Laos 手動補入） |
+| Myanmar | Q836 | 2026-08-31 | 15（7 Region + 7 State + Naypyidaw 聯邦特區；6 個自治區/自治縣正確排除，屬巢狀於 Shan State/Sagaing Region 底下的次層級） |
+| Nepal | Q837 | 2026-08-31 | 7 |
+| Pakistan | Q843 | 2026-08-31 | 7（4 省 + Islamabad 首都特區 + Gilgit-Baltistan + Azad Kashmir，皆為巴基斯坦實際治理的一級行政區；Junagadh and Manavadar 僅為歷史主張、從未實際治理過，正確排除） |
+| Sri Lanka | Q854 | 2026-08-31 | 9 |
+| Timor-Leste | Q574 | 2026-08-31 | 14（13 municipality，含 2022 年升格的 Atauro + Oe-Cusse Ambeno 特別行政區） |
 
-## 待處理（124，另有 1 國暫緩見上方說明）
+## 待處理（111，另有 1 國暫緩見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
-| Afghanistan | Q889 | AF | ⬜ |
 | Algeria | Q262 | DZ | ⬜ |
 | American Samoa | Q16641 | AS | ⬜ |
 | Angola | Q916 | AO | ⬜ |
 | Anguilla | Q25228 | AI | ⬜ |
 | Antarctica | Q51 | AQ | ⬜ |
-| Armenia | Q399 | AM | ⬜ |
 | Aruba | Q21203 | AW | ⬜ |
 | Ascension | Q31890709 | AC | ⬜ |
-| Azerbaijan | Q227 | AZ | ⬜ |
-| Bangladesh | Q902 | BD | ⬜ |
 | Benin | Q962 | BJ | ⬜ |
 | Bermuda | Q23635 | BM | ⬜ |
-| Bhutan | Q917 | BT | ⬜ |
 | Botswana | Q963 | BW | ⬜ |
 | Bouvet Island | Q23408 | BV | ⬜ |
 | British Indian Ocean Territory | Q43448 | IO | ⬜ |
 | British Virgin Islands | Q25305 | VG | ⬜ |
-| Brunei | Q921 | BN | ⬜ |
 | Burkina Faso | Q965 | BF | ⬜ |
 | Burundi | Q967 | BI | ⬜ |
 | Cameroon | Q1009 | CM | ⬜ |
@@ -197,7 +204,6 @@
 | French Polynesia | Q30971 | PF | ⬜ |
 | French Southern and Antarctic Lands | Q129003 | TF | ⬜ |
 | Gabon | Q1000 | GA | ⬜ |
-| Georgia | Q230 | GE | ⬜ |
 | German Democratic Republic | Q16957 | DD | ⬜ |
 | Ghana | Q117 | GH | ⬜ |
 | Gibraltar | Q1410 | GI | ⬜ |
@@ -212,7 +218,6 @@
 | Ivory Coast | Q1008 | CI | ⬜ |
 | Jersey | Q785 | JE | ⬜ |
 | Kenya | Q114 | KE | ⬜ |
-| Laos | Q819 | LA | ⬜ |
 | Lesotho | Q1013 | LS | ⬜ |
 | Liberia | Q1014 | LR | ⬜ |
 | Libya | Q1016 | LY | ⬜ |
@@ -227,16 +232,13 @@
 | Montserrat | Q13353 | MS | ⬜ |
 | Morocco | Q1028 | MA | ⬜ |
 | Mozambique | Q1029 | MZ | ⬜ |
-| Myanmar | Q836 | MM | ⬜ |
 | Namibia | Q1030 | NA | ⬜ |
-| Nepal | Q837 | NP | ⬜ |
 | Netherlands Antilles | Q25227 | AN | ⬜ |
 | New Caledonia | Q33788 | NC | ⬜ |
 | Niger | Q1032 | NE | ⬜ |
 | Nigeria | Q1033 | NG | ⬜ |
 | Norfolk Island | Q31057 | NF | ⬜ |
 | Northern Mariana Islands | Q16644 | MP | ⬜ |
-| Pakistan | Q843 | PK | ⬜ |
 | Pitcairn Islands | Q35672 | PN | ⬜ |
 | Puerto Rico | Q1183 | PR | ⬜ |
 | Republic of the Congo | Q971 | CG | ⬜ |
@@ -255,13 +257,11 @@
 | South Africa | Q258 | ZA | ⬜ |
 | South Georgia and the South Sandwich Islands | Q35086 | GS | ⬜ |
 | South Sudan | Q958 | SS | ⬜ |
-| Sri Lanka | Q854 | LK | ⬜ |
 | Sudan | Q1049 | SD | ⬜ |
 | Svalbard and Jan Mayen | Q842829 | SJ | ⬜ |
 | São Tomé and Príncipe | Q1039 | ST | ⬜ |
 | Tanzania | Q924 | TZ | ⬜ |
 | The Gambia | Q1005 | GM | ⬜ |
-| Timor-Leste | Q574 | TL | ⬜ |
 | Togo | Q945 | TG | ⬜ |
 | Tokelau | Q36823 | TK | ⬜ |
 | Tristan da Cunha | Q34625512 | TA | ⬜ |
