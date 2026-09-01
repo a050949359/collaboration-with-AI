@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：147 / 259 完成**
+**進度：169 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
 
@@ -160,62 +160,62 @@
 | Pakistan | Q843 | 2026-08-31 | 7（4 省 + Islamabad 首都特區 + Gilgit-Baltistan + Azad Kashmir，皆為巴基斯坦實際治理的一級行政區；Junagadh and Manavadar 僅為歷史主張、從未實際治理過，正確排除） |
 | Sri Lanka | Q854 | 2026-08-31 | 9 |
 | Timor-Leste | Q574 | 2026-08-31 | 14（13 municipality，含 2022 年升格的 Atauro + Oe-Cusse Ambeno 特別行政區） |
+| Algeria | Q262 | 2026-08-31 | 58 |
+| Angola | Q916 | 2026-08-31 | 21（17 自動 + Cuando Cubango 已於 2024-09 拆分為 Cuando/Cubango 正確排除 + 手動補 Cuando/Cubango 兩新省 + Luanda 分出的 Icolo e Bengo + Moxico 分出的 Moxico Leste，2024 年行政重劃 18→21 省，Wikidata 對新省 P150 尚未連結） |
+| Benin | Q962 | 2026-08-31 | 12 |
+| Botswana | Q963 | 2026-08-31 | 17（9 個 District Council 自動 + 8 個手動補：漏抓的 Chobe District（P31 與其餘 9 區同屬 first-level administrative subdivision class）+ 2 City Council（Gaborone/Francistown）+ 5 Town Council（Lobatse/Selebi-Phikwe/Orapa/Jwaneng/Sowa）——官方地方政府法下城鎮議會與郡議會為並列一級行政單位，但 Wikidata 對這些城鎮僅標一般 city/town class，無獨立行政區 class，仍依實際治理結構補入） |
+| Burkina Faso | Q965 | 2026-08-31 | 13（11 自動 + 2 手動補：Djôrô/Guiriko 為 2024 年地名去殖民化改制後的新名稱，分別對應原 Sud-Ouest/Hauts-Bassins Region，P31 與其餘 11 區相同 class，agy 誤讀 description 文字裡的舊名稱當作「位於其內」而誤拒） |
+| Burundi | Q967 | 2026-08-31 | 17 |
+| Cameroon | Q1009 | 2026-08-31 | 10 |
+| Cape Verde | Q1011 | 2026-08-31 | 22 |
+| Central African Republic | Q929 | 2026-08-31 | 17（15 自動 + Mbomou/Ouham 兩省手動補，Wikidata 對它們完全無 P150） |
+| Chad | Q657 | 2026-08-31 | 23（21 省自動 + N'Djamena 特殊行政區自動 + 刪除已於 2012 廢除的舊版 Ennedi Region（agy 漏檢 P576 廢除日期誤收）、改手動補入現行的 Ennedi-Est/Ennedi-Ouest 兩省） |
+| Comoros | Q970 | 2026-08-31 | 3 |
+| Democratic Republic of the Congo | Q974 | 2026-08-31 | 26（25 省 + Kinshasa 首都） |
+| Djibouti | Q977 | 2026-08-31 | 6 |
+| Equatorial Guinea | Q983 | 2026-08-31 | 8（含 2017 年新設的 Djibloho 省） |
+| Eritrea | Q986 | 2026-08-31 | 6 |
+| Eswatini | Q1050 | 2026-08-31 | 4 |
+| Ethiopia | Q115 | 2026-08-31 | 14（12 州 + Addis Ababa/Dire Dawa 兩特許市，對上 2023 年 SNNPR 拆分為 Sidama/Southwest/South/Central 4 州後的現行結構） |
+| Gabon | Q1000 | 2026-08-31 | 9 |
+| Ghana | Q117 | 2026-08-31 | 16（2018 年新增 6 區後的現行數目） |
+| Guinea | Q1006 | 2026-09-01 | 8（7 自動 + Conakry 特別區手動補，被誤拒為僅普通城市） |
+| Guinea-Bissau | Q1007 | 2026-09-01 | 9（8 個 region + Bissau 自治區） |
+| Ivory Coast | Q1008 | 2026-09-01 | 14，全數手動建立（Wikidata P150 抓到的 19 個候選全部是 2011 年行政改制已廢除的舊制 19 大區，agy 只抓到 1 個 P576 廢除標記漏了另外 18 個；現行結構是 12 般 district + Abidjan/Yamoussoukro 2 自治區＝14 District，31 個 Region 為第二層非第一層，改查 class Q20717263「district of Ivory Coast」找到完整 14 個現行清單） |
 
-## 待處理（111，另有 1 國暫緩見上方說明）
+## 待處理（89，另有 1 國暫緩見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
-| Algeria | Q262 | DZ | ⬜ |
 | American Samoa | Q16641 | AS | ⬜ |
-| Angola | Q916 | AO | ⬜ |
 | Anguilla | Q25228 | AI | ⬜ |
 | Antarctica | Q51 | AQ | ⬜ |
 | Aruba | Q21203 | AW | ⬜ |
 | Ascension | Q31890709 | AC | ⬜ |
-| Benin | Q962 | BJ | ⬜ |
 | Bermuda | Q23635 | BM | ⬜ |
-| Botswana | Q963 | BW | ⬜ |
 | Bouvet Island | Q23408 | BV | ⬜ |
 | British Indian Ocean Territory | Q43448 | IO | ⬜ |
 | British Virgin Islands | Q25305 | VG | ⬜ |
-| Burkina Faso | Q965 | BF | ⬜ |
-| Burundi | Q967 | BI | ⬜ |
-| Cameroon | Q1009 | CM | ⬜ |
-| Cape Verde | Q1011 | CV | ⬜ |
 | Caribbean Netherlands | Q27561 | BQ | ⬜ |
 | Cayman Islands | Q5785 | KY | ⬜ |
-| Central African Republic | Q929 | CF | ⬜ |
-| Chad | Q657 | TD | ⬜ |
 | Christmas Island | Q31063 | CX | ⬜ |
 | Clipperton Island | Q161258 | CP | ⬜ |
 | Cocos (Keeling) Islands | Q36004 | CC | ⬜ |
-| Comoros | Q970 | KM | ⬜ |
 | Curaçao | Q25279 | CW | ⬜ |
-| Democratic Republic of the Congo | Q974 | CD | ⬜ |
 | Diego Garcia | Q184851 | DG | ⬜ |
-| Djibouti | Q977 | DJ | ⬜ |
-| Equatorial Guinea | Q983 | GQ | ⬜ |
-| Eritrea | Q986 | ER | ⬜ |
-| Eswatini | Q1050 | SZ | ⬜ |
-| Ethiopia | Q115 | ET | ⬜ |
 | Falkland Islands | Q9648 | FK | ⬜ |
 | Faroe Islands | Q4628 | FO | ⬜ |
 | French Guiana | Q3769 | GF | ⬜ |
 | French Polynesia | Q30971 | PF | ⬜ |
 | French Southern and Antarctic Lands | Q129003 | TF | ⬜ |
-| Gabon | Q1000 | GA | ⬜ |
 | German Democratic Republic | Q16957 | DD | ⬜ |
-| Ghana | Q117 | GH | ⬜ |
 | Gibraltar | Q1410 | GI | ⬜ |
 | Greenland | Q223 | GL | ⬜ |
 | Guadeloupe | Q17012 | GP | ⬜ |
 | Guam | Q16635 | GU | ⬜ |
 | Guernsey | Q25230 | GG | ⬜ |
-| Guinea | Q1006 | GN | ⬜ |
-| Guinea-Bissau | Q1007 | GW | ⬜ |
 | Heard Island and McDonald Islands | Q131198 | HM | ⬜ |
 | Isle of Man | Q9676 | IM | ⬜ |
-| Ivory Coast | Q1008 | CI | ⬜ |
 | Jersey | Q785 | JE | ⬜ |
 | Kenya | Q114 | KE | ⬜ |
 | Lesotho | Q1013 | LS | ⬜ |
