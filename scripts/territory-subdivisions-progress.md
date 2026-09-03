@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：200 / 259 完成**
+**進度：208 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
 
@@ -22,7 +22,20 @@
 
 待處理清單中的屬地混雜三種狀況：(A) 已有 `part_of` → 宗主國（France 海外省、US territory、NL 王國組成國、Australia 外部領地、Norway 的 Bouvet、Finland 的 Åland，皆為法律上明確的一級行政區/自治區，之前跑對應宗主國那批時已建立）；(B) 憲政上「依附但非行政區劃」，改用新的 `dependency_of` 關聯類型（非 `part_of`，避免誤植為一級行政區）——已補齊：Guernsey/Jersey/Isle of Man/Sark（英國皇家屬地）、Bermuda/Cayman/BVI/Falklands/Gibraltar/Montserrat/Pitcairn/Turks and Caicos/South Georgia/BIOT/Diego Garcia/Anguilla/St Helena 群組（含 Ascension/Tristan da Cunha 兩子島，掛在 St Helena 群組下非直接 UK）→ 英國海外領地；Faroe Islands/Greenland → 新建的 Kingdom of Denmark（Q756617）王國層實體；Tokelau → New Zealand；Svalbard and Jan Mayen → Norway（原本漏掉沒建）；(C) Antarctica、Western Sahara 兩者主權狀態特殊，未套用任何關聯，維持現狀。另外 Caribbean Netherlands 屬荷蘭本土特別自治市，非王國組成國，改補 `part_of` → Netherlands（Q55，非 Kingdom Q29999）。
 
-這批只處理「屬地本身 vs 宗主國」的關聯定位，**不含**這些屬地自己內部的一級行政區資料（例如 Réunion 底下的 arrondissement），那是完全獨立的另一項工作，尚未開始。
+這批只處理「屬地本身 vs 宗主國」的關聯定位，**不含**這些屬地自己內部的一級行政區資料（例如 Réunion 底下的 arrondissement），那是完全獨立的另一項工作。
+
+### 屬地自身的一級行政區（陸續補建）
+
+| 屬地 | QID | 完成日期 | 一級行政區數 |
+|---|---|---|---|
+| Bermuda | Q23635 | 2026-09-03 | 11（9 教區 + Hamilton/St. George's 兩市鎮） |
+| Guernsey | Q25230 | 2026-09-03 | 3（Guernsey 本島 + Alderney + Sark；Sark 原本掛 dependency_of，已修正為 part_of，因為它是 Bailiwick 內的一級管轄區而非獨立屬地） |
+| Jersey | Q785 | 2026-09-03 | 12（12 教區） |
+| Greenland | Q223 | 2026-09-03 | 6（5 市鎮 + 東北格陵蘭國家公園，直屬未建制區手動補） |
+| Faroe Islands | Q4628 | 2026-09-03 | 30，全數手動建立（P150 無候選；改查 class 找到 30 個市鎮，Wikipedia 記載現行 29 個，與 Wikidata 有 1 筆落差，個別皆無 P576 廢除標記，屬市鎮合併過程中的資料時間差，暫採 Wikidata 現況） |
+| Tokelau | Q36823 | 2026-09-03 | 3，全數手動建立（P150 無候選；3 個環礁 Atafu/Fakaofo/Nukunonu 各自有村議會 taupulega 自治，即為一級單位） |
+| Svalbard and Jan Mayen | Q842829 | 2026-09-03 | 0（純紀錄，此為 ISO 統計組合代碼非實際治理單位；Jan Mayen/Svalbard 兩地各自已是挪威的一級行政區，見 Norway 該列） |
+| Isle of Man | Q9676 | 2026-09-03 | 18，全數手動建立（P150 無候選；改查 class 找到 18 個 parish，比照 Iceland 先例採傳統教區為第一層近似值；現代地方政府另有 commissioners 選區制度，未採用） |
 
 ## 已完成
 
@@ -229,7 +242,7 @@
 | Zambia | Q953 | 2026-09-03 | 10 |
 | Zimbabwe | Q954 | 2026-09-03 | 10 |
 
-## 待處理（54，另有 1 國暫緩、4 個已解體歷史實體見上方說明）
+## 待處理（46，另有 1 國暫緩、4 個已解體歷史實體見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -238,7 +251,6 @@
 | Antarctica | Q51 | AQ | ⬜ |
 | Aruba | Q21203 | AW | ⬜ |
 | Ascension | Q31890709 | AC | ⬜ |
-| Bermuda | Q23635 | BM | ⬜ |
 | Bouvet Island | Q23408 | BV | ⬜ |
 | British Indian Ocean Territory | Q43448 | IO | ⬜ |
 | British Virgin Islands | Q25305 | VG | ⬜ |
@@ -250,18 +262,13 @@
 | Curaçao | Q25279 | CW | ⬜ |
 | Diego Garcia | Q184851 | DG | ⬜ |
 | Falkland Islands | Q9648 | FK | ⬜ |
-| Faroe Islands | Q4628 | FO | ⬜ |
 | French Guiana | Q3769 | GF | ⬜ |
 | French Polynesia | Q30971 | PF | ⬜ |
 | French Southern and Antarctic Lands | Q129003 | TF | ⬜ |
 | Gibraltar | Q1410 | GI | ⬜ |
-| Greenland | Q223 | GL | ⬜ |
 | Guadeloupe | Q17012 | GP | ⬜ |
 | Guam | Q16635 | GU | ⬜ |
-| Guernsey | Q25230 | GG | ⬜ |
 | Heard Island and McDonald Islands | Q131198 | HM | ⬜ |
-| Isle of Man | Q9676 | IM | ⬜ |
-| Jersey | Q785 | JE | ⬜ |
 | Maldives | Q826 | MV | ⚠️ 暫緩，見下方說明 |
 | Martinique | Q17054 | MQ | ⬜ |
 | Mayotte | Q17063 | YT | ⬜ |
@@ -279,8 +286,6 @@
 | Sark | Q3405693 | CQ | ⬜ |
 | Sint Maarten | Q26273 | SX | ⬜ |
 | South Georgia and the South Sandwich Islands | Q35086 | GS | ⬜ |
-| Svalbard and Jan Mayen | Q842829 | SJ | ⬜ |
-| Tokelau | Q36823 | TK | ⬜ |
 | Tristan da Cunha | Q34625512 | TA | ⬜ |
 | Turks and Caicos Islands | Q18221 | TC | ⬜ |
 | United States Minor Outlying Islands | Q16645 | UM | ⬜ |
