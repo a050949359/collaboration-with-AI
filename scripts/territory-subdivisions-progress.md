@@ -3,9 +3,11 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：218 / 259 完成**
+**進度：245 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
+
+**Antarctica（Q51）、Western Sahara（Q6250）**：不列入自動流程，非「待確認」而是刻意排除——南極洲無主權國家，由《南極條約》多國共管，不存在「一級行政區」概念；西撒哈拉主權爭議未解（摩洛哥實際控制多數領土但國際普遍未承認其主權，Polisario Front/SADR 主張全境但控制範圍有限），兩造行政區劃皆具高度政治爭議性，超出本專案範圍。
 
 **Cayman Islands（Q5785）、Montserrat（Q13353）、Turks and Caicos Islands（Q18221）**：官方都有明確的一級行政區（開曼 6 個 district、蒙哲臘 3 個教區、Turks and Caicos 有其行政區劃），但 Wikidata 對這幾個小型屬地的行政區 entity 完全沒有建立或極不完整（搜尋不到對應的 district/parish entity），P150 候選也是 0。需要人工找到官方/可靠來源核對 QID 後才能繼續，暫不列入自動流程。
 
@@ -48,6 +50,33 @@
 | British Indian Ocean Territory | Q43448 | 2026-09-03 | 0（居民已強制遷離，僅 Diego Garcia 軍事基地，Diego Garcia 已列為其下轄的 dependency_of） |
 | Pitcairn Islands | Q35672 | 2026-09-03 | 0（人口約 50 人，單一治理單位） |
 | Saint Helena, Ascension and Tristan da Cunha | Q192184 | 2026-09-03 | 3（Saint Helena + Ascension + Tristan da Cunha，剛好對上該領地自身名稱的三個組成部分；agy 自動抓到的候選 QID 是地理實體非行政區 entity，已改用正確的 administrative_division QID 手動建立，Ascension/Tristan da Cunha 原本掛的 dependency_of 已清除改為 part_of） |
+| Gibraltar | Q1410 | 2026-09-03 | 0（單一自治市，不分區） |
+| Christmas Island | Q31063 | 2026-09-03 | 0（單一治理單位） |
+| Cocos (Keeling) Islands | Q36004 | 2026-09-03 | 0（單一治理單位） |
+| Norfolk Island | Q31057 | 2026-09-03 | 0（單一治理單位） |
+| Guam | Q16635 | 2026-09-03 | 19（19 個 village） |
+| American Samoa | Q16641 | 2026-09-03 | 5（3 個 district + Swains Island/Rose Atoll 兩無建制環礁） |
+| Northern Mariana Islands | Q16644 | 2026-09-03 | 4（4 個市鎮） |
+| Puerto Rico | Q1183 | 2026-09-03 | 78（77 自動 + Culebra 手動補，離島型 municipio 被誤拒為僅島嶼） |
+| United States Virgin Islands | Q11703 | 2026-09-03 | 2，全數手動建立（P150 無候選；官方實為 2 個 district，St. Thomas 與 St. John 合併為一區，非坊間常誤解的 3 島各自一區） |
+| United States Minor Outlying Islands | Q16645 | 2026-09-03 | 9（9 個無人島嶼，正確排除 Bajo Nuevo Bank/Serranilla Bank 兩個哥倫比亞/牙買加等多方主權爭議礁，不屬此 ISO 分組） |
+| Åland | Q5689 | 2026-09-03 | 16（16 個市鎮） |
+| Aruba | Q21203 | 2026-09-03 | 0（單一治理單位，無正式次級行政區） |
+| Curaçao | Q25279 | 2026-09-03 | 0（單一治理單位） |
+| Sint Maarten | Q26273 | 2026-09-03 | 0（單一治理單位） |
+| Caribbean Netherlands | Q27561 | 2026-09-03 | 3，全數手動建立（P150 無候選；本身即 Bonaire/Sint Eustatius/Saba 三個荷蘭本土特別自治市的統稱） |
+| French Guiana | Q3769 | 2026-09-03 | 2（2 個 arrondissement，commune 為第二層正確排除） |
+| Guadeloupe | Q17012 | 2026-09-03 | 2（2 個 arrondissement） |
+| Martinique | Q17054 | 2026-09-03 | 4（4 個 arrondissement） |
+| Mayotte | Q17063 | 2026-09-03 | 17（無 arrondissement 層級，直接以 17 個 commune 為一級行政區；canton 為選舉區劃正確排除） |
+| Réunion | Q17070 | 2026-09-03 | 4（4 個 arrondissement） |
+| French Polynesia | Q30971 | 2026-09-03 | 5，多數手動建立（P150 幾乎全被 commune/島嶼干擾，官方一級行政區為 5 個群島區 subdivision administrative：Windward/Leeward/Marquesas/Austral/Tuamotu-Gambier；Wikidata 對 Austral/Leeward 有英法文重複實體，法文版是無資料空殼，採用有 P150 資料的英文版；Marquesas 反之採用唯一有資料的法文版 Îles Marquises） |
+| New Caledonia | Q33788 | 2026-09-03 | 3，全數手動建立（agy 逾時失敗；P150 只連到 commune 沒連到省，改查 class 找到官方 3 個 province：South/North/Loyalty Islands） |
+| Saint Barthélemy | Q25362 | 2026-09-03 | 0（單一海外集體，不分區） |
+| Saint Pierre and Miquelon | Q34617 | 2026-09-03 | 2（Saint-Pierre + Miquelon-Langlade 兩 commune；L'Ile-aux-Marins 已於 1945 年併入 Saint-Pierre，正確排除） |
+| Saint-Martin | Q126125 | 2026-09-03 | 0（單一海外集體，不分區） |
+| Wallis and Futuna | Q35555 | 2026-09-03 | 3（3 個傳統王國 Sigave/Alo/Uvea） |
+| French Southern and Antarctic Lands | Q129003 | 2026-09-03 | 5（5 個 district：Crozet/Kerguelen/Scattered Islands/Saint Paul and Amsterdam/Adélie Land） |
 
 ## 已完成
 
@@ -254,44 +283,11 @@
 | Zambia | Q953 | 2026-09-03 | 10 |
 | Zimbabwe | Q954 | 2026-09-03 | 10 |
 
-## 待處理（46，另有 1 國暫緩、4 個已解體歷史實體見上方說明）
+## 待處理（3，另有 1 國暫緩、2 個主權特殊排除、4 個已解體歷史實體見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
-| American Samoa | Q16641 | AS | ⬜ |
-| Antarctica | Q51 | AQ | ⬜ |
-| Aruba | Q21203 | AW | ⬜ |
-| Ascension | Q31890709 | AC | ⬜ |
-| Caribbean Netherlands | Q27561 | BQ | ⬜ |
 | Cayman Islands | Q5785 | KY | ⬜ |
-| Christmas Island | Q31063 | CX | ⬜ |
-| Cocos (Keeling) Islands | Q36004 | CC | ⬜ |
-| Curaçao | Q25279 | CW | ⬜ |
-| Diego Garcia | Q184851 | DG | ⬜ |
-| French Guiana | Q3769 | GF | ⬜ |
-| French Polynesia | Q30971 | PF | ⬜ |
-| French Southern and Antarctic Lands | Q129003 | TF | ⬜ |
-| Gibraltar | Q1410 | GI | ⬜ |
-| Guadeloupe | Q17012 | GP | ⬜ |
-| Guam | Q16635 | GU | ⬜ |
 | Maldives | Q826 | MV | ⚠️ 暫緩，見下方說明 |
-| Martinique | Q17054 | MQ | ⬜ |
-| Mayotte | Q17063 | YT | ⬜ |
 | Montserrat | Q13353 | MS | ⬜ |
-| New Caledonia | Q33788 | NC | ⬜ |
-| Norfolk Island | Q31057 | NF | ⬜ |
-| Northern Mariana Islands | Q16644 | MP | ⬜ |
-| Puerto Rico | Q1183 | PR | ⬜ |
-| Réunion | Q17070 | RE | ⬜ |
-| Saint Barthélemy | Q25362 | BL | ⬜ |
-| Saint Pierre and Miquelon | Q34617 | PM | ⬜ |
-| Saint-Martin | Q126125 | MF | ⬜ |
-| Sark | Q3405693 | CQ | ⬜ |
-| Sint Maarten | Q26273 | SX | ⬜ |
-| Tristan da Cunha | Q34625512 | TA | ⬜ |
 | Turks and Caicos Islands | Q18221 | TC | ⬜ |
-| United States Minor Outlying Islands | Q16645 | UM | ⬜ |
-| United States Virgin Islands | Q11703 | VI | ⬜ |
-| Wallis and Futuna | Q35555 | WF | ⬜ |
-| Western Sahara | Q6250 | EH | ⬜ |
-| Åland | Q5689 | AX | ⬜ |
