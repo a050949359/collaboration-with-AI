@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：184 / 259 完成**
+**進度：200 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
 
@@ -197,8 +197,24 @@
 | Niger | Q1032 | 2026-09-03 | 8（7 個 region + Niamey 首都區） |
 | Nigeria | Q1033 | 2026-09-03 | 37（36 州 + Federal Capital Territory） |
 | Republic of the Congo | Q971 | 2026-09-03 | 15（13 個 department 自動，含 2023 年新設的 Nkéni-Alima/Congo-Oubangui/Djoué-Léfini 三省 + Brazzaville/Pointe-Noire 兩省級直轄市手動補） |
+| Rwanda | Q1037 | 2026-09-03 | 5（4 省 + Kigali 首都省） |
+| Senegal | Q1041 | 2026-09-03 | 14 |
+| Seychelles | Q1042 | 2026-09-03 | 27（25 自動 + Ile Perseverance I/II 兩填海造陸新區手動補，缺 description 被誤拒） |
+| Sierra Leone | Q1044 | 2026-09-03 | 5（4 省 + Western Area 首都區，含 2017 年新設的 North West Province） |
+| Somalia | Q1045 | 2026-09-03 | 14（官方共 18 個 region，缺 Somaliland 主張的 Woqooyi Galbeed/Togdheer/Sanaag/Sool 4 區——Wikidata 將這 4 區歸類為「region of Somaliland」而非「region of Somalia」，P150 未連到 Somalia，反映 Somaliland 自 1991 年起事實獨立運作的政治現實，雖國際未承認其主權，此處依循 Wikidata 既有行政區劃模型未強行併入，與 Crimea/West Bank 軍事佔領案例性質不同；Bari/Nugal 皆屬 Puntland、agy dry-run 與正式寫入判斷不一致但正式寫入時已正確全數通過，無需手動修正） |
+| South Africa | Q258 | 2026-09-03 | 9 |
+| South Sudan | Q958 | 2026-09-03 | 13，全數手動建立（P150 候選 29 個裡 22 個是 2015-2017 年 32 州制的州，已於 2020-02-22 南蘇丹和平協議恢復 10 州制時正式廢除，Wikidata 均有 P576 標記但 agy 系統性漏檢僅抓到其中 4 個；現行為 10 州 + Abyei/Pibor/Ruweng 3 個特別行政區；Abyei 為蘇丹/南蘇丹跨界爭議領土，比照南蘇丹官方立場列入其特別行政區） |
+| Sudan | Q1049 | 2026-09-03 | 17（15 自動 + Central Darfur/East Darfur 手動補，2012 年達佛分裂新增的兩州；Abyei 已列於南蘇丹特別行政區未重複列入） |
+| São Tomé and Príncipe | Q1039 | 2026-09-03 | 2（São Tomé Province + Príncipe 自治區；6 個 district 正確排除，屬 São Tomé Province 底下第二層） |
+| Tanzania | Q924 | 2026-09-03 | 31（26 自動 + Njombe/Simiyu/Katavi/Geita/Songwe 5 個手動補，2012-2016 年新設的大陸新區，Wikidata 對它們完全無 P150；含 5 個尚吉巴 region） |
+| The Gambia | Q1005 | 2026-09-03 | 7（6 自動 + Banjul 首都手動補，P31 與其餘 region 同 class 但缺 P150 連結） |
+| Togo | Q945 | 2026-09-03 | 5 |
+| Tunisia | Q948 | 2026-09-03 | 24 |
+| Uganda | Q1036 | 2026-09-03 | 135（134 自動 + Madi-Okollo District 手動補，2020 年新設、缺 description 被誤拒） |
+| Zambia | Q953 | 2026-09-03 | 10 |
+| Zimbabwe | Q954 | 2026-09-03 | 10 |
 
-## 待處理（74，另有 1 國暫緩見上方說明）
+## 待處理（58，另有 1 國暫緩見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -242,38 +258,22 @@
 | Northern Mariana Islands | Q16644 | MP | ⬜ |
 | Pitcairn Islands | Q35672 | PN | ⬜ |
 | Puerto Rico | Q1183 | PR | ⬜ |
-| Rwanda | Q1037 | RW | ⬜ |
 | Réunion | Q17070 | RE | ⬜ |
 | Saint Barthélemy | Q25362 | BL | ⬜ |
 | Saint Helena, Ascension and Tristan da Cunha | Q192184 | SH | ⬜ |
 | Saint Pierre and Miquelon | Q34617 | PM | ⬜ |
 | Saint-Martin | Q126125 | MF | ⬜ |
 | Sark | Q3405693 | CQ | ⬜ |
-| Senegal | Q1041 | SN | ⬜ |
-| Seychelles | Q1042 | SC | ⬜ |
-| Sierra Leone | Q1044 | SL | ⬜ |
 | Sint Maarten | Q26273 | SX | ⬜ |
-| Somalia | Q1045 | SO | ⬜ |
-| South Africa | Q258 | ZA | ⬜ |
 | South Georgia and the South Sandwich Islands | Q35086 | GS | ⬜ |
-| South Sudan | Q958 | SS | ⬜ |
-| Sudan | Q1049 | SD | ⬜ |
 | Svalbard and Jan Mayen | Q842829 | SJ | ⬜ |
-| São Tomé and Príncipe | Q1039 | ST | ⬜ |
-| Tanzania | Q924 | TZ | ⬜ |
-| The Gambia | Q1005 | GM | ⬜ |
-| Togo | Q945 | TG | ⬜ |
 | Tokelau | Q36823 | TK | ⬜ |
 | Tristan da Cunha | Q34625512 | TA | ⬜ |
 | Trust Territory of the Pacific Islands | Q129237 | PC | ⬜ |
-| Tunisia | Q948 | TN | ⬜ |
 | Turks and Caicos Islands | Q18221 | TC | ⬜ |
-| Uganda | Q1036 | UG | ⬜ |
 | United States Minor Outlying Islands | Q16645 | UM | ⬜ |
 | United States Virgin Islands | Q11703 | VI | ⬜ |
 | Wallis and Futuna | Q35555 | WF | ⬜ |
 | Western Sahara | Q6250 | EH | ⬜ |
 | Yugoslavia | Q36704 | YU | ⬜ |
-| Zambia | Q953 | ZM | ⬜ |
-| Zimbabwe | Q954 | ZW | ⬜ |
 | Åland | Q5689 | AX | ⬜ |
