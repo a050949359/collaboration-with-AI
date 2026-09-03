@@ -3,9 +3,11 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：208 / 259 完成**
+**進度：218 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
+
+**Cayman Islands（Q5785）、Montserrat（Q13353）、Turks and Caicos Islands（Q18221）**：官方都有明確的一級行政區（開曼 6 個 district、蒙哲臘 3 個教區、Turks and Caicos 有其行政區劃），但 Wikidata 對這幾個小型屬地的行政區 entity 完全沒有建立或極不完整（搜尋不到對應的 district/parish entity），P150 候選也是 0。需要人工找到官方/可靠來源核對 QID 後才能繼續，暫不列入自動流程。
 
 **Maldives（Q826）**：Wikidata 的 P150（國家→第一層行政區）只回傳 20 個「行政環礁」，但實際現行官方行政架構是 **18 個行政環礁 + 5 個市**（Malé City、Addu City、Fuvahmulah City、Kulhudhuffushi City、Thinadhoo City）。核對發現 Wikidata 對這 5 個市的資料很不完整：只有 Malé（`Q9347`，P31 含明確的 `first-level administrative division`）跟 Addu City（`Q4681407`，獨立城市 entity 但沒有 P150 連到 Maldives）有乾淨的城市 QID；Fuvahmulah 只能對應回舊的環礁 entity（`Q1811116` Gnaviyani Atoll）；Kulhudhuffushi、Thinadhoo 完全沒有城市層級的 entity，只有島嶼 entity。原本 20 個環礁要扣哪 2 個變成 18 個，也需要跟官方資料源核對才能確定，不能用猜的。**尚未寫入任何資料**（只跑過 dry-run）。需要人工找到官方/可靠來源核對完整名單後才能繼續，不要在自動化流程中被跳過或誤選為「下一國」。
 
@@ -36,6 +38,16 @@
 | Tokelau | Q36823 | 2026-09-03 | 3，全數手動建立（P150 無候選；3 個環礁 Atafu/Fakaofo/Nukunonu 各自有村議會 taupulega 自治，即為一級單位） |
 | Svalbard and Jan Mayen | Q842829 | 2026-09-03 | 0（純紀錄，此為 ISO 統計組合代碼非實際治理單位；Jan Mayen/Svalbard 兩地各自已是挪威的一級行政區，見 Norway 該列） |
 | Isle of Man | Q9676 | 2026-09-03 | 18，全數手動建立（P150 無候選；改查 class 找到 18 個 parish，比照 Iceland 先例採傳統教區為第一層近似值；現代地方政府另有 commissioners 選區制度，未採用） |
+| Anguilla | Q25228 | 2026-09-03 | 14，全數手動建立（P150 無候選；改查 class 找到 14 個 district） |
+| British Virgin Islands | Q25305 | 2026-09-03 | 0（無正式治理用一級行政區，僅有選舉用途的行政區劃） |
+| Falkland Islands | Q9648 | 2026-09-03 | 0（單一治理單位，無正式次級行政區） |
+| Bouvet Island | Q23408 | 2026-09-03 | 0（無人島） |
+| Clipperton Island | Q161258 | 2026-09-03 | 0（無人島） |
+| South Georgia and the South Sandwich Islands | Q35086 | 2026-09-03 | 0（無常住人口，僅研究站） |
+| Heard Island and McDonald Islands | Q131198 | 2026-09-03 | 0（無人島） |
+| British Indian Ocean Territory | Q43448 | 2026-09-03 | 0（居民已強制遷離，僅 Diego Garcia 軍事基地，Diego Garcia 已列為其下轄的 dependency_of） |
+| Pitcairn Islands | Q35672 | 2026-09-03 | 0（人口約 50 人，單一治理單位） |
+| Saint Helena, Ascension and Tristan da Cunha | Q192184 | 2026-09-03 | 3（Saint Helena + Ascension + Tristan da Cunha，剛好對上該領地自身名稱的三個組成部分；agy 自動抓到的候選 QID 是地理實體非行政區 entity，已改用正確的 administrative_division QID 手動建立，Ascension/Tristan da Cunha 原本掛的 dependency_of 已清除改為 part_of） |
 
 ## 已完成
 
@@ -247,28 +259,21 @@
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
 | American Samoa | Q16641 | AS | ⬜ |
-| Anguilla | Q25228 | AI | ⬜ |
 | Antarctica | Q51 | AQ | ⬜ |
 | Aruba | Q21203 | AW | ⬜ |
 | Ascension | Q31890709 | AC | ⬜ |
-| Bouvet Island | Q23408 | BV | ⬜ |
-| British Indian Ocean Territory | Q43448 | IO | ⬜ |
-| British Virgin Islands | Q25305 | VG | ⬜ |
 | Caribbean Netherlands | Q27561 | BQ | ⬜ |
 | Cayman Islands | Q5785 | KY | ⬜ |
 | Christmas Island | Q31063 | CX | ⬜ |
-| Clipperton Island | Q161258 | CP | ⬜ |
 | Cocos (Keeling) Islands | Q36004 | CC | ⬜ |
 | Curaçao | Q25279 | CW | ⬜ |
 | Diego Garcia | Q184851 | DG | ⬜ |
-| Falkland Islands | Q9648 | FK | ⬜ |
 | French Guiana | Q3769 | GF | ⬜ |
 | French Polynesia | Q30971 | PF | ⬜ |
 | French Southern and Antarctic Lands | Q129003 | TF | ⬜ |
 | Gibraltar | Q1410 | GI | ⬜ |
 | Guadeloupe | Q17012 | GP | ⬜ |
 | Guam | Q16635 | GU | ⬜ |
-| Heard Island and McDonald Islands | Q131198 | HM | ⬜ |
 | Maldives | Q826 | MV | ⚠️ 暫緩，見下方說明 |
 | Martinique | Q17054 | MQ | ⬜ |
 | Mayotte | Q17063 | YT | ⬜ |
@@ -276,16 +281,13 @@
 | New Caledonia | Q33788 | NC | ⬜ |
 | Norfolk Island | Q31057 | NF | ⬜ |
 | Northern Mariana Islands | Q16644 | MP | ⬜ |
-| Pitcairn Islands | Q35672 | PN | ⬜ |
 | Puerto Rico | Q1183 | PR | ⬜ |
 | Réunion | Q17070 | RE | ⬜ |
 | Saint Barthélemy | Q25362 | BL | ⬜ |
-| Saint Helena, Ascension and Tristan da Cunha | Q192184 | SH | ⬜ |
 | Saint Pierre and Miquelon | Q34617 | PM | ⬜ |
 | Saint-Martin | Q126125 | MF | ⬜ |
 | Sark | Q3405693 | CQ | ⬜ |
 | Sint Maarten | Q26273 | SX | ⬜ |
-| South Georgia and the South Sandwich Islands | Q35086 | GS | ⬜ |
 | Tristan da Cunha | Q34625512 | TA | ⬜ |
 | Turks and Caicos Islands | Q18221 | TC | ⬜ |
 | United States Minor Outlying Islands | Q16645 | UM | ⬜ |
