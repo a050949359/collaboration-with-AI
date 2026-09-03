@@ -9,6 +9,15 @@
 
 **Maldives（Q826）**：Wikidata 的 P150（國家→第一層行政區）只回傳 20 個「行政環礁」，但實際現行官方行政架構是 **18 個行政環礁 + 5 個市**（Malé City、Addu City、Fuvahmulah City、Kulhudhuffushi City、Thinadhoo City）。核對發現 Wikidata 對這 5 個市的資料很不完整：只有 Malé（`Q9347`，P31 含明確的 `first-level administrative division`）跟 Addu City（`Q4681407`，獨立城市 entity 但沒有 P150 連到 Maldives）有乾淨的城市 QID；Fuvahmulah 只能對應回舊的環礁 entity（`Q1811116` Gnaviyani Atoll）；Kulhudhuffushi、Thinadhoo 完全沒有城市層級的 entity，只有島嶼 entity。原本 20 個環礁要扣哪 2 個變成 18 個，也需要跟官方資料源核對才能確定，不能用猜的。**尚未寫入任何資料**（只跑過 dry-run）。需要人工找到官方/可靠來源核對完整名單後才能繼續，不要在自動化流程中被跳過或誤選為「下一國」。
 
+## 🗑️ 已解體之歷史政治實體（不處理，僅留紀錄）
+
+以下 4 筆在待處理清單中，但代表的國家/政治實體已不復存在，本專案不會為它們補行政區資料，僅保留在 country layer 供歷史查詢，不要在自動化流程中被誤選為「下一國」：
+
+- **German Democratic Republic（東德，Q16957）**：1990 年兩德統一後併入西德，不復存在。
+- **Netherlands Antilles（荷屬安地列斯，Q25227）**：2010 年解體，分拆為 Curaçao、Sint Maarten（已是獨立國家層實體）+ 荷蘭加勒比區（Bonaire/Sint Eustatius/Saba，現為荷蘭本土特別自治市，未單獨列為 country layer 實體）。
+- **Trust Territory of the Pacific Islands（太平洋群島託管地，Q129237）**：1994 年解體，分拆為帛琉、馬紹爾群島、密克羅尼西亞聯邦（皆已是獨立國家層實體）+ 北馬里亞納群島（美國自治邦，仍在待處理清單）。
+- **Yugoslavia（南斯拉夫，Q36704）**：1991-2003 年間逐步解體，分拆為塞爾維亞、克羅埃西亞、斯洛維尼亞、波士尼亞、蒙特內哥羅、北馬其頓等（皆已是獨立國家層實體且行政區已完成）。
+
 ## 已完成
 
 | 國家 | QID | 完成日期 | 一級行政區數 |
@@ -214,7 +223,7 @@
 | Zambia | Q953 | 2026-09-03 | 10 |
 | Zimbabwe | Q954 | 2026-09-03 | 10 |
 
-## 待處理（58，另有 1 國暫緩見上方說明）
+## 待處理（54，另有 1 國暫緩、4 個已解體歷史實體見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -239,7 +248,6 @@
 | French Guiana | Q3769 | GF | ⬜ |
 | French Polynesia | Q30971 | PF | ⬜ |
 | French Southern and Antarctic Lands | Q129003 | TF | ⬜ |
-| German Democratic Republic | Q16957 | DD | ⬜ |
 | Gibraltar | Q1410 | GI | ⬜ |
 | Greenland | Q223 | GL | ⬜ |
 | Guadeloupe | Q17012 | GP | ⬜ |
@@ -252,7 +260,6 @@
 | Martinique | Q17054 | MQ | ⬜ |
 | Mayotte | Q17063 | YT | ⬜ |
 | Montserrat | Q13353 | MS | ⬜ |
-| Netherlands Antilles | Q25227 | AN | ⬜ |
 | New Caledonia | Q33788 | NC | ⬜ |
 | Norfolk Island | Q31057 | NF | ⬜ |
 | Northern Mariana Islands | Q16644 | MP | ⬜ |
@@ -269,11 +276,9 @@
 | Svalbard and Jan Mayen | Q842829 | SJ | ⬜ |
 | Tokelau | Q36823 | TK | ⬜ |
 | Tristan da Cunha | Q34625512 | TA | ⬜ |
-| Trust Territory of the Pacific Islands | Q129237 | PC | ⬜ |
 | Turks and Caicos Islands | Q18221 | TC | ⬜ |
 | United States Minor Outlying Islands | Q16645 | UM | ⬜ |
 | United States Virgin Islands | Q11703 | VI | ⬜ |
 | Wallis and Futuna | Q35555 | WF | ⬜ |
 | Western Sahara | Q6250 | EH | ⬜ |
-| Yugoslavia | Q36704 | YU | ⬜ |
 | Åland | Q5689 | AX | ⬜ |
