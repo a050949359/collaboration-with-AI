@@ -18,6 +18,12 @@
 - **Trust Territory of the Pacific Islands（太平洋群島託管地，Q129237）**：1994 年解體，分拆為帛琉、馬紹爾群島、密克羅尼西亞聯邦（皆已是獨立國家層實體）+ 北馬里亞納群島（美國自治邦，仍在待處理清單）。
 - **Yugoslavia（南斯拉夫，Q36704）**：1991-2003 年間逐步解體，分拆為塞爾維亞、克羅埃西亞、斯洛維尼亞、波士尼亞、蒙特內哥羅、北馬其頓等（皆已是獨立國家層實體且行政區已完成）。
 
+## 🔗 屬地/皇家屬地 dependency_of 關聯（2026-09-03 補建）
+
+待處理清單中的屬地混雜三種狀況：(A) 已有 `part_of` → 宗主國（France 海外省、US territory、NL 王國組成國、Australia 外部領地、Norway 的 Bouvet、Finland 的 Åland，皆為法律上明確的一級行政區/自治區，之前跑對應宗主國那批時已建立）；(B) 憲政上「依附但非行政區劃」，改用新的 `dependency_of` 關聯類型（非 `part_of`，避免誤植為一級行政區）——已補齊：Guernsey/Jersey/Isle of Man/Sark（英國皇家屬地）、Bermuda/Cayman/BVI/Falklands/Gibraltar/Montserrat/Pitcairn/Turks and Caicos/South Georgia/BIOT/Diego Garcia/Anguilla/St Helena 群組（含 Ascension/Tristan da Cunha 兩子島，掛在 St Helena 群組下非直接 UK）→ 英國海外領地；Faroe Islands/Greenland → 新建的 Kingdom of Denmark（Q756617）王國層實體；Tokelau → New Zealand；Svalbard and Jan Mayen → Norway（原本漏掉沒建）；(C) Antarctica、Western Sahara 兩者主權狀態特殊，未套用任何關聯，維持現狀。另外 Caribbean Netherlands 屬荷蘭本土特別自治市，非王國組成國，改補 `part_of` → Netherlands（Q55，非 Kingdom Q29999）。
+
+這批只處理「屬地本身 vs 宗主國」的關聯定位，**不含**這些屬地自己內部的一級行政區資料（例如 Réunion 底下的 arrondissement），那是完全獨立的另一項工作，尚未開始。
+
 ## 已完成
 
 | 國家 | QID | 完成日期 | 一級行政區數 |
