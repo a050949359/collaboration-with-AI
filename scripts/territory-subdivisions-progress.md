@@ -3,7 +3,7 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：169 / 259 完成**
+**進度：184 / 259 完成**
 
 ## ⚠️ 暫緩處理的國家
 
@@ -182,8 +182,23 @@
 | Guinea | Q1006 | 2026-09-01 | 8（7 自動 + Conakry 特別區手動補，被誤拒為僅普通城市） |
 | Guinea-Bissau | Q1007 | 2026-09-01 | 9（8 個 region + Bissau 自治區） |
 | Ivory Coast | Q1008 | 2026-09-01 | 14，全數手動建立（Wikidata P150 抓到的 19 個候選全部是 2011 年行政改制已廢除的舊制 19 大區，agy 只抓到 1 個 P576 廢除標記漏了另外 18 個；現行結構是 12 般 district + Abidjan/Yamoussoukro 2 自治區＝14 District，31 個 Region 為第二層非第一層，改查 class Q20717263「district of Ivory Coast」找到完整 14 個現行清單） |
+| Kenya | Q114 | 2026-09-01 | 47，全數手動建立（P150 候選的舊 8 省制已於 2013 年廢除，agy 正確全數排除；改查現行郡 class Q269218 找到完整 47 個 county，剛好對上肯亞 2013 年新憲法後的現行結構） |
+| Lesotho | Q1013 | 2026-09-01 | 10 |
+| Liberia | Q1014 | 2026-09-01 | 15 |
+| Libya | Q1016 | 2026-09-01 | 21（6 個同名城市實體正確排除，屬所在 district 的下級城鎮/首都城市，非第一層） |
+| Madagascar | Q1019 | 2026-09-01 | 24，全數手動建立（P150 候選的舊 6 省制已於 2004 年廢除，agy 又漏檢 P576；改查 class Q971831 找到現行 25 個候選，扣除已於後續改制廢除的 Vatovavy-Fitovinany（已拆分為 Vatovavy/Fitovinany 兩區）= 24，含 2025 年 7 月才正式就職的最新第 24 區 Ambatosoa） |
+| Malawi | Q1020 | 2026-09-01 | 3 |
+| Mali | Q912 | 2026-09-01 | 20（19 個 Region + Bamako 首都區，對上 2023 年行政重劃後現行結構） |
+| Mauritania | Q1025 | 2026-09-02 | 15（12 自動 + 3 手動補：首都 Nouakchott 已於 2018 年拆分為 Nouakchott-Nord/Ouest/Sud 三個獨立 region，舊版單一城市 entity 正確排除） |
+| Mauritius | Q1027 | 2026-09-02 | 10（9 district 自動 + Rodrigues 自治島手動補，P31 明確標示 first-level administrative division 但無 P150 連結） |
+| Morocco | Q1028 | 2026-09-02 | 10（本土 10 個 region；Laâyoune-Sakia El Hamra/Dakhla-Oued Ed-Dahab 涵蓋西撒哈拉爭議領土，摩洛哥雖實際控制但國際普遍未承認主權，比照 Russia/Crimea、Israel/West Bank 案例排除——dry-run 時 agy 正確拒絕，但正式寫入時判斷不一致誤收，已手動刪除2個實體修正） |
+| Mozambique | Q1029 | 2026-09-03 | 11（10 省自動 + 首都 Maputo City 手動補，與省同級的獨立直轄市） |
+| Namibia | Q1030 | 2026-09-03 | 14 |
+| Niger | Q1032 | 2026-09-03 | 8（7 個 region + Niamey 首都區） |
+| Nigeria | Q1033 | 2026-09-03 | 37（36 州 + Federal Capital Territory） |
+| Republic of the Congo | Q971 | 2026-09-03 | 15（13 個 department 自動，含 2023 年新設的 Nkéni-Alima/Congo-Oubangui/Djoué-Léfini 三省 + Brazzaville/Pointe-Noire 兩省級直轄市手動補） |
 
-## 待處理（89，另有 1 國暫緩見上方說明）
+## 待處理（74，另有 1 國暫緩見上方說明）
 
 | 國家 | QID | code | 狀態 |
 |---|---|---|---|
@@ -217,31 +232,16 @@
 | Heard Island and McDonald Islands | Q131198 | HM | ⬜ |
 | Isle of Man | Q9676 | IM | ⬜ |
 | Jersey | Q785 | JE | ⬜ |
-| Kenya | Q114 | KE | ⬜ |
-| Lesotho | Q1013 | LS | ⬜ |
-| Liberia | Q1014 | LR | ⬜ |
-| Libya | Q1016 | LY | ⬜ |
-| Madagascar | Q1019 | MG | ⬜ |
-| Malawi | Q1020 | MW | ⬜ |
 | Maldives | Q826 | MV | ⚠️ 暫緩，見下方說明 |
-| Mali | Q912 | ML | ⬜ |
 | Martinique | Q17054 | MQ | ⬜ |
-| Mauritania | Q1025 | MR | ⬜ |
-| Mauritius | Q1027 | MU | ⬜ |
 | Mayotte | Q17063 | YT | ⬜ |
 | Montserrat | Q13353 | MS | ⬜ |
-| Morocco | Q1028 | MA | ⬜ |
-| Mozambique | Q1029 | MZ | ⬜ |
-| Namibia | Q1030 | NA | ⬜ |
 | Netherlands Antilles | Q25227 | AN | ⬜ |
 | New Caledonia | Q33788 | NC | ⬜ |
-| Niger | Q1032 | NE | ⬜ |
-| Nigeria | Q1033 | NG | ⬜ |
 | Norfolk Island | Q31057 | NF | ⬜ |
 | Northern Mariana Islands | Q16644 | MP | ⬜ |
 | Pitcairn Islands | Q35672 | PN | ⬜ |
 | Puerto Rico | Q1183 | PR | ⬜ |
-| Republic of the Congo | Q971 | CG | ⬜ |
 | Rwanda | Q1037 | RW | ⬜ |
 | Réunion | Q17070 | RE | ⬜ |
 | Saint Barthélemy | Q25362 | BL | ⬜ |
