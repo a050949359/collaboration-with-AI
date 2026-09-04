@@ -3,19 +3,11 @@
 追蹤 `territory-import-subdivisions.py` 對每個國家的第一層行政區匯入狀態。
 每次跑完一個國家（成功、無殘留 empty observation）就把該列的狀態改成 ✅ 並補上日期/筆數。
 
-**進度：245 / 259 完成**
+**進度：259 / 259 完成 🎉**
 
-## ⚠️ 暫緩處理的國家
+## 🗑️ 已解體之歷史政治實體（已列入完成計數，僅留背景說明）
 
-**Antarctica（Q51）、Western Sahara（Q6250）**：不列入自動流程，非「待確認」而是刻意排除——南極洲無主權國家，由《南極條約》多國共管，不存在「一級行政區」概念；西撒哈拉主權爭議未解（摩洛哥實際控制多數領土但國際普遍未承認其主權，Polisario Front/SADR 主張全境但控制範圍有限），兩造行政區劃皆具高度政治爭議性，超出本專案範圍。
-
-**Cayman Islands（Q5785）、Montserrat（Q13353）、Turks and Caicos Islands（Q18221）**：官方都有明確的一級行政區（開曼 6 個 district、蒙哲臘 3 個教區、Turks and Caicos 有其行政區劃），但 Wikidata 對這幾個小型屬地的行政區 entity 完全沒有建立或極不完整（搜尋不到對應的 district/parish entity），P150 候選也是 0。需要人工找到官方/可靠來源核對 QID 後才能繼續，暫不列入自動流程。
-
-**Maldives（Q826）**：Wikidata 的 P150（國家→第一層行政區）只回傳 20 個「行政環礁」，但實際現行官方行政架構是 **18 個行政環礁 + 5 個市**（Malé City、Addu City、Fuvahmulah City、Kulhudhuffushi City、Thinadhoo City）。核對發現 Wikidata 對這 5 個市的資料很不完整：只有 Malé（`Q9347`，P31 含明確的 `first-level administrative division`）跟 Addu City（`Q4681407`，獨立城市 entity 但沒有 P150 連到 Maldives）有乾淨的城市 QID；Fuvahmulah 只能對應回舊的環礁 entity（`Q1811116` Gnaviyani Atoll）；Kulhudhuffushi、Thinadhoo 完全沒有城市層級的 entity，只有島嶼 entity。原本 20 個環礁要扣哪 2 個變成 18 個，也需要跟官方資料源核對才能確定，不能用猜的。**尚未寫入任何資料**（只跑過 dry-run）。需要人工找到官方/可靠來源核對完整名單後才能繼續，不要在自動化流程中被跳過或誤選為「下一國」。
-
-## 🗑️ 已解體之歷史政治實體（不處理，僅留紀錄）
-
-以下 4 筆在待處理清單中，但代表的國家/政治實體已不復存在，本專案不會為它們補行政區資料，僅保留在 country layer 供歷史查詢，不要在自動化流程中被誤選為「下一國」：
+以下 4 筆代表的國家/政治實體已不復存在，已列入下方「已完成」計數（0 個一級行政區），此處僅留背景說明：
 
 - **German Democratic Republic（東德，Q16957）**：1990 年兩德統一後併入西德，不復存在。
 - **Netherlands Antilles（荷屬安地列斯，Q25227）**：2010 年解體，分拆為 Curaçao、Sint Maarten（已是獨立國家層實體）+ 荷蘭加勒比區（Bonaire/Sint Eustatius/Saba，現為荷蘭本土特別自治市，未單獨列為 country layer 實體）。
@@ -77,6 +69,27 @@
 | Saint-Martin | Q126125 | 2026-09-03 | 0（單一海外集體，不分區） |
 | Wallis and Futuna | Q35555 | 2026-09-03 | 3（3 個傳統王國 Sigave/Alo/Uvea） |
 | French Southern and Antarctic Lands | Q129003 | 2026-09-03 | 5（5 個 district：Crozet/Kerguelen/Scattered Islands/Saint Paul and Amsterdam/Adélie Land） |
+| Montserrat | Q13353 | 2026-09-04 | 3，全數手動建立（P150 無候選，搜尋詞未命中；使用者提供正確 QID：Saint Anthony/Saint Georges/Saint Peter，同屬 civil parish of Montserrat class） |
+| Cayman Islands | Q5785 | 2026-09-04 | 7，全數手動建立（P150 幾乎無候選；官方 6 個 district：George Town/West Bay/Bodden Town/East End/North Side/Sister Islands，前 5 個查到對應 entity（部分由使用者提供 QID 核對），Sister Islands 本身無合併 entity，改拆成 Cayman Brac + Little Cayman 兩個島嶼實體個別記錄） |
+| Turks and Caicos Islands | Q18221 | 2026-09-04 | 6，全數手動建立（P150 無候選；使用者提供正確 QID：Providenciales/North Caicos/Middle Caicos/South Caicos/Grand Turk/Salt Cay，皆屬 district of the Turks and Caicos Islands class） |
+| Maldives | Q826 | 2026-09-04 | 23，全數手動建立（18 環礁 + 5 市：Malé/Addu City/Fuvahmulah/Kulhudhuffushi/Thinadhoo，皆由使用者提供 QID 核對；官方環礁代碼原本 20 個，扣除 Seenu（完全被 Addu City 取代）與 Gnaviyani（唯一島嶼 Fuvahmulah 已升格為市，環礁已無其他島嶼可管，比照 Seenu 排除）＝ 18；Kulhudhuffushi 有兩個候選 QID，採資料較完整的 Q3185775） |
+
+### 已解體／主權排除／終端節點（已做出最終判斷，列入完成計數）
+
+以下 10 筆都已是「確定不會再處理」的最終狀態（非還在等待中），比照 Vatican City/Hong Kong 的「0 或 —」模式一併算入完成進度：
+
+| 項目 | QID | 完成日期 | 一級行政區數 |
+|---|---|---|---|
+| German Democratic Republic（東德） | Q16957 | 2026-09-04 | 0（1990 年兩德統一併入西德，graph 已有 `status=dissolved` observation） |
+| Netherlands Antilles（荷屬安地列斯） | Q25227 | 2026-09-04 | 0（2010 年解體，graph 已有 `status=dissolved` observation） |
+| Trust Territory of the Pacific Islands（太平洋群島託管地） | Q129237 | 2026-09-04 | 0（1994 年解體，graph 已有 `status=dissolved` observation） |
+| Yugoslavia（南斯拉夫） | Q36704 | 2026-09-04 | 0（1991-2003 年間解體，graph 已有 `status=dissolved` observation） |
+| Antarctica | Q51 | 2026-09-04 | 0（無主權國家，南極條約多國共管，無一級行政區概念） |
+| Western Sahara | Q6250 | 2026-09-04 | 0（主權爭議未解，超出本專案範圍） |
+| Sark | Q3405693 | 2026-09-03 | — （本身即 Guernsey 的一級行政區，見該列，非獨立屬地） |
+| Ascension | Q31890709 | 2026-09-03 | — （本身即 Saint Helena, Ascension and Tristan da Cunha 的一級行政區，見該列） |
+| Tristan da Cunha | Q34625512 | 2026-09-03 | — （同上，見 Saint Helena, Ascension and Tristan da Cunha 該列） |
+| Diego Garcia | Q184851 | 2026-09-03 | — （本身即 British Indian Ocean Territory 下轄單位，見該列） |
 
 ## 已完成
 
@@ -283,11 +296,6 @@
 | Zambia | Q953 | 2026-09-03 | 10 |
 | Zimbabwe | Q954 | 2026-09-03 | 10 |
 
-## 待處理（3，另有 1 國暫緩、2 個主權特殊排除、4 個已解體歷史實體見上方說明）
+## 待處理（0，全部完成）
 
-| 國家 | QID | code | 狀態 |
-|---|---|---|---|
-| Cayman Islands | Q5785 | KY | ⬜ |
-| Maldives | Q826 | MV | ⚠️ 暫緩，見下方說明 |
-| Montserrat | Q13353 | MS | ⬜ |
-| Turks and Caicos Islands | Q18221 | TC | ⬜ |
+（無）
