@@ -3,6 +3,16 @@
 > 第一層行政區已於 2026-09-04 全數完成（259/259，見 `territory-subdivisions-progress.md`）。
 > 這份文件規劃**第二層**的範圍：不做全部 259 國，只挑熱門旅遊國家。
 
+## Resume prompt（下次開新對話直接貼這段）
+
+```
+接續 Territory MCP 第二層行政區的工作。先看記憶檔 project_territory_mcp_tool.md
+最上面「2026-09-04: PROJECT COMPLETE」那段，跟 scripts/territory-subdivisions-layer2-plan.md
+這份規劃文件。第一步：把 territory-import-subdivisions.py 改成支援任意父層 QID
+（目前寫死 parent = 國家層的 countries 表資料），改完之後從 Top 11 熱門旅遊國
+（France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan）開始跑第二層。
+```
+
 ## 範圍依據
 
 2025 年國際遊客人數排行（來源：UN Tourism / 多方旅遊統計網站彙整，非本專案 Tour App 資料——該 App 資料是假資料，不能用）：
