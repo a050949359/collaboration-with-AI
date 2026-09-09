@@ -92,12 +92,19 @@ JUDGE_PROMPT_TEMPLATE = """你是一位資深地理／行政區資料審核員�
 {candidates_json}
 
 ## 判斷原則
+0. **清單裡每一個候選都已經由 Wikidata 的 P150 關係結構性確認是 {parent_name} 的直屬子行政區**
+   （這份清單本身就是照著 {parent_name} 的 P150 撈出來的，不是關鍵字搜尋撈出來的雜訊）。
+   description 欄位常常只會寫成通用的一句話（例如 "department of France"、"French department"），
+   **不會特地把上層名稱重複寫進去**——這是正常現象，**不是**「查不到隸屬關係」的證據，
+   絕對不要因為 description 沒有明確提到 {parent_name} 這個名字就 reject，那不是這裡要判斷的問題。
+   你唯一要判斷的是：這個候選**現在**還是不是一個**有效、現行**的行政區（見下面第 2、3 點的判準）。
 1. 只根據上面提供的 label / description / instance_of 判斷，不要腦補清單以外的資訊。
 2. 濾掉：已廢除／歷史行政區（description 提到 "former"、"abolished"、"historical" 等）、
    跟其他候選明顯是同一個地方的重複實體、非行政區性質的地理實體（山脈、河流、地區泛稱等
    誤入候選清單的雜訊）。
-3. 不確定的候選（描述不清楚、看不出是不是現行行政區）一律歸類到 rejected，
-   reason 寫「需人工確認：<原因>」，不要因為想幫忙而放行有疑慮的候選。
+3. 不確定的候選（instance_of 完全看不出是不是行政區性質，或有明確跡象顯示可能已廢除/歷史化）
+   才歸類到 rejected，reason 寫「需人工確認：<原因>」——但**「description 沒有寫出上層名稱」
+   本身不構成不確定的理由**（見第 0 點），不要因此放到 rejected。
 4. 這次只抓 {parent_name} 直屬的下一層，不用判斷更深的子行政區。
 5. 對每個 accepted 的候選，從它的 instance_of 清單裡挑一個**最能代表其行政區性質**的詞當 type
    （例如 instance_of 是 "city, big city, special municipality" 時，"special municipality" 比
