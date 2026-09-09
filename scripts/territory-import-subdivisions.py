@@ -100,9 +100,17 @@ JUDGE_PROMPT_TEMPLATE = """你是一位資深地理／行政區資料審核員�
    絕對不要因為 description 沒有明確提到 {parent_name} 這個名字就 reject，那不是這裡要判斷的問題。
    你唯一要判斷的是：這個候選**現在**還是不是一個**有效、現行**的行政區（見下面第 2、3 點的判準）。
 1. 只根據上面提供的 label / description / instance_of 判斷，不要腦補清單以外的資訊。
-2. 濾掉：已廢除／歷史行政區（description 提到 "former"、"abolished"、"historical" 等）、
-   跟其他候選明顯是同一個地方的重複實體、非行政區性質的地理實體（山脈、河流、地區泛稱等
-   誤入候選清單的雜訊）。
+2. 濾掉：已廢除／歷史行政區、跟其他候選明顯是同一個地方的重複實體、非行政區性質的地理實體
+   （山脈、河流、地區泛稱等誤入候選清單的雜訊）。**判斷「已廢除／歷史」時，"former"、
+   "abolished"、"historical" 這幾個字要看它修飾的是什麼，不能看到就直接濾掉**：
+   - 如果 description／instance_of **本身的主體**就是在說這個實體已經廢除／成為歷史
+     （例如 instance_of 直接是 "former administrative territorial entity"，或 description
+     整句都在描述一個已消失的舊行政區），才是真的要濾掉。
+   - 如果 description 的**主幹**其實是現在式、肯定這是現行行政區（例如開頭就是
+     "district of Shanghai, China"、"county of X"），"former"/"formerly" 只是後面附加的
+     子句在講這個地方**以前的另一個身份**（例如「以前是獨立的市，後來併入變成現在的區」），
+     這種不算已廢除，**應該 accept**——這是真實發生過的誤判（上海的嘉定/松江/青浦區都被
+     Wikidata 這樣描述而誤拒絕過），描述一個地方的沿革不等於這個行政區現在無效。
 3. 不確定的候選（instance_of 完全看不出是不是行政區性質，或有明確跡象顯示可能已廢除/歷史化）
    才歸類到 rejected，reason 寫「需人工確認：<原因>」——但**「description 沒有寫出上層名稱」
    本身不構成不確定的理由**（見第 0 點），不要因此放到 rejected。
