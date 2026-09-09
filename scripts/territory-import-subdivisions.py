@@ -47,6 +47,7 @@ import re
 import subprocess
 import sys
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -240,7 +241,16 @@ def fetch_children(parent_qid: str, endpoint: str, token: str) -> list:
 
 def process_parent(parent_qid: str, parent_name: str, endpoint: str, token: str, dry_run: bool) -> None:
     print(f"=== {parent_name} ({parent_qid}) ===")
-    candidates = fetch_subdivision_candidates(parent_qid)
+    try:
+        candidates = fetch_subdivision_candidates(parent_qid)
+    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as e:
+        # Wikidata 查詢服務偶爾會 429/502/read-timeout（尤其背靠背連續呼叫很多個上層節點時，
+        # 見 territory-subdivisions 記憶檔的 rate-limiting 記錄）——這裡沒接住的話，單一上層節點
+        # 的暫時性網路錯誤會讓整支腳本直接掛掉，白白浪費前面已經處理完的上層節點進度。
+        # 印錯誤、跳過這個上層節點，讓迴圈可以繼續處理下一個——跟 agy 呼叫失敗/寫入失敗的既有
+        # 容錯策略一致，重跑這支腳本（或事後單獨用 --countries 補跑這個 QID）是安全的。
+        print(f"  fetch_subdivision_candidates({parent_qid}) failed: {e}", file=sys.stderr)
+        return
     print(f"  candidates: {len(candidates)}")
     for c in candidates:
         print(f"    {c['qid']} | {c['label']} | {c['instance_of']}")
