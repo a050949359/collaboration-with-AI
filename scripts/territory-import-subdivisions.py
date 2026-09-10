@@ -114,6 +114,16 @@ JUDGE_PROMPT_TEMPLATE = """你是一位資深地理／行政區資料審核員�
 3. 不確定的候選（instance_of 完全看不出是不是行政區性質，或有明確跡象顯示可能已廢除/歷史化）
    才歸類到 rejected，reason 寫「需人工確認：<原因>」——但**「description 沒有寫出上層名稱」
    本身不構成不確定的理由**（見第 0 點），不要因此放到 rejected。
+3.5. **另一種要 reject 的情況：候選結構上雖然通過 P150，但實際上是「純地理／歷史分組，
+   本身沒有現行治理功能」（沒有議會、沒有預算、沒有行政機關）**——這跟第 2 點的「已廢除」不同，
+   這種分組從頭到尾就不是治理單位，只是慣用的地理／文化分類，底下真正的治理單位是這個分組
+   底下的子項目（城市／鎮／村等）。已知的例子：日本的「郡」（instance_of／description 常寫成
+   "district of Japan" 或 "district in ... prefecture, Japan"——這是明治時代郡制廢除後
+   留下的地址用地理分組，不是市町村之上真正的行政層級，真正治理單位是郡底下的市/町/村本身，
+   曾經被誤判為正式行政區並整批寫入過，要特別注意）；愛爾蘭的傳統四省
+   （Leinster/Munster/Connacht/Ulster）。看到 label／instance_of／description 顯示是這類
+   「本來就沒有治理功能的地理／文化分組」時，reject，reason 寫「地理/歷史分組無治理功能：<理由>」，
+   不要跟「已廢除的舊制」混在一起，也不要因為結構上有 P150 就 accept。
 4. 這次只抓 {parent_name} 直屬的下一層，不用判斷更深的子行政區。
 5. 對每個 accepted 的候選，從它的 instance_of 清單裡挑一個**最能代表其行政區性質**的詞當 type
    （例如 instance_of 是 "city, big city, special municipality" 時，"special municipality" 比
