@@ -106,8 +106,11 @@ Kingdom of Netherlands（Q29999）底下把 Q55 當成一個節點掛上去（�
 
 > **2026-09-11 已在圖譜上標記**：下方清單中所有「第二層資料缺口」的節點（不含純缺 label
 > observation、USA 個別子節點問題、Sardinia 單筆分類問題這幾類）都已在對應的父節點上加一筆
-> `type=layer2_gap` 的 observation，內容摘要同下方文字，方便之後直接用 `search_nodes` 查
-> `layer2_gap` 這個 type 找出全部待補國家/地區，不需要重新爬一次文件。共 37 筆：Spain 1、
+> `type=layer2_gap` 的 observation，內容摘要同下方文字。⚠️ `search_nodes` 只比對節點名稱/
+> 節點 type/observation **content**，不比對 observation 自己的 type 欄位，所以搜尋字串
+> `"layer2_gap"` 找不到——要嘛用 `read_graph(entity_name=QID)` 逐一查（QID 見下方清單），
+> 要嘛用 `search_nodes(query="資料缺口")` 撈（可比對到 35/37 筆，Sicily/Friuli-Venezia
+> Giulia 這兩筆用詞不同未含該字串，仍需查 QID `Q1460`/`Q1250`）。共 37 筆：Spain 1、
 > USA 1、Italy 2、Mexico 11、UK 1、Japan 5、Malaysia 9、Canada 7。
 
 - **France**：`Q15104`（法國某個第一層大區）缺 label observation，屬於 2026-08 第一層匯入時就存在的舊資料缺口（refresh_observations 的既知 ~5-10% 暫時性失敗），非本次新增。
