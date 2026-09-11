@@ -104,6 +104,12 @@ Kingdom of Netherlands（Q29999）底下把 Q55 當成一個節點掛上去（�
 
 ## 待補清單（不影響已完成筆數，事後一次性補，不要單筆插隊補）
 
+> **2026-09-11 已在圖譜上標記**：下方清單中所有「第二層資料缺口」的節點（不含純缺 label
+> observation、USA 個別子節點問題、Sardinia 單筆分類問題這幾類）都已在對應的父節點上加一筆
+> `type=layer2_gap` 的 observation，內容摘要同下方文字，方便之後直接用 `search_nodes` 查
+> `layer2_gap` 這個 type 找出全部待補國家/地區，不需要重新爬一次文件。共 37 筆：Spain 1、
+> USA 1、Italy 2、Mexico 11、UK 1、Japan 5、Malaysia 9、Canada 7。
+
 - **France**：`Q15104`（法國某個第一層大區）缺 label observation，屬於 2026-08 第一層匯入時就存在的舊資料缺口（refresh_observations 的既知 ~5-10% 暫時性失敗），非本次新增。
 - **France**：Balearic Islands 同類疑似 candidates:0 的資料缺口（西班牙段，非法國——見下）待查證是否為 Wikidata P150 真缺，或本來就無次一層。
 - **Spain**：`Q107356467`（Balearic Islands）P150 回傳 0 候選，西班牙其他小型單一省份自治區（Cantabria/La Rioja/Ceuta/Melilla/Navarre）0 候選屬預期（單一省份/單一市，省級已名存實亡或本來就無次一層），Balearic Islands 略可疑，待查證。
