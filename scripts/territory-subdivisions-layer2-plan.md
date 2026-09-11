@@ -52,6 +52,26 @@ App）使用情境更直接相關，優先於單純接續觀光排名擴充：
 | Taiwan 🇹🇼 | Q865 | ✅ 6 個（6 都/縣市） |
 | South Korea 🇰🇷 | Q884 | ✅ 17 個（1 特別市+6 廣域市+1 特別自治市+8 道+1 特別自治道） |
 
+## 擴充二：Greece/Austria/Malaysia/Netherlands/Canada（2026-09-11，接續觀光排名）
+
+Taiwan/Korea 之後接續按 Wikipedia「World Tourism rankings」2024 年表格（比先前搜尋到的多方
+矛盾數字更可靠的單一來源）重新核對排序，往下找到的下一批：
+
+| 國家 | QID | 第一層完成狀態 |
+|---|---|---|
+| Greece 🇬🇷 | Q41 | ✅ 14 個（13 大區+聖山自治修道院區） |
+| Austria 🇦🇹 | Q40 | ✅ 9 個 |
+| Malaysia 🇲🇾 | Q833 | ✅ 16 個 |
+| Netherlands 🇳🇱（本土，Q55） | Q55 | ⚠️ 本次才補建（見下方說明） |
+| Canada 🇨🇦 | Q16 | ✅ 13 個 |
+
+**Netherlands 特殊狀況**：Q55（荷蘭本土）本身此前從未跑過第一層行政區——2026-08-21 那批只在
+Kingdom of Netherlands（Q29999）底下把 Q55 當成一個節點掛上去（與 Aruba/Curaçao/Sint Maarten
+同級），Q55 自己的 12 個省份從未建立。本次用 `--under Q29999 --countries Q55` 讓腳本對 Q55
+本身跑 P150 查詢，補建 12 省 + Bonaire/Sint Eustatius/Saba 3 個特別自治市（共 15 個一級單位），
+才能接著跑真正的第二層（市鎮）。**這其實是本輪掃到的一個第一層缺口，不是單純的第二層工作**，
+之後若還有類似「Kingdom 包一層、本體從未單獨建過第一層」的國家要留意這個模式。
+
 ## 待辦（下次接續）
 
 0. **下次接續請先讀這一條**：France/Spain/USA/China/Italy/Turkey 已完成（見下表）；Mexico 執行到一半被中斷，直接重跑 `--under Q96`（不加 --countries）即可安全恢復；剩下 Thailand/Germany/UK/Japan 尚未開始。繼續時比照本次已建立的模式：`--under <QID>`（大國先 `--countries` 分批，8-9 個一批）→ 背景執行 → Monitor 監看 `^===|agy accepted|failed|Error|Traceback` → 每批結束後 grep 檢查真正的 failed/Traceback（不是 agy 的正常 rejected）並統計 accepted 總數 → 更新本文件的進度表 → 下一批/下一國。
@@ -76,6 +96,11 @@ App）使用情境更直接相關，優先於單純接續觀光排名擴充：
 | Japan 🇯🇵 | Q17 | ✅ 完成（有已知缺口，2026-09-10/11） | 902 | 47 都道府縣全跑完（6 批），零系統性寫入失敗；過程中發現並修正 judge prompt 系統性誤判「郡」（gun/district，無治理功能地理分組）為正式行政區的 bug（見下方說明），修正前已誤建的 21 個郡 entity 已刪除；Hokkaidō 特殊結構（14 個振興局 subprefecture）正確辨識；Tokyo 62/62 精確吻合官方數；多個縣有 P150 缺口（見下方待補清單） |
 | Taiwan 🇹🇼 | Q865 | ✅ 完成（2026-09-11） | 157 | 6 都/縣市一次跑完，零真正失敗（Kaohsiung 首次遇到 SPARQL 逾時，單獨重跑後正常，屬既有已知的暫時性網路問題）；Taoyuan 13/13、Tainan 37/37、New Taipei 28/29、Taichung 29/29、Taipei 12/12、Kaohsiung 38/38，皆精確吻合官方行政區數 |
 | South Korea 🇰🇷 | Q884 | ✅ 完成（2026-09-11） | 252 | 17 個一級行政區一次跑完，零系統性寫入失敗，**零 P150 資料缺口**——每一個都精確吻合官方市郡區數（Seoul 25/25、Busan 16/16、Daegu 9/9、Incheon 10/10、Gwangju 5/5、Daejeon 5/5、Ulsan 5/5、Sejong 24/24、Gyeonggi 31/31、8 道 11~22 不等皆精確吻合、Jeju 2/2），是本輪資料完整度最乾淨的國家 |
+| Greece 🇬🇷 | Q41 | ✅ 完成（2026-09-11） | 74 | 14 個大區全跑完，零系統性寫入失敗；Mount Athos 自治修道院區 0 候選正確（無一般行政區劃），其餘 13 個大區皆有實際資料 |
+| Austria 🇦🇹 | Q40 | ✅ 完成（2026-09-11） | 116 | 9 個邦一次跑完，零系統性寫入失敗，Vienna 23/23、Styria 13/13 等多數精確吻合官方郡/區數 |
+| Malaysia 🇲🇾 | Q833 | ✅ 完成（有嚴重缺口，2026-09-11） | 29 | 16 個州一次跑完，零系統性寫入失敗；但只有 Sarawak（12/12）、Sabah（5/5）、Perak（12/12）有實際資料，其餘 9 州（Negeri Sembilan/Johor/Malacca/Kelantan/Penang/Kedah/Terengganu/Selangor/Pahang）P150 全數 0 候選，是本輪目前最嚴重的資料缺口（見下方待補清單） |
+| Netherlands 🇳🇱（本土 Q55） | Q55 | ✅ 完成（本次補建第一層，2026-09-11） | 339（+15 補建的一級單位） | 12 省先行補建（見上方擴充二說明），再跑第二層市鎮：South Holland 50/111、North Holland 43/74、Flevoland 6/6、Zeeland 13/18、Groningen 9/30、Friesland 18/35、Gelderland 51/58、Drenthe 12/12、Overijssel 25/51、Utrecht 26/39、Limburg 30/62、North Brabant 56/73，多數拒絕皆為 2010s 大規模市鎮合併後的舊制正確過濾，非缺口；Bonaire/Saba/Sint Eustatius 三特別自治市 0 候選正確（單一市鎮無次級） |
+| Canada 🇨🇦 | Q16 | ✅ 完成（有嚴重缺口，2026-09-11） | 74 | 13 個省/地區一次跑完，零系統性寫入失敗；但 Ontario/Alberta/Manitoba/Saskatchewan/Newfoundland and Labrador/Yukon/Nunavut 共 7 個 P150 全數 0 候選，只有 Nova Scotia（5）、New Brunswick（15）、British Columbia（30）、PEI（3）、Northwest Territories（5）、Quebec（16）有實際資料，同樣是本輪嚴重缺口區（見下方待補清單） |
 
 ## 待補清單（不影響已完成筆數，事後一次性補，不要單筆插隊補）
 
@@ -97,3 +122,5 @@ App）使用情境更直接相關，優先於單純接續觀光排名擴充：
 - **Japan**：`Q1037393`（Hokkaidō）第二層並非市町村而是 14 個「振興局」（subprefecture）——這是北海道特有的真實行政結構（市町村是第三層），14/14 全數正確接受，非資料缺口。
 - **Taiwan**：全部 6 個第一層節點（Taoyuan `Q115256`、Tainan `Q140631`、New Taipei `Q244898`、Taichung `Q245023`、Taipei `Q1867`、Kaohsiung `Q181557`）本身都缺 label observation（顯示成裸 QID，同 France `Q15104`/Mexico `Q82112`/Germany `Q1194`/UK `Q21` 那類第一層舊缺口），需 refresh_observations 補齊；第二層資料本身無缺口，皆精確吻合官方行政區數。
 - **South Korea**：無已知資料缺口，17 個一級行政區的第二層皆精確吻合官方市郡區數，第一層節點也無裸 QID 情況。
+- **Malaysia**：9 個州 P150 完全 0 候選（實際各州皆有 3~12 個縣不等）：`Q213893`（Negeri Sembilan）、`Q183032`（Johor）、`Q185221`（Malacca）、`Q185944`（Kelantan，本身還缺 label observation）、`Q188096`（Penang）、`Q188947`（Kedah）、`Q189701`（Terengganu）、`Q189710`（Selangor）、`Q191346`（Pahang）。只有 Sarawak/Sabah/Perak 三州有實際資料，是本輪目前候選覆蓋率最差的國家。
+- **Canada**：7 個省/地區 P150 完全 0 候選：`Q1904`（Ontario，人口最多的省）、`Q1951`（Alberta）、`Q1948`（Manitoba）、`Q1989`（Saskatchewan）、`Q2003`（Newfoundland and Labrador）、`Q2009`（Yukon）、`Q2023`（Nunavut）。只有 Nova Scotia/New Brunswick/British Columbia/PEI/Northwest Territories/Quebec 六個有實際資料。
