@@ -3,19 +3,22 @@
 > 第一層行政區已於 2026-09-04 全數完成（259/259，見 `territory-subdivisions-progress.md`）。
 > 這份文件規劃**第二層**的範圍：不做全部 259 國，只挑熱門旅遊國家。
 
-## 狀態：Top 11 熱門旅遊國第二層全數完成（2026-09-11）
+## 狀態：Top 11 熱門旅遊國 + Taiwan/Korea 第二層全數完成（2026-09-11）
 
 France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan 11 國第二層行政區皆已跑完，
-零系統性寫入失敗。各國仍有已知的 Wikidata P150 資料缺口（見下方「待補清單」），是資料源本身的
-問題，不是腳本或 agy 判斷錯誤，之後可視需要另外查證補建，不影響現有資料的正確性。
+零系統性寫入失敗。接著加開第二批擴充範圍：Taiwan + South Korea（對本專案使用情境比觀光排名更
+直接相關，見下方「擴充：Taiwan/Korea」），同樣零系統性寫入失敗，South Korea 更是 17 個一級行政區
+全數精確吻合官方數字、零 P150 資料缺口。各國仍有已知的 Wikidata P150 資料缺口（見下方「待補
+清單」），是資料源本身的問題，不是腳本或 agy 判斷錯誤，之後可視需要另外查證補建，不影響現有
+資料的正確性。
 
 ## Resume prompt（若之後要擴大範圍到更多國家，開新對話貼這段）
 
 ```
 接續 Territory MCP 第二層行政區的工作。先看記憶檔 project_territory_mcp_tool.md，
 跟 scripts/territory-subdivisions-layer2-plan.md 這份規劃文件——Top 11 熱門旅遊國
-（France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan）已全數完成。
-若要擴大範圍，用法：`python3 scripts/territory-import-subdivisions.py --under <國家 QID>`
+（France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan）+ Taiwan/Korea
+已全數完成。若要擴大範圍，用法：`python3 scripts/territory-import-subdivisions.py --under <國家 QID>`
 （大國先用 --countries 分批，8-9 個一批）→ 背景執行 → Monitor 監看
 `^===|agy accepted|failed|Error|Traceback` → 每批結束後 grep 檢查真正的 failed/Traceback
 （不是 agy 的正常 rejected）並統計 accepted 總數 → 更新本文件的進度表 → 下一批/下一國。
@@ -39,6 +42,16 @@ France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan 11 國第�
 | 10 | UK 🇬🇧 | 39M | Q145 | ✅ 4 個 |
 | 11 | Japan 🇯🇵 | 32M | Q17 | ✅ 47 個 |
 
+## 擴充：Taiwan/Korea（2026-09-11，使用者確認優先於觀光排名 12-20 名）
+
+Top 11 完成後使用者要求「再找下一批」，因兩國排名未進觀光前 15 名但對本專案（Taiwan 航空/旅遊
+App）使用情境更直接相關，優先於單純接續觀光排名擴充：
+
+| 國家 | QID | 第一層完成狀態 |
+|---|---|---|
+| Taiwan 🇹🇼 | Q865 | ✅ 6 個（6 都/縣市） |
+| South Korea 🇰🇷 | Q884 | ✅ 17 個（1 特別市+6 廣域市+1 特別自治市+8 道+1 特別自治道） |
+
 ## 待辦（下次接續）
 
 0. **下次接續請先讀這一條**：France/Spain/USA/China/Italy/Turkey 已完成（見下表）；Mexico 執行到一半被中斷，直接重跑 `--under Q96`（不加 --countries）即可安全恢復；剩下 Thailand/Germany/UK/Japan 尚未開始。繼續時比照本次已建立的模式：`--under <QID>`（大國先 `--countries` 分批，8-9 個一批）→ 背景執行 → Monitor 監看 `^===|agy accepted|failed|Error|Traceback` → 每批結束後 grep 檢查真正的 failed/Traceback（不是 agy 的正常 rejected）並統計 accepted 總數 → 更新本文件的進度表 → 下一批/下一國。
@@ -61,6 +74,8 @@ France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan 11 國第�
 | Germany 🇩🇪 | Q183 | ✅ 完成（2026-09-10） | 218 | 16 邦一次跑完，零系統性寫入失敗；Berlin 12/12、Bavaria 7/7、Bremen 2/2 皆精確吻合官方數；`Q1194`（Schleswig-Holstein）本身缺 label observation（見下方待補） |
 | UK 🇬🇧 | Q145 | ✅ 完成（有已知缺口，2026-09-10） | 74 | 4 個構成國全跑完，零系統性寫入失敗；Scotland 32/32、N. Ireland 11/11、Wales 22/22 精確吻合；England（`Q21`）只有 9 個候選，實際應有 300+ 地方政府單位，嚴重 P150 缺口（見下方待補） |
 | Japan 🇯🇵 | Q17 | ✅ 完成（有已知缺口，2026-09-10/11） | 902 | 47 都道府縣全跑完（6 批），零系統性寫入失敗；過程中發現並修正 judge prompt 系統性誤判「郡」（gun/district，無治理功能地理分組）為正式行政區的 bug（見下方說明），修正前已誤建的 21 個郡 entity 已刪除；Hokkaidō 特殊結構（14 個振興局 subprefecture）正確辨識；Tokyo 62/62 精確吻合官方數；多個縣有 P150 缺口（見下方待補清單） |
+| Taiwan 🇹🇼 | Q865 | ✅ 完成（2026-09-11） | 157 | 6 都/縣市一次跑完，零真正失敗（Kaohsiung 首次遇到 SPARQL 逾時，單獨重跑後正常，屬既有已知的暫時性網路問題）；Taoyuan 13/13、Tainan 37/37、New Taipei 28/29、Taichung 29/29、Taipei 12/12、Kaohsiung 38/38，皆精確吻合官方行政區數 |
+| South Korea 🇰🇷 | Q884 | ✅ 完成（2026-09-11） | 252 | 17 個一級行政區一次跑完，零系統性寫入失敗，**零 P150 資料缺口**——每一個都精確吻合官方市郡區數（Seoul 25/25、Busan 16/16、Daegu 9/9、Incheon 10/10、Gwangju 5/5、Daejeon 5/5、Ulsan 5/5、Sejong 24/24、Gyeonggi 31/31、8 道 11~22 不等皆精確吻合、Jeju 2/2），是本輪資料完整度最乾淨的國家 |
 
 ## 待補清單（不影響已完成筆數，事後一次性補，不要單筆插隊補）
 
@@ -80,3 +95,5 @@ France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan 11 國第�
 - **Japan**：**系統性 bug 已修正（2026-09-10，commit `19868bb`）**——judge prompt 原本會把「郡」（gun/district of Japan，明治郡制廢除後僅剩地址用地理分組、無議會無治理機關）誤判為正式行政區接受，因為它結構上仍通過 P150。已修正前誤建的 21 個郡 entity（Aomori 8 個、Fukushima 13 個）已手動刪除，新增判斷規則明確排除此類「有 P150 但本身無治理功能的地理/歷史分組」（同一類的已知案例還有 Ireland 傳統四省）。修正後全程重新驗證，郡類雜訊持續被正確拒絕。
 - **Japan**：多個縣有 P150 資料缺口（候選數遠低於實際市町村數，非 agy 誤判）：`Q48326`（Iwate，14/33）、`Q132751`（Shimane，8/19）、`Q133935`（Tottori，4/19，日本面積最小縣）、`Q127877`（Nagano，20/77）、`Q766445`（Okinawa，11/41）等；`Q82112` 類的裸 QID 缺 label 情況也出現在 `Q1037393`（Hokkaidō，但本身第二層 14 個振興局資料正確完整，只是自身 label 缺失）。
 - **Japan**：`Q1037393`（Hokkaidō）第二層並非市町村而是 14 個「振興局」（subprefecture）——這是北海道特有的真實行政結構（市町村是第三層），14/14 全數正確接受，非資料缺口。
+- **Taiwan**：全部 6 個第一層節點（Taoyuan `Q115256`、Tainan `Q140631`、New Taipei `Q244898`、Taichung `Q245023`、Taipei `Q1867`、Kaohsiung `Q181557`）本身都缺 label observation（顯示成裸 QID，同 France `Q15104`/Mexico `Q82112`/Germany `Q1194`/UK `Q21` 那類第一層舊缺口），需 refresh_observations 補齊；第二層資料本身無缺口，皆精確吻合官方行政區數。
+- **South Korea**：無已知資料缺口，17 個一級行政區的第二層皆精確吻合官方市郡區數，第一層節點也無裸 QID 情況。
