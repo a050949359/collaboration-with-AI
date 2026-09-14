@@ -3,7 +3,17 @@
 > 第一層行政區已於 2026-09-04 全數完成（259/259，見 `territory-subdivisions-progress.md`）。
 > 這份文件規劃**第二層**的範圍：不做全部 259 國，只挑熱門旅遊國家。
 
-## 狀態：Top 11 熱門旅遊國 + Taiwan/Korea 第二層全數完成（2026-09-11）
+## 狀態：18 國第二層全數完成（2026-09-14，再加 Portugal/Saudi Arabia/UAE/Vietnam/Morocco）
+
+Top 11 + Taiwan/Korea + Greece/Austria/Malaysia/Netherlands/Canada 共 16 國完成後，依 Wikipedia
+「World Tourism rankings」頁面的區域排名資料（Europe/Asia/Americas/Africa 2024-2025 各區前十，
+排除已做過的國家）挑下一批：Portugal（~29.0M）、Saudi Arabia（~29.7M）、UAE（~18.7M）、
+Vietnam（~17.5M）、Morocco（~17.4M）。5 國第二層全跑完，零系統性寫入失敗（全程無 Traceback/
+Error）。Saudi Arabia（11/13 省 0 候選）、UAE（7/7 酋長國全數 0 候選）、Portugal（13/20 區 0
+候選）皆有嚴重 P150 資料缺口，Vietnam/Morocco 資料完整度良好。已知缺口已在圖譜上標記
+（見下方「待補清單」）。
+
+## 舊狀態記錄：Top 11 熱門旅遊國 + Taiwan/Korea 第二層全數完成（2026-09-11）
 
 France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan 11 國第二層行政區皆已跑完，
 零系統性寫入失敗。接著加開第二批擴充範圍：Taiwan + South Korea（對本專案使用情境比觀光排名更
@@ -16,12 +26,17 @@ France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan 11 國第�
 
 ```
 接續 Territory MCP 第二層行政區的工作。先看記憶檔 project_territory_mcp_tool.md，
-跟 scripts/territory-subdivisions-layer2-plan.md 這份規劃文件——Top 11 熱門旅遊國
-（France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan）+ Taiwan/Korea
-已全數完成。若要擴大範圍，用法：`python3 scripts/territory-import-subdivisions.py --under <國家 QID>`
+跟 scripts/territory-subdivisions-layer2-plan.md 這份規劃文件——18 國已全數完成：
+Top 11 熱門旅遊國（France/Spain/USA/China/Italy/Turkey/Mexico/Thailand/Germany/UK/Japan）
++ Taiwan/Korea + Greece/Austria/Malaysia/Netherlands/Canada + Portugal/Saudi Arabia/UAE/
+Vietnam/Morocco。若要擴大範圍，先用 WebSearch/WebFetch 查 Wikipedia「World Tourism
+rankings」頁面（區域排名比單一全球表更容易查到，注意數字跨來源常不一致，只用來抓排序，
+別當精確值）排除已做過的國家挑下一批 → 用法：
+`python3 scripts/territory-import-subdivisions.py --under <國家 QID>`
 （大國先用 --countries 分批，8-9 個一批）→ 背景執行 → Monitor 監看
 `^===|agy accepted|failed|Error|Traceback` → 每批結束後 grep 檢查真正的 failed/Traceback
-（不是 agy 的正常 rejected）並統計 accepted 總數 → 更新本文件的進度表 → 下一批/下一國。
+（不是 agy 的正常 rejected）並統計 accepted 總數 → 對 P150 全 0 候選的節點補
+`add_observation(type=layer2_gap)` 標記 → 更新本文件的進度表 → 下一批/下一國。
 ```
 
 ## 範圍依據
@@ -72,6 +87,23 @@ Kingdom of Netherlands（Q29999）底下把 Q55 當成一個節點掛上去（�
 才能接著跑真正的第二層（市鎮）。**這其實是本輪掃到的一個第一層缺口，不是單純的第二層工作**，
 之後若還有類似「Kingdom 包一層、本體從未單獨建過第一層」的國家要留意這個模式。
 
+## 擴充三：Portugal/Saudi Arabia/UAE/Vietnam/Morocco（2026-09-14，接續觀光排名）
+
+Greece/Austria/Malaysia/Netherlands/Canada 之後，用 Wikipedia「World Tourism rankings」頁面
+的區域排名表（Europe/Asia/Americas/Africa，2024-2025 各區前十）重新核對，排除已做過的國家，
+往下找到的下一批：
+
+| 國家 | QID | 第一層完成狀態 |
+|---|---|---|
+| Portugal 🇵🇹 | Q45 | ✅ 20 個（本土 18 區+Madeira+Azores 兩自治區） |
+| Saudi Arabia 🇸🇦 | Q851 | ✅ 13 個 |
+| UAE 🇦🇪 | Q878 | ✅ 7 個（7 酋長國） |
+| Vietnam 🇻🇳 | Q881 | ✅ 34 個（2025 行政區重劃後新制，原 63 省市合併而來） |
+| Morocco 🇲🇦 | Q1028 | ✅ 10 個（不含西撒哈拉主張的 2 個爭議大區，比照既有西撒哈拉排除慣例） |
+
+5 國一次跑完，零系統性寫入失敗（全程無 Traceback/Error）。Saudi Arabia/UAE/Portugal 三國有
+嚴重 P150 資料缺口（見下方待補清單），Vietnam/Morocco 資料完整度良好。
+
 ## 待辦（下次接續）
 
 0. **下次接續請先讀這一條**：France/Spain/USA/China/Italy/Turkey 已完成（見下表）；Mexico 執行到一半被中斷，直接重跑 `--under Q96`（不加 --countries）即可安全恢復；剩下 Thailand/Germany/UK/Japan 尚未開始。繼續時比照本次已建立的模式：`--under <QID>`（大國先 `--countries` 分批，8-9 個一批）→ 背景執行 → Monitor 監看 `^===|agy accepted|failed|Error|Traceback` → 每批結束後 grep 檢查真正的 failed/Traceback（不是 agy 的正常 rejected）並統計 accepted 總數 → 更新本文件的進度表 → 下一批/下一國。
@@ -101,17 +133,24 @@ Kingdom of Netherlands（Q29999）底下把 Q55 當成一個節點掛上去（�
 | Malaysia 🇲🇾 | Q833 | ✅ 完成（有嚴重缺口，2026-09-11） | 29 | 16 個州一次跑完，零系統性寫入失敗；但只有 Sarawak（12/12）、Sabah（5/5）、Perak（12/12）有實際資料，其餘 9 州（Negeri Sembilan/Johor/Malacca/Kelantan/Penang/Kedah/Terengganu/Selangor/Pahang）P150 全數 0 候選，是本輪目前最嚴重的資料缺口（見下方待補清單） |
 | Netherlands 🇳🇱（本土 Q55） | Q55 | ✅ 完成（本次補建第一層，2026-09-11） | 339（+15 補建的一級單位） | 12 省先行補建（見上方擴充二說明），再跑第二層市鎮：South Holland 50/111、North Holland 43/74、Flevoland 6/6、Zeeland 13/18、Groningen 9/30、Friesland 18/35、Gelderland 51/58、Drenthe 12/12、Overijssel 25/51、Utrecht 26/39、Limburg 30/62、North Brabant 56/73，多數拒絕皆為 2010s 大規模市鎮合併後的舊制正確過濾，非缺口；Bonaire/Saba/Sint Eustatius 三特別自治市 0 候選正確（單一市鎮無次級） |
 | Canada 🇨🇦 | Q16 | ✅ 完成（有嚴重缺口，2026-09-11） | 74 | 13 個省/地區一次跑完，零系統性寫入失敗；但 Ontario/Alberta/Manitoba/Saskatchewan/Newfoundland and Labrador/Yukon/Nunavut 共 7 個 P150 全數 0 候選，只有 Nova Scotia（5）、New Brunswick（15）、British Columbia（30）、PEI（3）、Northwest Territories（5）、Quebec（16）有實際資料，同樣是本輪嚴重缺口區（見下方待補清單） |
+| Portugal 🇵🇹 | Q45 | ✅ 完成（有嚴重缺口，2026-09-14） | 74 | 20 個區一次跑完，零系統性寫入失敗；但 13/20 區 P150 全數 0 候選，只有 Lisbon（16）、Setúbal（13）、Porto（18）、Braga（14）、Madeira（11）、Bragança（1）、`Q274118`（1，本身還缺 label observation）有實際資料，Azores 自治區也在 0 候選之列（見下方待補清單） |
+| Saudi Arabia 🇸🇦 | Q851 | ✅ 完成（有嚴重缺口，2026-09-14） | 3 | 13 省一次跑完，零系統性寫入失敗；但 11/13 省 P150 全數 0 候選，只有 Northern Borders Province（1）、Riyadh Province（2）有實際資料，是本輪目前候選覆蓋率最差的國家之一（見下方待補清單） |
+| UAE 🇦🇪 | Q878 | ✅ 完成（全數缺口，2026-09-14） | 0 | 7 個酋長國一次跑完，零系統性寫入失敗；但全部 7/7 酋長國 P150 皆 0 候選，本輪唯一「整個國家零第二層資料」的案例（見下方待補清單） |
+| Vietnam 🇻🇳 | Q881 | ✅ 完成（2026-09-14） | 360 | 34 個省市（2025 重劃後新制）一次跑完，零系統性寫入失敗；拒絕的候選多為改制前已廢除的舊縣（description 標示 former district），agy 判斷正確 |
+| Morocco 🇲🇦 | Q1028 | ✅ 完成（2026-09-14） | 69 | 10 個大區（不含西撒哈拉主張的 2 個爭議大區）一次跑完，零系統性寫入失敗，10/10 皆有實際資料，本輪資料完整度良好的國家之一 |
 
 ## 待補清單（不影響已完成筆數，事後一次性補，不要單筆插隊補）
 
-> **2026-09-11 已在圖譜上標記**：下方清單中所有「第二層資料缺口」的節點（不含純缺 label
-> observation、USA 個別子節點問題、Sardinia 單筆分類問題這幾類）都已在對應的父節點上加一筆
-> `type=layer2_gap` 的 observation，內容摘要同下方文字。⚠️ `search_nodes` 只比對節點名稱/
+> **2026-09-11／2026-09-14 已在圖譜上標記**：下方清單中所有「第二層資料缺口」的節點（不含純缺
+> label observation、USA 個別子節點問題、Sardinia 單筆分類問題這幾類）都已在對應的父節點上加
+> 一筆 `type=layer2_gap` 的 observation，內容摘要同下方文字。⚠️ `search_nodes` 只比對節點名稱/
 > 節點 type/observation **content**，不比對 observation 自己的 type 欄位，所以搜尋字串
 > `"layer2_gap"` 找不到——要嘛用 `read_graph(entity_name=QID)` 逐一查（QID 見下方清單），
-> 要嘛用 `search_nodes(query="資料缺口")` 撈（可比對到 35/37 筆，Sicily/Friuli-Venezia
-> Giulia 這兩筆用詞不同未含該字串，仍需查 QID `Q1460`/`Q1250`）。共 37 筆：Spain 1、
-> USA 1、Italy 2、Mexico 11、UK 1、Japan 5、Malaysia 9、Canada 7。
+> 要嘛用 `search_nodes(query="資料缺口")` 撈（2026-09-11 那批可比對到 35/37 筆，Sicily/
+> Friuli-Venezia Giulia 這兩筆用詞不同未含該字串，仍需查 QID `Q1460`/`Q1250`；2026-09-14
+> 新增的 31 筆用詞統一含「資料缺口」，皆可被 `search_nodes` 撈到）。共 68 筆：Spain 1、
+> USA 1、Italy 2、Mexico 11、UK 1、Japan 5、Malaysia 9、Canada 7、Saudi Arabia 11、UAE 7、
+> Portugal 13。
 
 - **France**：`Q15104`（法國某個第一層大區）缺 label observation，屬於 2026-08 第一層匯入時就存在的舊資料缺口（refresh_observations 的既知 ~5-10% 暫時性失敗），非本次新增。
 - **France**：Balearic Islands 同類疑似 candidates:0 的資料缺口（西班牙段，非法國——見下）待查證是否為 Wikidata P150 真缺，或本來就無次一層。
@@ -133,3 +172,7 @@ Kingdom of Netherlands（Q29999）底下把 Q55 當成一個節點掛上去（�
 - **South Korea**：無已知資料缺口，17 個一級行政區的第二層皆精確吻合官方市郡區數，第一層節點也無裸 QID 情況。
 - **Malaysia**：9 個州 P150 完全 0 候選（實際各州皆有 3~12 個縣不等）：`Q213893`（Negeri Sembilan）、`Q183032`（Johor）、`Q185221`（Malacca）、`Q185944`（Kelantan，本身還缺 label observation）、`Q188096`（Penang）、`Q188947`（Kedah）、`Q189701`（Terengganu）、`Q189710`（Selangor）、`Q191346`（Pahang）。只有 Sarawak/Sabah/Perak 三州有實際資料，是本輪目前候選覆蓋率最差的國家。
 - **Canada**：7 個省/地區 P150 完全 0 候選：`Q1904`（Ontario，人口最多的省）、`Q1951`（Alberta）、`Q1948`（Manitoba）、`Q1989`（Saskatchewan）、`Q2003`（Newfoundland and Labrador）、`Q2009`（Yukon）、`Q2023`（Nunavut）。只有 Nova Scotia/New Brunswick/British Columbia/PEI/Northwest Territories/Quebec 六個有實際資料。
+- **Portugal**：13 個區 P150 完全 0 候選：`Q210527`（Aveiro）、`Q225189`（Portalegre）、`Q244510`（Santarém）、`Q244512`（Leiria）、`Q244517`（Coimbra）、`Q273529`（Castelo Branco）、`Q321455`（Beja）、`Q379372`（Vila Real）、`Q25263`（Azores 自治區）、`Q244521`（Faro）、`Q273525`（Viseu）、`Q273533`（Guarda）、`Q326214`（Viana do Castelo）。只有 Lisbon/Setúbal/Porto/Braga/Madeira/Bragança 六個區有實際資料；`Q274118`（未知區名，僅 1 個候選）本身還缺 label observation，同 France `Q15104` 那類第一層舊缺口。
+- **Saudi Arabia**：13 個省中 11 個 P150 完全 0 候選：`Q234167`（Mecca）、`Q236027`（Medina）、`Q243656`（Ha'il）、`Q269973`（Jazan）、`Q464718`（Najran）、`Q779855`（Asir）、`Q852774`（Al-Baha）、`Q953508`（Eastern Province）、`Q1105411`（Al-Qassim）、`Q1315953`（Tabuk）、`Q1471266`（Al-Jowf）。只有 Northern Borders Province/Riyadh Province 兩省有實際資料（各僅 1-2 筆），是本輪候選覆蓋率最差的國家之一。
+- **UAE**：7 個酋長國 P150 全數 0 候選（`Q159477` Ajman、`Q170024` Ras Al Khaimah、`Q175021` Umm Al Quwain、`Q187712` Abu Dhabi、`Q188810` Sharjah、`Q613` Dubai、`Q4091` Fujairah），是本輪唯一「整個國家零第二層資料」的案例——包含 Dubai/Abu Dhabi 這種資料量通常很豐富的地方也是 0，推測阿聯的市級行政區（如 Dubai 的 municipality）在 Wikidata 沒有用 P150 連到酋長國本身。
+- **Vietnam/Morocco**：無已知資料缺口，皆完整涵蓋全部一級行政區。
