@@ -3,15 +3,20 @@
 > 第一層行政區已於 2026-09-04 全數完成（259/259，見 `territory-subdivisions-progress.md`）。
 > 這份文件規劃**第二層**的範圍：不做全部 259 國，只挑熱門旅遊國家。
 
-## 狀態：18 國第二層全數完成（2026-09-14，再加 Portugal/Saudi Arabia/UAE/Vietnam/Morocco）
+## 狀態：23 國第二層全數完成（2026-09-15，再加 Egypt/Tunisia/Brazil/Dominican Republic/South Africa）
 
-Top 11 + Taiwan/Korea + Greece/Austria/Malaysia/Netherlands/Canada 共 16 國完成後，依 Wikipedia
-「World Tourism rankings」頁面的區域排名資料（Europe/Asia/Americas/Africa 2024-2025 各區前十，
-排除已做過的國家）挑下一批：Portugal（~29.0M）、Saudi Arabia（~29.7M）、UAE（~18.7M）、
-Vietnam（~17.5M）、Morocco（~17.4M）。5 國第二層全跑完，零系統性寫入失敗（全程無 Traceback/
-Error）。Saudi Arabia（11/13 省 0 候選）、UAE（7/7 酋長國全數 0 候選）、Portugal（13/20 區 0
-候選）皆有嚴重 P150 資料缺口，Vietnam/Morocco 資料完整度良好。已知缺口已在圖譜上標記
-（見下方「待補清單」）。
+Top 11 + Taiwan/Korea + Greece/Austria/Malaysia/Netherlands/Canada + Portugal/Saudi Arabia/UAE/
+Vietnam/Morocco 共 18 國完成後，依同一套區域排名資料往下挑：Egypt（~15.8M）、Tunisia
+（~10.3M）、Brazil（~9.3M）、Dominican Republic（~8.9M）、South Africa（~8.9M）。**這批中途
+遇到一次 session 非預期中斷**（Brazil 27 州只跑了 9 州就被中斷，Dominican Republic/South
+Africa 完全沒開始），下個 session 重新啟動後先查圖譜（不是相信舊 log，舊 session 的 scratchpad
+已隨中斷消失）確認實際進度，再用 `--under Q155`（Brazil，冪等安全重跑）+ 兩個未跑國家接續，
+這次把 log 放到跨 session 共用目錄（非 session 專屬 scratchpad）避免同樣問題再發生。最終：
+Egypt（26/27 省 0 候選）、Tunisia（22/24 省 0 候選）為嚴重缺口；Dominican Republic 32/32 省
+全數 0 候選，是繼 UAE 之後第二個「整國零第二層資料」案例；South Africa 9/9 省全數有資料，乾淨
+完成；Brazil 27 州中 26 州有實際資料（Federal District 本身結構上無次層，非缺口），僅 Bahia
+（417 候選）因 agy 輸出過長 3 次重試皆 JSON 解析失敗，屬腳本對超大候選清單的已知技術限制，
+**不是資料缺口**。已知缺口與技術限制皆已在圖譜上標記（見下方「待補清單」）。
 
 ## 舊狀態記錄：Top 11 熱門旅遊國 + Taiwan/Korea 第二層全數完成（2026-09-11）
 
@@ -104,6 +109,39 @@ Greece/Austria/Malaysia/Netherlands/Canada 之後，用 Wikipedia「World Touris
 5 國一次跑完，零系統性寫入失敗（全程無 Traceback/Error）。Saudi Arabia/UAE/Portugal 三國有
 嚴重 P150 資料缺口（見下方待補清單），Vietnam/Morocco 資料完整度良好。
 
+## 擴充四：Egypt/Tunisia/Brazil/Dominican Republic/South Africa（2026-09-15，接續觀光排名）
+
+擴充三之後，同樣依區域排名表往下挑的一批：
+
+| 國家 | QID | 第一層完成狀態 |
+|---|---|---|
+| Egypt 🇪🇬 | Q79 | ✅ 27 個省 |
+| Tunisia 🇹🇳 | Q948 | ✅ 24 個省 |
+| Brazil 🇧🇷 | Q155 | ✅ 27 個（26 州+聯邦區） |
+| Dominican Republic 🇩🇴 | Q786 | ✅ 32 個省 |
+| South Africa 🇿🇦 | Q258 | ✅ 9 個省 |
+
+**過程中遇到一次 session 中斷**：上一輪執行到 Brazil 中途（27 州跑了 9 州）時 session 意外
+結束，且該 session 專屬的 scratchpad 目錄隨之消失，原始 log 不可考。下個 session 重新開始時
+沒有直接相信「應該跑完了」，而是先用 `read_graph` 逐一查 Egypt/Tunisia/Brazil/Dominican
+Republic/South Africa 這 5 國每個一級行政區底下有沒有第二層 relation，確認 Egypt/Tunisia 其實
+已經正常跑完（只是資料本身缺口嚴重、看起來像沒跑完），Brazil 卡在中途，Dominican
+Republic/South Africa 完全沒開始。之後用 `--under Q155`（不加 `--countries`，冪等安全重跑
+全部 27 州）接續 Brazil，再跑 Dominican Republic/South Africa，並把這次的 log 改放到跨
+session 共用的目錄（不是 session 專屬 scratchpad），避免下次再發生同樣的「log 隨中斷消失」
+問題。
+
+Brazil 重跑時另外發現：Rio Grande do Sul（495 候選）、Bahia（417 候選）、Goiás（246 候選）
+這三個候選數特別多的州，agy 回傳的 JSON 被截斷導致解析失敗，腳本正常跳過（非崩潰）。單獨重跑
+Rio Grande do Sul、Goiás 後都成功；Bahia 連續 3 次重跑都在不同位置解析失敗（截斷點每次不同，
+非固定 bug 而像是輸出長度機率性超限），判斷為腳本尚未處理「超大候選清單」的已知技術限制，
+停止重試並記錄，之後如需補齊可考慮讓腳本對候選數超過某個門檻的上層節點自動分批查詢。
+
+最終結果：Egypt 僅 1/27 省有資料（總計 7 筆），Tunisia 僅 2/24 省有資料（總計 21 筆），兩國
+皆為嚴重 P150 缺口；Dominican Republic 32/32 省全數 0 候選（整國缺口，同 UAE 案例）；
+South Africa 9/9 省全數有資料，零缺口；Brazil 27 州中 26 州有資料（Federal District 結構上
+本來就無次層），僅 Bahia 因上述技術限制暫缺。
+
 ## 待辦（下次接續）
 
 0. **下次接續請先讀這一條**：France/Spain/USA/China/Italy/Turkey 已完成（見下表）；Mexico 執行到一半被中斷，直接重跑 `--under Q96`（不加 --countries）即可安全恢復；剩下 Thailand/Germany/UK/Japan 尚未開始。繼續時比照本次已建立的模式：`--under <QID>`（大國先 `--countries` 分批，8-9 個一批）→ 背景執行 → Monitor 監看 `^===|agy accepted|failed|Error|Traceback` → 每批結束後 grep 檢查真正的 failed/Traceback（不是 agy 的正常 rejected）並統計 accepted 總數 → 更新本文件的進度表 → 下一批/下一國。
@@ -138,6 +176,11 @@ Greece/Austria/Malaysia/Netherlands/Canada 之後，用 Wikipedia「World Touris
 | UAE 🇦🇪 | Q878 | ✅ 完成（全數缺口，2026-09-14） | 0 | 7 個酋長國一次跑完，零系統性寫入失敗；但全部 7/7 酋長國 P150 皆 0 候選，本輪唯一「整個國家零第二層資料」的案例（見下方待補清單） |
 | Vietnam 🇻🇳 | Q881 | ✅ 完成（2026-09-14） | 360 | 34 個省市（2025 重劃後新制）一次跑完，零系統性寫入失敗；拒絕的候選多為改制前已廢除的舊縣（description 標示 former district），agy 判斷正確 |
 | Morocco 🇲🇦 | Q1028 | ✅ 完成（2026-09-14） | 69 | 10 個大區（不含西撒哈拉主張的 2 個爭議大區）一次跑完，零系統性寫入失敗，10/10 皆有實際資料，本輪資料完整度良好的國家之一 |
+| Egypt 🇪🇬 | Q79 | ✅ 完成（有嚴重缺口，2026-09-15） | 7 | 27 省一次跑完，零系統性寫入失敗；但 26/27 省 P150 全數 0 候選，只有 Aswan Governorate（7）有實際資料，本輪目前候選覆蓋率最差的國家（見下方待補清單） |
+| Tunisia 🇹🇳 | Q948 | ✅ 完成（有嚴重缺口，2026-09-15） | 21 | 24 省一次跑完，零系統性寫入失敗；但 22/24 省 P150 全數 0 候選，只有 Ben Arous Governorate（7）、Sfax Governorate（14）有實際資料（見下方待補清單） |
+| Brazil 🇧🇷 | Q155 | ✅ 完成（有已知缺口，2026-09-15） | 3592 | 27 州（26 州+聯邦區）中途遇 session 中斷，接續補跑；26/27 州有實際資料（Federal District `Q119158` 結構上本來就無次層，非缺口），僅 Bahia（`Q40430`，417 候選）因 agy 輸出過長 3 次重試皆 JSON 解析失敗，屬腳本尚未處理的技術限制（見下方待補清單） |
+| Dominican Republic 🇩🇴 | Q786 | ✅ 完成（全數缺口，2026-09-15） | 0 | 32 省一次跑完，零系統性寫入失敗；但全部 32/32 省 P150 皆 0 候選，繼 UAE 之後本輪第二個「整個國家零第二層資料」案例（見下方待補清單） |
+| South Africa 🇿🇦 | Q258 | ✅ 完成（2026-09-15） | 53 | 9 省一次跑完，零系統性寫入失敗，9/9 皆有實際資料，資料完整度良好 |
 
 ## 待補清單（不影響已完成筆數，事後一次性補，不要單筆插隊補）
 
@@ -148,9 +191,10 @@ Greece/Austria/Malaysia/Netherlands/Canada 之後，用 Wikipedia「World Touris
 > `"layer2_gap"` 找不到——要嘛用 `read_graph(entity_name=QID)` 逐一查（QID 見下方清單），
 > 要嘛用 `search_nodes(query="資料缺口")` 撈（2026-09-11 那批可比對到 35/37 筆，Sicily/
 > Friuli-Venezia Giulia 這兩筆用詞不同未含該字串，仍需查 QID `Q1460`/`Q1250`；2026-09-14
-> 新增的 31 筆用詞統一含「資料缺口」，皆可被 `search_nodes` 撈到）。共 68 筆：Spain 1、
+> 起新增的批次用詞統一含「資料缺口」，皆可被 `search_nodes` 撈到）。共 149 筆：Spain 1、
 > USA 1、Italy 2、Mexico 11、UK 1、Japan 5、Malaysia 9、Canada 7、Saudi Arabia 11、UAE 7、
-> Portugal 13。
+> Portugal 13、Egypt 26、Tunisia 22、Dominican Republic 32、Brazil 1（Bahia，技術限制非
+> P150 缺口，內容文字不同）。
 
 - **France**：`Q15104`（法國某個第一層大區）缺 label observation，屬於 2026-08 第一層匯入時就存在的舊資料缺口（refresh_observations 的既知 ~5-10% 暫時性失敗），非本次新增。
 - **France**：Balearic Islands 同類疑似 candidates:0 的資料缺口（西班牙段，非法國——見下）待查證是否為 Wikidata P150 真缺，或本來就無次一層。
@@ -176,3 +220,7 @@ Greece/Austria/Malaysia/Netherlands/Canada 之後，用 Wikipedia「World Touris
 - **Saudi Arabia**：13 個省中 11 個 P150 完全 0 候選：`Q234167`（Mecca）、`Q236027`（Medina）、`Q243656`（Ha'il）、`Q269973`（Jazan）、`Q464718`（Najran）、`Q779855`（Asir）、`Q852774`（Al-Baha）、`Q953508`（Eastern Province）、`Q1105411`（Al-Qassim）、`Q1315953`（Tabuk）、`Q1471266`（Al-Jowf）。只有 Northern Borders Province/Riyadh Province 兩省有實際資料（各僅 1-2 筆），是本輪候選覆蓋率最差的國家之一。
 - **UAE**：7 個酋長國 P150 全數 0 候選（`Q159477` Ajman、`Q170024` Ras Al Khaimah、`Q175021` Umm Al Quwain、`Q187712` Abu Dhabi、`Q188810` Sharjah、`Q613` Dubai、`Q4091` Fujairah），是本輪唯一「整個國家零第二層資料」的案例——包含 Dubai/Abu Dhabi 這種資料量通常很豐富的地方也是 0，推測阿聯的市級行政區（如 Dubai 的 municipality）在 Wikidata 沒有用 P150 連到酋長國本身。
 - **Vietnam/Morocco**：無已知資料缺口，皆完整涵蓋全部一級行政區。
+- **Egypt**：27 省中 26 省 P150 完全 0 候選，只有 `Q30835`（Aswan Governorate，7 筆）有實際資料，是本輪目前候選覆蓋率最差的國家。其餘 26 省 QID：`Q29937`、`Q29943`、`Q29965`、`Q30630`、`Q30644`、`Q30650`、`Q30656`、`Q30662`、`Q30669`（本身還缺 label observation）、`Q30675`、`Q30682`、`Q30683`、`Q30786`、`Q30797`、`Q30805`、`Q30815`、`Q30831`、`Q30832`、`Q30946`、`Q31067`、`Q31065`、`Q31070`、`Q31068`、`Q31074`、`Q31075`、`Q31079`。
+- **Tunisia**：24 省中 22 省 P150 完全 0 候選，只有 `Q233116`（Ben Arous Governorate，7 筆）、`Q241129`（Sfax Governorate，14 筆）有實際資料。其餘 22 省 QID：`Q238555`、`Q241145`、`Q242263`、`Q269968`、`Q276565`、`Q276574`、`Q276576`、`Q276580`、`Q286063`、`Q318102`、`Q327045`、`Q327087`、`Q327097`、`Q27916`、`Q328109`、`Q328115`、`Q328145`、`Q328164`、`Q328199`、`Q388047`、`Q388059`、`Q734328`。
+- **Dominican Republic**：32 省全數 P150 完全 0 候選（`Q530231`、`Q549386`、`Q592624`、`Q594405`、`Q693487`、`Q794239`、`Q807079`、`Q937217`、`Q1137545`、`Q1137551`、`Q1138575`、`Q1140742`、`Q1145487`、`Q1262745`、`Q1295496`、`Q1323353`、`Q1331932`、`Q1352533`、`Q1352536`、`Q1366107`、`Q1366119`、`Q1424391`、`Q1424401`、`Q1772745`、`Q1772983`、`Q1774831`、`Q1774848`、`Q1836903`、`Q1949656`、`Q2001793`、`Q2021942`、`Q2499228`），包含首都聖多明哥所在的 Distrito Nacional/Santo Domingo Province 也是 0，繼 UAE 之後本輪第二個「整個國家零第二層資料」案例。
+- **Brazil**：`Q40430`（Bahia，417 候選）連續 3 次重跑都因 agy 輸出被截斷導致 JSON 解析失敗（每次截斷位置不同），**不是 P150 資料缺口**（候選確實存在），而是腳本尚未處理「單次候選清單過大」的技術限制；`Q119158`（Federal District）P150 0 候選但屬正常結構（聯邦區本身即為最終層級，無次級市鎮，同 Washington D.C. 模式），非缺口不需處理。
