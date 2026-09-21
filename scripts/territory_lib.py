@@ -26,7 +26,7 @@ import urllib.request
 from pathlib import Path
 
 WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql"
-USER_AGENT = "collaboration-with-AI/1.0 (haroldchen@besttour.com.tw)"
+USER_AGENT = "collaboration-with-AI/1.0 (a050949359@gmail.com)"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = REPO_ROOT / "database" / "database.sqlite"
