@@ -19,7 +19,7 @@ class TerritoryMcpService implements McpToolServiceInterface
         'refresh_observations',
     ];
 
-    private const READ_TOOLS = ['read_graph', 'search_nodes'];
+    private const READ_TOOLS = ['read_graph', 'read_children', 'search_nodes'];
 
     // 未指定 entity_name 時 read_graph 的匯出上限；search_nodes 的搜尋結果上限。
     private const UNSCOPED_GRAPH_LIMIT = 200;
@@ -42,6 +42,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             'create_relation' => $this->createRelation($id, $args),
             'delete_relation' => $this->deleteRelation($id, $args),
             'read_graph' => $this->readGraph($id, $args),
+            'read_children' => $this->readChildren($id, $args),
             'search_nodes' => $this->searchNodes($id, $args),
             default => $this->text($id, "Unknown tool: $name", true),
         };
@@ -217,6 +218,44 @@ class TerritoryMcpService implements McpToolServiceInterface
         ));
     }
 
+    private function readChildren(mixed $id, array $args): JsonResponse
+    {
+        $entityName = trim($args['entity_name'] ?? '');
+        if (! $entityName) {
+            return $this->text($id, 'entity_name is required.', true);
+        }
+        $parent = TerritoryEntity::where('name', $entityName)->first();
+        if (! $parent) {
+            return $this->text($id, 'Entity not found.', true);
+        }
+
+        // 兩步查詢，不是逐子節點各查一次：先一次撈出所有子節點 id，
+        // 再用 whereIn + with('observations') 一次 eager load 全部子節點的資料。
+        $childIds = TerritoryRelation::where('to_entity_id', $parent->id)
+            ->where('relation_type', 'part_of')
+            ->pluck('from_entity_id');
+
+        $children = TerritoryEntity::with('observations')
+            ->whereIn('id', $childIds)
+            ->get()
+            ->map(fn ($e) => $this->formatEntity($e));
+
+        return $this->text($id, json_encode([
+            'parent' => $this->formatEntity($parent),
+            'children' => $children,
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    }
+
+    private function formatEntity(TerritoryEntity $entity): array
+    {
+        return [
+            'id' => $entity->id,
+            'name' => $entity->name,
+            'type' => $entity->type,
+            'observations' => $entity->observations->map(fn ($o) => ['id' => $o->id, 'type' => $o->type, 'content' => $o->content])->all(),
+        ];
+    }
+
     private function searchNodes(mixed $id, array $args): JsonResponse
     {
         $query = trim($args['query'] ?? '');
@@ -337,6 +376,17 @@ class TerritoryMcpService implements McpToolServiceInterface
                     'properties' => [
                         'entity_name' => ['type' => 'string', 'description' => '只看特定節點的子圖，填 Wikidata QID（選填）'],
                     ],
+                ],
+            ],
+            [
+                'name' => 'read_children',
+                'description' => '一次讀取指定節點的所有直屬子節點（part_of 指向它的節點）完整資料，含各自的 observations——不用像 read_graph 那樣每個子節點各查一次才拿得到名稱。回傳 parent（該節點本身，含 observations）與 children（子節點陣列，各自含 observations）。只往下抓一層；子節點自己的子節點需再對該子節點呼叫一次。',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'entity_name' => ['type' => 'string', 'description' => '父節點的 Wikidata QID'],
+                    ],
+                    'required' => ['entity_name'],
                 ],
             ],
             [
