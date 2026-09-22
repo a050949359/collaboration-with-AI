@@ -47,6 +47,22 @@ const loadError = ref('');
 /** 國家清單載入失敗（跟「某國子節點載入失敗」分開，這個會讓整顆地球點不動） */
 const countriesError = ref('');
 
+/**
+ * 點到沒有對應圖譜資料的區域時的短暫提示。
+ * 沒有這個的話會變成「點了完全沒反應」，使用者只能猜是不是壞了——
+ * 圖譜沒資料（空 DB）或該國沒有 ISO 數字碼時都會走到這裡。
+ */
+const clickHint = ref('');
+let clickHintTimer = 0;
+
+function showClickHint(message: string) {
+    clickHint.value = message;
+    clearTimeout(clickHintTimer);
+    clickHintTimer = window.setTimeout(() => {
+        clickHint.value = '';
+    }, 3200);
+}
+
 /** iso 數字碼 → 國家。world-atlas 的 polygon id 就是這個碼，點擊時用來對照 QID。 */
 const byIsoNumeric = computed(() => {
     const map = new Map<string, Country>();
@@ -259,10 +275,19 @@ async function initGlobe() {
         .onPolygonClick((feat: any) => {
             const c = byIsoNumeric.value.get(polygonIso(feat));
 
-            // 有 9 個 country 節點沒有 ISO 數字碼（解體歷史實體/爭議地區），對不上 polygon
-            if (c) {
-                void selectCountry(c);
+            if (!c) {
+                // 對不上的兩種情況：圖譜整個沒資料，或該國沒有 ISO 數字碼
+                // （解體歷史實體/爭議地區）。兩種都要講清楚，不要靜默。
+                showClickHint(
+                    countries.value.length === 0
+                        ? '目前沒有國家資料，無法對應點選的區域'
+                        : `${feat?.properties?.name ?? '這個區域'} 沒有對應的圖譜資料`,
+                );
+
+                return;
             }
+
+            void selectCountry(c);
         })
         .pointOfView({ lat: 20, lng: 0, altitude: 2.4 }, 0);
 
@@ -324,6 +349,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+    clearTimeout(clickHintTimer);
     cancelAnimationFrame(offsetRaf);
     window.removeEventListener('resize', resizeToContainer);
     globeInstance?._destructor?.();
@@ -344,6 +370,16 @@ onUnmounted(() => {
         <main
             class="pointer-events-none relative z-10 min-h-[calc(100vh-4rem)]"
         >
+            <!-- 點到沒有對應資料的區域時的浮動提示，3 秒後消失 -->
+            <Transition name="hint">
+                <p
+                    v-if="clickHint"
+                    class="binary-glass absolute inset-x-0 top-4 mx-auto w-fit rounded-full px-4 py-2 text-xs text-[var(--binary-text-muted)]"
+                >
+                    {{ clickHint }}
+                </p>
+            </Transition>
+
             <!-- 未選國家：置中的世界層摘要，不擋地球主體 -->
             <div
                 v-if="!selected"
@@ -384,6 +420,15 @@ onUnmounted(() => {
                             重新載入
                         </button>
                     </div>
+
+                    <!-- 資料是空的（例如本機 DB 沒匯入）也要講，不然使用者只會看到
+                         一顆點不動的地球跟三個 0，無從判斷是壞了還是沒資料 -->
+                    <p
+                        v-else-if="!countries.length"
+                        class="mt-4 rounded-lg border border-[var(--binary-outline-variant)] p-3 text-xs text-[var(--binary-text-muted)]"
+                    >
+                        目前資料庫沒有國家資料,地球可以轉動但無法點選。
+                    </p>
 
                     <dl v-else class="mt-5 grid grid-cols-3 gap-3 text-center">
                         <div>
@@ -530,3 +575,17 @@ onUnmounted(() => {
         </main>
     </AppLayout>
 </template>
+
+<style scoped>
+.hint-enter-active,
+.hint-leave-active {
+    transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+}
+.hint-enter-from,
+.hint-leave-to {
+    opacity: 0;
+    transform: translateY(-6px);
+}
+</style>
