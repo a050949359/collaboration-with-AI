@@ -253,13 +253,21 @@ class TerritoryMcpService implements McpToolServiceInterface
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
+    // read_children/read_subtree 專用的精簡節點格式：
+    // - 不含內部 DB id（對外一律用 QID 識別，這個數字 id 沒有呼叫端會用到）
+    // - QID 欄位命名為 qid 而非 name——底層 TerritoryEntity.name 欄位存的其實是 Wikidata QID
+    //   （既有慣例，見 create_entity 工具說明），沿用 name 這個 key 容易被誤會是人類可讀名稱，
+    //   真正的顯示名稱在 observations.label / observations.label_en 裡
+    // - observations 從 [{id,type,content}] 陣列壓成 {type: content} 扁平物件
+    //   （同一節點同一 type 唯一，DB 有 unique(entity_id,type) 約束，pluck 不會丟資料）
+    // read_graph/search_nodes 刻意不套用這個格式，兩者的既有呼叫端（territory-import-subdivisions.py
+    // 的 remove_observation 流程、entities[0] 假設）依賴原本的 name/id 欄位，不能動。
     private function formatEntity(TerritoryEntity $entity): array
     {
         return [
-            'id' => $entity->id,
-            'name' => $entity->name,
+            'qid' => $entity->name,
             'type' => $entity->type,
-            'observations' => $entity->observations->map(fn ($o) => ['id' => $o->id, 'type' => $o->type, 'content' => $o->content])->all(),
+            'observations' => $entity->observations->pluck('content', 'type')->all(),
         ];
     }
 
@@ -457,7 +465,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name' => 'read_children',
-                'description' => '一次讀取指定節點的所有直屬子節點（part_of 指向它的節點）完整資料，含各自的 observations——不用像 read_graph 那樣每個子節點各查一次才拿得到名稱。回傳 parent（該節點本身，含 observations）與 children（子節點陣列，各自含 observations）。只往下抓一層；子節點自己的子節點需再對該子節點呼叫一次。',
+                'description' => '一次讀取指定節點的所有直屬子節點（part_of 指向它的節點）完整資料，含各自的 observations——不用像 read_graph 那樣每個子節點各查一次才拿得到名稱。回傳 parent（該節點本身）與 children（子節點陣列）；每個節點格式為 {qid, type, observations}，qid 是 Wikidata QID（識別用），observations 是 {type: content} 扁平物件（例如 observations.label 是顯示名稱，非 read_graph 那種 [{id,type,content}] 陣列，這裡不含 observation 自己的 DB id，需要用 id 呼叫 remove_observation 時改用 read_graph）。只往下抓一層；子節點自己的子節點需再對該子節點呼叫一次。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -468,7 +476,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name' => 'read_subtree',
-                'description' => '一次讀取指定節點往下 N 層的完整子樹（巢狀結構），伺服器內部逐層 BFS（每層固定 2 條 SQL，不會因為節點數暴增變成逐點查詢），適合像「一次拿某國所有省 + 每省底下所有市」這種要跨兩層以上資料的情境，取代自己迴圈呼叫 read_children 多次。回傳 {tree, total_nodes, truncated}：tree 是巢狀節點（每個節點含 observations + children 陣列），total_nodes 是實際回傳的節點總數，truncated 為 true 代表因安全上限（最多 '.self::SUBTREE_NODE_LIMIT.' 個節點）被截斷，並非資料本身只有這麼多，需要縮小 depth 或改用 read_children 分批查。depth 上限 '.self::SUBTREE_MAX_DEPTH.' 層。',
+                'description' => '一次讀取指定節點往下 N 層的完整子樹（巢狀結構），伺服器內部逐層 BFS（每層固定 2 條 SQL，不會因為節點數暴增變成逐點查詢），適合像「一次拿某國所有省 + 每省底下所有市」這種要跨兩層以上資料的情境，取代自己迴圈呼叫 read_children 多次。回傳 {tree, total_nodes, truncated}：tree 是巢狀節點，格式為 {qid, type, observations, children}（qid 是 Wikidata QID，observations 是 {type: content} 扁平物件，例如 observations.label 是顯示名稱；不含 entity/observation 自己的 DB id，需要 id 來呼叫 remove_observation 時改用 read_graph），children 是同樣格式的子節點陣列。total_nodes 是實際回傳的節點總數，truncated 為 true 代表因安全上限（最多 '.self::SUBTREE_NODE_LIMIT.' 個節點）被截斷，並非資料本身只有這麼多，需要縮小 depth 或改用 read_children 分批查。depth 上限 '.self::SUBTREE_MAX_DEPTH.' 層。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
