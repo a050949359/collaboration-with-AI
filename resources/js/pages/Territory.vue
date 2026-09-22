@@ -44,6 +44,8 @@ const selected = ref<Country | null>(null);
 const children = ref<Node[]>([]);
 const isLoading = ref(false);
 const loadError = ref('');
+/** 國家清單載入失敗（跟「某國子節點載入失敗」分開，這個會讓整顆地球點不動） */
+const countriesError = ref('');
 
 /** iso 數字碼 → 國家。world-atlas 的 polygon id 就是這個碼，點擊時用來對照 QID。 */
 const byIsoNumeric = computed(() => {
@@ -164,7 +166,10 @@ async function selectCountry(country: Country) {
             throw new Error(json?.message || 'Failed to load subdivisions');
         }
 
-        children.value = (json.children ?? []) as Node[];
+        // 同樣防呆：非陣列不要塞進 state，否則 topChildren 的 .slice() 會 render 失敗
+        children.value = Array.isArray(json.children)
+            ? (json.children as Node[])
+            : [];
 
         // 鏡頭飛到該國第一個有座標的子節點附近，沒有就不動
         const anchor = children.value.find((c) => c.lat != null);
@@ -285,13 +290,30 @@ function isSelectedPolygon(feat: any): boolean {
 }
 
 async function loadCountries() {
+    countriesError.value = '';
+
     try {
         const res = await fetch(api.territory.countries(), {
             headers: { Accept: 'application/json' },
         });
-        countries.value = (await res.json()) as Country[];
-    } catch {
-        loadError.value = 'Failed to load countries';
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+
+        // 一定要確認是陣列再塞進 state：後端 500 時（例如 Redis 連不上）Laravel 會回
+        // JSON 錯誤「物件」，fetch 不 throw、res.json() 也會成功，物件流進 computed 後
+        // .filter()/.reduce() 會整頁 render 失敗，不只是資料空白而已。
+        if (!Array.isArray(json)) {
+            throw new Error('Unexpected response shape');
+        }
+
+        countries.value = json as Country[];
+    } catch (error) {
+        countriesError.value =
+            error instanceof Error ? error.message : 'Failed to load';
     }
 }
 
@@ -344,7 +366,26 @@ onUnmounted(() => {
                         點擊地球上的國家,查看它底下的行政區資料。拖曳可旋轉地球。
                     </p>
 
-                    <dl class="mt-5 grid grid-cols-3 gap-3 text-center">
+                    <!-- 國家清單載入失敗時地球還是能轉，但點了不會有反應，要明講原因 -->
+                    <div
+                        v-if="countriesError"
+                        class="mt-4 rounded-lg border border-[var(--binary-tertiary)]/40 p-3"
+                    >
+                        <p class="text-xs text-[var(--binary-tertiary)]">
+                            國家資料載入失敗({{
+                                countriesError
+                            }}),地球可以轉動但無法點選。
+                        </p>
+                        <button
+                            type="button"
+                            class="binary-ghost-button mt-2 text-xs"
+                            @click="loadCountries"
+                        >
+                            重新載入
+                        </button>
+                    </div>
+
+                    <dl v-else class="mt-5 grid grid-cols-3 gap-3 text-center">
                         <div>
                             <dt
                                 class="text-[10px] text-[var(--binary-outline)]"

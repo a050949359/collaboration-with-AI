@@ -7,6 +7,7 @@ use App\Models\Territory\TerritoryEntity;
 use App\Models\Territory\TerritoryObservation;
 use App\Models\Territory\TerritoryRelation;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -36,44 +37,64 @@ class TerritoryBrowseController extends Controller
      */
     public function countries(): JsonResponse
     {
-        $countries = Cache::remember('territory:countries', self::COUNTRIES_TTL, function () {
-            $entities = TerritoryEntity::where('type', 'country')->get(['id', 'name']);
-            $ids = $entities->pluck('id');
-
-            // 一次撈完所有需要的 observation，避免逐國 N+1
-            $obs = TerritoryObservation::whereIn('entity_id', $ids)
-                ->whereIn('type', self::COUNTRY_FIELDS)
-                ->get(['entity_id', 'type', 'content'])
-                ->groupBy('entity_id');
-
-            // 一次算完每國的第一層行政區數量
-            $childCounts = TerritoryRelation::whereIn('to_entity_id', $ids)
-                ->where('relation_type', 'part_of')
-                ->select('to_entity_id', DB::raw('COUNT(*) as c'))
-                ->groupBy('to_entity_id')
-                ->pluck('c', 'to_entity_id');
-
-            return $entities->map(function ($e) use ($obs, $childCounts) {
-                $fields = ($obs[$e->id] ?? collect())->pluck('content', 'type');
-
-                return [
-                    'qid' => $e->name,
-                    'label' => $fields['label_zh_tw'] ?? $fields['label_en'] ?? $e->name,
-                    'label_en' => $fields['label_en'] ?? null,
-                    // world-atlas 的 polygon id 是 ISO 3166-1 數字碼，補零成 3 碼才對得上。
-                    // 注意：不是每個 country 節點都有 numeric（解體歷史實體/爭議地區沒有）。
-                    'iso_numeric' => isset($fields['numeric'])
-                        ? str_pad($fields['numeric'], 3, '0', STR_PAD_LEFT)
-                        : null,
-                    'iso_code' => $fields['iso_code'] ?? null,
-                    'continent' => $fields['continent'] ?? null,
-                    'population' => isset($fields['population']) ? (int) $fields['population'] : null,
-                    'child_count' => (int) ($childCounts[$e->id] ?? 0),
-                ];
-            })->values();
-        });
+        try {
+            $countries = Cache::remember(
+                'territory:countries',
+                self::COUNTRIES_TTL,
+                fn () => $this->buildCountries(),
+            );
+        } catch (\Throwable) {
+            // 快取只是最佳化，資料本來就在 DB。Redis 掛掉時退化成直接查詢，
+            // 不要讓一個唯讀公開頁面因為快取層故障就整頁 500。
+            $countries = $this->buildCountries();
+        }
 
         return response()->json($countries);
+    }
+
+    /**
+     * 回傳「純陣列」而非 Eloquent Collection：快取序列化時物件會帶著類別資訊，
+     * 換行程讀回來還原不了會變成 __PHP_Incomplete_Class，之後整個 TTL 期間
+     * 都回傳壞掉的內容。純資料不管哪種 serializer 都安全。
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildCountries(): array
+    {
+        $entities = TerritoryEntity::where('type', 'country')->get(['id', 'name']);
+        $ids = $entities->pluck('id');
+
+        // 一次撈完所有需要的 observation，避免逐國 N+1
+        $obs = TerritoryObservation::whereIn('entity_id', $ids)
+            ->whereIn('type', self::COUNTRY_FIELDS)
+            ->get(['entity_id', 'type', 'content'])
+            ->groupBy('entity_id');
+
+        // 一次算完每國的第一層行政區數量
+        $childCounts = TerritoryRelation::whereIn('to_entity_id', $ids)
+            ->where('relation_type', 'part_of')
+            ->select('to_entity_id', DB::raw('COUNT(*) as c'))
+            ->groupBy('to_entity_id')
+            ->pluck('c', 'to_entity_id');
+
+        return $entities->map(function ($e) use ($obs, $childCounts) {
+            $fields = ($obs[$e->id] ?? collect())->pluck('content', 'type');
+
+            return [
+                'qid' => $e->name,
+                'label' => $fields['label_zh_tw'] ?? $fields['label_en'] ?? $e->name,
+                'label_en' => $fields['label_en'] ?? null,
+                // world-atlas 的 polygon id 是 ISO 3166-1 數字碼，補零成 3 碼才對得上。
+                // 注意：不是每個 country 節點都有 numeric（解體歷史實體/爭議地區沒有）。
+                'iso_numeric' => isset($fields['numeric'])
+                    ? str_pad($fields['numeric'], 3, '0', STR_PAD_LEFT)
+                    : null,
+                'iso_code' => $fields['iso_code'] ?? null,
+                'continent' => $fields['continent'] ?? null,
+                'population' => isset($fields['population']) ? (int) $fields['population'] : null,
+                'child_count' => (int) ($childCounts[$e->id] ?? 0),
+            ];
+        })->values()->all();
     }
 
     /** 公開：某節點的直屬子節點（part_of 指向它的節點），含座標與統計欄位。 */
@@ -105,7 +126,7 @@ class TerritoryBrowseController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, TerritoryObservation>  $observations
+     * @param  Collection<int, TerritoryObservation>  $observations
      * @return array<string, mixed>
      */
     private function formatNode(TerritoryEntity $entity, $observations): array
