@@ -636,7 +636,7 @@ onUnmounted(() => {
 
 <template>
     <Head title="CodeGraph" />
-    <AppLayout>
+    <AppLayout :disable-background="mode3d">
         <div class="flex h-[calc(100vh-4rem)] flex-col">
             <!-- 工具列 -->
             <div
