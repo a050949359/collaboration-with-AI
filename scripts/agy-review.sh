@@ -175,11 +175,20 @@ SQL injection、auth bypass、mass-assignment、secret/token 外洩、XSS（注�
 - 不要灌水稱讚，務實精簡，整體控制在 400 行內。
 
 ## 第四步：發回 GitHub（直接內嵌，不要寫檔）
-用單一 gh 指令把 review 內嵌發出（記得帶 -R，不要用 --body-file、不要寫暫存檔）：
-  gh -R ${REPO_SLUG} pr comment ${PR} --body "<完整內容>"
+用單一 gh 指令把 review 內嵌發出，記得帶 -R。**格式限制務必遵守**：
+  gh -R ${REPO_SLUG} pr comment ${PR} --body '<完整內容>'
+- **body 整段一定要用「單引號」包起來**，直接把多行內容貼在單引號中間（單引號內換行
+  是合法的，不用跳脫）。**絕對不可以用 \$(...) command substitution 或 <<EOF heredoc
+  這類需要額外開一個 shell 才能展開的寫法**——這個 sandbox 的權限白名單只認得「直接
+  執行 gh」這一種情況，任何需要先起 shell 展開的寫法都會被判定成 unsandboxed 指令、
+  直接被拒絕且不會印出任何錯誤原因，你只會看到指令沒有效果。也不要用 --body-file、
+  不要寫暫存檔。
+- 內容裡如果剛好出現英文單引號字元（'），該處要寫成 '\''（先結束單引號、插入一個
+  跳脫過的單引號、再重新開一個單引號），或者乾脆避免在 review 內文使用英文單引號
+  （中文引號「」、後引號 \` 都不受影響，只有 ' 需要處理）。
 其中 <完整內容> 的**第一行必須是這個標記**：${SENTINEL}
 第二行標題：## 🛰️ Antigravity Code Review（自動產生 · 模型：${MODEL}）
-之後接你的 review 內容（markdown，含換行沒問題，直接放進 --body 字串即可）。
+之後接你的 review 內容（markdown，含換行沒問題，直接放進單引號字串即可）。
 確認指令成功（gh 會印出 comment 的 URL）。完成後回報你貼上的 comment URL。
 PROMPT_EOF
 
