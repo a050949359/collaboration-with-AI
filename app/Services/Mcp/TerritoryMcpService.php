@@ -19,7 +19,7 @@ class TerritoryMcpService implements McpToolServiceInterface
         'refresh_observations',
     ];
 
-    private const READ_TOOLS = ['read_graph', 'read_children', 'read_subtree', 'search_nodes'];
+    private const READ_TOOLS = ['read_graph', 'read_children', 'read_subtree', 'read_ancestors', 'search_nodes'];
 
     // 未指定 entity_name 時 read_graph 的匯出上限；search_nodes 的搜尋結果上限。
     private const UNSCOPED_GRAPH_LIMIT = 200;
@@ -50,6 +50,7 @@ class TerritoryMcpService implements McpToolServiceInterface
             'read_graph' => $this->readGraph($id, $args),
             'read_children' => $this->readChildren($id, $args),
             'read_subtree' => $this->readSubtree($id, $args),
+            'read_ancestors' => $this->readAncestors($id, $args),
             'search_nodes' => $this->searchNodes($id, $args),
             default => $this->text($id, "Unknown tool: $name", true),
         };
@@ -273,6 +274,22 @@ class TerritoryMcpService implements McpToolServiceInterface
 
     private function readSubtree(mixed $id, array $args): JsonResponse
     {
+        return $this->walkPartOfBfs($id, $args, goUp: false, childrenKey: 'children');
+    }
+
+    private function readAncestors(mixed $id, array $args): JsonResponse
+    {
+        return $this->walkPartOfBfs($id, $args, goUp: true, childrenKey: 'parents');
+    }
+
+    // read_subtree／read_ancestors 共用的 BFS：沿 part_of 關係一路往下（子節點）或往上
+    // （父節點）走 depth 層，逐層固定 2 條 SQL（relations 一次撈、entities+observations 一次
+    // eager load），不管那一層有幾個節點都不會變成 N+1；最後用遞迴 closure 一次組成巢狀樹回傳。
+    // $goUp=false：frontier 用 to_entity_id 比對，往子節點走（read_subtree）。
+    // $goUp=true：frontier 用 from_entity_id 比對，往父節點走（read_ancestors）。
+    // $childrenKey 決定輸出巢狀陣列叫 children 還是 parents，語意上比較清楚。
+    private function walkPartOfBfs(mixed $id, array $args, bool $goUp, string $childrenKey): JsonResponse
+    {
         $entityName = trim($args['entity_name'] ?? '');
         if (! $entityName) {
             return $this->text($id, 'entity_name is required.', true);
@@ -285,18 +302,18 @@ class TerritoryMcpService implements McpToolServiceInterface
             return $this->text($id, 'Entity not found.', true);
         }
 
-        // BFS 逐層往下查：每層固定 2 條 SQL（relations 一次撈、entities+observations 一次 eager load），
-        // 不管那一層有幾個節點都不會變成 N+1；用 $entitiesById／$childIdsByParentId 存扁平資料，
-        // 最後再用遞迴 closure 一次組成巢狀樹狀結構回傳，過程中不再打 DB。
+        $frontierColumn = $goUp ? 'from_entity_id' : 'to_entity_id';
+        $nextColumn = $goUp ? 'to_entity_id' : 'from_entity_id';
+
         $entitiesById = [$root->id => $root];
-        $childIdsByParentId = [];
+        $relatedIdsByAnchorId = [];
         $frontierIds = [$root->id];
         $totalNodes = 1;
         $truncated = false;
 
         for ($level = 0; $level < $depth && $frontierIds !== [] && $totalNodes < self::SUBTREE_NODE_LIMIT; $level++) {
             $relations = TerritoryRelation::where('relation_type', 'part_of')
-                ->whereIn('to_entity_id', $frontierIds)
+                ->whereIn($frontierColumn, $frontierIds)
                 ->get(['from_entity_id', 'to_entity_id']);
 
             if ($relations->isEmpty()) {
@@ -304,21 +321,23 @@ class TerritoryMcpService implements McpToolServiceInterface
             }
 
             $remaining = self::SUBTREE_NODE_LIMIT - $totalNodes;
-            $childIds = $relations->pluck('from_entity_id')->unique()->values();
-            if ($childIds->count() > $remaining) {
+            $nextIds = $relations->pluck($nextColumn)->unique()->values();
+            if ($nextIds->count() > $remaining) {
                 $truncated = true;
-                $childIds = $childIds->take($remaining);
+                $nextIds = $nextIds->take($remaining);
             }
-            $allowedChildIds = $childIds->flip();
+            $allowedNextIds = $nextIds->flip();
 
             foreach ($relations as $rel) {
-                if (! $allowedChildIds->has($rel->from_entity_id)) {
+                $anchorId = $goUp ? $rel->from_entity_id : $rel->to_entity_id;
+                $relatedId = $goUp ? $rel->to_entity_id : $rel->from_entity_id;
+                if (! $allowedNextIds->has($relatedId)) {
                     continue;
                 }
-                $childIdsByParentId[$rel->to_entity_id][] = $rel->from_entity_id;
+                $relatedIdsByAnchorId[$anchorId][] = $relatedId;
             }
 
-            $newEntities = TerritoryEntity::with('observations')->whereIn('id', $childIds)->get()->keyBy('id');
+            $newEntities = TerritoryEntity::with('observations')->whereIn('id', $nextIds)->get()->keyBy('id');
             foreach ($newEntities as $entityId => $entity) {
                 $entitiesById[$entityId] = $entity;
             }
@@ -327,21 +346,20 @@ class TerritoryMcpService implements McpToolServiceInterface
             $frontierIds = $newEntities->keys()->all();
         }
 
-        // $ancestorPath = 從根節點到目前節點路上的祖先 id 清單。part_of 理論上不該出現循環，
-        // 但 DB 沒有約束擋掉（例如誤用 create_relation 對兩個節點各建一次相反方向的 part_of），
-        // 沒有這層防護的話真的遇到循環會無限遞迴直到 PHP stack overflow、整個 request 掛掉。
-        $buildNode = function (int $entityId, array $ancestorPath = []) use (&$buildNode, $entitiesById, $childIdsByParentId): array {
+        // $ancestorPath = 從根節點到目前節點路上已經走過的 id 清單（不論往上還是往下走，
+        // 命名都沿用 ancestorPath，代表「這條路徑上已經出現過的節點」）。part_of 理論上不該
+        // 出現循環，但 DB 沒有約束擋掉，沒有這層防護真的遇到循環會無限遞迴到 stack overflow。
+        $buildNode = function (int $entityId, array $ancestorPath = []) use (&$buildNode, $entitiesById, $relatedIdsByAnchorId, $childrenKey): array {
             $node = $this->formatEntity($entitiesById[$entityId]);
             if (\in_array($entityId, $ancestorPath, true)) {
-                // 偵測到循環：這個節點的 QID 已經出現在自己的祖先路徑上，直接截斷，不再往下展開。
-                $node['children'] = [];
+                $node[$childrenKey] = [];
 
                 return $node;
             }
             $path = [...$ancestorPath, $entityId];
-            $node['children'] = array_map(
-                fn (int $childId) => $buildNode($childId, $path),
-                $childIdsByParentId[$entityId] ?? []
+            $node[$childrenKey] = array_map(
+                fn (int $relatedId) => $buildNode($relatedId, $path),
+                $relatedIdsByAnchorId[$entityId] ?? []
             );
 
             return $node;
@@ -495,6 +513,18 @@ class TerritoryMcpService implements McpToolServiceInterface
                     'properties' => [
                         'entity_name' => ['type' => 'string', 'description' => '根節點的 Wikidata QID'],
                         'depth' => ['type' => 'integer', 'description' => '往下查幾層，預設 1（等同 read_children），最大 '.self::SUBTREE_MAX_DEPTH],
+                    ],
+                    'required' => ['entity_name'],
+                ],
+            ],
+            [
+                'name' => 'read_ancestors',
+                'description' => 'read_subtree 的反方向版本：一次讀取指定節點往上 N 層的祖先鏈（沿 part_of 往父節點走），適合手上只有一個子節點 QID（例如某個區），想知道它上面依序屬於哪個省、哪個國家，不用自己對 read_graph 拿到的父節點 QID 再逐層手動查。回傳 {tree, total_nodes, truncated}：tree 是巢狀節點，格式為 {qid, type, observations, parents}（parents 是同樣格式的父節點陣列——一個節點可能有多個 parallel parent，見 create_relation 說明）。total_nodes/truncated 語意同 read_subtree。depth 上限 '.self::SUBTREE_MAX_DEPTH.' 層。',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'entity_name' => ['type' => 'string', 'description' => '起點節點的 Wikidata QID'],
+                        'depth' => ['type' => 'integer', 'description' => '往上查幾層，預設 1，最大 '.self::SUBTREE_MAX_DEPTH],
                     ],
                     'required' => ['entity_name'],
                 ],
