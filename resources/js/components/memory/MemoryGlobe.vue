@@ -96,17 +96,11 @@ async function initGlobe() {
     }
 
     globeInstance = new Globe(containerEl.value)
-        .backgroundImageUrl(
-            'https://cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png',
-        )
+        .backgroundImageUrl('/images/globe/night-sky.png')
         // Memory 這邊想要白天地球（跟 Airports 的夜間版不同）：藍色海洋 + 綠棕色陸地，
         // 真實衛星色彩，跟 arc/pin 的綠色主題色搭起來也比較活潑。
-        .globeImageUrl(
-            'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-day.jpg',
-        )
-        .bumpImageUrl(
-            'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png',
-        )
+        .globeImageUrl('/images/globe/earth-day.jpg')
+        .bumpImageUrl('/images/globe/earth-topology.png')
         .showAtmosphere(true)
         .atmosphereColor('#2ca46d')
         .atmosphereAltitude(0.15)
