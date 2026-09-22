@@ -329,8 +329,6 @@ export default {
             top_countries: '機場數量 Top 10 國家',
         },
         globe: {
-            title: '地球機場分佈',
-            hint: '點擊地球上的國家，自動查詢該國機場並標示大頭針',
             selected: '目前選取',
             airport_count: '機場數：{count}',
             loading: '機場資料載入中...',

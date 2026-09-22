@@ -1,22 +1,8 @@
 <script setup lang="ts">
-import {
-    drag,
-    geoDistance,
-    geoCentroid,
-    geoGraticule,
-    geoOrthographic,
-    geoPath,
-    interpolate,
-    json,
-    select,
-    transition,
-    zoom,
-    zoomIdentity,
-} from 'd3';
-import type { GeoPath, GeoProjection, Selection } from 'd3';
+// 機場地球（globe.gl，底層 Three.js）。國界 polygon 可點擊：高亮 + 鏡頭飛過去 + 抓該國機場。
 import * as topojson from 'topojson-client';
 import type { Topology } from 'topojson-specification';
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api } from '@/lib/routes';
 
@@ -30,21 +16,13 @@ const { t } = useI18n();
 const containerEl = ref<HTMLDivElement | null>(null);
 const selectedCountryCode = ref('');
 const selectedCountryName = ref('');
+const selectedNumericId = ref<string | null>(null);
 const airportCount = ref(0);
 const isLoading = ref(false);
 const loadError = ref('');
 
-const W = 780;
-const H = 520;
-const INITIAL_SCALE = 240;
-
-let projection: GeoProjection;
-let path: GeoPath;
-let svgEl: Selection<SVGSVGElement, unknown, null, undefined>;
-let gLand: Selection<SVGGElement, unknown, null, undefined>;
-let gPins: Selection<SVGGElement, unknown, null, undefined>;
-let countries: any[] = [];
-let renderRequested = false;
+let Globe: any = null;
+let globeInstance: any = null;
 
 const alpha2ToNumeric: Record<string, string> = {
     AF: '004',
@@ -307,56 +285,17 @@ const numericToAlpha2 = Object.entries(alpha2ToNumeric).reduce<
     return acc;
 }, {});
 
-function requestRender() {
-    if (renderRequested) {
-        return;
-    }
-
-    renderRequested = true;
-    requestAnimationFrame(() => {
-        renderRequested = false;
-        render();
-    });
-}
-
-function render() {
-    svgEl.select<SVGPathElement>('.globe-sphere').attr('d', path as any);
-    svgEl
-        .select<SVGPathElement>('.graticule')
-        .attr('d', path(geoGraticule()()) as any);
-    gLand.selectAll<SVGPathElement, any>('path').attr('d', path as any);
-
-    const center = projection.invert!([W / 2, H / 2])!;
-    gPins
-        .selectAll<SVGCircleElement, [number, number]>('circle')
-        .attr('cx', (d) => projection(d)![0])
-        .attr('cy', (d) => projection(d)![1])
-        .attr('visibility', (d) =>
-            geoDistance(d, center) > 1.57 ? 'hidden' : 'visible',
-        );
-}
-
 function renderPins(items: AirportItem[]) {
-    gPins.selectAll('*').remove();
-    items.forEach((airport) => {
-        const lat = airport.location.latitude;
-        const lon = airport.location.longitude;
+    const pins = items
+        .filter(
+            (a) => a.location.latitude != null && a.location.longitude != null,
+        )
+        .map((a) => ({
+            lat: a.location.latitude as number,
+            lng: a.location.longitude as number,
+        }));
 
-        if (lat == null || lon == null) {
-            return;
-        }
-
-        gPins
-            .append('circle')
-            .datum([lon, lat] as [number, number])
-            .attr('r', 3.5)
-            .attr('fill', '#00e5ff')
-            .attr('stroke', '#001f24')
-            .attr('stroke-width', 0.8)
-            .attr('cx', (d) => projection(d)![0])
-            .attr('cy', (d) => projection(d)![1]);
-    });
-    requestRender();
+    globeInstance?.pointsData(pins);
 }
 
 async function searchCountryAirports(alpha2: string) {
@@ -390,45 +329,15 @@ async function searchCountryAirports(alpha2: string) {
     }
 }
 
-function highlightCountryById(countryId: string) {
-    gLand
-        .selectAll<SVGPathElement, any>('path')
-        .attr('fill', (d) =>
-            String(d.id).padStart(3, '0') === countryId
-                ? 'rgba(0,229,255,0.35)'
-                : 'rgba(0,79,88,0.4)',
-        )
-        .attr('stroke', (d) =>
-            String(d.id).padStart(3, '0') === countryId ? '#ffffff' : '#00daf3',
-        )
-        .attr('stroke-width', (d) =>
-            String(d.id).padStart(3, '0') === countryId ? 1.4 : 0.5,
-        );
-}
-
-function rotateToCountry(feature: any) {
-    const centroid = geoCentroid(feature);
-    const r0 = projection.rotate();
-    const r1: [number, number] = [-centroid[0], -centroid[1]];
-
-    transition()
-        .duration(650)
-        .tween('rotate', () => {
-            const ir = interpolate(r0, r1);
-
-            return (t: number) => {
-                projection.rotate(ir(t));
-                requestRender();
-            };
-        });
-}
-
-async function onCountryClick(feature: any) {
+async function onCountryClick(
+    feature: any,
+    coords: { lat: number; lng: number },
+) {
     const numeric = String(feature.id).padStart(3, '0');
     const alpha2 = numericToAlpha2[numeric];
 
-    highlightCountryById(numeric);
-    rotateToCountry(feature);
+    selectedNumericId.value = numeric;
+    globeInstance?.pointOfView({ lat: coords.lat, lng: coords.lng }, 650);
 
     selectedCountryCode.value = alpha2 ?? '';
     selectedCountryName.value =
@@ -445,148 +354,149 @@ async function onCountryClick(feature: any) {
     await searchCountryAirports(alpha2);
 }
 
+// 3D 的 material 建立後不會重新求值（同 CodeGraph 3D 模式的既有模式），
+// 選取變動時要重新塞一次 accessor 自己觸發重繪。
+watch(selectedNumericId, () => {
+    if (!globeInstance) {
+        return;
+    }
+
+    globeInstance.polygonCapColor(globeInstance.polygonCapColor());
+    globeInstance.polygonStrokeColor(globeInstance.polygonStrokeColor());
+});
+
 async function initGlobe() {
     if (!containerEl.value) {
         return;
     }
 
-    svgEl = select(containerEl.value)
-        .append('svg')
-        .attr('viewBox', `0 0 ${W} ${H}`)
-        .attr('class', 'h-full w-full cursor-grab active:cursor-grabbing');
+    if (!Globe) {
+        Globe = (await import('globe.gl')).default;
+    }
 
-    projection = geoOrthographic()
-        .scale(INITIAL_SCALE)
-        .translate([W / 2, H / 2])
-        .rotate([0, -22])
-        .clipAngle(90);
-
-    path = geoPath().projection(projection);
-
-    svgEl
-        .append('path')
-        .datum({ type: 'Sphere' } as any)
-        .attr('class', 'globe-sphere')
-        .attr('fill', '#0d141d')
-        .attr('stroke', '#00daf3')
-        .attr('stroke-width', 0.4)
-        .attr('d', path as any);
-
-    svgEl
-        .append('path')
-        .datum(geoGraticule()())
-        .attr('class', 'graticule')
-        .attr('fill', 'none')
-        .attr('stroke', 'rgba(0,229,255,0.08)')
-        .attr('stroke-width', 0.5)
-        .attr('d', path as any);
-
-    gLand = svgEl.append('g');
-    gPins = svgEl.append('g');
-
-    const dragBehavior = drag<SVGSVGElement, unknown>().on('drag', (event) => {
-        const r = projection.rotate();
-        const k = 75 / projection.scale();
-        projection.rotate([r[0] + event.dx * k, r[1] - event.dy * k]);
-        requestRender();
-    });
-
-    const zoomBehavior = zoom<SVGSVGElement, unknown>()
-        .scaleExtent([180, 1200])
-        .on('zoom', (event) => {
-            projection.scale(event.transform.k);
-            requestRender();
-        });
-
-    svgEl.call(dragBehavior).call(zoomBehavior);
-    svgEl.call(zoomBehavior.transform, zoomIdentity.scale(INITIAL_SCALE));
-
-    const world = await json<Topology>(
-        'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
-    );
-
-    if (!world) {
+    // 套件下載期間（await 中）元件可能已經被卸載，containerEl 會變成 null；
+    // 不重新檢查的話 new Globe(null) 會噴錯，且建出來的 instance 因為錯過
+    // onUnmounted 時機、永遠不會被 _destructor() 清掉（memory leak）。
+    if (!containerEl.value) {
         return;
     }
 
-    countries = (
+    globeInstance = new Globe(containerEl.value)
+        .backgroundImageUrl(
+            'https://cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png',
+        )
+        // 用 NASA 夜間衛星圖（three-globe demo 素材），取代自訂純色 + bump 的組合——
+        // 深藍海洋 + 城市燈光光點，海陸對比明顯，換過 earth-dark.jpg 才發現那張圖本身
+        // 像素就幾乎全黑（不是燈光沒打夠），這張才是真的看得出細節的深色地球。
+        .globeImageUrl(
+            'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg',
+        )
+        .bumpImageUrl(
+            'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png',
+        )
+        .showAtmosphere(true)
+        .atmosphereColor('#00daf3')
+        .atmosphereAltitude(0.15)
+        .polygonAltitude(0.006)
+        .polygonCapColor((feat: any) =>
+            String(feat.id).padStart(3, '0') === selectedNumericId.value
+                ? 'rgba(0,229,255,0.35)'
+                : 'rgba(0,0,0,0)',
+        )
+        .polygonSideColor(() => 'rgba(0,0,0,0)')
+        .polygonStrokeColor((feat: any) =>
+            String(feat.id).padStart(3, '0') === selectedNumericId.value
+                ? '#ffffff'
+                : '#00daf3',
+        )
+        .onPolygonClick((feature: any, _event: MouseEvent, coords: any) => {
+            void onCountryClick(feature, coords);
+        })
+        .pointColor(() => '#00e5ff')
+        .pointAltitude(0.01)
+        .pointRadius(0.25)
+        // altitude 調低讓球體撐滿容器（原本 2.2 鏡頭拉太遠，球體只占畫面中間一小塊，
+        // 四周留一大圈星空空白，不算「佈滿」）。
+        .pointOfView({ lat: 22, lng: 0, altitude: 1.4 }, 0);
+
+    resizeToContainer();
+
+    const world = await fetch(
+        'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+    ).then((r) => r.json() as Promise<Topology>);
+
+    const countries = (
         topojson.feature(world, (world.objects as any).countries) as any
     ).features;
 
-    gLand
-        .selectAll<SVGPathElement, any>('path')
-        .data(countries)
-        .enter()
-        .append('path')
-        .attr('fill', 'rgba(0,79,88,0.4)')
-        .attr('stroke', '#00daf3')
-        .attr('stroke-width', 0.5)
-        .attr('d', path as any)
-        .style('cursor', 'pointer')
-        .on('click', (_, feature) => {
-            void onCountryClick(feature);
-        });
+    globeInstance.polygonsData(countries);
+}
 
-    requestRender();
+function resizeToContainer() {
+    if (!containerEl.value || !globeInstance) {
+        return;
+    }
+
+    globeInstance
+        .width(containerEl.value.clientWidth)
+        .height(containerEl.value.clientHeight);
 }
 
 onMounted(() => {
     void initGlobe();
+    window.addEventListener('resize', resizeToContainer);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', resizeToContainer);
+    globeInstance?._destructor?.();
+    globeInstance = null;
 });
 </script>
 
 <template>
-    <section class="binary-card-raised p-4 md:p-6">
-        <div class="mb-4 flex items-center justify-between gap-3">
-            <div>
-                <h3
-                    class="binary-label text-xs font-bold text-[var(--binary-outline)] uppercase"
+    <!-- 地球（含星空背景）鋪滿整個 section 當背景層；標題/提示文字拿掉（globe 分頁按鈕本身
+         已經說明這是什麼、互動也算直覺），只留「目前選取」小徽章浮在右上角，不擋畫面。 -->
+    <section
+        class="binary-card-raised relative isolate h-[420px] overflow-hidden p-4 md:h-[520px] md:p-6"
+    >
+        <div ref="containerEl" class="absolute inset-0" />
+
+        <div
+            class="absolute top-3 right-3 z-10 rounded-xl bg-[#0d141d]/50 p-2 text-right backdrop-blur-sm"
+        >
+            <p
+                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+            >
+                {{ t('airports.globe.selected') }}
+            </p>
+            <p class="text-sm font-bold text-[var(--binary-primary)]">
+                {{ selectedCountryCode || '--' }}
+                <span
+                    class="ml-1 text-xs font-normal text-[var(--binary-text-muted)]"
+                    >{{ selectedCountryName }}</span
                 >
-                    &gt; {{ t('airports.globe.title') }}
-                </h3>
-                <p class="mt-1 text-xs text-[var(--binary-text-muted)]">
-                    {{ t('airports.globe.hint') }}
-                </p>
-            </div>
-            <div class="text-right">
-                <p
-                    class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
-                >
-                    {{ t('airports.globe.selected') }}
-                </p>
-                <p class="text-sm font-bold text-[var(--binary-primary)]">
-                    {{ selectedCountryCode || '--' }}
-                    <span
-                        class="ml-1 text-xs font-normal text-[var(--binary-text-muted)]"
-                        >{{ selectedCountryName }}</span
-                    >
-                </p>
-                <p class="text-[10px] text-[var(--binary-outline)]">
-                    {{
-                        t('airports.globe.airport_count', {
-                            count: airportCount.toLocaleString(),
-                        })
-                    }}
-                </p>
-            </div>
+            </p>
+            <p class="text-[10px] text-[var(--binary-outline)]">
+                {{
+                    t('airports.globe.airport_count', {
+                        count: airportCount.toLocaleString(),
+                    })
+                }}
+            </p>
         </div>
 
         <div
-            class="relative overflow-hidden rounded-xl border border-[var(--binary-outline)]/20 bg-[#0d141d]"
+            v-if="isLoading"
+            class="absolute inset-x-0 top-3 z-10 text-center text-xs text-[var(--binary-primary)]"
         >
-            <div ref="containerEl" class="h-[360px] w-full md:h-[460px]" />
-            <div
-                v-if="isLoading"
-                class="absolute inset-x-0 top-3 text-center text-xs text-[var(--binary-primary)]"
-            >
-                {{ t('airports.globe.loading') }}
-            </div>
-            <div
-                v-if="loadError"
-                class="absolute inset-x-0 bottom-3 text-center text-xs text-red-300"
-            >
-                {{ loadError }}
-            </div>
+            {{ t('airports.globe.loading') }}
+        </div>
+        <div
+            v-if="loadError"
+            class="absolute inset-x-0 bottom-3 z-10 text-center text-xs text-red-300"
+        >
+            {{ loadError }}
         </div>
     </section>
 </template>
