@@ -312,14 +312,16 @@ onUnmounted(() => {
 <template>
     <Head title="Territory" />
     <AppLayout disable-background>
-        <!-- 地球鋪滿視窗當背景層（取代主題背景動畫），內容疊在上面 -->
-        <div
-            ref="containerEl"
-            class="fixed inset-x-0 top-16 bottom-0 -z-10"
-            aria-hidden="true"
-        />
+        <!-- 地球鋪滿視窗當背景層（取代主題背景動畫），內容疊在上面。
+             z-index 不能用負值：.binary-page 是 relative、pointer-events auto 且盒子蓋滿
+             視窗，地球放負 z-index 會被它擋掉所有點擊/拖曳，事件傳不到 canvas。 -->
+        <div ref="containerEl" class="fixed inset-x-0 top-16 bottom-0 z-0" />
 
-        <main class="relative min-h-[calc(100vh-4rem)]">
+        <!-- 內容層整片 pointer-events-none 讓事件穿透到地球，只有實際面板收事件，
+             面板之間的空白處可以直接拖曳轉動地球。 -->
+        <main
+            class="pointer-events-none relative z-10 min-h-[calc(100vh-4rem)]"
+        >
             <!-- 未選國家：置中的世界層摘要，不擋地球主體 -->
             <div
                 v-if="!selected"
