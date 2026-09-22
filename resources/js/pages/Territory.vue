@@ -44,6 +44,22 @@ const loadError = ref('');
 /** 國家清單載入失敗（跟「某國子節點載入失敗」分開，這個會讓整顆地球點不動） */
 const countriesError = ref('');
 
+/** 目前選取國家的行政區邊界 feature（GeoJSON，`id` 就是 QID）。 */
+const adminFeatures = ref<any[]>([]);
+/** 這個國家畫不出邊界：檔案不存在，或檔案裡的 QID 跟圖譜這一層對不起來。 */
+const adminMissing = ref(false);
+/** 目前點亮的行政區（地球上的 polygon 與左側清單共用這個狀態）。 */
+const activeChildQid = ref<string | null>(null);
+
+/** 國界 feature，全程不變；行政區邊界是疊在它上面另一組資料。 */
+let worldFeatures: unknown[] = [];
+
+/**
+ * 換國家時的請求序號。子節點與邊界是兩個接力的非同步請求，使用者快速連點不同國家時
+ * 先發的可能後到，沒有這個序號就會把上一國的資料蓋到現在選的國家上。
+ */
+let selectionToken = 0;
+
 /**
  * 點到沒有對應圖譜資料的區域時的短暫提示。
  * 沒有這個的話會變成「點了完全沒反應」，使用者只能猜是不是壞了——
@@ -68,6 +84,17 @@ const byIsoNumeric = computed(() => {
         if (c.iso_numeric) {
             map.set(c.iso_numeric, c);
         }
+    }
+
+    return map;
+});
+
+/** QID → 子節點，給 polygon 的 label／點擊回查用。 */
+const childByQid = computed(() => {
+    const map = new Map<string, Node>();
+
+    for (const c of children.value) {
+        map.set(c.qid, c);
     }
 
     return map;
@@ -118,6 +145,99 @@ function themeColor(varName: string, fallback: string): string {
     return ctx.fillStyle;
 }
 
+/**
+ * 主題色 + 透明度。polygon 的 cap/stroke 要吃帶 alpha 的顏色字串，
+ * 而 themeColor() 回來的是 `#rrggbb`，這裡補上 alpha。
+ */
+function withAlpha(color: string, alpha: number): string {
+    const m = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(color);
+
+    if (!m) {
+        return color;
+    }
+
+    const [r, g, b] = m.slice(1).map((h) => parseInt(h, 16));
+
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/** 行政區 polygon 的 id 是 QID（Q123…），國界是 ISO 數字碼，用這個分辨兩種圖層。 */
+function isAdminPolygon(feat: any): boolean {
+    return typeof feat?.id === 'string' && feat.id.startsWith('Q');
+}
+
+/** 國界 + 目前國家的行政區邊界疊成同一份 polygonsData（globe.gl 只有一個 polygon 圖層）。 */
+function syncPolygons() {
+    globeInstance?.polygonsData([...worldFeatures, ...adminFeatures.value]);
+}
+
+/**
+ * 顏色 accessor 是純函式，globe.gl 不知道它依賴的 ref 變了，
+ * 重新餵同一個 accessor 逼它整層重算（沿用既有做法）。
+ */
+function refreshPolygonStyles() {
+    globeInstance
+        ?.polygonCapColor(globeInstance.polygonCapColor())
+        .polygonStrokeColor(globeInstance.polygonStrokeColor());
+}
+
+/**
+ * 抓某國的行政區邊界。檔案由 scripts/build-admin-geojson.py 產生，一國一檔、
+ * 檔名是國家 QID，內容同時含第一層與第二層（Natural Earth 的 admin-1 本來就混著兩層）。
+ * 這裡只留「目前這層子節點真的有的 QID」，不然使用者還沒下鑽就會看到第二層的線。
+ */
+async function loadAdminGeometry(qid: string, token: number) {
+    adminFeatures.value = [];
+    adminMissing.value = false;
+
+    try {
+        const res = await fetch(`/geo/admin/${qid}.json`, {
+            headers: { Accept: 'application/json' },
+        });
+
+        // 沒有這個國家的邊界檔是正常情況（來源涵蓋 193 國），不是錯誤
+        if (!res.ok) {
+            adminMissing.value = true;
+
+            return;
+        }
+
+        const json = await res.json();
+        const features = Array.isArray(json?.features) ? json.features : [];
+
+        if (token !== selectionToken) {
+            return;
+        }
+
+        adminFeatures.value = features.filter((f: any) =>
+            childByQid.value.has(String(f?.id)),
+        );
+        adminMissing.value = adminFeatures.value.length === 0;
+    } catch {
+        // 邊界只是視覺加值，載不到就退回「只有國界」的樣子，不要影響資料面板
+        adminMissing.value = true;
+    } finally {
+        if (token === selectionToken) {
+            syncPolygons();
+            refreshPolygonStyles();
+        }
+    }
+}
+
+/** 點亮某個行政區（清單列與地球 polygon 互相連動），有座標就把鏡頭帶過去。 */
+function focusChild(child: Node) {
+    activeChildQid.value =
+        activeChildQid.value === child.qid ? null : child.qid;
+    refreshPolygonStyles();
+
+    if (activeChildQid.value && child.lat != null && globeInstance) {
+        globeInstance.pointOfView(
+            { lat: child.lat, lng: child.lng, altitude: 0.9 },
+            700,
+        );
+    }
+}
+
 /** globeOffset 沒有內建轉場，自己補一段 ease-out tween，避免位移用跳的。 */
 function tweenOffset(toX: number, duration = 600) {
     if (!globeInstance) {
@@ -153,17 +273,21 @@ function offsetForSelection(): number {
 }
 
 async function selectCountry(country: Country) {
+    const token = ++selectionToken;
+
     selected.value = country;
     children.value = [];
+    adminFeatures.value = [];
+    adminMissing.value = false;
+    activeChildQid.value = null;
     loadError.value = '';
     isLoading.value = true;
 
     // 停自動旋轉：已經聚焦在特定目標，繼續轉會慢慢轉離焦點
     if (globeInstance) {
         globeInstance.controls().autoRotate = false;
-        globeInstance
-            .polygonCapColor(globeInstance.polygonCapColor())
-            .polygonStrokeColor(globeInstance.polygonStrokeColor());
+        syncPolygons();
+        refreshPolygonStyles();
     }
 
     tweenOffset(offsetForSelection());
@@ -176,6 +300,11 @@ async function selectCountry(country: Country) {
 
         if (!res.ok) {
             throw new Error(json?.message || 'Failed to load subdivisions');
+        }
+
+        // 使用者已經換選別國，這份是慢到的舊回應，丟掉
+        if (token !== selectionToken) {
+            return;
         }
 
         // 同樣防呆：非陣列不要塞進 state，否則 topChildren 的 .slice() 會 render 失敗
@@ -192,25 +321,34 @@ async function selectCountry(country: Country) {
                 800,
             );
         }
+
+        // 邊界要等子節點回來才抓：檔案裡同時含第一、二層，得先知道這層有哪些 QID
+        await loadAdminGeometry(country.qid, token);
     } catch (error) {
         loadError.value =
             error instanceof Error ? error.message : 'Failed to load';
     } finally {
-        isLoading.value = false;
+        if (token === selectionToken) {
+            isLoading.value = false;
+        }
     }
 }
 
 function backToWorld() {
+    // 序號往前推，正在飛的子節點／邊界請求回來時就會被當成過期資料丟掉
+    selectionToken++;
     selected.value = null;
     children.value = [];
+    adminFeatures.value = [];
+    adminMissing.value = false;
+    activeChildQid.value = null;
     loadError.value = '';
     tweenOffset(0);
 
     if (globeInstance) {
         globeInstance.controls().autoRotate = true;
-        globeInstance
-            .polygonCapColor(globeInstance.polygonCapColor())
-            .polygonStrokeColor(globeInstance.polygonStrokeColor());
+        syncPolygons();
+        refreshPolygonStyles();
         globeInstance.pointOfView({ altitude: 2.4 }, 800);
     }
 }
@@ -253,22 +391,58 @@ async function initGlobe() {
         .showAtmosphere(true)
         .atmosphereColor(primary)
         .atmosphereAltitude(0.16)
-        .polygonAltitude(0.006)
-        .polygonCapColor((feat: any) =>
-            isSelectedPolygon(feat)
+        // 行政區墊高一點點：跟國界同高的話兩層會 z-fighting 閃爍
+        .polygonAltitude((feat: any) => (isAdminPolygon(feat) ? 0.012 : 0.006))
+        .polygonCapColor((feat: any) => {
+            if (isAdminPolygon(feat)) {
+                return activeChildQid.value === feat.id
+                    ? withAlpha(primary, 0.55)
+                    : withAlpha(primary, 0.12);
+            }
+
+            // 有行政區邊界時就不要再鋪整國的白底，否則會把上面那層洗淡
+            return isSelectedPolygon(feat) && !adminFeatures.value.length
                 ? 'rgba(255,255,255,0.28)'
-                : 'rgba(0,0,0,0)',
-        )
+                : 'rgba(0,0,0,0)';
+        })
         .polygonSideColor(() => 'rgba(0,0,0,0)')
-        .polygonStrokeColor((feat: any) =>
-            isSelectedPolygon(feat) ? '#ffffff' : primary,
-        )
+        .polygonStrokeColor((feat: any) => {
+            if (isAdminPolygon(feat)) {
+                return activeChildQid.value === feat.id
+                    ? '#ffffff'
+                    : withAlpha(primary, 0.65);
+            }
+
+            return isSelectedPolygon(feat) ? '#ffffff' : primary;
+        })
         .polygonLabel((feat: any) => {
+            if (isAdminPolygon(feat)) {
+                const child = childByQid.value.get(String(feat.id));
+
+                if (!child) {
+                    return '';
+                }
+
+                return child.population
+                    ? `${child.label}（人口 ${child.population.toLocaleString()}）`
+                    : child.label;
+            }
+
             const c = byIsoNumeric.value.get(polygonIso(feat));
 
             return c ? `${c.label}（${c.child_count} 個一級行政區）` : '';
         })
         .onPolygonClick((feat: any) => {
+            if (isAdminPolygon(feat)) {
+                const child = childByQid.value.get(String(feat.id));
+
+                if (child) {
+                    focusChild(child);
+                }
+
+                return;
+            }
+
             const c = byIsoNumeric.value.get(polygonIso(feat));
 
             if (!c) {
@@ -299,7 +473,8 @@ async function initGlobe() {
         (r) => r.json() as Promise<{ features: unknown[] }>,
     );
 
-    globeInstance.polygonsData(world.features);
+    worldFeatures = world.features;
+    syncPolygons();
 }
 
 function polygonIso(feat: any): string {
@@ -504,6 +679,24 @@ onUnmounted(() => {
                                 >{{ children.length }}</span
                             >
                         </div>
+
+                        <!-- 邊界圖資是逐國補的，有幾個畫得出來要講清楚，
+                             不然使用者會以為地球上少畫的那些是壞掉了 -->
+                        <div v-if="adminFeatures.length">
+                            <span class="text-[var(--binary-outline)]"
+                                >有邊界圖</span
+                            >
+                            <span
+                                class="ml-1 font-bold text-[var(--binary-primary)]"
+                                >{{ adminFeatures.length }}</span
+                            >
+                        </div>
+                        <div
+                            v-else-if="adminMissing && children.length"
+                            class="text-[var(--binary-outline)]"
+                        >
+                            尚無行政區邊界圖
+                        </div>
                     </div>
 
                     <p
@@ -522,31 +715,49 @@ onUnmounted(() => {
                         這個國家目前沒有下層行政區資料。
                     </p>
 
-                    <!-- 人口長條：純 CSS 寬度，不另外拉圖表套件 -->
+                    <!-- 人口長條：純 CSS 寬度，不另外拉圖表套件。
+                         整列可點：點了會在地球上點亮對應的行政區並把鏡頭帶過去，
+                         反過來點地球上的行政區也會點亮這裡的同一列。 -->
                     <ul v-else class="mt-4 space-y-2">
                         <li v-for="c in topChildren" :key="c.qid">
-                            <div
-                                class="flex items-baseline justify-between gap-2 text-xs"
-                            >
-                                <span
-                                    class="truncate text-[var(--binary-text)]"
-                                    >{{ c.label }}</span
-                                >
-                                <span
-                                    class="shrink-0 text-[10px] text-[var(--binary-outline)]"
-                                    >{{ formatNumber(c.population) }}</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 h-1.5 w-full rounded-full bg-[var(--binary-surface-container)]"
+                            <button
+                                type="button"
+                                class="w-full cursor-pointer rounded-lg px-2 py-1 text-left transition-colors"
+                                :class="
+                                    activeChildQid === c.qid
+                                        ? 'bg-[var(--binary-surface-high)]'
+                                        : 'hover:bg-[var(--binary-surface-container)]'
+                                "
+                                @click="focusChild(c)"
                             >
                                 <div
-                                    class="h-full rounded-full bg-[var(--binary-primary)]"
-                                    :style="{
-                                        width: `${((c.population ?? 0) / maxPopulation) * 100}%`,
-                                    }"
-                                />
-                            </div>
+                                    class="flex items-baseline justify-between gap-2 text-xs"
+                                >
+                                    <span
+                                        class="truncate"
+                                        :class="
+                                            activeChildQid === c.qid
+                                                ? 'font-bold text-[var(--binary-primary)]'
+                                                : 'text-[var(--binary-text)]'
+                                        "
+                                        >{{ c.label }}</span
+                                    >
+                                    <span
+                                        class="shrink-0 text-[10px] text-[var(--binary-outline)]"
+                                        >{{ formatNumber(c.population) }}</span
+                                    >
+                                </div>
+                                <div
+                                    class="mt-1 h-1.5 w-full rounded-full bg-[var(--binary-surface-container)]"
+                                >
+                                    <div
+                                        class="h-full rounded-full bg-[var(--binary-primary)]"
+                                        :style="{
+                                            width: `${((c.population ?? 0) / maxPopulation) * 100}%`,
+                                        }"
+                                    />
+                                </div>
+                            </button>
                         </li>
                     </ul>
 
