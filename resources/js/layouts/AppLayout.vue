@@ -46,6 +46,8 @@ interface NavLink {
 
 defineProps<{
     navLinks?: NavLink[];
+    // 頁面自己已有高耗能渲染（如地球）時可關掉背景動畫，預設 false。
+    disableBackground?: boolean;
 }>();
 
 const page = usePage();
@@ -349,7 +351,7 @@ function toggleLocale() {
     >
         <!-- Background -->
         <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-            <component :is="currentBg" />
+            <component :is="currentBg" v-if="!disableBackground" />
             <div class="bg-anim-glow" />
         </div>
 

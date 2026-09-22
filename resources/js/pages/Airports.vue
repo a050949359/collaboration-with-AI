@@ -186,7 +186,7 @@ onMounted(() => fetchAirports());
 <template>
     <Head :title="t('airports.title')" />
 
-    <AppLayout>
+    <AppLayout :disable-background="activeTab === 'globe'">
         <main class="pb-24">
             <div class="mx-auto max-w-screen-2xl px-[18px] md:px-8">
                 <!-- Header -->
