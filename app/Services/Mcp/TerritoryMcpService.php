@@ -327,9 +327,22 @@ class TerritoryMcpService implements McpToolServiceInterface
             $frontierIds = $newEntities->keys()->all();
         }
 
-        $buildNode = function (int $entityId) use (&$buildNode, $entitiesById, $childIdsByParentId): array {
+        // $ancestorPath = 從根節點到目前節點路上的祖先 id 清單。part_of 理論上不該出現循環，
+        // 但 DB 沒有約束擋掉（例如誤用 create_relation 對兩個節點各建一次相反方向的 part_of），
+        // 沒有這層防護的話真的遇到循環會無限遞迴直到 PHP stack overflow、整個 request 掛掉。
+        $buildNode = function (int $entityId, array $ancestorPath = []) use (&$buildNode, $entitiesById, $childIdsByParentId): array {
             $node = $this->formatEntity($entitiesById[$entityId]);
-            $node['children'] = array_map($buildNode, $childIdsByParentId[$entityId] ?? []);
+            if (\in_array($entityId, $ancestorPath, true)) {
+                // 偵測到循環：這個節點的 QID 已經出現在自己的祖先路徑上，直接截斷，不再往下展開。
+                $node['children'] = [];
+
+                return $node;
+            }
+            $path = [...$ancestorPath, $entityId];
+            $node['children'] = array_map(
+                fn (int $childId) => $buildNode($childId, $path),
+                $childIdsByParentId[$entityId] ?? []
+            );
 
             return $node;
         };
