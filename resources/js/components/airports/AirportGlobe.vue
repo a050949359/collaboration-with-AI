@@ -382,18 +382,12 @@ async function initGlobe() {
     }
 
     globeInstance = new Globe(containerEl.value)
-        .backgroundImageUrl(
-            'https://cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png',
-        )
+        .backgroundImageUrl('/images/globe/night-sky.png')
         // 用 NASA 夜間衛星圖（three-globe demo 素材），取代自訂純色 + bump 的組合——
         // 深藍海洋 + 城市燈光光點，海陸對比明顯，換過 earth-dark.jpg 才發現那張圖本身
         // 像素就幾乎全黑（不是燈光沒打夠），這張才是真的看得出細節的深色地球。
-        .globeImageUrl(
-            'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg',
-        )
-        .bumpImageUrl(
-            'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png',
-        )
+        .globeImageUrl('/images/globe/earth-night.jpg')
+        .bumpImageUrl('/images/globe/earth-topology.png')
         .showAtmosphere(true)
         .atmosphereColor('#00daf3')
         .atmosphereAltitude(0.15)
