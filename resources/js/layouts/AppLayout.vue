@@ -56,9 +56,10 @@ const brandTitle = computed(() => page.props.name || 'CHY Lab');
 
 const defaultNavLinks = computed((): NavLink[] => {
     const path = page.url;
-    const aviationActive =
+    const geographyActive =
         path.startsWith(routes.airports()) ||
-        path.startsWith(routes.airlines());
+        path.startsWith(routes.airlines()) ||
+        path.startsWith(routes.territory());
 
     return [
         {
@@ -69,9 +70,9 @@ const defaultNavLinks = computed((): NavLink[] => {
                 path.replace(/\/$/, '') === routes.home().replace(/\/$/, ''),
         },
         {
-            label: t('articles.nav.aviation'),
-            icon: 'aviation',
-            active: aviationActive,
+            label: t('articles.nav.geography'),
+            icon: 'geography',
+            active: geographyActive,
             children: [
                 {
                     label: t('articles.nav.airports'),
@@ -84,6 +85,12 @@ const defaultNavLinks = computed((): NavLink[] => {
                     href: routes.airlines(),
                     icon: 'airlines',
                     active: path.startsWith(routes.airlines()),
+                },
+                {
+                    label: t('articles.nav.territory'),
+                    href: routes.territory(),
+                    icon: 'territory',
+                    active: path.startsWith(routes.territory()),
                 },
             ],
         },

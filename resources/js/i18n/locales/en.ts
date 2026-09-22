@@ -14,7 +14,8 @@ export default {
             articles: 'Articles',
             airports: 'Airports',
             airlines: 'Airlines',
-            aviation: 'Aviation',
+            geography: 'Geography',
+            territory: 'Territory',
             about: 'About',
         },
         index: {

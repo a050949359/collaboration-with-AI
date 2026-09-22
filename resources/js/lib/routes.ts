@@ -36,6 +36,9 @@ export const routes = {
     // Airlines
     airlines: () => `${WEB_PREFIX}/airlines`,
 
+    // Territory（國家/行政區知識圖譜瀏覽）
+    territory: () => `${WEB_PREFIX}/territory`,
+
     // About
     about: () => `${WEB_PREFIX}/about`,
 
@@ -109,6 +112,10 @@ export const api = {
     mcp: () => '/api/mcp',
     codegraph: {
         graph: () => '/api/codegraph/graph',
+    },
+    territory: {
+        countries: () => '/api/territory/countries',
+        children: (qid: string) => `/api/territory/nodes/${qid}/children`,
     },
     memory: {
         graph: () => '/api/memory/graph',

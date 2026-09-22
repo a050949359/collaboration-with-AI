@@ -172,6 +172,7 @@ use App\Http\Controllers\Mcp\MemoryGraphController;
 use App\Http\Controllers\Mcp\MemoryObservationController;
 use App\Http\Controllers\Travel\BookingController;
 use App\Http\Controllers\Travel\ExportController;
+use App\Http\Controllers\Territory\TerritoryBrowseController;
 use App\Http\Controllers\Travel\PassengerController;
 use App\Http\Controllers\Travel\StatsController;
 use App\Http\Controllers\Travel\TourController;
@@ -342,6 +343,11 @@ Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->
 
 // codegraph 靜態程式碼結構圖（公開，唯讀；repo 本身即 public）
 Route::get('/codegraph/graph', [CodeGraphController::class, 'index']);
+
+// Territory 瀏覽 REST（公開唯讀；跟 /api/mcp/territory 的 JSON-RPC 分開，那支是給 LLM 工具用的）
+Route::get('/territory/countries', [TerritoryBrowseController::class, 'countries']);
+Route::get('/territory/nodes/{qid}/children', [TerritoryBrowseController::class, 'children'])
+    ->where('qid', 'Q\d+');
 
 // Memory graph REST（公開）
 Route::get('/memory/graph', [MemoryGraphController::class, 'index']);
