@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","id":"Q762573","properties":{"name":"Gaza Strip","level":1},"geometry":{"type":"Polygon","coordinates":[[[34.481,31.583],[34.2,31.314],[34.248,31.211],[34.351,31.289],[34.367,31.393],[34.556,31.54],[34.481,31.583]]]}}]}
+{"type":"FeatureCollection","features":[{"type":"Feature","id":"Q762573","properties":{"name":"Gaza Strip","level":1},"geometry":{"type":"Polygon","coordinates":[[[34.481,31.583],[34.556,31.54],[34.367,31.393],[34.351,31.289],[34.248,31.211],[34.2,31.314],[34.481,31.583]]]}}]}
