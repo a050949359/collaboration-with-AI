@@ -466,10 +466,9 @@ async function initGlobe() {
 
     resizeToContainer();
 
-    // 自架的混合國界（110m 骨架 + 50m 獨有的小島），由 scripts/build-globe-geojson.py
-    // 產生。110m 少了 61 個小島國／屬地的 feature（新加坡、馬爾他、馬爾地夫…），
-    // 那些國家在圖譜裡有資料卻點不到；補完涵蓋率等同 50m，頂點只多 15%。
-    const world = await fetch('/geo/countries-hybrid.json').then(
+    // 自架的國界（Natural Earth 10m，258 國），由 scripts/build-territory-geojson.py
+    // 產生。行政區邊界跟它是同一次拓樸簡化出來的，兩層的共用海岸線完全對齊。
+    const world = await fetch('/geo/countries.json').then(
         (r) => r.json() as Promise<{ features: unknown[] }>,
     );
 

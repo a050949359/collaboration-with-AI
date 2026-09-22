@@ -1,7 +1,24 @@
 #!/usr/bin/env python3
-"""產生行政區邊界 GeoJSON，逐國一檔：`public/geo/admin/{國家QID}.json`。
+"""產生地球儀用的兩層 GeoJSON：世界國界 + 逐國行政區邊界。
 
-## 來源與層級
+輸出：
+- `public/geo/countries.json`      世界層（258 國，`id` 是 ISO 3166-1 數字碼）
+- `public/geo/admin/{國家QID}.json` 該國行政區（`id` 是 QID）
+
+## 為什麼兩層要同一支腳本產
+
+國界原本用 world-atlas 110m（55 個頂點畫完法國本土），行政區用 NE 10m（6,609 個），
+兩者概化程度差一個量級，疊起來明顯對不齊：實測 110m 的每個頂點到 10m 最近點
+中位差 4.7 km、最大 18.6 km，在選取國家的縮放下差到 10 px 以上。
+
+NE 的 admin-0 與 admin-1 是**同一份底圖**（法國本土 3,643 個 admin-0 頂點有 3,633 個
+與 admin-1 完全重合、偏差 0.000 km），所以把兩層丟進**同一次 mapshaper 拓樸簡化**，
+共用的海岸線會被簡成同一條弧，對齊誤差歸零。
+
+⚠️ 這個保證的前提是**兩層用同一個保留率**。想讓世界層更輕就只能兩層一起降，
+單獨簡化世界層會讓共用弧不一致、對不齊的問題整個回來。
+
+## 層級
 
 Natural Earth 10m admin-1（4,596 個 feature，94% 帶 `wikidataid`）。
 
@@ -37,15 +54,16 @@ NE 10m 原始 1,295,319 個頂點（俄羅斯單國就 134k ≈ 610 KB gzip）�
 | 6% | 96,415 | 0.52 MB | 46 KB |
 | 3% | 60,734 | 0.36 MB | 26 KB |
 
-12% 在地球視角（一個國家頂多幾百 px）看不出差別，留點餘裕給之後放大。
+採用 6%：世界層 42,438 頂點／241 KB gzip、行政區合計 0.50 MB。12% 的世界層要
+436 KB gzip，對一個每次進站都要載的檔案太重；6% 的細節仍遠勝原本的 110m（12,218 頂點）。
 mapshaper 走 `npx -y mapshaper`，是**開發時**才跑的工具，不進 package.json
 （產物已 commit，一般開發與部署都不需要它）。
 
 ## 用法
 
-    python3 scripts/build-admin-geojson.py                  # 完整產生
-    python3 scripts/build-admin-geojson.py --simplify 6     # 換簡化強度
-    python3 scripts/build-admin-geojson.py --check          # 只印統計不寫檔
+    python3 scripts/build-territory-geojson.py               # 完整產生
+    python3 scripts/build-territory-geojson.py --simplify 12  # 換簡化強度（兩層一起）
+    python3 scripts/build-territory-geojson.py --check        # 只印統計不寫檔
 
 Wikidata 的查詢結果會快取在 /tmp，重跑不會再打一次（4,282 個 QID 分批查要幾分鐘）。
 """
@@ -62,15 +80,15 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-NE_URL = (
-    "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/"
-    "geojson/ne_10m_admin_1_states_provinces.geojson"
-)
+NE_BASE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/"
+NE_ADMIN1 = NE_BASE + "ne_10m_admin_1_states_provinces.geojson"
+NE_ADMIN0 = NE_BASE + "ne_10m_admin_0_countries.geojson"
 SPARQL_ENDPOINT = "https://query.wikidata.org/sparql"
 USER_AGENT = "ohya-territory-geometry/1.0 (https://ohya.vip)"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = REPO_ROOT / "public" / "geo" / "admin"
+WORLD_PATH = REPO_ROOT / "public" / "geo" / "countries.json"
 CACHE_DIR = Path("/tmp/territory-geometry-cache")
 
 # 一次問 Wikidata 幾個 QID。太大會撞 SPARQL 的查詢長度/逾時上限。
@@ -80,13 +98,13 @@ SPARQL_CHUNK = 400
 PRECISION = 0.001
 
 
-def fetch_source() -> dict:
+def fetch_source(url: str, name: str) -> dict:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cached = CACHE_DIR / "ne_10m_admin_1.geojson"
+    cached = CACHE_DIR / name
 
     if not cached.exists():
-        print(f"  下載 {NE_URL}（約 40 MB）")
-        with urllib.request.urlopen(urllib.request.Request(NE_URL, headers={"User-Agent": USER_AGENT}), timeout=300) as resp:
+        print(f"  下載 {url}")
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": USER_AGENT}), timeout=600) as resp:
             cached.write_bytes(resp.read())
     else:
         print(f"  沿用快取 {cached}")
@@ -349,12 +367,13 @@ def count_vertices(features: list[dict]) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--simplify", type=float, default=12.0, help="保留頂點比例（%%），預設 12")
+    parser.add_argument("--simplify", type=float, default=6.0, help="保留頂點比例（%%），兩層共用，預設 6")
     parser.add_argument("--check", action="store_true", help="只印統計，不寫檔")
     args = parser.parse_args()
 
     print("來源：")
-    source = fetch_source()
+    world_source = fetch_source(NE_ADMIN0, "ne_10m_admin_0.geojson")
+    source = fetch_source(NE_ADMIN1, "ne_10m_admin_1.geojson")
     all_features = source["features"]
 
     qids: list[str] = []
@@ -411,9 +430,56 @@ def main() -> int:
     # 併完一起簡化，父子形狀共用的邊界才會被簡成同一條。
     kept += dissolve_into_parents(kept, have_geometry)
 
+    # 世界層跟行政區一起進同一次簡化：NE 的 admin-0 與 admin-1 是同一份底圖，
+    # 同一個拓樸裡共用的海岸線才會被簡成同一條弧（見檔頭說明）。
+    # level 0 的 country 欄位留空，分檔時就不會被歸進任何一國。
+    for feature in world_source["features"]:
+        properties = feature["properties"]
+        # 要用 ISO_N3_EH 不是 ISO_N3：NE 的 ISO_N3 對法國、挪威是 '-99'
+        # （主權爭議欄位的歷史包袱），_EH 版本就是專門修這個的，有效值 244 vs 237。
+        iso = properties.get("ISO_N3_EH") or properties.get("ISO_N3")
+
+        kept.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    # 世界層照舊用 ISO 3166-1 數字碼當 id（前端就是拿它對圖譜的國家）。
+                    # NE 用 '-99' 表示沒有代碼（科索沃、北賽普勒斯…），當成沒有。
+                    "qid": properties.get("WIKIDATAID"),
+                    "iso": iso if iso and iso != "-99" else None,
+                    "name": properties.get("NAME"),
+                    "level": 0,
+                    "country": None,
+                    "parent": None,
+                },
+                "geometry": feature["geometry"],
+            }
+        )
+
     simplified = simplify(kept, args.simplify)
     print(f"  簡化後頂點 {count_vertices(simplified):,}")
     assert_clockwise(simplified)
+
+    world = [
+        {
+            "type": "Feature",
+            "id": f["properties"]["iso"],
+            "properties": {"name": f["properties"]["name"], "qid": f["properties"]["qid"]},
+            "geometry": f["geometry"],
+        }
+        for f in simplified
+        if f["properties"]["level"] == 0 and f.get("geometry")
+    ]
+    world.sort(key=lambda f: f["id"] or "zzz")
+    world_text = json.dumps(
+        {"type": "FeatureCollection", "features": world},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    print(f"  世界層 {len(world)} 國（有 ISO 數字碼 {sum(1 for f in world if f['id'])}）"
+          f"／{len(world_text.encode()) / 1024:.0f} KB")
+
+    simplified = [f for f in simplified if f["properties"]["level"] != 0]
 
     # 逐國分檔。key 用國家 QID（Wikidata 問出來的，比 NE 自己的 ISO 代碼可靠，
     # 也正好是圖譜 entity 的 name，前端拿到國家就能直接組路徑）。
@@ -469,7 +535,11 @@ def main() -> int:
     for country, text in payloads.items():
         (OUT_DIR / f"{country}.json").write_text(text, encoding="utf-8")
 
-    print(f"\n  已寫入 {OUT_DIR.relative_to(REPO_ROOT)}/（{len(payloads)} 檔）")
+    WORLD_PATH.parent.mkdir(parents=True, exist_ok=True)
+    WORLD_PATH.write_text(world_text, encoding="utf-8")
+
+    print(f"\n  已寫入 {WORLD_PATH.relative_to(REPO_ROOT)}"
+          f" 與 {OUT_DIR.relative_to(REPO_ROOT)}/（{len(payloads)} 檔）")
 
     return 0
 

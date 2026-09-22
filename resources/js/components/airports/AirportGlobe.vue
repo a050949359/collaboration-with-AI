@@ -413,9 +413,9 @@ async function initGlobe() {
 
     resizeToContainer();
 
-    // 自架的混合國界（110m 骨架 + 50m 獨有的小島），由 scripts/build-globe-geojson.py
-    // 產生。已經是 GeoJSON，不需要 topojson.feature() 轉換。
-    const world = await fetch('/geo/countries-hybrid.json').then(
+    // 自架的國界（Natural Earth 10m，258 國），由 scripts/build-territory-geojson.py
+    // 產生。行政區邊界跟它是同一次拓樸簡化出來的，兩層的共用海岸線完全對齊。
+    const world = await fetch('/geo/countries.json').then(
         (r) => r.json() as Promise<{ features: unknown[] }>,
     );
 
