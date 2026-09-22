@@ -336,8 +336,6 @@ export default {
             top_countries: 'Top 10 Countries by Airport Count',
         },
         globe: {
-            title: 'Airport Globe',
-            hint: 'Click a country on the globe to fetch airports and pin their coordinates.',
             selected: 'Selected',
             airport_count: 'Airports: {count}',
             loading: 'Loading airport data...',
