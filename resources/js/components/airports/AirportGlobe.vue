@@ -1,7 +1,5 @@
 <script setup lang="ts">
 // 機場地球（globe.gl，底層 Three.js）。國界 polygon 可點擊：高亮 + 鏡頭飛過去 + 抓該國機場。
-import * as topojson from 'topojson-client';
-import type { Topology } from 'topojson-specification';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api } from '@/lib/routes';
@@ -415,15 +413,13 @@ async function initGlobe() {
 
     resizeToContainer();
 
-    const world = await fetch(
-        'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
-    ).then((r) => r.json() as Promise<Topology>);
+    // 自架的混合國界（110m 骨架 + 50m 獨有的小島），由 scripts/build-globe-geojson.py
+    // 產生。已經是 GeoJSON，不需要 topojson.feature() 轉換。
+    const world = await fetch('/geo/countries-hybrid.json').then(
+        (r) => r.json() as Promise<{ features: unknown[] }>,
+    );
 
-    const countries = (
-        topojson.feature(world, (world.objects as any).countries) as any
-    ).features;
-
-    globeInstance.polygonsData(countries);
+    globeInstance.polygonsData(world.features);
 }
 
 function resizeToContainer() {

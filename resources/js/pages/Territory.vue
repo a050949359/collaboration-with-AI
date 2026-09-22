@@ -4,8 +4,6 @@
 // 左側滑入資料面板。位移用 globe.gl 的 globeOffset（canvas 尺寸全程不變），
 // 不是改容器寬度——改寬度每幀都要 resize WebGL renderer，會頓。
 import { Head } from '@inertiajs/vue3';
-import * as topojson from 'topojson-client';
-import type { Topology } from 'topojson-specification';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
@@ -294,14 +292,14 @@ async function initGlobe() {
 
     resizeToContainer();
 
-    const world = await fetch(
-        'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
-    ).then((r) => r.json() as Promise<Topology>);
-
-    globeInstance.polygonsData(
-        (topojson.feature(world, (world.objects as any).countries) as any)
-            .features,
+    // 自架的混合國界（110m 骨架 + 50m 獨有的小島），由 scripts/build-globe-geojson.py
+    // 產生。110m 少了 61 個小島國／屬地的 feature（新加坡、馬爾他、馬爾地夫…），
+    // 那些國家在圖譜裡有資料卻點不到；補完涵蓋率等同 50m，頂點只多 15%。
+    const world = await fetch('/geo/countries-hybrid.json').then(
+        (r) => r.json() as Promise<{ features: unknown[] }>,
     );
+
+    globeInstance.polygonsData(world.features);
 }
 
 function polygonIso(feat: any): string {
