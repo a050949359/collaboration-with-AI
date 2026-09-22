@@ -374,6 +374,13 @@ async function initGlobe() {
         Globe = (await import('globe.gl')).default;
     }
 
+    // 套件下載期間（await 中）元件可能已經被卸載，containerEl 會變成 null；
+    // 不重新檢查的話 new Globe(null) 會噴錯，且建出來的 instance 因為錯過
+    // onUnmounted 時機、永遠不會被 _destructor() 清掉（memory leak）。
+    if (!containerEl.value) {
+        return;
+    }
+
     globeInstance = new Globe(containerEl.value)
         .backgroundImageUrl(
             'https://cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png',
