@@ -144,7 +144,7 @@ onUnmounted(() => simulation?.stop());
 
 <template>
     <Head title="Knowledge Graph" />
-    <AppLayout>
+    <AppLayout disable-background>
         <div class="flex flex-col" style="height: calc(100vh - 4rem)">
             <!-- Header -->
             <div
