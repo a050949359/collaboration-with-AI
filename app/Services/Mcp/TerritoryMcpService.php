@@ -19,12 +19,18 @@ class TerritoryMcpService implements McpToolServiceInterface
         'refresh_observations',
     ];
 
-    private const READ_TOOLS = ['read_graph', 'read_children', 'search_nodes'];
+    private const READ_TOOLS = ['read_graph', 'read_children', 'read_subtree', 'read_ancestors', 'search_nodes'];
 
     // 未指定 entity_name 時 read_graph 的匯出上限；search_nodes 的搜尋結果上限。
     private const UNSCOPED_GRAPH_LIMIT = 200;
 
     private const SEARCH_LIMIT = 50;
+
+    // read_subtree 的安全上限：depth 最多往下幾層、整棵樹最多回傳幾個節點
+    // （防止對大國一次查太深層，把伺服器記憶體或回應大小炸掉）。
+    private const SUBTREE_MAX_DEPTH = 5;
+
+    private const SUBTREE_NODE_LIMIT = 1000;
 
     public function canHandle(string $name): bool
     {
@@ -43,6 +49,8 @@ class TerritoryMcpService implements McpToolServiceInterface
             'delete_relation' => $this->deleteRelation($id, $args),
             'read_graph' => $this->readGraph($id, $args),
             'read_children' => $this->readChildren($id, $args),
+            'read_subtree' => $this->readSubtree($id, $args),
+            'read_ancestors' => $this->readAncestors($id, $args),
             'search_nodes' => $this->searchNodes($id, $args),
             default => $this->text($id, "Unknown tool: $name", true),
         };
@@ -246,14 +254,122 @@ class TerritoryMcpService implements McpToolServiceInterface
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
+    // read_children/read_subtree 專用的精簡節點格式：
+    // - 不含內部 DB id（對外一律用 QID 識別，這個數字 id 沒有呼叫端會用到）
+    // - QID 欄位命名為 qid 而非 name——底層 TerritoryEntity.name 欄位存的其實是 Wikidata QID
+    //   （既有慣例，見 create_entity 工具說明），沿用 name 這個 key 容易被誤會是人類可讀名稱，
+    //   真正的顯示名稱在 observations.label / observations.label_en 裡
+    // - observations 從 [{id,type,content}] 陣列壓成 {type: content} 扁平物件
+    //   （同一節點同一 type 唯一，DB 有 unique(entity_id,type) 約束，pluck 不會丟資料）
+    // read_graph/search_nodes 刻意不套用這個格式，兩者的既有呼叫端（territory-import-subdivisions.py
+    // 的 remove_observation 流程、entities[0] 假設）依賴原本的 name/id 欄位，不能動。
     private function formatEntity(TerritoryEntity $entity): array
     {
         return [
-            'id' => $entity->id,
-            'name' => $entity->name,
+            'qid' => $entity->name,
             'type' => $entity->type,
-            'observations' => $entity->observations->map(fn ($o) => ['id' => $o->id, 'type' => $o->type, 'content' => $o->content])->all(),
+            'observations' => $entity->observations->pluck('content', 'type')->all(),
         ];
+    }
+
+    private function readSubtree(mixed $id, array $args): JsonResponse
+    {
+        return $this->walkPartOfBfs($id, $args, goUp: false, childrenKey: 'children');
+    }
+
+    private function readAncestors(mixed $id, array $args): JsonResponse
+    {
+        return $this->walkPartOfBfs($id, $args, goUp: true, childrenKey: 'parents');
+    }
+
+    // read_subtree／read_ancestors 共用的 BFS：沿 part_of 關係一路往下（子節點）或往上
+    // （父節點）走 depth 層，逐層固定 2 條 SQL（relations 一次撈、entities+observations 一次
+    // eager load），不管那一層有幾個節點都不會變成 N+1；最後用遞迴 closure 一次組成巢狀樹回傳。
+    // $goUp=false：frontier 用 to_entity_id 比對，往子節點走（read_subtree）。
+    // $goUp=true：frontier 用 from_entity_id 比對，往父節點走（read_ancestors）。
+    // $childrenKey 決定輸出巢狀陣列叫 children 還是 parents，語意上比較清楚。
+    private function walkPartOfBfs(mixed $id, array $args, bool $goUp, string $childrenKey): JsonResponse
+    {
+        $entityName = trim($args['entity_name'] ?? '');
+        if (! $entityName) {
+            return $this->text($id, 'entity_name is required.', true);
+        }
+        $depth = (int) ($args['depth'] ?? 1);
+        $depth = max(1, min($depth, self::SUBTREE_MAX_DEPTH));
+
+        $root = TerritoryEntity::with('observations')->where('name', $entityName)->first();
+        if (! $root) {
+            return $this->text($id, 'Entity not found.', true);
+        }
+
+        $frontierColumn = $goUp ? 'from_entity_id' : 'to_entity_id';
+        $nextColumn = $goUp ? 'to_entity_id' : 'from_entity_id';
+
+        $entitiesById = [$root->id => $root];
+        $relatedIdsByAnchorId = [];
+        $frontierIds = [$root->id];
+        $totalNodes = 1;
+        $truncated = false;
+
+        for ($level = 0; $level < $depth && $frontierIds !== [] && $totalNodes < self::SUBTREE_NODE_LIMIT; $level++) {
+            $relations = TerritoryRelation::where('relation_type', 'part_of')
+                ->whereIn($frontierColumn, $frontierIds)
+                ->get(['from_entity_id', 'to_entity_id']);
+
+            if ($relations->isEmpty()) {
+                break;
+            }
+
+            $remaining = self::SUBTREE_NODE_LIMIT - $totalNodes;
+            $nextIds = $relations->pluck($nextColumn)->unique()->values();
+            if ($nextIds->count() > $remaining) {
+                $truncated = true;
+                $nextIds = $nextIds->take($remaining);
+            }
+            $allowedNextIds = $nextIds->flip();
+
+            foreach ($relations as $rel) {
+                $anchorId = $goUp ? $rel->from_entity_id : $rel->to_entity_id;
+                $relatedId = $goUp ? $rel->to_entity_id : $rel->from_entity_id;
+                if (! $allowedNextIds->has($relatedId)) {
+                    continue;
+                }
+                $relatedIdsByAnchorId[$anchorId][] = $relatedId;
+            }
+
+            $newEntities = TerritoryEntity::with('observations')->whereIn('id', $nextIds)->get()->keyBy('id');
+            foreach ($newEntities as $entityId => $entity) {
+                $entitiesById[$entityId] = $entity;
+            }
+
+            $totalNodes += $newEntities->count();
+            $frontierIds = $newEntities->keys()->all();
+        }
+
+        // $ancestorPath = 從根節點到目前節點路上已經走過的 id 清單（不論往上還是往下走，
+        // 命名都沿用 ancestorPath，代表「這條路徑上已經出現過的節點」）。part_of 理論上不該
+        // 出現循環，但 DB 沒有約束擋掉，沒有這層防護真的遇到循環會無限遞迴到 stack overflow。
+        $buildNode = function (int $entityId, array $ancestorPath = []) use (&$buildNode, $entitiesById, $relatedIdsByAnchorId, $childrenKey): array {
+            $node = $this->formatEntity($entitiesById[$entityId]);
+            if (\in_array($entityId, $ancestorPath, true)) {
+                $node[$childrenKey] = [];
+
+                return $node;
+            }
+            $path = [...$ancestorPath, $entityId];
+            $node[$childrenKey] = array_map(
+                fn (int $relatedId) => $buildNode($relatedId, $path),
+                $relatedIdsByAnchorId[$entityId] ?? []
+            );
+
+            return $node;
+        };
+
+        return $this->text($id, json_encode([
+            'tree' => $buildNode($root->id),
+            'total_nodes' => $totalNodes,
+            'truncated' => $truncated,
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
     private function searchNodes(mixed $id, array $args): JsonResponse
@@ -380,11 +496,35 @@ class TerritoryMcpService implements McpToolServiceInterface
             ],
             [
                 'name' => 'read_children',
-                'description' => '一次讀取指定節點的所有直屬子節點（part_of 指向它的節點）完整資料，含各自的 observations——不用像 read_graph 那樣每個子節點各查一次才拿得到名稱。回傳 parent（該節點本身，含 observations）與 children（子節點陣列，各自含 observations）。只往下抓一層；子節點自己的子節點需再對該子節點呼叫一次。',
+                'description' => '一次讀取指定節點的所有直屬子節點（part_of 指向它的節點）完整資料，含各自的 observations——不用像 read_graph 那樣每個子節點各查一次才拿得到名稱。回傳 parent（該節點本身）與 children（子節點陣列）；每個節點格式為 {qid, type, observations}，qid 是 Wikidata QID（識別用），observations 是 {type: content} 扁平物件（例如 observations.label 是顯示名稱，非 read_graph 那種 [{id,type,content}] 陣列，這裡不含 observation 自己的 DB id，需要用 id 呼叫 remove_observation 時改用 read_graph）。只往下抓一層；子節點自己的子節點需再對該子節點呼叫一次。',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
                         'entity_name' => ['type' => 'string', 'description' => '父節點的 Wikidata QID'],
+                    ],
+                    'required' => ['entity_name'],
+                ],
+            ],
+            [
+                'name' => 'read_subtree',
+                'description' => '一次讀取指定節點往下 N 層的完整子樹（巢狀結構），伺服器內部逐層 BFS（每層固定 2 條 SQL，不會因為節點數暴增變成逐點查詢），適合像「一次拿某國所有省 + 每省底下所有市」這種要跨兩層以上資料的情境，取代自己迴圈呼叫 read_children 多次。回傳 {tree, total_nodes, truncated}：tree 是巢狀節點，格式為 {qid, type, observations, children}（qid 是 Wikidata QID，observations 是 {type: content} 扁平物件，例如 observations.label 是顯示名稱；不含 entity/observation 自己的 DB id，需要 id 來呼叫 remove_observation 時改用 read_graph），children 是同樣格式的子節點陣列。total_nodes 是實際回傳的節點總數，truncated 為 true 代表因安全上限（最多 '.self::SUBTREE_NODE_LIMIT.' 個節點）被截斷，並非資料本身只有這麼多，需要縮小 depth 或改用 read_children 分批查。depth 上限 '.self::SUBTREE_MAX_DEPTH.' 層。',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'entity_name' => ['type' => 'string', 'description' => '根節點的 Wikidata QID'],
+                        'depth' => ['type' => 'integer', 'description' => '往下查幾層，預設 1（等同 read_children），最大 '.self::SUBTREE_MAX_DEPTH],
+                    ],
+                    'required' => ['entity_name'],
+                ],
+            ],
+            [
+                'name' => 'read_ancestors',
+                'description' => 'read_subtree 的反方向版本：一次讀取指定節點往上 N 層的祖先鏈（沿 part_of 往父節點走），適合手上只有一個子節點 QID（例如某個區），想知道它上面依序屬於哪個省、哪個國家，不用自己對 read_graph 拿到的父節點 QID 再逐層手動查。回傳 {tree, total_nodes, truncated}：tree 是巢狀節點，格式為 {qid, type, observations, parents}（parents 是同樣格式的父節點陣列——一個節點可能有多個 parallel parent，見 create_relation 說明）。total_nodes/truncated 語意同 read_subtree。depth 上限 '.self::SUBTREE_MAX_DEPTH.' 層。',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'entity_name' => ['type' => 'string', 'description' => '起點節點的 Wikidata QID'],
+                        'depth' => ['type' => 'integer', 'description' => '往上查幾層，預設 1，最大 '.self::SUBTREE_MAX_DEPTH],
                     ],
                     'required' => ['entity_name'],
                 ],
