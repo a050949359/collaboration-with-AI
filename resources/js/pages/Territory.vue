@@ -30,7 +30,6 @@ interface Node {
     lng: number | null;
     population: number | null;
     area: number | null;
-    has_gap: boolean;
 }
 
 const containerEl = ref<HTMLDivElement | null>(null);
@@ -95,7 +94,6 @@ const topChildren = computed(() => children.value.slice(0, 12));
 const maxPopulation = computed(() =>
     Math.max(1, ...topChildren.value.map((c) => c.population ?? 0)),
 );
-const gapCount = computed(() => children.value.filter((c) => c.has_gap).length);
 
 function formatNumber(n: number | null): string {
     return n == null ? '—' : n.toLocaleString();
@@ -506,15 +504,6 @@ onUnmounted(() => {
                             <span
                                 class="ml-1 font-bold text-[var(--binary-primary)]"
                                 >{{ children.length }}</span
-                            >
-                        </div>
-                        <div v-if="gapCount">
-                            <span class="text-[var(--binary-outline)]"
-                                >下層資料缺口</span
-                            >
-                            <span
-                                class="ml-1 font-bold text-[var(--binary-tertiary)]"
-                                >{{ gapCount }}</span
                             >
                         </div>
                     </div>

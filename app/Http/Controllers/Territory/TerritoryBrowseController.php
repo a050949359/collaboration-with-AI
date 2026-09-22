@@ -26,9 +26,13 @@ class TerritoryBrowseController extends Controller
         'label_en', 'label_zh_tw', 'numeric', 'iso_code', 'continent', 'population',
     ];
 
-    /** 行政區層要帶出來的 observation 欄位 */
+    /**
+     * 行政區層要帶出來的 observation 欄位。
+     * 刻意不含 layer2_gap：那是匯入流程的內部品管記錄（內容還含日期與內部工具名稱），
+     * 屬於開發端資訊，不該從公開端點流出去。
+     */
     private const NODE_FIELDS = [
-        'label', 'label_en', 'description', 'coordinates', 'population', 'area', 'layer2_gap',
+        'label', 'label_en', 'description', 'coordinates', 'population', 'area',
     ];
 
     /**
@@ -143,9 +147,6 @@ class TerritoryBrowseController extends Controller
             'lng' => $lng,
             'population' => isset($fields['population']) ? (int) $fields['population'] : null,
             'area' => isset($fields['area']) ? (float) $fields['area'] : null,
-            // layer2_gap 標記這個節點的下一層在 Wikidata 是缺的（或腳本技術限制），
-            // 前端拿來畫「資料完整度」，跟「真的沒有下層」要分開看待。
-            'has_gap' => isset($fields['layer2_gap']),
         ];
     }
 
