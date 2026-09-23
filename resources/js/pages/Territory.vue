@@ -832,235 +832,250 @@ onUnmounted(() => {
                  刻意不用 binary-glass：星空底本來就夠暗，加了玻璃面板在純黑上只會
                  多出一個灰色矩形的邊，看起來像浮在空地裡的卡片。擺左下而不是垂直
                  置中，是為了把中線讓給地球，順便填掉那塊死角、跟地球拉出對角線。 -->
-            <div
-                v-if="!selected"
-                class="pointer-events-none flex min-h-[calc(100vh-4rem)] items-end px-6 pb-8 md:px-12 md:pb-12"
-            >
-                <div class="pointer-events-auto max-w-md">
-                    <p
-                        class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
-                    >
-                        &gt; territory_graph
-                    </p>
-                    <h1
-                        class="text-gradient-primary mt-1 text-3xl font-bold md:text-4xl"
-                    >
-                        世界行政區圖譜
-                    </h1>
-                    <p
-                        class="mt-2 text-xs text-[var(--binary-text-muted)] md:text-sm"
-                    >
-                        拖曳旋轉地球,點擊國家查看它底下的行政區。
-                    </p>
-
-                    <!-- 國家清單載入失敗時地球還是能轉，但點了不會有反應，要明講原因 -->
-                    <div
-                        v-if="countriesError"
-                        class="mt-4 rounded-lg border border-[var(--binary-tertiary)]/40 p-3"
-                    >
-                        <p class="text-xs text-[var(--binary-tertiary)]">
-                            國家資料載入失敗({{
-                                countriesError
-                            }}),地球可以轉動但無法點選。
-                        </p>
-                        <button
-                            type="button"
-                            class="binary-ghost-button mt-2 text-xs"
-                            @click="loadCountries"
+            <!-- ⚠️ 兩塊都要 absolute 疊在同一格。轉場期間兩者同時存在，若留在一般
+                 流程裡會上下堆成兩倍高，把畫面往下推、還長出捲軸。 -->
+            <Transition name="world-intro">
+                <div
+                    v-if="!selected"
+                    class="pointer-events-none absolute inset-0 flex items-end px-6 pb-8 md:px-12 md:pb-12"
+                >
+                    <div class="pointer-events-auto max-w-md">
+                        <p
+                            class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
                         >
-                            重新載入
-                        </button>
-                    </div>
+                            &gt; territory_graph
+                        </p>
+                        <h1
+                            class="text-gradient-primary mt-1 text-3xl font-bold md:text-4xl"
+                        >
+                            世界行政區圖譜
+                        </h1>
+                        <p
+                            class="mt-2 text-xs text-[var(--binary-text-muted)] md:text-sm"
+                        >
+                            拖曳旋轉地球,點擊國家查看它底下的行政區。
+                        </p>
 
-                    <!-- 資料是空的（例如本機 DB 沒匯入）也要講，不然使用者只會看到
+                        <!-- 國家清單載入失敗時地球還是能轉，但點了不會有反應，要明講原因 -->
+                        <div
+                            v-if="countriesError"
+                            class="mt-4 rounded-lg border border-[var(--binary-tertiary)]/40 p-3"
+                        >
+                            <p class="text-xs text-[var(--binary-tertiary)]">
+                                國家資料載入失敗({{
+                                    countriesError
+                                }}),地球可以轉動但無法點選。
+                            </p>
+                            <button
+                                type="button"
+                                class="binary-ghost-button mt-2 text-xs"
+                                @click="loadCountries"
+                            >
+                                重新載入
+                            </button>
+                        </div>
+
+                        <!-- 資料是空的（例如本機 DB 沒匯入）也要講，不然使用者只會看到
                          一顆點不動的地球跟三個 0，無從判斷是壞了還是沒資料 -->
-                    <p
-                        v-else-if="!countries.length"
-                        class="mt-4 rounded-lg border border-[var(--binary-outline-variant)] p-3 text-xs text-[var(--binary-text-muted)]"
-                    >
-                        目前資料庫沒有國家資料,地球可以轉動但無法點選。
-                    </p>
+                        <p
+                            v-else-if="!countries.length"
+                            class="mt-4 rounded-lg border border-[var(--binary-outline-variant)] p-3 text-xs text-[var(--binary-text-muted)]"
+                        >
+                            目前資料庫沒有國家資料,地球可以轉動但無法點選。
+                        </p>
 
-                    <!-- 橫排＋靠左，跟上面的標題同一條左緣；原本的三欄置中在沒有
+                        <!-- 橫排＋靠左，跟上面的標題同一條左緣；原本的三欄置中在沒有
                          盒子框住時會散掉，對不到任何東西 -->
-                    <dl
-                        v-else
-                        class="mt-5 flex gap-8 border-t border-[var(--binary-outline-variant)] pt-4"
-                    >
-                        <div>
-                            <dt
-                                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
-                            >
-                                國家
-                            </dt>
-                            <dd
-                                class="mt-0.5 text-xl font-bold text-[var(--binary-primary)] tabular-nums"
-                            >
-                                {{ worldStats.countries }}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt
-                                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
-                            >
-                                有下層資料
-                            </dt>
-                            <dd
-                                class="mt-0.5 text-xl font-bold text-[var(--binary-primary)] tabular-nums"
-                            >
-                                {{ worldStats.withData }}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt
-                                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
-                            >
-                                行政區總數
-                            </dt>
-                            <dd
-                                class="mt-0.5 text-xl font-bold text-[var(--binary-primary)] tabular-nums"
-                            >
-                                {{ formatNumber(worldStats.totalChildren) }}
-                            </dd>
-                        </div>
-                    </dl>
+                        <dl
+                            v-else
+                            class="mt-5 flex gap-8 border-t border-[var(--binary-outline-variant)] pt-4"
+                        >
+                            <div>
+                                <dt
+                                    class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                                >
+                                    國家
+                                </dt>
+                                <dd
+                                    class="mt-0.5 text-xl font-bold text-[var(--binary-primary)] tabular-nums"
+                                >
+                                    {{ worldStats.countries }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt
+                                    class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                                >
+                                    有下層資料
+                                </dt>
+                                <dd
+                                    class="mt-0.5 text-xl font-bold text-[var(--binary-primary)] tabular-nums"
+                                >
+                                    {{ worldStats.withData }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt
+                                    class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
+                                >
+                                    行政區總數
+                                </dt>
+                                <dd
+                                    class="mt-0.5 text-xl font-bold text-[var(--binary-primary)] tabular-nums"
+                                >
+                                    {{ formatNumber(worldStats.totalChildren) }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
                 </div>
-            </div>
+            </Transition>
 
             <!-- 選了國家：左側資料面板滑入（手機版從下方佔滿寬度） -->
-            <div
-                v-else
-                class="pointer-events-none flex min-h-[calc(100vh-4rem)] items-end md:items-center"
-            >
-                <section
-                    class="binary-glass pointer-events-auto max-h-[70vh] w-full overflow-y-auto rounded-2xl p-5 md:ml-8 md:max-h-[80vh] md:w-[26rem]"
+            <Transition name="country-panel">
+                <div
+                    v-if="selected"
+                    class="pointer-events-none absolute inset-0 flex items-end md:items-center"
                 >
-                    <!-- 退出是逐層的：2D → 行政區 → 世界（Esc 也是同一條路） -->
-                    <button
-                        type="button"
-                        class="binary-ghost-button mb-4 text-xs"
-                        @click="
-                            isFlat
-                                ? unflatten()
-                                : drilledQid
-                                  ? drillOut()
-                                  : backToWorld()
-                        "
+                    <section
+                        class="binary-glass pointer-events-auto max-h-[70vh] w-full overflow-y-auto rounded-2xl p-5 md:ml-8 md:max-h-[80vh] md:w-[26rem]"
                     >
-                        {{
-                            isFlat
-                                ? '← 回到地球'
-                                : drilledQid
-                                  ? '← 收起行政區'
-                                  : '← 回到世界'
-                        }}
-                    </button>
+                        <!-- 退出是逐層的：2D → 行政區 → 世界（Esc 也是同一條路） -->
+                        <button
+                            type="button"
+                            class="binary-ghost-button mb-4 text-xs"
+                            @click="
+                                isFlat
+                                    ? unflatten()
+                                    : drilledQid
+                                      ? drillOut()
+                                      : backToWorld()
+                            "
+                        >
+                            {{
+                                isFlat
+                                    ? '← 回到地球'
+                                    : drilledQid
+                                      ? '← 收起行政區'
+                                      : '← 回到世界'
+                            }}
+                        </button>
 
-                    <h2 class="text-2xl font-bold text-[var(--binary-text)]">
-                        {{ selected.label }}
-                    </h2>
-                    <p class="mt-1 text-xs text-[var(--binary-text-muted)]">
-                        {{ selected.iso_code }} ·
-                        {{ selected.continent ?? '—' }} · 人口
-                        {{ formatNumber(selected.population) }}
-                    </p>
+                        <h2
+                            class="text-2xl font-bold text-[var(--binary-text)]"
+                        >
+                            {{ selected.label }}
+                        </h2>
+                        <p class="mt-1 text-xs text-[var(--binary-text-muted)]">
+                            {{ selected.iso_code }} ·
+                            {{ selected.continent ?? '—' }} · 人口
+                            {{ formatNumber(selected.population) }}
+                        </p>
 
-                    <div
-                        class="mt-4 flex items-center gap-4 border-y border-[var(--binary-outline-variant)] py-3 text-xs"
-                    >
-                        <div>
-                            <span class="text-[var(--binary-outline)]"
-                                >一級行政區</span
+                        <div
+                            class="mt-4 flex items-center gap-4 border-y border-[var(--binary-outline-variant)] py-3 text-xs"
+                        >
+                            <div>
+                                <span class="text-[var(--binary-outline)]"
+                                    >一級行政區</span
+                                >
+                                <span
+                                    class="ml-1 font-bold text-[var(--binary-primary)]"
+                                    >{{ children.length }}</span
+                                >
+                            </div>
+
+                            <!-- 下鑽的正式入口。再點一次地球上同一國也會下鑽，但那是隱藏
+                             的快捷鍵，不能當唯一入口——使用者不會知道要點第二次。 -->
+                            <!-- binary-button 是 w-full 的，放在這一列會把標籤擠到換行，
+                             這裡要的是行內動作，所以走 ghost 版再補一圈主色邊框 -->
+                            <button
+                                v-if="canDrill && !drilledQid"
+                                type="button"
+                                class="binary-ghost-button ml-auto shrink-0 border border-[var(--binary-primary)]/50 py-1 disabled:opacity-50"
+                                :disabled="isDrilling"
+                                @click="selected && drillIn(selected)"
                             >
+                                {{ isDrilling ? '載入中…' : '展開邊界' }}
+                            </button>
+                            <!-- 下鑽後才給攤平入口：2D 層畫的就是浮起中的那批板塊 -->
+                            <button
+                                v-else-if="drilledQid && !isFlat"
+                                type="button"
+                                class="binary-ghost-button ml-auto shrink-0 border border-[var(--binary-primary)]/50 py-1"
+                                @click="flatten"
+                            >
+                                攤平
+                            </button>
                             <span
-                                class="ml-1 font-bold text-[var(--binary-primary)]"
-                                >{{ children.length }}</span
+                                v-else-if="isFlat"
+                                class="ml-auto truncate text-[10px] text-[var(--binary-outline)]"
                             >
+                                {{
+                                    activeRegionQid
+                                        ? regionLabel
+                                        : '點區塊看名稱'
+                                }}
+                            </span>
                         </div>
 
-                        <!-- 下鑽的正式入口。再點一次地球上同一國也會下鑽，但那是隱藏
-                             的快捷鍵，不能當唯一入口——使用者不會知道要點第二次。 -->
-                        <!-- binary-button 是 w-full 的，放在這一列會把標籤擠到換行，
-                             這裡要的是行內動作，所以走 ghost 版再補一圈主色邊框 -->
-                        <button
-                            v-if="canDrill && !drilledQid"
-                            type="button"
-                            class="binary-ghost-button ml-auto shrink-0 border border-[var(--binary-primary)]/50 py-1 disabled:opacity-50"
-                            :disabled="isDrilling"
-                            @click="selected && drillIn(selected)"
+                        <p
+                            v-if="isLoading"
+                            class="mt-4 text-xs text-[var(--binary-primary)]"
                         >
-                            {{ isDrilling ? '載入中…' : '展開邊界' }}
-                        </button>
-                        <!-- 下鑽後才給攤平入口：2D 層畫的就是浮起中的那批板塊 -->
-                        <button
-                            v-else-if="drilledQid && !isFlat"
-                            type="button"
-                            class="binary-ghost-button ml-auto shrink-0 border border-[var(--binary-primary)]/50 py-1"
-                            @click="flatten"
+                            載入中...
+                        </p>
+                        <p
+                            v-else-if="loadError"
+                            class="mt-4 text-xs text-red-300"
                         >
-                            攤平
-                        </button>
-                        <span
-                            v-else-if="isFlat"
-                            class="ml-auto truncate text-[10px] text-[var(--binary-outline)]"
+                            {{ loadError }}
+                        </p>
+                        <p
+                            v-else-if="!children.length"
+                            class="mt-4 text-xs text-[var(--binary-text-muted)]"
                         >
-                            {{ activeRegionQid ? regionLabel : '點區塊看名稱' }}
-                        </span>
-                    </div>
+                            這個國家目前沒有下層行政區資料。
+                        </p>
 
-                    <p
-                        v-if="isLoading"
-                        class="mt-4 text-xs text-[var(--binary-primary)]"
-                    >
-                        載入中...
-                    </p>
-                    <p v-else-if="loadError" class="mt-4 text-xs text-red-300">
-                        {{ loadError }}
-                    </p>
-                    <p
-                        v-else-if="!children.length"
-                        class="mt-4 text-xs text-[var(--binary-text-muted)]"
-                    >
-                        這個國家目前沒有下層行政區資料。
-                    </p>
-
-                    <!-- 人口長條：純 CSS 寬度，不另外拉圖表套件 -->
-                    <ul v-else class="mt-4 space-y-2">
-                        <li v-for="c in topChildren" :key="c.qid">
-                            <div
-                                class="flex items-baseline justify-between gap-2 text-xs"
-                            >
-                                <span
-                                    class="truncate text-[var(--binary-text)]"
-                                    >{{ c.label }}</span
-                                >
-                                <span
-                                    class="shrink-0 text-[10px] text-[var(--binary-outline)]"
-                                    >{{ formatNumber(c.population) }}</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 h-1.5 w-full rounded-full bg-[var(--binary-surface-container)]"
-                            >
+                        <!-- 人口長條：純 CSS 寬度，不另外拉圖表套件 -->
+                        <ul v-else class="mt-4 space-y-2">
+                            <li v-for="c in topChildren" :key="c.qid">
                                 <div
-                                    class="h-full rounded-full bg-[var(--binary-primary)]"
-                                    :style="{
-                                        width: `${((c.population ?? 0) / maxPopulation) * 100}%`,
-                                    }"
-                                />
-                            </div>
-                        </li>
-                    </ul>
+                                    class="flex items-baseline justify-between gap-2 text-xs"
+                                >
+                                    <span
+                                        class="truncate text-[var(--binary-text)]"
+                                        >{{ c.label }}</span
+                                    >
+                                    <span
+                                        class="shrink-0 text-[10px] text-[var(--binary-outline)]"
+                                        >{{ formatNumber(c.population) }}</span
+                                    >
+                                </div>
+                                <div
+                                    class="mt-1 h-1.5 w-full rounded-full bg-[var(--binary-surface-container)]"
+                                >
+                                    <div
+                                        class="h-full rounded-full bg-[var(--binary-primary)]"
+                                        :style="{
+                                            width: `${((c.population ?? 0) / maxPopulation) * 100}%`,
+                                        }"
+                                    />
+                                </div>
+                            </li>
+                        </ul>
 
-                    <p
-                        v-if="children.length > topChildren.length"
-                        class="mt-3 text-[10px] text-[var(--binary-outline)]"
-                    >
-                        僅顯示人口前 {{ topChildren.length }} 名,共
-                        {{ children.length }} 個
-                    </p>
-                </section>
-            </div>
+                        <p
+                            v-if="children.length > topChildren.length"
+                            class="mt-3 text-[10px] text-[var(--binary-outline)]"
+                        >
+                            僅顯示人口前 {{ topChildren.length }} 名,共
+                            {{ children.length }} 個
+                        </p>
+                    </section>
+                </div>
+            </Transition>
         </main>
     </AppLayout>
 </template>
@@ -1076,5 +1091,47 @@ onUnmounted(() => {
 .hint-leave-to {
     opacity: 0;
     transform: translateY(-6px);
+}
+
+/* 世界層說明往下淡出（它本來就在畫面底部，往下退最自然），國家面板同時從左邊
+   滑進來。兩段刻意重疊播放，不用 out-in 排隊——地球那邊的位移與鏡頭是 600/800ms
+   的 tween，面板要在地球還在動的時候就到位，才像同一件事。 */
+.world-intro-enter-active,
+.world-intro-leave-active {
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+}
+.world-intro-enter-from,
+.world-intro-leave-to {
+    opacity: 0;
+    transform: translateY(16px);
+}
+
+.country-panel-enter-active,
+.country-panel-leave-active {
+    transition:
+        opacity 0.4s ease,
+        transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.country-panel-enter-from,
+.country-panel-leave-to {
+    opacity: 0;
+    transform: translateX(-32px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .world-intro-enter-active,
+    .world-intro-leave-active,
+    .country-panel-enter-active,
+    .country-panel-leave-active {
+        transition-duration: 0.01ms;
+    }
+    .world-intro-enter-from,
+    .world-intro-leave-to,
+    .country-panel-enter-from,
+    .country-panel-leave-to {
+        transform: none;
+    }
 }
 </style>
