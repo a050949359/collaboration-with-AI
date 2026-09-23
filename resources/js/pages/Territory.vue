@@ -5,9 +5,11 @@
 // 不是改容器寬度——改寬度每幀都要 resize WebGL renderer，會頓。
 import { Head } from '@inertiajs/vue3';
 import * as THREE from 'three';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import FlatMap from '../components/territory/FlatMap.vue';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
+import { themeColor, withAlpha } from '../lib/theme-color';
 
 interface Country {
     qid: string;
@@ -88,6 +90,12 @@ let worldFeatures: any[] = [];
 /** 目前浮起中的行政區 feature（下鑽時才有東西） */
 let regionFeatures: any[] = [];
 
+/**
+ * 行政區浮起的高度。2D 交接時要用同一個值去算螢幕座標，不然攤平的第 0 幀
+ * 會對到球面而不是浮起後的位置，差一點點但看得出來。
+ */
+const regionAltitude = 0.03;
+
 const countries = ref<Country[]>([]);
 const selected = ref<Country | null>(null);
 const children = ref<Node[]>([]);
@@ -115,6 +123,19 @@ const drilledQid = ref<string | null>(null);
 const isDrilling = ref(false);
 /** 下鑽後點到的那一塊行政區 QID */
 const activeRegionQid = ref<string | null>(null);
+/** 是否已經攤平成 2D。退場有動畫，所以卸載要等 FlatMap 回報 exited */
+const isFlat = ref(false);
+const flatMapEl = ref<InstanceType<typeof FlatMap> | null>(null);
+/**
+ * 交接那一刻的行政區 feature 快照，交給 FlatMap 當 props。
+ *
+ * 一定要 shallowRef：一般的 ref 會把整棵幾何（法國 15,040 個座標陣列）包成
+ * reactive proxy，除了白花時間，proxy 後的物件跟 three-globe 手上那批**不是
+ * 同一個實例**，digest 會把已經建好的板塊當成新資料整批重建。
+ */
+const flatFeatures = shallowRef<any[]>([]);
+/** 視窗寬度。panelInset 是 computed，要有個會變的來源才會跟著 resize 重算。 */
+const viewportWidth = ref(0);
 
 /** 目前這個國家能不能下鑽（有被選取、且索引裡有第一層幾何） */
 const canDrill = computed(
@@ -189,55 +210,25 @@ function formatNumber(n: number | null): string {
     return n == null ? '—' : n.toLocaleString();
 }
 
-/** 讀主題色給大氣層光暈用（沿用 CodeGraph 的做法：借 canvas 正規化任意 CSS 色）。 */
-function themeColor(varName: string, fallback: string): string {
-    const raw = getComputedStyle(document.documentElement)
-        .getPropertyValue(varName)
-        .trim();
-
-    if (!raw) {
-        return fallback;
-    }
-
-    const ctx = document.createElement('canvas').getContext('2d');
-
-    if (!ctx) {
-        return raw;
-    }
-
-    ctx.fillStyle = raw;
-
-    return ctx.fillStyle;
-}
-
 /**
- * 給主題色加上透明度。
- *
- * themeColor 走 canvas 正規化，吐出來只會是 `#rrggbb` 或 `rgba(...)` 兩種形式，
- * 這裡兩種都接。不能直接字串相接：主題色若剛好已經帶 alpha，接出來會是壞值。
+ * 行政區顯示名：幾何檔有些 feature 沒有 name，用圖譜的 children 補。
+ * 兩邊都沒有就回空字串，不要拿 QID 充數——地圖上標一個「Q15104」比留白更糟，
+ * 面板那邊才適合顯示 QID（那裡的用途是讓人查得到是哪一筆）。
  */
-function withAlpha(color: string, alpha: number): string {
-    if (/^#[0-9a-f]{6}$/i.test(color)) {
-        return (
-            color +
-            Math.round(alpha * 255)
-                .toString(16)
-                .padStart(2, '0')
-        );
-    }
-
-    const channels = color.match(/[\d.]+/g);
-
-    return channels && channels.length >= 3
-        ? `rgba(${channels[0]},${channels[1]},${channels[2]},${alpha})`
-        : color;
-}
-
-/** 行政區顯示名：幾何檔有 14 個 feature 沒有 name，用圖譜的 children 補。 */
 function regionName(feat: any): string {
     const fromGraph = children.value.find((c) => c.qid === feat?.id);
 
-    return fromGraph?.label ?? feat?.properties?.name ?? feat?.id ?? '';
+    // 圖譜裡有些節點的 label 直接存成自己的 QID（例如 Q15104／普羅旺斯-阿爾卑斯-
+    // 蔚藍海岸），那是匯入時漏掉名稱，不是真的叫這個名字。當成沒有名稱處理。
+    const label =
+        fromGraph && fromGraph.label !== fromGraph.qid ? fromGraph.label : null;
+
+    return label ?? feat?.properties?.name ?? '';
+}
+
+/** 2D 層的填色量值。幾何檔沒有人口，一律從圖譜的 children 取。 */
+function regionPopulation(feat: any): number | null {
+    return children.value.find((c) => c.qid === feat?.id)?.population ?? null;
 }
 
 /** globeOffset 沒有內建轉場，自己補一段 ease-out tween，避免位移用跳的。 */
@@ -264,6 +255,22 @@ function tweenOffset(toX: number, duration = 600) {
 
     offsetRaf = requestAnimationFrame(step);
 }
+
+/**
+ * 資料面板實際佔掉的畫面，給 2D 地圖避開用。
+ *
+ * 3D 那邊是整顆球往右推（globeOffset），2D 這邊不推畫面、改成把地圖 fit 在剩下的
+ * 矩形裡——平面圖沒有「球心」的概念，推位移只會讓它偏出畫面。
+ * 數字對應面板的 `md:w-[26rem]` + `md:ml-8`，再加一點呼吸空間。
+ */
+const panelInset = computed(() => {
+    const isNarrow = viewportWidth.value < 768;
+
+    return {
+        left: isNarrow ? 0 : 26 * 16 + 32 + 24,
+        bottom: isNarrow ? window.innerHeight * 0.45 : 0,
+    };
+});
 
 /** 選中時地球往右讓出左側面板空間；手機版空間不夠，改成不位移（面板走底部）。 */
 function offsetForSelection(): number {
@@ -373,8 +380,84 @@ async function drillIn(country: Country) {
     }
 }
 
+/**
+ * 「這個經緯度，現在畫在螢幕的哪個 px」——用地球自己的相機算。
+ *
+ * 這是 2D 轉場不會跳的關鍵：回傳的就是 three.js 當下把該點畫到的位置，
+ * 所以攤平動畫的第 0 幀跟 WebGL 畫面在數學上完全重合。
+ * 用 d3 的 geoOrthographic 去近似相機也行，但那是拿正射當透視，實測跨度 15° 的
+ * 國家邊緣會差到 7.85%，交接瞬間看得出來抖一下。
+ *
+ * 相機的 setViewOffset（globeOffset 讓地球右移那件事）已經算在 projectionMatrix
+ * 裡，所以這裡不必額外補償位移。
+ */
+function projectFromGlobe(lng: number, lat: number): [number, number] | null {
+    if (!globeInstance) {
+        return null;
+    }
+
+    const { x, y, z } = globeInstance.getCoords(lat, lng, regionAltitude);
+    const point = new THREE.Vector3(x, y, z);
+    const toCamera = globeInstance.camera().position.clone().sub(point);
+
+    // 背面剔除。getScreenCoords 對球背面的點照樣吐得出座標，不擋的話攤平會從
+    // 地球背面拉出幾條線。地表法線（球心→該點）與「該點→相機」同向才看得見。
+    if (point.clone().normalize().dot(toCamera.normalize()) <= 0) {
+        return null;
+    }
+
+    const screen = globeInstance.getScreenCoords(lat, lng, regionAltitude);
+
+    return screen ? [screen.x, screen.y] : null;
+}
+
+/** 攤平：把目前浮起的行政區交給 2D 層，地球淡出並暫停。 */
+function flatten() {
+    if (!regionFeatures.length) {
+        return;
+    }
+
+    flatFeatures.value = regionFeatures;
+    isFlat.value = true;
+}
+
+/** 收回 3D：先讓 2D 層倒帶回球面，播完才卸載（見 onFlatExited）。 */
+function unflatten() {
+    globeInstance?.resumeAnimation();
+    flatMapEl.value?.exit();
+}
+
+function onFlatReady(info: { shown: number; dropped: number }) {
+    // 海外屬地離本土太遠，一起框進畫面本土會縮成一點，所以 2D 層只畫本土那一團。
+    // 但不能默默少掉——面板列表裡明明有，畫面上卻找不到。
+    if (info.dropped > 0) {
+        showClickHint(`平面圖只顯示本土，另有 ${info.dropped} 個海外屬地未畫`);
+    }
+}
+
+function onFlatDone() {
+    // 攤平後地球整片透明，還讓它每幀重畫沒有意義
+    globeInstance?.pauseAnimation();
+}
+
+function onFlatExited() {
+    isFlat.value = false;
+    flatFeatures.value = [];
+}
+
+/** 不播退場動畫直接收掉 2D 層。用在「跳過中間層級」的情況（換國家、回世界）。 */
+function closeFlatNow() {
+    if (!isFlat.value) {
+        return;
+    }
+
+    globeInstance?.resumeAnimation();
+    onFlatExited();
+}
+
 /** 收起行政區，回到國家層。世界層不動，所以這一步是零重建。 */
 function drillOut() {
+    closeFlatNow();
     regionFeatures = [];
     drilledQid.value = null;
     activeRegionQid.value = null;
@@ -404,6 +487,7 @@ async function selectCountry(country: Country) {
 
     // 換國家：先把上一國浮起來的板塊收掉
     if (drilledQid.value) {
+        closeFlatNow();
         regionFeatures = [];
         drilledQid.value = null;
         activeRegionQid.value = null;
@@ -456,6 +540,7 @@ async function selectCountry(country: Country) {
 }
 
 function backToWorld() {
+    closeFlatNow();
     selected.value = null;
     children.value = [];
     loadError.value = '';
@@ -472,13 +557,15 @@ function backToWorld() {
     }
 }
 
-/** Esc 一次退一層：行政區 → 國家 → 世界 */
+/** Esc 一次退一層：2D → 行政區 → 國家 → 世界 */
 function onKeydown(event: KeyboardEvent) {
     if (event.key !== 'Escape') {
         return;
     }
 
-    if (drilledQid.value) {
+    if (isFlat.value) {
+        unflatten();
+    } else if (drilledQid.value) {
         drillOut();
     } else if (selected.value) {
         backToWorld();
@@ -486,6 +573,8 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 function resizeToContainer() {
+    viewportWidth.value = window.innerWidth;
+
     if (!containerEl.value || !globeInstance) {
         return;
     }
@@ -526,7 +615,9 @@ async function initGlobe() {
         .atmosphereAltitude(0.16)
         // 行政區浮到國家層上方。altitude 在 three-globe 是 `scale = 1 + alt` 的
         // tween，不重建幾何，所以「升起來」這個動畫本身是免費的。
-        .polygonAltitude((feat: any) => (feat.__region ? 0.03 : 0.006))
+        .polygonAltitude((feat: any) =>
+            feat.__region ? regionAltitude : 0.006,
+        )
         .polygonCapMaterial((feat: any) => {
             if (feat.__region) {
                 return feat.id === activeRegionQid.value
@@ -664,6 +755,7 @@ async function loadCountries() {
 }
 
 onMounted(async () => {
+    viewportWidth.value = window.innerWidth;
     await Promise.all([loadCountries(), loadAdminIndex()]);
     await initGlobe();
     window.addEventListener('resize', resizeToContainer);
@@ -692,7 +784,31 @@ onUnmounted(() => {
         <!-- 地球鋪滿視窗當背景層（取代主題背景動畫），內容疊在上面。
              z-index 不能用負值：.binary-page 是 relative、pointer-events auto 且盒子蓋滿
              視窗，地球放負 z-index 會被它擋掉所有點擊/拖曳，事件傳不到 canvas。 -->
-        <div ref="containerEl" class="fixed inset-x-0 top-16 bottom-0 z-0" />
+        <!-- 攤平後地球整片淡出。轉場的第 0 幀兩層是重合的，所以這段淡出看起來
+             不像換頁，比較像線條被抽乾淨。pointer-events 也要一起關掉，否則
+             看不見的球還在吃拖曳。 -->
+        <div
+            ref="containerEl"
+            class="fixed inset-x-0 top-16 bottom-0 z-0 transition-opacity duration-500"
+            :class="isFlat ? 'pointer-events-none opacity-0' : 'opacity-100'"
+        />
+
+        <div v-if="isFlat" class="fixed inset-x-0 top-16 bottom-0 z-0">
+            <FlatMap
+                ref="flatMapEl"
+                :features="flatFeatures"
+                :project="projectFromGlobe"
+                :active-qid="activeRegionQid"
+                :label-of="regionName"
+                :value-of="regionPopulation"
+                :inset-left="panelInset.left"
+                :inset-bottom="panelInset.bottom"
+                @select="activeRegionQid = $event"
+                @ready="onFlatReady"
+                @done="onFlatDone"
+                @exited="onFlatExited"
+            />
+        </div>
 
         <!-- 內容層整片 pointer-events-none 讓事件穿透到地球，只有實際面板收事件，
              面板之間的空白處可以直接拖曳轉動地球。 -->
@@ -808,13 +924,25 @@ onUnmounted(() => {
                 <section
                     class="binary-glass pointer-events-auto max-h-[70vh] w-full overflow-y-auto rounded-2xl p-5 md:ml-8 md:max-h-[80vh] md:w-[26rem]"
                 >
-                    <!-- 退出是兩段式的：下鑽時先收行政區，再一次才回世界 -->
+                    <!-- 退出是逐層的：2D → 行政區 → 世界（Esc 也是同一條路） -->
                     <button
                         type="button"
                         class="binary-ghost-button mb-4 text-xs"
-                        @click="drilledQid ? drillOut() : backToWorld()"
+                        @click="
+                            isFlat
+                                ? unflatten()
+                                : drilledQid
+                                  ? drillOut()
+                                  : backToWorld()
+                        "
                     >
-                        {{ drilledQid ? '← 收起行政區' : '← 回到世界' }}
+                        {{
+                            isFlat
+                                ? '← 回到地球'
+                                : drilledQid
+                                  ? '← 收起行政區'
+                                  : '← 回到世界'
+                        }}
                     </button>
 
                     <h2 class="text-2xl font-bold text-[var(--binary-text)]">
@@ -852,11 +980,20 @@ onUnmounted(() => {
                         >
                             {{ isDrilling ? '載入中…' : '展開邊界' }}
                         </button>
-                        <span
-                            v-else-if="drilledQid"
-                            class="ml-auto text-[10px] text-[var(--binary-outline)]"
+                        <!-- 下鑽後才給攤平入口：2D 層畫的就是浮起中的那批板塊 -->
+                        <button
+                            v-else-if="drilledQid && !isFlat"
+                            type="button"
+                            class="binary-ghost-button ml-auto shrink-0 border border-[var(--binary-primary)]/50 py-1"
+                            @click="flatten"
                         >
-                            {{ activeRegionQid ? regionLabel : '點板塊看名稱' }}
+                            攤平
+                        </button>
+                        <span
+                            v-else-if="isFlat"
+                            class="ml-auto truncate text-[10px] text-[var(--binary-outline)]"
+                        >
+                            {{ activeRegionQid ? regionLabel : '點區塊看名稱' }}
                         </span>
                     </div>
 
