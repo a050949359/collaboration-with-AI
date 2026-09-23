@@ -96,7 +96,7 @@ async function initGlobe() {
     }
 
     globeInstance = new Globe(containerEl.value)
-        .backgroundImageUrl('/images/globe/night-sky.png')
+        .backgroundImageUrl('/images/globe/night-sky.jpg')
         // Memory 這邊想要白天地球（跟 Airports 的夜間版不同）：藍色海洋 + 綠棕色陸地，
         // 真實衛星色彩，跟 arc/pin 的綠色主題色搭起來也比較活潑。
         .globeImageUrl('/images/globe/earth-day.jpg')

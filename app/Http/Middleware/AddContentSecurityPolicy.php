@@ -60,8 +60,9 @@ class AddContentSecurityPolicy
             "font-src 'self' https://fonts.gstatic.com",
             // self + data:；Google 登入頭像走 *.googleusercontent.com。
             "img-src 'self' data: https://*.googleusercontent.com",
-            // 同源 ws-lab/gacha 由 'self' 涵蓋；Gemini Live wss；地球儀的 world-atlas JSON。
-            "connect-src 'self' wss://generativelanguage.googleapis.com https://cdn.jsdelivr.net",
+            // 同源 ws-lab/gacha 由 'self' 涵蓋；Gemini Live wss。
+            // （地球儀的國界 JSON 原本從 cdn.jsdelivr.net 抓，已改成自架 /geo/*，白名單收掉）
+            "connect-src 'self' wss://generativelanguage.googleapis.com",
             // 'self'：mini-orch 嵌自己的 dashboard iframe（同源）；Turnstile widget iframe。
             "frame-src 'self' https://challenges.cloudflare.com",
             // 防 clickjacking：只允許自家頁面 iframe 本站，擋外部嵌入。
