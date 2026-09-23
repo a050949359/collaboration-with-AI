@@ -4,6 +4,7 @@
 // 左側滑入資料面板。位移用 globe.gl 的 globeOffset（canvas 尺寸全程不變），
 // 不是改容器寬度——改寬度每幀都要 resize WebGL renderer，會頓。
 import { Head } from '@inertiajs/vue3';
+import * as THREE from 'three';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import AppLayout from '../layouts/AppLayout.vue';
 import { api } from '../lib/routes';
@@ -31,6 +32,28 @@ interface Node {
 }
 
 const containerEl = ref<HTMLDivElement | null>(null);
+
+/**
+ * polygon 的 cap 材質，全部 polygon 共用這兩份。
+ *
+ * three-globe 是逐「單一 polygon 塊」建物件的（MultiPolygon 會被拆開），這份國界
+ * 拆完約 284 塊，預設每塊都會自己 new 一份材質。改成共用實例後材質從 284 份變 2 份，
+ * draw call 之間不必再切換材質狀態。
+ *
+ * 未選取那份用 `colorWrite: false`：畫面上跟原本的全透明一樣看不見，但它不是
+ * 「透明物件」，所以不進透明佇列、不做混合、也不必每幀重新深度排序。
+ * 點擊偵測是對 mesh 做 raycast、不看材質，所以照常可以點。
+ */
+const idleCapMaterial = new THREE.MeshBasicMaterial({
+    colorWrite: false,
+    depthWrite: false,
+});
+const selectedCapMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.28,
+    depthWrite: false,
+});
 
 let Globe: any = null;
 let globeInstance: any = null;
@@ -162,7 +185,7 @@ async function selectCountry(country: Country) {
     if (globeInstance) {
         globeInstance.controls().autoRotate = false;
         globeInstance
-            .polygonCapColor(globeInstance.polygonCapColor())
+            .polygonCapMaterial(globeInstance.polygonCapMaterial())
             .polygonStrokeColor(globeInstance.polygonStrokeColor());
     }
 
@@ -209,7 +232,7 @@ function backToWorld() {
     if (globeInstance) {
         globeInstance.controls().autoRotate = true;
         globeInstance
-            .polygonCapColor(globeInstance.polygonCapColor())
+            .polygonCapMaterial(globeInstance.polygonCapMaterial())
             .polygonStrokeColor(globeInstance.polygonStrokeColor());
         globeInstance.pointOfView({ altitude: 2.4 }, 800);
     }
@@ -253,10 +276,8 @@ async function initGlobe() {
         .atmosphereColor(primary)
         .atmosphereAltitude(0.16)
         .polygonAltitude(0.006)
-        .polygonCapColor((feat: any) =>
-            isSelectedPolygon(feat)
-                ? 'rgba(255,255,255,0.28)'
-                : 'rgba(0,0,0,0)',
+        .polygonCapMaterial((feat: any) =>
+            isSelectedPolygon(feat) ? selectedCapMaterial : idleCapMaterial,
         )
         // 側牆設成 falsy 讓 three-globe 連幾何都不建（includeSides=false）。
         // 它原本就是全透明看不見的，卻仍然是三角形、還多佔一份材質。
@@ -358,6 +379,8 @@ onUnmounted(() => {
     window.removeEventListener('resize', resizeToContainer);
     globeInstance?._destructor?.();
     globeInstance = null;
+    idleCapMaterial.dispose();
+    selectedCapMaterial.dispose();
 });
 </script>
 

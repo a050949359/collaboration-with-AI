@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // 機場地球（globe.gl，底層 Three.js）。國界 polygon 可點擊：高亮 + 鏡頭飛過去 + 抓該國機場。
+import * as THREE from 'three';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api } from '@/lib/routes';
@@ -21,6 +22,22 @@ const loadError = ref('');
 
 let Globe: any = null;
 let globeInstance: any = null;
+
+/**
+ * 所有 polygon 共用這兩份 cap 材質（理由見 Territory.vue 同一段註解）：
+ * three-globe 預設每塊 polygon 各自 new 一份，共用後材質從數百份降到 2 份；
+ * 未選取那份用 colorWrite:false，看不見但不進透明佇列，raycast 照樣點得到。
+ */
+const idleCapMaterial = new THREE.MeshBasicMaterial({
+    colorWrite: false,
+    depthWrite: false,
+});
+const selectedCapMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00e5ff,
+    transparent: true,
+    opacity: 0.35,
+    depthWrite: false,
+});
 
 const alpha2ToNumeric: Record<string, string> = {
     AF: '004',
@@ -359,7 +376,7 @@ watch(selectedNumericId, () => {
         return;
     }
 
-    globeInstance.polygonCapColor(globeInstance.polygonCapColor());
+    globeInstance.polygonCapMaterial(globeInstance.polygonCapMaterial());
     globeInstance.polygonStrokeColor(globeInstance.polygonStrokeColor());
 });
 
@@ -389,10 +406,10 @@ async function initGlobe() {
         .atmosphereColor('#00daf3')
         .atmosphereAltitude(0.15)
         .polygonAltitude(0.006)
-        .polygonCapColor((feat: any) =>
+        .polygonCapMaterial((feat: any) =>
             String(feat.id).padStart(3, '0') === selectedNumericId.value
-                ? 'rgba(0,229,255,0.35)'
-                : 'rgba(0,0,0,0)',
+                ? selectedCapMaterial
+                : idleCapMaterial,
         )
         // 側牆設成 falsy，three-globe 就不會建那圈看不見的三角形（見 Territory.vue）
         .polygonSideColor(() => false)
@@ -442,6 +459,8 @@ onUnmounted(() => {
     window.removeEventListener('resize', resizeToContainer);
     globeInstance?._destructor?.();
     globeInstance = null;
+    idleCapMaterial.dispose();
+    selectedCapMaterial.dispose();
 });
 </script>
 
