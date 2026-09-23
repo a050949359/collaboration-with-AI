@@ -396,6 +396,30 @@ function onFlatDone() {
 function onFlatExited() {
     isFlat.value = false;
     flatFeatures.value = [];
+
+    if (exitThenWorld) {
+        exitThenWorld = false;
+        backToWorld();
+    }
+}
+
+/**
+ * 麵包屑上的「世界」：從平面圖一次跳兩層。
+ *
+ * 不能直接 backToWorld——那會把 2D 層硬砍掉。先播完摺疊動畫，回到地球之後才退回
+ * 世界層（見 onFlatExited）。
+ */
+let exitThenWorld = false;
+
+function goWorld() {
+    if (isFlat.value) {
+        exitThenWorld = true;
+        unflatten();
+
+        return;
+    }
+
+    backToWorld();
 }
 
 /** 不播退場動畫直接收掉 2D 層。用在「跳過中間層級」的情況（換國家、回世界）。 */
@@ -707,6 +731,49 @@ onUnmounted(() => {
         <main
             class="pointer-events-none relative z-10 min-h-[calc(100vh-4rem)]"
         >
+            <!-- 麵包屑：固定在左上角，**不隨面板移動**。
+                 它取代了原本面板裡那顆退回鈕——現在有三層了，「回到地球／回到世界」
+                 只表達「退一步」，看不出自己在哪一層、也沒辦法一次跳兩層。
+                 世界層不顯示：那裡只會寫一個「世界」，跟旁邊的大標重複。 -->
+            <Transition name="breadcrumb">
+                <nav
+                    v-if="selected"
+                    aria-label="所在層級"
+                    class="absolute top-4 left-0 z-10 flex items-center gap-1.5 px-6 text-[11px] md:pl-8"
+                >
+                    <button
+                        type="button"
+                        class="pointer-events-auto text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)]"
+                        @click="goWorld"
+                    >
+                        世界
+                    </button>
+                    <span class="text-[var(--binary-outline-variant)]">›</span>
+
+                    <!-- 已經攤平時「國家」是上一層（可點回去），否則它就是目前位置 -->
+                    <button
+                        v-if="isFlat"
+                        type="button"
+                        class="pointer-events-auto text-[var(--binary-outline)] transition hover:text-[var(--binary-primary)]"
+                        @click="unflatten"
+                    >
+                        {{ selected.label }}
+                    </button>
+                    <span v-else class="font-bold text-[var(--binary-text)]">
+                        {{ selected.label }}
+                    </span>
+
+                    <template v-if="isFlat">
+                        <span class="text-[var(--binary-outline-variant)]"
+                            >›</span
+                        >
+                        <span class="font-bold text-[var(--binary-text)]">
+                            行政區
+                        </span>
+                    </template>
+                </nav>
+            </Transition>
+
             <!-- 點到沒有對應資料的區域時的浮動提示，3 秒後消失 -->
             <Transition name="hint">
                 <p
@@ -824,20 +891,14 @@ onUnmounted(() => {
             <Transition name="country-panel">
                 <div
                     v-if="selected"
-                    class="pointer-events-none absolute inset-0 flex items-end md:items-center"
+                    class="pointer-events-none absolute inset-0 flex items-end md:items-center md:pt-12"
                 >
                     <section
                         class="binary-glass pointer-events-auto max-h-[70vh] w-full overflow-y-auto rounded-2xl p-5 md:ml-8 md:max-h-[80vh] md:w-[26rem]"
                     >
-                        <!-- 退出是逐層的：平面圖 → 世界（Esc 也是同一條路） -->
-                        <button
-                            type="button"
-                            class="binary-ghost-button mb-4 text-xs"
-                            @click="isFlat ? unflatten() : backToWorld()"
-                        >
-                            {{ isFlat ? '← 回到地球' : '← 回到世界' }}
-                        </button>
-
+                        <!-- 退回鍵搬到畫面左上角的麵包屑了（見 <main> 開頭）：
+                             它原本是一顆藥丸鈕，在面板最上面吃掉一整列只為了一個
+                             低頻動作，把真正要讀的國名往下推。 -->
                         <h2
                             class="text-2xl font-bold text-[var(--binary-text)]"
                         >
@@ -988,11 +1049,23 @@ onUnmounted(() => {
     transform: translateX(-32px);
 }
 
+/* 麵包屑是固定錨點，進出只用淡入淡出，不跟著滑動——會動的錨點就不是錨點了 */
+.breadcrumb-enter-active,
+.breadcrumb-leave-active {
+    transition: opacity 0.3s ease;
+}
+.breadcrumb-enter-from,
+.breadcrumb-leave-to {
+    opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .world-intro-enter-active,
     .world-intro-leave-active,
     .country-panel-enter-active,
-    .country-panel-leave-active {
+    .country-panel-leave-active,
+    .breadcrumb-enter-active,
+    .breadcrumb-leave-active {
         transition-duration: 0.01ms;
     }
     .world-intro-enter-from,
