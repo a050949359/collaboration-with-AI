@@ -445,11 +445,33 @@ async function initGlobe() {
     // 而是 three-globe 逐塊建 ConicPolygonGeometry——50m 是 1,616 塊／99,539 頂點，
     // 實測是單一個 5.6 秒的長任務（headless CPU），期間整頁凍住。
     // 混合版是 436 塊／12,218 頂點，沒有這種巨型任務。
-    const world = await fetch('/geo/countries-hybrid.json').then(
-        (r) => r.json() as Promise<{ features: unknown[] }>,
-    );
+    let features: unknown[];
 
-    globeInstance.polygonsData(world.features);
+    try {
+        const res = await fetch('/geo/countries-hybrid.json');
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        features = ((await res.json()) as { features: unknown[] }).features;
+    } catch (error) {
+        // 抓不到國界時地球本身照樣轉，只是點不到國家——要明講，不然使用者
+        // 只會看到一顆沒有反應的球，無從判斷是壞了還是本來就這樣。
+        loadError.value = `Failed to load country borders (${
+            error instanceof Error ? error.message : 'unknown error'
+        })`;
+
+        return;
+    }
+
+    // ⚠️ 跟上面 import 那處同一個防護：fetch 期間元件可能已經被卸載，
+    // onUnmounted 會把 globeInstance 設成 null，這裡不檢查就是對 null 取屬性。
+    if (!globeInstance) {
+        return;
+    }
+
+    globeInstance.polygonsData(features);
 }
 
 function resizeToContainer() {
