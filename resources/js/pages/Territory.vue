@@ -828,26 +828,29 @@ onUnmounted(() => {
                 </p>
             </Transition>
 
-            <!-- 未選國家：置中的世界層摘要，不擋地球主體 -->
+            <!-- 未選國家：左下角的說明。
+                 刻意不用 binary-glass：星空底本來就夠暗，加了玻璃面板在純黑上只會
+                 多出一個灰色矩形的邊，看起來像浮在空地裡的卡片。擺左下而不是垂直
+                 置中，是為了把中線讓給地球，順便填掉那塊死角、跟地球拉出對角線。 -->
             <div
                 v-if="!selected"
-                class="pointer-events-none flex min-h-[calc(100vh-4rem)] items-end justify-center p-6 md:items-center md:justify-start md:p-12"
+                class="pointer-events-none flex min-h-[calc(100vh-4rem)] items-end px-6 pb-8 md:px-12 md:pb-12"
             >
-                <div
-                    class="binary-glass pointer-events-auto max-w-sm rounded-2xl p-5"
-                >
+                <div class="pointer-events-auto max-w-md">
                     <p
                         class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
                     >
                         &gt; territory_graph
                     </p>
                     <h1
-                        class="text-gradient-primary mt-2 text-2xl font-bold md:text-3xl"
+                        class="text-gradient-primary mt-1 text-3xl font-bold md:text-4xl"
                     >
                         世界行政區圖譜
                     </h1>
-                    <p class="mt-2 text-xs text-[var(--binary-text-muted)]">
-                        點擊地球上的國家,查看它底下的行政區資料。拖曳可旋轉地球。
+                    <p
+                        class="mt-2 text-xs text-[var(--binary-text-muted)] md:text-sm"
+                    >
+                        拖曳旋轉地球,點擊國家查看它底下的行政區。
                     </p>
 
                     <!-- 國家清單載入失敗時地球還是能轉，但點了不會有反應，要明講原因 -->
@@ -878,39 +881,44 @@ onUnmounted(() => {
                         目前資料庫沒有國家資料,地球可以轉動但無法點選。
                     </p>
 
-                    <dl v-else class="mt-5 grid grid-cols-3 gap-3 text-center">
+                    <!-- 橫排＋靠左，跟上面的標題同一條左緣；原本的三欄置中在沒有
+                         盒子框住時會散掉，對不到任何東西 -->
+                    <dl
+                        v-else
+                        class="mt-5 flex gap-8 border-t border-[var(--binary-outline-variant)] pt-4"
+                    >
                         <div>
                             <dt
-                                class="text-[10px] text-[var(--binary-outline)]"
+                                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
                             >
                                 國家
                             </dt>
                             <dd
-                                class="text-lg font-bold text-[var(--binary-primary)]"
+                                class="mt-0.5 text-xl font-bold text-[var(--binary-primary)] tabular-nums"
                             >
                                 {{ worldStats.countries }}
                             </dd>
                         </div>
                         <div>
                             <dt
-                                class="text-[10px] text-[var(--binary-outline)]"
+                                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
                             >
                                 有下層資料
                             </dt>
                             <dd
-                                class="text-lg font-bold text-[var(--binary-primary)]"
+                                class="mt-0.5 text-xl font-bold text-[var(--binary-primary)] tabular-nums"
                             >
                                 {{ worldStats.withData }}
                             </dd>
                         </div>
                         <div>
                             <dt
-                                class="text-[10px] text-[var(--binary-outline)]"
+                                class="binary-label text-[10px] text-[var(--binary-outline)] uppercase"
                             >
                                 行政區總數
                             </dt>
                             <dd
-                                class="text-lg font-bold text-[var(--binary-primary)]"
+                                class="mt-0.5 text-xl font-bold text-[var(--binary-primary)] tabular-nums"
                             >
                                 {{ formatNumber(worldStats.totalChildren) }}
                             </dd>
