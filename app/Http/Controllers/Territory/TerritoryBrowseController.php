@@ -78,8 +78,8 @@ class TerritoryBrowseController extends Controller
     {
         // ⚠️ 不要用 Cache::remember 包 try/catch。那樣寫在「closure 已經跑完、只是
         // 存快取失敗」時（例如 Redis maxmemory + noeviction）會掉進 catch 再 build
-        // 一次，等於每個 request 打兩輪查詢、而且快取永遠填不回去——這支是公開且
-        // 沒有 throttle 的端點，等於自帶放大器。
+        // 一次，等於每個 request 打兩輪查詢、而且快取永遠填不回去——這支是公開端點，
+        // 路由層雖然有 throttle:60,1，但 60 次 × 兩輪查詢仍然是白費的放大。
         //
         // 拆成「讀 → build → 寫」三步，build 最多只會發生一次；讀寫各自的失敗都
         // 只是退化成直接查 DB。DB 本身的例外不攔，直接往上拋。
