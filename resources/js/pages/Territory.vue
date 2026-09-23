@@ -248,13 +248,30 @@ function tweenOffset(toX: number, duration = 600) {
  * 數字對應面板的 `md:w-[26rem]` + `md:ml-8`，再加一點呼吸空間。
  */
 const panelInset = computed(() => {
-    const isNarrow = viewportWidth.value < 768;
+    if (!isNarrow.value) {
+        return { left: 26 * 16 + 32 + 24, top: 0, bottom: 0 };
+    }
 
     return {
-        left: isNarrow ? 0 : 26 * 16 + 32 + 24,
-        bottom: isNarrow ? window.innerHeight * 0.45 : 0,
+        left: 0,
+        // 上方讓出麵包屑那一條，順便把地圖從畫面頂端推開一點
+        top: 44,
+        // 手機版攤平時面板已經縮成一條（見 isCompactPanel），只要讓出它那點高度。
+        // 面板是 max-h-[26vh]，量到的實際高度約 0.23 倍視窗高，這裡抓 0.25 留邊。
+        // 原本抓 0.3 多讓了六十幾 px，地圖被擠得偏上、底下空一塊。
+        bottom: window.innerHeight * 0.25,
     };
 });
+
+const isNarrow = computed(() => viewportWidth.value < 768);
+
+/**
+ * 手機版 + 已攤平 → 面板縮成一條。
+ *
+ * 直的螢幕上，一張佔 70vh 的資料面板會把地圖擠到只剩上半部，等於看不到東西。
+ * 攤平時真正要看的是地圖，面板只需要回答「我點到的是哪一塊」。
+ */
+const isCompactPanel = computed(() => isNarrow.value && isFlat.value);
 
 /** 選中時地球往右讓出左側面板空間；手機版空間不夠，改成不位移（面板走底部）。 */
 function offsetForSelection(): number {
@@ -718,6 +735,7 @@ onUnmounted(() => {
                 :label-of="regionName"
                 :value-of="regionPopulation"
                 :inset-left="panelInset.left"
+                :inset-top="panelInset.top"
                 :inset-bottom="panelInset.bottom"
                 @select="activeRegionQid = $event"
                 @ready="onFlatReady"
@@ -894,114 +912,140 @@ onUnmounted(() => {
                     class="pointer-events-none absolute inset-0 flex items-end md:items-center md:pt-12"
                 >
                     <section
-                        class="binary-glass pointer-events-auto max-h-[70vh] w-full overflow-y-auto rounded-2xl p-5 md:ml-8 md:max-h-[80vh] md:w-[26rem]"
+                        class="binary-glass pointer-events-auto w-full overflow-y-auto rounded-2xl md:ml-8 md:max-h-[80vh] md:w-[26rem] md:p-5"
+                        :class="
+                            isCompactPanel
+                                ? 'max-h-[26vh] p-4'
+                                : 'max-h-[52vh] p-5'
+                        "
                     >
                         <!-- 退回鍵搬到畫面左上角的麵包屑了（見 <main> 開頭）：
                              它原本是一顆藥丸鈕，在面板最上面吃掉一整列只為了一個
                              低頻動作，把真正要讀的國名往下推。 -->
                         <h2
-                            class="text-2xl font-bold text-[var(--binary-text)]"
+                            class="font-bold text-[var(--binary-text)]"
+                            :class="isCompactPanel ? 'text-base' : 'text-2xl'"
                         >
                             {{ selected.label }}
                         </h2>
-                        <p class="mt-1 text-xs text-[var(--binary-text-muted)]">
-                            {{ selected.iso_code }} ·
-                            {{ selected.continent ?? '—' }} · 人口
-                            {{ formatNumber(selected.population) }}
+
+                        <!-- 手機版攤平時只留「我點到哪一塊」，其餘讓位給地圖 -->
+                        <p
+                            v-if="isCompactPanel"
+                            class="mt-1 text-xs"
+                            :class="
+                                activeRegionQid
+                                    ? 'text-[var(--binary-primary)]'
+                                    : 'text-[var(--binary-outline)]'
+                            "
+                        >
+                            {{ activeRegionQid ? regionLabel : '點區塊看名稱' }}
                         </p>
 
-                        <div
-                            class="mt-4 flex items-center gap-4 border-y border-[var(--binary-outline-variant)] py-3 text-xs"
-                        >
-                            <div>
-                                <span class="text-[var(--binary-outline)]"
-                                    >一級行政區</span
+                        <template v-else>
+                            <p
+                                class="mt-1 text-xs text-[var(--binary-text-muted)]"
+                            >
+                                {{ selected.iso_code }} ·
+                                {{ selected.continent ?? '—' }} · 人口
+                                {{ formatNumber(selected.population) }}
+                            </p>
+
+                            <div
+                                class="mt-4 flex items-center gap-4 border-y border-[var(--binary-outline-variant)] py-3 text-xs"
+                            >
+                                <div>
+                                    <span class="text-[var(--binary-outline)]"
+                                        >一級行政區</span
+                                    >
+                                    <span
+                                        class="ml-1 font-bold text-[var(--binary-primary)]"
+                                        >{{ children.length }}</span
+                                    >
+                                </div>
+
+                                <!-- 正式入口。再點一次地球上同一國也會展開，但那是隱藏的
+                             快捷鍵，不能當唯一入口——使用者不會知道要點第二次。 -->
+                                <!-- binary-button 是 w-full 的，放在這一列會把標籤擠到換行，
+                             這裡要的是行內動作，所以走 ghost 版再補一圈主色邊框 -->
+                                <button
+                                    v-if="canDrill && !isFlat"
+                                    type="button"
+                                    class="binary-ghost-button ml-auto shrink-0 border border-[var(--binary-primary)]/50 py-1 disabled:opacity-50"
+                                    :disabled="isDrilling"
+                                    @click="selected && openFlatMap(selected)"
                                 >
+                                    {{ isDrilling ? '載入中…' : '展開行政區' }}
+                                </button>
                                 <span
-                                    class="ml-1 font-bold text-[var(--binary-primary)]"
-                                    >{{ children.length }}</span
+                                    v-else-if="isFlat"
+                                    class="ml-auto truncate text-[10px] text-[var(--binary-outline)]"
                                 >
+                                    {{
+                                        activeRegionQid
+                                            ? regionLabel
+                                            : '點區塊看名稱'
+                                    }}
+                                </span>
                             </div>
 
-                            <!-- 正式入口。再點一次地球上同一國也會展開，但那是隱藏的
-                             快捷鍵，不能當唯一入口——使用者不會知道要點第二次。 -->
-                            <!-- binary-button 是 w-full 的，放在這一列會把標籤擠到換行，
-                             這裡要的是行內動作，所以走 ghost 版再補一圈主色邊框 -->
-                            <button
-                                v-if="canDrill && !isFlat"
-                                type="button"
-                                class="binary-ghost-button ml-auto shrink-0 border border-[var(--binary-primary)]/50 py-1 disabled:opacity-50"
-                                :disabled="isDrilling"
-                                @click="selected && openFlatMap(selected)"
+                            <p
+                                v-if="isLoading"
+                                class="mt-4 text-xs text-[var(--binary-primary)]"
                             >
-                                {{ isDrilling ? '載入中…' : '展開行政區' }}
-                            </button>
-                            <span
-                                v-else-if="isFlat"
-                                class="ml-auto truncate text-[10px] text-[var(--binary-outline)]"
+                                載入中...
+                            </p>
+                            <p
+                                v-else-if="loadError"
+                                class="mt-4 text-xs text-red-300"
                             >
-                                {{
-                                    activeRegionQid
-                                        ? regionLabel
-                                        : '點區塊看名稱'
-                                }}
-                            </span>
-                        </div>
+                                {{ loadError }}
+                            </p>
+                            <p
+                                v-else-if="!children.length"
+                                class="mt-4 text-xs text-[var(--binary-text-muted)]"
+                            >
+                                這個國家目前沒有下層行政區資料。
+                            </p>
 
-                        <p
-                            v-if="isLoading"
-                            class="mt-4 text-xs text-[var(--binary-primary)]"
-                        >
-                            載入中...
-                        </p>
-                        <p
-                            v-else-if="loadError"
-                            class="mt-4 text-xs text-red-300"
-                        >
-                            {{ loadError }}
-                        </p>
-                        <p
-                            v-else-if="!children.length"
-                            class="mt-4 text-xs text-[var(--binary-text-muted)]"
-                        >
-                            這個國家目前沒有下層行政區資料。
-                        </p>
-
-                        <!-- 人口長條：純 CSS 寬度，不另外拉圖表套件 -->
-                        <ul v-else class="mt-4 space-y-2">
-                            <li v-for="c in topChildren" :key="c.qid">
-                                <div
-                                    class="flex items-baseline justify-between gap-2 text-xs"
-                                >
-                                    <span
-                                        class="truncate text-[var(--binary-text)]"
-                                        >{{ c.label }}</span
-                                    >
-                                    <span
-                                        class="shrink-0 text-[10px] text-[var(--binary-outline)]"
-                                        >{{ formatNumber(c.population) }}</span
-                                    >
-                                </div>
-                                <div
-                                    class="mt-1 h-1.5 w-full rounded-full bg-[var(--binary-surface-container)]"
-                                >
+                            <!-- 人口長條：純 CSS 寬度，不另外拉圖表套件 -->
+                            <ul v-else class="mt-4 space-y-2">
+                                <li v-for="c in topChildren" :key="c.qid">
                                     <div
-                                        class="h-full rounded-full bg-[var(--binary-primary)]"
-                                        :style="{
-                                            width: `${((c.population ?? 0) / maxPopulation) * 100}%`,
-                                        }"
-                                    />
-                                </div>
-                            </li>
-                        </ul>
+                                        class="flex items-baseline justify-between gap-2 text-xs"
+                                    >
+                                        <span
+                                            class="truncate text-[var(--binary-text)]"
+                                            >{{ c.label }}</span
+                                        >
+                                        <span
+                                            class="shrink-0 text-[10px] text-[var(--binary-outline)]"
+                                            >{{
+                                                formatNumber(c.population)
+                                            }}</span
+                                        >
+                                    </div>
+                                    <div
+                                        class="mt-1 h-1.5 w-full rounded-full bg-[var(--binary-surface-container)]"
+                                    >
+                                        <div
+                                            class="h-full rounded-full bg-[var(--binary-primary)]"
+                                            :style="{
+                                                width: `${((c.population ?? 0) / maxPopulation) * 100}%`,
+                                            }"
+                                        />
+                                    </div>
+                                </li>
+                            </ul>
 
-                        <p
-                            v-if="children.length > topChildren.length"
-                            class="mt-3 text-[10px] text-[var(--binary-outline)]"
-                        >
-                            僅顯示人口前 {{ topChildren.length }} 名,共
-                            {{ children.length }} 個
-                        </p>
+                            <p
+                                v-if="children.length > topChildren.length"
+                                class="mt-3 text-[10px] text-[var(--binary-outline)]"
+                            >
+                                僅顯示人口前 {{ topChildren.length }} 名,共
+                                {{ children.length }} 個
+                            </p>
+                        </template>
                     </section>
                 </div>
             </Transition>

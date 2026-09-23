@@ -36,8 +36,9 @@ const props = defineProps<{
     labelOf: (feat: any) => string;
     /** 用來上色的量值（目前是人口），null 代表沒資料 */
     valueOf: (feat: any) => number | null;
-    /** 資料面板蓋住的區域，地圖要避開（桌機面板在左、手機在下） */
+    /** 被其他 UI 蓋住、地圖要避開的邊（桌機面板在左；手機面板在下、麵包屑在上） */
     insetLeft?: number;
+    insetTop?: number;
     insetBottom?: number;
 }>();
 
@@ -84,6 +85,8 @@ const hoverQid = ref<string | null>(null);
 /** 畫布的 CSS 尺寸（不含 devicePixelRatio） */
 let cssWidth = 0;
 let cssHeight = 0;
+/** 實際採用的 devicePixelRatio（夾在 2 以內），畫布與 hit test 共用同一個值 */
+let dpr = 1;
 
 const palette = {
     primary: '#6bdc9f',
@@ -221,11 +224,12 @@ function pickProjection(features: any[]) {
     // 所以這裡只要把「可用的矩形」講對，剩下的它會處理。
     const pad = Math.min(cssWidth, cssHeight) * 0.06;
     const left = (props.insetLeft ?? 0) + pad;
+    const top = (props.insetTop ?? 0) + pad;
     const bottom = cssHeight - (props.insetBottom ?? 0) - pad;
 
     projection.fitExtent(
         [
-            [left, pad],
+            [left, top],
             [cssWidth - pad, bottom],
         ],
         collection,
@@ -463,7 +467,9 @@ function resizeCanvas() {
         return;
     }
 
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // 3x 的手機不必真的畫 3 倍大，夾在 2x。⚠️ hitTest 必須用**夾過的這個值**，
+    // 不能自己去讀 window.devicePixelRatio，否則 3x 裝置會偏 1.5 倍。
+    dpr = Math.min(2, window.devicePixelRatio || 1);
 
     cssWidth = canvas.parentElement.clientWidth;
     cssHeight = canvas.parentElement.clientHeight;
@@ -473,7 +479,7 @@ function resizeCanvas() {
     canvas.style.height = `${cssHeight}px`;
 
     ctx = canvas.getContext('2d');
-    // 之後一律用 CSS px 思考；isPointInPath 也吃同一組座標
+    // 畫圖一律用 CSS px 思考（路徑、標籤都是），由這個 transform 放大到實際像素
     ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
@@ -501,8 +507,14 @@ function hitTest(event: MouseEvent): string | null {
     }
 
     const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+
+    // ⚠️ isPointInPath 的座標是**實際像素**，不吃 ctx 的 transform；路徑本身才會被
+    // transform 放大。所以這裡要自己乘上 dpr，不能直接丟 CSS px。
+    // 實測（Chromium、dpr=2、CTM=scale(2)）：對一個畫在 CSS (100,100)-(200,200)
+    // 的方塊，問 (150,150) 回 false、問 (300,300) 反而回 true——點空白處會選到
+    // 離一段距離的區塊，就是這個原因。dpr=1 時兩者同值，所以一般螢幕看不出來。
+    const x = (event.clientX - rect.left) * dpr;
+    const y = (event.clientY - rect.top) * dpr;
 
     // 由後往前找：後畫的疊在上面
     for (let i = shapes.length - 1; i >= 0; i--) {
