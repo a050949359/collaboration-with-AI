@@ -170,9 +170,9 @@ Route::post('/line/about-token', [LineAboutTokenController::class, 'issue'])->mi
 
 use App\Http\Controllers\Mcp\MemoryGraphController;
 use App\Http\Controllers\Mcp\MemoryObservationController;
+use App\Http\Controllers\Territory\TerritoryBrowseController;
 use App\Http\Controllers\Travel\BookingController;
 use App\Http\Controllers\Travel\ExportController;
-use App\Http\Controllers\Territory\TerritoryBrowseController;
 use App\Http\Controllers\Travel\PassengerController;
 use App\Http\Controllers\Travel\StatsController;
 use App\Http\Controllers\Travel\TourController;

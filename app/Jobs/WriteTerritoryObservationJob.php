@@ -7,6 +7,7 @@ use App\Enums\Territory\ObservationJobStatus;
 use App\Enums\Territory\SubdivisionObservationType;
 use App\Models\Territory\TerritoryEntity;
 use App\Models\Territory\TerritoryObservationJob;
+use App\Support\TerritoryCache;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -85,6 +86,10 @@ class WriteTerritoryObservationJob implements ShouldQueue
             });
 
             $job->update(['status' => ObservationJobStatus::Success]);
+
+            // 名稱/人口變了，世界層摘要的快取就過期了。不失效的話最長會 stale
+            // 一整個 TTL（24 小時），而且只能靠人工進 shell 清。
+            TerritoryCache::forgetCountries();
         } catch (Throwable $e) {
             $job->update(['status' => ObservationJobStatus::Failed, 'error' => $e->getMessage()]);
         }

@@ -6,6 +6,7 @@ use App\Models\Territory\TerritoryEntity;
 use App\Models\Territory\TerritoryObservation;
 use App\Models\Territory\TerritoryObservationJob;
 use App\Models\Territory\TerritoryRelation;
+use App\Support\TerritoryCache;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -159,6 +160,9 @@ class TerritoryMcpService implements McpToolServiceInterface
             'relation_type' => $relationType,
         ]);
 
+        // child_count 是世界層摘要的一部分，關係變動就要讓它重算
+        TerritoryCache::forgetCountries();
+
         return $this->text($id, json_encode([
             'from' => $from->name,
             'relation_type' => $rel->relation_type,
@@ -183,6 +187,10 @@ class TerritoryMcpService implements McpToolServiceInterface
             'to_entity_id' => $to->id,
             'relation_type' => $relationType,
         ])->delete();
+
+        if ($deleted) {
+            TerritoryCache::forgetCountries();
+        }
 
         return $this->text($id, $deleted ? 'Relation deleted.' : 'Relation not found.');
     }
