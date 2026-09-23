@@ -1,39 +1,39 @@
 #!/usr/bin/env python3
-"""產生地球儀用的國界 GeoJSON（world-atlas 110m，可選擇補上 50m 獨有的小島）。
+"""產生地球儀用的國界 GeoJSON（world-atlas 110m 骨架 + 50m 獨有的小島）。
 
-## ⚠️ 預設不補小島（實測結論，別再改回去）
-
-補小島會讓地球的鏡頭動畫明顯變鈍。原因不是資料量——頂點只多 9%——而是
-**three-globe 對每個 feature 建一個 cap mesh + 一條 stroke line**：
-
-| | feature | 物件／draw call | 頂點 | 互動 |
-|---|---|---|---|---|
-| **110m（預設）** | **177** | **354** | 10,583 | 順 |
-| 110m + 50m 小島 | 238 | 476 | 12,218 | 選取／回到世界的動畫會鈍 |
-
-cap 即使完全透明也照建照畫（`polygonCapColor` 回傳 `'rgba(0,0,0,0)'` 是真值，
-three-globe 的 `hasCap` 就成立），而且**不能省**——點擊偵測就是對這片透明 cap
-做 raycast，拿掉國家就點不到了。
-
-真的需要小島國可點的話，別走 polygon，改用另一個便宜的圖層（點標記）。
-
-## 補小島的效果（`--with-islands`）
+## 為什麼是「混合」而不是直接用 50m
 
 world-atlas 的兩個解析度各有問題（實測）：
 
-| 方案                      | 可點地域 | 頂點數  | 成本   |
-|---------------------------|----------|---------|--------|
-| 110m                      |      175 |  11,180 | 基準   |
-| 50m                       |      236 |  98,196 | 8.8x   |
-| 110m + 50m 獨有的小島     |      236 |  12,822 | 1.15x  |
+| 方案                      | 可點地域 | feature | 塊    | 頂點   | gzip   |
+|---------------------------|----------|---------|-------|--------|--------|
+| 110m                      |      175 |     177 |   285 | 11,180 |  59 KB |
+| 50m                       |      236 |     241 | 1,616 | 99,539 | 642 KB |
+| 110m + 50m 獨有的小島     |      236 |     238 |   436 | 12,218 |  90 KB |
 
-50m 那 8.8 倍幾乎全花在大國海岸線變細，但我們缺的是「小島存不存在」而不是精細度
-（新加坡、馬爾他、馬爾地夫…在 110m 裡整個沒有 feature，所以點不到）。
-混合方案涵蓋率等同 50m，傳輸與 GPU 成本卻幾乎跟 110m 一樣。
+我們缺的是「小島存不存在」而不是海岸線精細度——新加坡、馬爾他、馬爾地夫…在
+110m 裡整個沒有 feature，所以點不到。補完涵蓋率等同 50m，成本卻幾乎跟 110m 一樣。
+
+50m 的代價在**初次載入**：瓶頸不是下載（本機 6 ms）也不是 JSON.parse（8 ms），
+而是 three-globe 建幾何。它把每個 MultiPolygon 拆成「塊」，逐塊 new 出
+Group + Mesh + LineSegments + 2 份材質，再跑 `ConicPolygonGeometry`
+（沿輪廓依 curvature resolution 補球面點 → 大塊還要灑球面格點做 point-in-polygon
+→ earcut 三角化，跨換日線／極區的塊改走更慢的 d3-geo-voronoi）。
+這一整串在同一個 task 內跑完才還給瀏覽器：50m 實測是單一個 5.6 秒長任務
+（headless CPU），期間整頁凍住。混合版沒有這種巨型任務。
+
+註：塊數不是唯一因素，大塊比小塊貴得多（灑格點與 point-in-polygon 的成本隨該塊
+頂點數走），所以「只濾掉小島塊」省不了多少——50m 濾到 606 塊，頂點仍留 86%。
+
+## 逐塊的執行期成本（另一條軸線，跟本腳本無關但一起記著）
+
+three-globe 預設每塊自己 new 一份材質。前端已改成共用 material 實例、且未選取的
+cap 用 `colorWrite: false` 讓它不進透明佇列。cap **不能省**——點擊偵測就是對這片
+看不見的 cap 做 raycast，拿掉國家就點不到了。
 
 ## 輸出
 
-`public/geo/countries-110m.json`（或 `--with-islands` 的 `countries-hybrid.json`）
+`public/geo/countries-hybrid.json`（或 `--no-islands` 的 `countries-110m.json`）
 — 直接是 GeoJSON FeatureCollection，
 globe.gl 的 `polygonsData` 可以直接吃，前端不需要再跑 `topojson.feature()`。
 副檔名刻意用 `.json` 而不是 `.geojson`：nginx 的 gzip_types 認得 application/json，
@@ -44,9 +44,9 @@ feature 保留 `id`（ISO 3166-1 numeric，字串）與 `properties.name`，
 
 ## 用法
 
-    python3 scripts/build-globe-geojson.py                  # 產生 countries-110m.json
-    python3 scripts/build-globe-geojson.py --with-islands   # 產生 countries-hybrid.json
-    python3 scripts/build-globe-geojson.py --check          # 只印統計，不寫檔
+    python3 scripts/build-globe-geojson.py                # 產生 countries-hybrid.json（出貨用）
+    python3 scripts/build-globe-geojson.py --no-islands   # 產生 countries-110m.json
+    python3 scripts/build-globe-geojson.py --check        # 只印統計，不寫檔
 """
 
 from __future__ import annotations
@@ -214,9 +214,10 @@ def main() -> int:
         "--check", action="store_true", help="只印統計數字，不寫出檔案"
     )
     parser.add_argument(
-        "--with-islands",
-        action="store_true",
-        help="補上 50m 獨有的 61 個小島（涵蓋率較好但動畫會鈍，見檔頭說明）",
+        "--no-islands",
+        dest="with_islands",
+        action="store_false",
+        help="不補 50m 獨有的 61 個小島，只輸出純 110m（那些小島國會點不到）",
     )
     args = parser.parse_args()
 
@@ -242,7 +243,7 @@ def main() -> int:
 
     print()
     print(f"  110m feature：{len(base)}（有 id {len(base_ids)}）")
-    print(f"  50m 獨有補上：{len(extras)}" + ("" if args.with_islands else "（未啟用 --with-islands）"))
+    print(f"  50m 獨有補上：{len(extras)}" + ("" if args.with_islands else "（--no-islands）"))
     print(f"  合併後：{len(merged)} feature／{count_vertices(merged):,} 頂點")
     print(f"  大小：{len(text.encode()) / 1024:.0f} KB（未壓縮）")
 

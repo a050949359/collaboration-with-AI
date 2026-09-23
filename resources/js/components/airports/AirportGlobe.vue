@@ -430,10 +430,10 @@ async function initGlobe() {
 
     resizeToContainer();
 
-    // 自架的國界（world-atlas 110m），由 scripts/build-globe-geojson.py 產生。
-    // 已經是 GeoJSON，不需要 topojson.feature() 轉換。
-    // 小島 feature 刻意不補，理由見 Territory.vue 同一段註解（物件數會讓動畫變鈍）。
-    const world = await fetch('/geo/countries-110m.json').then(
+    // 自架的混合國界（110m 骨架 + 50m 獨有的小島），由 scripts/build-globe-geojson.py
+    // 產生。已經是 GeoJSON，不需要 topojson.feature() 轉換。
+    // 為什麼不直接用 50m：理由見 Territory.vue 同一段註解（初次載入會凍住好幾秒）。
+    const world = await fetch('/geo/countries-hybrid.json').then(
         (r) => r.json() as Promise<{ features: unknown[] }>,
     );
 
