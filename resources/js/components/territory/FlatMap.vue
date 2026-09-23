@@ -21,7 +21,7 @@
  * 一百多個 DOM node 還輕，也省得為了轉場和靜態各寫一套。
  */
 import { geoBounds, geoConicConformal, geoMercator } from 'd3';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { themeColor, withAlpha } from '../../lib/theme-color';
 
 const props = defineProps<{
@@ -327,6 +327,29 @@ function easeInOutCubic(t: number): number {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+function pathFor(shape: Shape, t: number, settled: boolean): Path2D {
+    const path = new Path2D();
+
+    for (const { start, end } of shape.rings) {
+        for (let i = 0; i < start.length; i += 2) {
+            const x = settled ? end[i] : start[i] + (end[i] - start[i]) * t;
+            const y = settled
+                ? end[i + 1]
+                : start[i + 1] + (end[i + 1] - start[i + 1]) * t;
+
+            if (i === 0) {
+                path.moveTo(x, y);
+            } else {
+                path.lineTo(x, y);
+            }
+        }
+
+        path.closePath();
+    }
+
+    return path;
+}
+
 function draw(t: number) {
     if (!ctx) {
         return;
@@ -338,24 +361,10 @@ function draw(t: number) {
     const settled = t >= 1;
 
     for (const shape of shapes) {
-        const path = new Path2D();
-
-        for (const { start, end } of shape.rings) {
-            for (let i = 0; i < start.length; i += 2) {
-                const x = settled ? end[i] : start[i] + (end[i] - start[i]) * t;
-                const y = settled
-                    ? end[i + 1]
-                    : start[i + 1] + (end[i + 1] - start[i + 1]) * t;
-
-                if (i === 0) {
-                    path.moveTo(x, y);
-                } else {
-                    path.lineTo(x, y);
-                }
-            }
-
-            path.closePath();
-        }
+        // 靜態之後形狀不會再動，路徑沿用快取的那份：hover 或選取只是換顏色，
+        // 不該為了換個填色把一萬五千個頂點重描一遍。
+        const path =
+            settled && shape.path ? shape.path : pathFor(shape, t, settled);
 
         ctx.fillStyle = fillFor(shape);
         ctx.fill(path, 'evenodd');
@@ -375,6 +384,16 @@ function draw(t: number) {
     // 標籤只在靜態時畫：morph 途中位置一直在動，字會糊成一團
     if (!settled) {
         return;
+    }
+
+    // 選取的那塊再描一次。上面是照陣列順序畫的，晚畫的鄰居會蓋掉它的邊，
+    // 少了半圈白線會讓人以為點下去沒反應。
+    const active = shapes.find((s) => s.qid === props.activeQid);
+
+    if (active?.path) {
+        ctx.strokeStyle = palette.text;
+        ctx.lineWidth = 1.8;
+        ctx.stroke(active.path);
     }
 
     ctx.font =
@@ -508,6 +527,17 @@ function onClick(event: MouseEvent) {
         emit('select', hit);
     }
 }
+
+/**
+ * 選取的區塊是父層的狀態，canvas 不會自己知道它變了。
+ *
+ * 沒有這個 watch 的話，點下去不會立刻重畫——要等下一次 hover 變動才順便畫出來，
+ * 而點擊當下 hover 本來就已經是同一塊，於是看起來就是「切換有延遲」。
+ */
+watch(
+    () => props.activeQid,
+    () => draw(progress),
+);
 
 /** 退場：倒帶回球面位置，父層等 exited 再卸載。 */
 function exit() {
