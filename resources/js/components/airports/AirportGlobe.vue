@@ -24,9 +24,15 @@ let Globe: any = null;
 let globeInstance: any = null;
 
 /**
- * 所有 polygon 共用這兩份 cap 材質（理由見 Territory.vue 同一段註解）：
- * three-globe 預設每塊 polygon 各自 new 一份，共用後材質從數百份降到 2 份；
- * 未選取那份用 colorWrite:false，看不見但不進透明佇列，raycast 照樣點得到。
+ * 所有 polygon 共用這兩份 cap 材質。
+ *
+ * three-globe 是逐「單一 polygon 塊」建物件的（MultiPolygon 會被拆開），這份國界拆完
+ * 約 436 塊，預設每塊都會自己 new 一份材質。改成共用實例後材質降到 2 份，draw call
+ * 之間不必再切換材質狀態。
+ *
+ * 未選取那份用 `colorWrite: false`：畫面上跟全透明一樣看不見，但它不是「透明物件」，
+ * 所以不進透明佇列、不做混合、也不必每幀重新深度排序。
+ * ⚠️ cap 不能省——點擊偵測就是對這片看不見的 cap 做 raycast，拿掉就點不到國家了。
  */
 const idleCapMaterial = new THREE.MeshBasicMaterial({
     colorWrite: false,
@@ -411,7 +417,9 @@ async function initGlobe() {
                 ? selectedCapMaterial
                 : idleCapMaterial,
         )
-        // 側牆設成 falsy，three-globe 就不會建那圈看不見的三角形（見 Territory.vue）
+        // 側牆一定要 falsy 才不會建幾何：three-globe 的判斷是
+        // `hasSide = !!(sideColor || sideMaterial)`，回 'rgba(0,0,0,0)' 沒用（那是真值），
+        // 照樣會建出一圈看不見的三角形還多佔一份材質。
         .polygonSideColor(() => false)
         .polygonStrokeColor((feat: any) =>
             String(feat.id).padStart(3, '0') === selectedNumericId.value
@@ -430,9 +438,13 @@ async function initGlobe() {
 
     resizeToContainer();
 
-    // 自架的混合國界（110m 骨架 + 50m 獨有的小島），由 scripts/build-globe-geojson.py
-    // 產生。已經是 GeoJSON，不需要 topojson.feature() 轉換。
-    // 為什麼不直接用 50m：理由見 Territory.vue 同一段註解（初次載入會凍住好幾秒）。
+    // 自架的混合國界（110m 骨架 + 50m 獨有的 61 個小島），由
+    // scripts/build-globe-geojson.py 產生。已經是 GeoJSON，不需要 topojson.feature()。
+    //
+    // ⚠️ 不要改成完整的 50m：瓶頸不是下載（本機實測 6 ms）也不是 JSON.parse（8 ms），
+    // 而是 three-globe 逐塊建 ConicPolygonGeometry——50m 是 1,616 塊／99,539 頂點，
+    // 實測是單一個 5.6 秒的長任務（headless CPU），期間整頁凍住。
+    // 混合版是 436 塊／12,218 頂點，沒有這種巨型任務。
     const world = await fetch('/geo/countries-hybrid.json').then(
         (r) => r.json() as Promise<{ features: unknown[] }>,
     );
