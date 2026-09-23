@@ -55,9 +55,38 @@ const selectedCapMaterial = new THREE.MeshBasicMaterial({
     depthWrite: false,
 });
 
+/**
+ * 下鑽後浮起的行政區塊材質。這兩份跟上面不同，是真的要看得見的：
+ * 浮起來的板塊如果沒有 cap 顏色，畫面上只會有一圈線，看不出「一塊一塊」。
+ */
+const regionCapMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.1,
+    depthWrite: false,
+});
+const regionActiveCapMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.34,
+    depthWrite: false,
+});
+
 let Globe: any = null;
 let globeInstance: any = null;
 let offsetRaf = 0;
+
+/**
+ * 世界層的 feature。**必須是同一批物件實例**，不能每次重新 map／展開。
+ *
+ * three-globe 的 digest 是 d3 式 enter/update，key 取自它蓋在 datum 上的 `__id`。
+ * 下鑽時是把行政區「追加」進同一個陣列（見 applyPolygons），只要世界層傳的還是
+ * 這批原物件，它們就落在 update 分支、一根三角形都不會重建；退出下鑽同理。
+ * 若改成整個換掉，世界層 436 塊會被 dispose 再重建，回來時就是一次凍結。
+ */
+let worldFeatures: any[] = [];
+/** 目前浮起中的行政區 feature（下鑽時才有東西） */
+let regionFeatures: any[] = [];
 
 const countries = ref<Country[]>([]);
 const selected = ref<Country | null>(null);
@@ -66,6 +95,46 @@ const isLoading = ref(false);
 const loadError = ref('');
 /** 國家清單載入失敗（跟「某國子節點載入失敗」分開，這個會讓整顆地球點不動） */
 const countriesError = ref('');
+
+interface AdminStats {
+    /** 第一層 feature 數 */
+    l1: number;
+    /** 第二層 feature 數（目前只當統計，還沒做到第三層） */
+    l2: number;
+    parts: number;
+    vertices: number;
+    /** 最大一塊的外接框 [w, s, e, n]，鏡頭用 */
+    bbox: [number, number, number, number];
+    kb: number;
+}
+
+/** 哪些國家有行政區幾何可以下鑽（public/geo/admin/index.json，由腳本產生） */
+const adminIndex = ref<Record<string, AdminStats>>({});
+/** 已下鑽的國家 QID；null 代表還在國家層 */
+const drilledQid = ref<string | null>(null);
+const isDrilling = ref(false);
+/** 下鑽後點到的那一塊行政區 QID */
+const activeRegionQid = ref<string | null>(null);
+
+/** 目前這個國家能不能下鑽（有被選取、且索引裡有第一層幾何） */
+const canDrill = computed(
+    () => !!selected.value && !!adminIndex.value[selected.value.qid],
+);
+
+/** 點到的那塊行政區要顯示的名字 */
+const regionLabel = computed(() => {
+    const qid = activeRegionQid.value;
+
+    if (!qid) {
+        return '';
+    }
+
+    return (
+        children.value.find((c) => c.qid === qid)?.label ??
+        regionFeatures.find((f) => f.id === qid)?.properties?.name ??
+        qid
+    );
+});
 
 /**
  * 點到沒有對應圖譜資料的區域時的短暫提示。
@@ -141,6 +210,36 @@ function themeColor(varName: string, fallback: string): string {
     return ctx.fillStyle;
 }
 
+/**
+ * 給主題色加上透明度。
+ *
+ * themeColor 走 canvas 正規化，吐出來只會是 `#rrggbb` 或 `rgba(...)` 兩種形式，
+ * 這裡兩種都接。不能直接字串相接：主題色若剛好已經帶 alpha，接出來會是壞值。
+ */
+function withAlpha(color: string, alpha: number): string {
+    if (/^#[0-9a-f]{6}$/i.test(color)) {
+        return (
+            color +
+            Math.round(alpha * 255)
+                .toString(16)
+                .padStart(2, '0')
+        );
+    }
+
+    const channels = color.match(/[\d.]+/g);
+
+    return channels && channels.length >= 3
+        ? `rgba(${channels[0]},${channels[1]},${channels[2]},${alpha})`
+        : color;
+}
+
+/** 行政區顯示名：幾何檔有 14 個 feature 沒有 name，用圖譜的 children 補。 */
+function regionName(feat: any): string {
+    const fromGraph = children.value.find((c) => c.qid === feat?.id);
+
+    return fromGraph?.label ?? feat?.properties?.name ?? feat?.id ?? '';
+}
+
 /** globeOffset 沒有內建轉場，自己補一段 ease-out tween，避免位移用跳的。 */
 function tweenOffset(toX: number, duration = 600) {
     if (!globeInstance) {
@@ -175,7 +274,142 @@ function offsetForSelection(): number {
     return window.innerWidth * 0.2;
 }
 
+/**
+ * 把目前該畫的 polygon 交給 globe。
+ *
+ * 一定要走「世界層原物件 + 行政區」的組合，不要用 map／filter 產生新物件，
+ * 理由見 worldFeatures 的註解。
+ */
+function applyPolygons() {
+    globeInstance?.polygonsData(
+        regionFeatures.length
+            ? [...worldFeatures, ...regionFeatures]
+            : worldFeatures,
+    );
+}
+
+/**
+ * 逼 three-globe 重跑一次 accessor。
+ *
+ * 這些 accessor 讀的是 Vue 的 ref（selected / activeRegionQid），值變了 globe 並不
+ * 知道；把 accessor 原封不動再設回去就會觸發一次 digest。altitude 是 scale tween、
+ * 材質只是換參考，所以這趟不重建幾何——除非側牆的有無改變（見 polygonSideColor）。
+ */
+function refreshStyles() {
+    if (!globeInstance) {
+        return;
+    }
+
+    globeInstance
+        .polygonCapMaterial(globeInstance.polygonCapMaterial())
+        .polygonStrokeColor(globeInstance.polygonStrokeColor())
+        .polygonAltitude(globeInstance.polygonAltitude());
+}
+
+/** 依 bbox 把鏡頭擺到該國上方：框愈大拉愈遠。 */
+function focusOnBbox(bbox: [number, number, number, number]) {
+    const [west, south, east, north] = bbox;
+    const lat = (south + north) / 2;
+    const lng = (west + east) / 2;
+
+    // 經度差要乘 cos(lat) 才是實際跨幅，否則高緯度國家會被誤判成很寬而拉太遠
+    const spanLat = north - south;
+    const spanLng = (east - west) * Math.cos((lat * Math.PI) / 180);
+    const span = Math.max(spanLat, spanLng);
+
+    // 跨換日線的國家（俄羅斯、斐濟）bbox 會退化成整圈，算出來的中心點沒有意義。
+    // 原型先讓它退回一個安全的遠景，不要把鏡頭丟到太平洋中間。
+    const crossesAntimeridian = east - west > 180;
+
+    globeInstance?.pointOfView(
+        crossesAntimeridian
+            ? { altitude: 1.8 }
+            : { lat, lng, altitude: Math.min(2.2, Math.max(0.35, span / 22)) },
+        900,
+    );
+}
+
+/** 下鑽：抓該國的行政區幾何，追加到 polygon 層並浮起來。 */
+async function drillIn(country: Country) {
+    const stats = adminIndex.value[country.qid];
+
+    if (!stats || isDrilling.value) {
+        return;
+    }
+
+    isDrilling.value = true;
+
+    try {
+        const res = await fetch(`/geo/admin/${country.qid}.json`);
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const payload = (await res.json()) as { features: any[] };
+
+        // level 0 是國家自己（跟世界層重複），level 2 是第二層（還沒做到那一步）
+        regionFeatures = payload.features.filter(
+            (f) => f?.properties?.level === 1,
+        );
+
+        // 蓋一個自己的旗標，之後 accessor 就不必猜「這是國家還是行政區」
+        for (const feature of regionFeatures) {
+            feature.__region = true;
+        }
+
+        drilledQid.value = country.qid;
+        activeRegionQid.value = null;
+
+        applyPolygons();
+        focusOnBbox(stats.bbox);
+    } catch (error) {
+        regionFeatures = [];
+        showClickHint(
+            `行政區邊界載入失敗（${error instanceof Error ? error.message : '未知錯誤'}）`,
+        );
+    } finally {
+        isDrilling.value = false;
+    }
+}
+
+/** 收起行政區，回到國家層。世界層不動，所以這一步是零重建。 */
+function drillOut() {
+    regionFeatures = [];
+    drilledQid.value = null;
+    activeRegionQid.value = null;
+    applyPolygons();
+
+    if (selected.value) {
+        const anchor = children.value.find((c) => c.lat != null);
+
+        globeInstance?.pointOfView(
+            anchor
+                ? { lat: anchor.lat, lng: anchor.lng, altitude: 1.6 }
+                : { altitude: 1.6 },
+            800,
+        );
+    }
+}
+
 async function selectCountry(country: Country) {
+    // 點已經選取的同一國＝下鑽的快捷（面板上那顆按鈕才是正式入口）
+    if (selected.value?.qid === country.qid) {
+        if (!drilledQid.value) {
+            void drillIn(country);
+        }
+
+        return;
+    }
+
+    // 換國家：先把上一國浮起來的板塊收掉
+    if (drilledQid.value) {
+        regionFeatures = [];
+        drilledQid.value = null;
+        activeRegionQid.value = null;
+        applyPolygons();
+    }
+
     selected.value = country;
     children.value = [];
     loadError.value = '';
@@ -184,9 +418,7 @@ async function selectCountry(country: Country) {
     // 停自動旋轉：已經聚焦在特定目標，繼續轉會慢慢轉離焦點
     if (globeInstance) {
         globeInstance.controls().autoRotate = false;
-        globeInstance
-            .polygonCapMaterial(globeInstance.polygonCapMaterial())
-            .polygonStrokeColor(globeInstance.polygonStrokeColor());
+        refreshStyles();
     }
 
     tweenOffset(offsetForSelection());
@@ -227,14 +459,29 @@ function backToWorld() {
     selected.value = null;
     children.value = [];
     loadError.value = '';
+    regionFeatures = [];
+    drilledQid.value = null;
+    activeRegionQid.value = null;
     tweenOffset(0);
 
     if (globeInstance) {
         globeInstance.controls().autoRotate = true;
-        globeInstance
-            .polygonCapMaterial(globeInstance.polygonCapMaterial())
-            .polygonStrokeColor(globeInstance.polygonStrokeColor());
+        applyPolygons();
+        refreshStyles();
         globeInstance.pointOfView({ altitude: 2.4 }, 800);
+    }
+}
+
+/** Esc 一次退一層：行政區 → 國家 → 世界 */
+function onKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Escape') {
+        return;
+    }
+
+    if (drilledQid.value) {
+        drillOut();
+    } else if (selected.value) {
+        backToWorld();
     }
 }
 
@@ -267,6 +514,8 @@ async function initGlobe() {
     }
 
     const primary = themeColor('--binary-primary', '#6bdc9f');
+    // 側牆帶透明度，讓下面的地球還透得出來，不然浮起的板塊會像一塊不透光的積木
+    const regionSide = withAlpha(primary, 0.4);
 
     globeInstance = new Globe(containerEl.value)
         .backgroundImageUrl('/images/globe/night-sky.jpg')
@@ -275,22 +524,51 @@ async function initGlobe() {
         .showAtmosphere(true)
         .atmosphereColor(primary)
         .atmosphereAltitude(0.16)
-        .polygonAltitude(0.006)
-        .polygonCapMaterial((feat: any) =>
-            isSelectedPolygon(feat) ? selectedCapMaterial : idleCapMaterial,
-        )
-        // 側牆設成 falsy 讓 three-globe 連幾何都不建（includeSides=false）。
+        // 行政區浮到國家層上方。altitude 在 three-globe 是 `scale = 1 + alt` 的
+        // tween，不重建幾何，所以「升起來」這個動畫本身是免費的。
+        .polygonAltitude((feat: any) => (feat.__region ? 0.03 : 0.006))
+        .polygonCapMaterial((feat: any) => {
+            if (feat.__region) {
+                return feat.id === activeRegionQid.value
+                    ? regionActiveCapMaterial
+                    : regionCapMaterial;
+            }
+
+            return isSelectedPolygon(feat)
+                ? selectedCapMaterial
+                : idleCapMaterial;
+        })
+        // 國家層側牆設成 falsy 讓 three-globe 連幾何都不建（includeSides=false）。
         // 它原本就是全透明看不見的，卻仍然是三角形、還多佔一份材質。
-        .polygonSideColor(() => false)
-        .polygonStrokeColor((feat: any) =>
-            isSelectedPolygon(feat) ? '#ffffff' : primary,
-        )
+        //
+        // 浮起來的行政區反過來需要側牆——那圈牆就是「浮起」的視覺本體。
+        // ⚠️ 側牆的有無會讓 ConicPolygonGeometry 重建，所以這個值只能依 feature
+        // 種類決定，不能拿來做 hover 之類會反覆切換的效果。
+        .polygonSideColor((feat: any) => (feat.__region ? regionSide : false))
+        .polygonStrokeColor((feat: any) => {
+            if (feat.__region) {
+                return feat.id === activeRegionQid.value ? '#ffffff' : primary;
+            }
+
+            return isSelectedPolygon(feat) ? '#ffffff' : primary;
+        })
         .polygonLabel((feat: any) => {
+            if (feat.__region) {
+                return regionName(feat);
+            }
+
             const c = byIsoNumeric.value.get(polygonIso(feat));
 
             return c ? `${c.label}（${c.child_count} 個一級行政區）` : '';
         })
         .onPolygonClick((feat: any) => {
+            if (feat.__region) {
+                activeRegionQid.value = feat.id ?? null;
+                refreshStyles();
+
+                return;
+            }
+
             const c = byIsoNumeric.value.get(polygonIso(feat));
 
             if (!c) {
@@ -325,10 +603,28 @@ async function initGlobe() {
     // 頂點。這段是同一個 task 跑完才還給瀏覽器，換 50m 實測單一長任務 5.6 秒
     // （headless CPU），期間整頁凍住、連進度條都動不了。
     const world = await fetch('/geo/countries-hybrid.json').then(
-        (r) => r.json() as Promise<{ features: unknown[] }>,
+        (r) => r.json() as Promise<{ features: any[] }>,
     );
 
-    globeInstance.polygonsData(world.features);
+    worldFeatures = world.features;
+    applyPolygons();
+}
+
+/**
+ * 下鑽索引。18 KB，跟世界層一起載；沒有它就只能每點一國先去 fetch 看會不會 404，
+ * 而且面板上那顆「展開行政區」要先畫出來才知道該不該畫。
+ * 載不到不算致命——只是所有國家都不給下鑽入口，國家層照常能用。
+ */
+async function loadAdminIndex() {
+    try {
+        const res = await fetch('/geo/admin/index.json');
+
+        if (res.ok) {
+            adminIndex.value = await res.json();
+        }
+    } catch {
+        adminIndex.value = {};
+    }
 }
 
 function polygonIso(feat: any): string {
@@ -368,19 +664,25 @@ async function loadCountries() {
 }
 
 onMounted(async () => {
-    await loadCountries();
+    await Promise.all([loadCountries(), loadAdminIndex()]);
     await initGlobe();
     window.addEventListener('resize', resizeToContainer);
+    window.addEventListener('keydown', onKeydown);
 });
 
 onUnmounted(() => {
     clearTimeout(clickHintTimer);
     cancelAnimationFrame(offsetRaf);
     window.removeEventListener('resize', resizeToContainer);
+    window.removeEventListener('keydown', onKeydown);
     globeInstance?._destructor?.();
     globeInstance = null;
+    worldFeatures = [];
+    regionFeatures = [];
     idleCapMaterial.dispose();
     selectedCapMaterial.dispose();
+    regionCapMaterial.dispose();
+    regionActiveCapMaterial.dispose();
 });
 </script>
 
@@ -506,12 +808,13 @@ onUnmounted(() => {
                 <section
                     class="binary-glass pointer-events-auto max-h-[70vh] w-full overflow-y-auto rounded-2xl p-5 md:ml-8 md:max-h-[80vh] md:w-[26rem]"
                 >
+                    <!-- 退出是兩段式的：下鑽時先收行政區，再一次才回世界 -->
                     <button
                         type="button"
                         class="binary-ghost-button mb-4 text-xs"
-                        @click="backToWorld"
+                        @click="drilledQid ? drillOut() : backToWorld()"
                     >
-                        ← 回到世界
+                        {{ drilledQid ? '← 收起行政區' : '← 回到世界' }}
                     </button>
 
                     <h2 class="text-2xl font-bold text-[var(--binary-text)]">
@@ -524,7 +827,7 @@ onUnmounted(() => {
                     </p>
 
                     <div
-                        class="mt-4 flex gap-4 border-y border-[var(--binary-outline-variant)] py-3 text-xs"
+                        class="mt-4 flex items-center gap-4 border-y border-[var(--binary-outline-variant)] py-3 text-xs"
                     >
                         <div>
                             <span class="text-[var(--binary-outline)]"
@@ -535,6 +838,26 @@ onUnmounted(() => {
                                 >{{ children.length }}</span
                             >
                         </div>
+
+                        <!-- 下鑽的正式入口。再點一次地球上同一國也會下鑽，但那是隱藏
+                             的快捷鍵，不能當唯一入口——使用者不會知道要點第二次。 -->
+                        <!-- binary-button 是 w-full 的，放在這一列會把標籤擠到換行，
+                             這裡要的是行內動作，所以走 ghost 版再補一圈主色邊框 -->
+                        <button
+                            v-if="canDrill && !drilledQid"
+                            type="button"
+                            class="binary-ghost-button ml-auto shrink-0 border border-[var(--binary-primary)]/50 py-1 disabled:opacity-50"
+                            :disabled="isDrilling"
+                            @click="selected && drillIn(selected)"
+                        >
+                            {{ isDrilling ? '載入中…' : '展開邊界' }}
+                        </button>
+                        <span
+                            v-else-if="drilledQid"
+                            class="ml-auto text-[10px] text-[var(--binary-outline)]"
+                        >
+                            {{ activeRegionQid ? regionLabel : '點板塊看名稱' }}
+                        </span>
                     </div>
 
                     <p
