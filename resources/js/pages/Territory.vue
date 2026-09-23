@@ -739,7 +739,7 @@ onUnmounted(() => {
                 <nav
                     v-if="selected"
                     aria-label="所在層級"
-                    class="absolute top-4 left-0 z-10 flex items-center gap-1.5 px-6 text-[11px] md:pl-8"
+                    class="absolute top-4 left-0 z-10 flex items-center gap-2 px-6 text-[13px] md:pl-8 md:text-sm"
                 >
                     <button
                         type="button"
