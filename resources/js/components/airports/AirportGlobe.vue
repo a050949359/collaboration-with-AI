@@ -380,12 +380,11 @@ async function initGlobe() {
     }
 
     globeInstance = new Globe(containerEl.value)
-        .backgroundImageUrl('/images/globe/night-sky.png')
+        .backgroundImageUrl('/images/globe/night-sky.jpg')
         // 用 NASA 夜間衛星圖（three-globe demo 素材），取代自訂純色 + bump 的組合——
         // 深藍海洋 + 城市燈光光點，海陸對比明顯，換過 earth-dark.jpg 才發現那張圖本身
         // 像素就幾乎全黑（不是燈光沒打夠），這張才是真的看得出細節的深色地球。
         .globeImageUrl('/images/globe/earth-night.jpg')
-        .bumpImageUrl('/images/globe/earth-topology.png')
         .showAtmosphere(true)
         .atmosphereColor('#00daf3')
         .atmosphereAltitude(0.15)
@@ -395,7 +394,8 @@ async function initGlobe() {
                 ? 'rgba(0,229,255,0.35)'
                 : 'rgba(0,0,0,0)',
         )
-        .polygonSideColor(() => 'rgba(0,0,0,0)')
+        // 側牆設成 falsy，three-globe 就不會建那圈看不見的三角形（見 Territory.vue）
+        .polygonSideColor(() => false)
         .polygonStrokeColor((feat: any) =>
             String(feat.id).padStart(3, '0') === selectedNumericId.value
                 ? '#ffffff'
@@ -413,9 +413,10 @@ async function initGlobe() {
 
     resizeToContainer();
 
-    // 自架的混合國界（110m 骨架 + 50m 獨有的小島），由 scripts/build-globe-geojson.py
-    // 產生。已經是 GeoJSON，不需要 topojson.feature() 轉換。
-    const world = await fetch('/geo/countries-hybrid.json').then(
+    // 自架的國界（world-atlas 110m），由 scripts/build-globe-geojson.py 產生。
+    // 已經是 GeoJSON，不需要 topojson.feature() 轉換。
+    // 小島 feature 刻意不補，理由見 Territory.vue 同一段註解（物件數會讓動畫變鈍）。
+    const world = await fetch('/geo/countries-110m.json').then(
         (r) => r.json() as Promise<{ features: unknown[] }>,
     );
 

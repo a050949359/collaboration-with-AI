@@ -246,10 +246,9 @@ async function initGlobe() {
     const primary = themeColor('--binary-primary', '#6bdc9f');
 
     globeInstance = new Globe(containerEl.value)
-        .backgroundImageUrl('/images/globe/night-sky.png')
+        .backgroundImageUrl('/images/globe/night-sky.jpg')
         // 夜間版：這顆球背後要壓文字跟卡片，白天版太亮會跟內容搶對比
         .globeImageUrl('/images/globe/earth-night.jpg')
-        .bumpImageUrl('/images/globe/earth-topology.png')
         .showAtmosphere(true)
         .atmosphereColor(primary)
         .atmosphereAltitude(0.16)
@@ -259,7 +258,9 @@ async function initGlobe() {
                 ? 'rgba(255,255,255,0.28)'
                 : 'rgba(0,0,0,0)',
         )
-        .polygonSideColor(() => 'rgba(0,0,0,0)')
+        // 側牆設成 falsy 讓 three-globe 連幾何都不建（includeSides=false）。
+        // 它原本就是全透明看不見的，卻仍然是三角形、還多佔一份材質。
+        .polygonSideColor(() => false)
         .polygonStrokeColor((feat: any) =>
             isSelectedPolygon(feat) ? '#ffffff' : primary,
         )
@@ -295,7 +296,14 @@ async function initGlobe() {
     // 自架的混合國界（110m 骨架 + 50m 獨有的小島），由 scripts/build-globe-geojson.py
     // 產生。110m 少了 61 個小島國／屬地的 feature（新加坡、馬爾他、馬爾地夫…），
     // 那些國家在圖譜裡有資料卻點不到；補完涵蓋率等同 50m，頂點只多 15%。
-    const world = await fetch('/geo/countries-hybrid.json').then(
+    // 自架的國界（world-atlas 110m，177 國），由 scripts/build-globe-geojson.py 產生。
+    // 已經是 GeoJSON，不需要 topojson.feature() 轉換。
+    //
+    // ⚠️ 不要為了讓小島國可點就把 50m 的 61 個小島補進來（腳本的 --with-islands）：
+    // three-globe 對每個 feature 建一個 cap mesh + 一條 stroke line，238 個 feature
+    // 就是 476 個物件／draw call。實測選取與回到世界的鏡頭動畫會明顯鈍，177 個則順。
+    // 成本在物件數，不在頂點數（頂點只差 9%）。
+    const world = await fetch('/geo/countries-110m.json').then(
         (r) => r.json() as Promise<{ features: unknown[] }>,
     );
 

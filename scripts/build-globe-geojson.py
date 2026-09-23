@@ -1,7 +1,23 @@
 #!/usr/bin/env python3
-"""產生地球儀用的「混合」國界 GeoJSON（110m 骨架 + 50m 獨有的小島）。
+"""產生地球儀用的國界 GeoJSON（world-atlas 110m，可選擇補上 50m 獨有的小島）。
 
-## 為什麼要混合
+## ⚠️ 預設不補小島（實測結論，別再改回去）
+
+補小島會讓地球的鏡頭動畫明顯變鈍。原因不是資料量——頂點只多 9%——而是
+**three-globe 對每個 feature 建一個 cap mesh + 一條 stroke line**：
+
+| | feature | 物件／draw call | 頂點 | 互動 |
+|---|---|---|---|---|
+| **110m（預設）** | **177** | **354** | 10,583 | 順 |
+| 110m + 50m 小島 | 238 | 476 | 12,218 | 選取／回到世界的動畫會鈍 |
+
+cap 即使完全透明也照建照畫（`polygonCapColor` 回傳 `'rgba(0,0,0,0)'` 是真值，
+three-globe 的 `hasCap` 就成立），而且**不能省**——點擊偵測就是對這片透明 cap
+做 raycast，拿掉國家就點不到了。
+
+真的需要小島國可點的話，別走 polygon，改用另一個便宜的圖層（點標記）。
+
+## 補小島的效果（`--with-islands`）
 
 world-atlas 的兩個解析度各有問題（實測）：
 
@@ -17,7 +33,8 @@ world-atlas 的兩個解析度各有問題（實測）：
 
 ## 輸出
 
-`public/geo/countries-hybrid.json` — 直接是 GeoJSON FeatureCollection，
+`public/geo/countries-110m.json`（或 `--with-islands` 的 `countries-hybrid.json`）
+— 直接是 GeoJSON FeatureCollection，
 globe.gl 的 `polygonsData` 可以直接吃，前端不需要再跑 `topojson.feature()`。
 副檔名刻意用 `.json` 而不是 `.geojson`：nginx 的 gzip_types 認得 application/json，
 `.geojson` 會被當成 octet-stream 而不壓縮（差別是 85 KB vs 247 KB）。
@@ -27,8 +44,9 @@ feature 保留 `id`（ISO 3166-1 numeric，字串）與 `properties.name`，
 
 ## 用法
 
-    python3 scripts/build-globe-geojson.py            # 下載來源並產生
-    python3 scripts/build-globe-geojson.py --check    # 只印統計，不寫檔
+    python3 scripts/build-globe-geojson.py                  # 產生 countries-110m.json
+    python3 scripts/build-globe-geojson.py --with-islands   # 產生 countries-hybrid.json
+    python3 scripts/build-globe-geojson.py --check          # 只印統計，不寫檔
 """
 
 from __future__ import annotations
@@ -45,7 +63,8 @@ SOURCES = {
 }
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-OUT_PATH = REPO_ROOT / "public" / "geo" / "countries-hybrid.json"
+OUT_PATH = REPO_ROOT / "public" / "geo" / "countries-110m.json"
+OUT_PATH_WITH_ISLANDS = REPO_ROOT / "public" / "geo" / "countries-hybrid.json"
 CACHE_DIR = Path("/tmp/world-atlas-cache")
 
 # 座標四捨五入位數。4 位 ≈ 11 公尺，對一顆螢幕上幾百 px 的地球綽綽有餘，
@@ -194,6 +213,11 @@ def main() -> int:
     parser.add_argument(
         "--check", action="store_true", help="只印統計數字，不寫出檔案"
     )
+    parser.add_argument(
+        "--with-islands",
+        action="store_true",
+        help="補上 50m 獨有的 61 個小島（涵蓋率較好但動畫會鈍，見檔頭說明）",
+    )
     args = parser.parse_args()
 
     print("來源：")
@@ -205,7 +229,7 @@ def main() -> int:
     # 只補「110m 整個沒有這個 id」的 feature。沒有 id 的（N. Cyprus / Somaliland /
     # Kosovo / Indian Ocean Ter. / Siachen Glacier）不補：前三個 110m 已經畫得出來，
     # 後兩個沒有 ISO numeric 本來就對不到圖譜，補了也點不了。
-    extras = [f for f in detailed if f["id"] and f["id"] not in base_ids]
+    extras = [f for f in detailed if f["id"] and f["id"] not in base_ids] if args.with_islands else []
 
     merged = base + extras
     merged.sort(key=lambda f: (f["id"] or "zzz", f["properties"]["name"] or ""))
@@ -214,9 +238,11 @@ def main() -> int:
     # separators：去掉 JSON 預設的空白，檔案小一成
     text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
+    out_path = OUT_PATH_WITH_ISLANDS if args.with_islands else OUT_PATH
+
     print()
     print(f"  110m feature：{len(base)}（有 id {len(base_ids)}）")
-    print(f"  50m 獨有補上：{len(extras)}")
+    print(f"  50m 獨有補上：{len(extras)}" + ("" if args.with_islands else "（未啟用 --with-islands）"))
     print(f"  合併後：{len(merged)} feature／{count_vertices(merged):,} 頂點")
     print(f"  大小：{len(text.encode()) / 1024:.0f} KB（未壓縮）")
 
@@ -225,9 +251,9 @@ def main() -> int:
 
         return 0
 
-    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUT_PATH.write_text(text, encoding="utf-8")
-    print(f"\n  已寫入 {OUT_PATH.relative_to(REPO_ROOT)}")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(text, encoding="utf-8")
+    print(f"\n  已寫入 {out_path.relative_to(REPO_ROOT)}")
 
     return 0
 
