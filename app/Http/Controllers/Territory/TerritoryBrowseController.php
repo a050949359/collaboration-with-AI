@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Territory\TerritoryEntity;
 use App\Models\Territory\TerritoryObservation;
 use App\Models\Territory\TerritoryRelation;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -47,6 +48,11 @@ class TerritoryBrowseController extends Controller
                 self::COUNTRIES_TTL,
                 fn () => $this->buildCountries(),
             );
+        } catch (QueryException $e) {
+            // DB 本身就壞了，退化路徑走的是同一組查詢、一樣會失敗。
+            // 這裡不吞也不重試，直接往上拋——否則只是多打一次無效連線、
+            // 讓回應更慢，最後還是 500。
+            throw $e;
         } catch (\Throwable) {
             // 快取只是最佳化，資料本來就在 DB。Redis 掛掉時退化成直接查詢，
             // 不要讓一個唯讀公開頁面因為快取層故障就整頁 500。
