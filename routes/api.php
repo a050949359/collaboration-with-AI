@@ -170,6 +170,7 @@ Route::post('/line/about-token', [LineAboutTokenController::class, 'issue'])->mi
 
 use App\Http\Controllers\Mcp\MemoryGraphController;
 use App\Http\Controllers\Mcp\MemoryObservationController;
+use App\Http\Controllers\Territory\TerritoryBrowseController;
 use App\Http\Controllers\Travel\BookingController;
 use App\Http\Controllers\Travel\ExportController;
 use App\Http\Controllers\Travel\PassengerController;
@@ -342,6 +343,28 @@ Route::post('/agyd/upload/{taskId}', [AgydReceiveController::class, 'upload'])->
 
 // codegraph 靜態程式碼結構圖（公開，唯讀；repo 本身即 public）
 Route::get('/codegraph/graph', [CodeGraphController::class, 'index']);
+
+// Territory 瀏覽 REST（公開唯讀；跟 /api/mcp/territory 的 JSON-RPC 分開，那支是給 LLM 工具用的）
+//
+// throttle 對齊 v1/airports 那組公開唯讀查詢：60/min 對正常使用綽綽有餘（頁面載入打一次
+// countries、每點一個國家打一次 children），但擋得住無認證的連打——countries 在 cache miss
+// 時要掃全部 260 國的 observation。
+//
+// 兩個實測過的行為，改這裡之前先知道：
+//
+// 1. **計數桶是共用的**。Laravel 的 `throttle:N,M` 用「IP + domain」當 key，不含路由，
+//    所以這組跟 v1/airports、v1/airlines 共用同一個桶（實測：把 territory 打滿 61 次，
+//    v1/airports 也跟著 429）。要獨立的桶得改用具名 limiter，但全專案 30 幾處都是簡單
+//    形式，只為這裡破例不划算。
+// 2. **限流計數走 Redis**，所以 Redis 整個掛掉時這兩支會 500——TerritoryBrowseController
+//    裡那段「快取失效也要能回應」的降級擋不到 middleware。這是刻意接受的：Redis 全掛是
+//    維運事故（session/queue/cache 全倒），單獨保住這一頁沒有意義。那段降級真正要擋的是
+//    「Redis 活著但寫不進去」（maxmemory + noeviction），那種情況 throttle 仍然正常。
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/territory/countries', [TerritoryBrowseController::class, 'countries']);
+    Route::get('/territory/nodes/{qid}/children', [TerritoryBrowseController::class, 'children'])
+        ->where('qid', 'Q\d+');
+});
 
 // Memory graph REST（公開）
 Route::get('/memory/graph', [MemoryGraphController::class, 'index']);
