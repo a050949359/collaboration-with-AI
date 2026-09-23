@@ -179,9 +179,12 @@ function selectMainland(features: any[]): any[] {
             return false;
         }
 
-        // 經度差要乘 cos(lat) 才是實際跨幅，不然高緯度會誤判成很遠
+        // 經度差先繞回 -180..180，換日線兩側才算得出真實距離（俄羅斯的楚科奇被切成
+        // ±180 兩塊，直接相減會變成差 360 度而被誤判成地球另一端）。
+        // 再乘 cos(lat) 才是實際跨幅，不然高緯度會誤判成很遠。
         const dLng =
-            (center[0] - anchorLng) * Math.cos((anchorLat * Math.PI) / 180);
+            (((((center[0] - anchorLng + 180) % 360) + 360) % 360) - 180) *
+            Math.cos((anchorLat * Math.PI) / 180);
         const dLat = center[1] - anchorLat;
 
         return Math.hypot(dLng, dLat) <= 25;
@@ -199,7 +202,9 @@ function pickProjection(features: any[]) {
     const collection = { type: 'FeatureCollection', features } as any;
     const [[west, south], [east, north]] = geoBounds(collection);
     const centerLat = (south + north) / 2;
-    const centerLng = (west + east) / 2;
+    // geoBounds 對跨換日線的範圍會回傳 west > east（斐濟是 177 ~ -179）。
+    // 直接取平均會得到地球另一端的經度，投影就整個轉錯邊。
+    const centerLng = (west + (east < west ? east + 360 : east)) / 2;
 
     const projection =
         Math.abs(centerLat) < 20

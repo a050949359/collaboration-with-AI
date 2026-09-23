@@ -111,7 +111,10 @@ interface AdminStats {
     l2: number;
     parts: number;
     vertices: number;
-    /** 最大一塊的外接框 [w, s, e, n]，鏡頭用 */
+    /**
+     * 本土那一群的外接框 [w, s, e, n]，鏡頭用。
+     * ⚠️ 經度是展開過的，可能超出 ±180（俄羅斯 190.3、斐濟 180.2）。
+     */
     bbox: [number, number, number, number];
     kb: number;
 }
@@ -313,25 +316,25 @@ function refreshStyles() {
         .polygonAltitude(globeInstance.polygonAltitude());
 }
 
-/** 依 bbox 把鏡頭擺到該國上方：框愈大拉愈遠。 */
+/**
+ * 依 bbox 把鏡頭擺到該國上方：框愈大拉愈遠。
+ *
+ * bbox 來自 index.json，是「本土那一群」的框，而且**經度是展開過的**，
+ * 可能超出 ±180（俄羅斯的東界是 190.3、斐濟是 180.2），這樣跨換日線的國家才算得出
+ * 連續的中心點與跨幅。算完中心點要自己繞回 -180..180 再交給 pointOfView。
+ */
 function focusOnBbox(bbox: [number, number, number, number]) {
     const [west, south, east, north] = bbox;
     const lat = (south + north) / 2;
-    const lng = (west + east) / 2;
+    const lng = (((((west + east) / 2 + 180) % 360) + 360) % 360) - 180;
 
     // 經度差要乘 cos(lat) 才是實際跨幅，否則高緯度國家會被誤判成很寬而拉太遠
     const spanLat = north - south;
     const spanLng = (east - west) * Math.cos((lat * Math.PI) / 180);
     const span = Math.max(spanLat, spanLng);
 
-    // 跨換日線的國家（俄羅斯、斐濟）bbox 會退化成整圈，算出來的中心點沒有意義。
-    // 原型先讓它退回一個安全的遠景，不要把鏡頭丟到太平洋中間。
-    const crossesAntimeridian = east - west > 180;
-
     globeInstance?.pointOfView(
-        crossesAntimeridian
-            ? { altitude: 1.8 }
-            : { lat, lng, altitude: Math.min(2.2, Math.max(0.35, span / 22)) },
+        { lat, lng, altitude: Math.min(2.2, Math.max(0.35, span / 22)) },
         900,
     );
 }
