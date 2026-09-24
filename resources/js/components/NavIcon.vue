@@ -65,36 +65,53 @@ defineProps<{ name: string; size?: number }>();
             />
         </template>
 
-        <!-- aviation -->
-        <template v-else-if="name === 'aviation'">
-            <circle
-                class="stroke-default"
-                cx="16"
-                cy="16"
-                r="2.4"
-                stroke-width="1.5"
-            />
-            <g class="anim-prop">
-                <path
-                    class="stroke-default"
-                    d="M16 14 C 16 9, 11 6, 9 8 C 11 10, 14 13, 16 14 Z"
-                    stroke-width="1.5"
-                    stroke-linejoin="round"
-                />
-                <path
-                    class="stroke-default"
-                    d="M18 16 C 23 16, 26 21, 24 23 C 22 21, 19 18, 18 16 Z"
-                    stroke-width="1.5"
-                    stroke-linejoin="round"
-                />
-            </g>
+        <!-- geography（地理群組：地球儀，經緯線） -->
+        <template v-else-if="name === 'geography'">
             <circle
                 class="stroke-default"
                 cx="16"
                 cy="16"
                 r="11"
                 stroke-width="1.5"
-                opacity="0.3"
+            />
+            <ellipse
+                class="stroke-default"
+                cx="16"
+                cy="16"
+                rx="4.6"
+                ry="11"
+                stroke-width="1.5"
+            />
+            <path class="stroke-default" d="M5 16 H27" stroke-width="1.5" />
+            <path
+                class="stroke-default"
+                d="M7.7 9.6 H24.3 M7.7 22.4 H24.3"
+                stroke-width="1.5"
+                opacity="0.45"
+            />
+        </template>
+
+        <!-- territory（行政區：層層堆疊，對應 國→省→市 的階層） -->
+        <template v-else-if="name === 'territory'">
+            <path
+                class="stroke-default"
+                d="M16 4 L28 10 L16 16 L4 10 Z"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+            />
+            <path
+                class="stroke-default"
+                d="M4 16 L16 22 L28 16"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+                opacity="0.6"
+            />
+            <path
+                class="stroke-default"
+                d="M4 21.5 L16 27.5 L28 21.5"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+                opacity="0.35"
             />
         </template>
 

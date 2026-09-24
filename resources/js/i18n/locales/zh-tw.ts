@@ -14,7 +14,8 @@ export default {
             articles: '文章',
             airports: '機場',
             airlines: '航空公司',
-            aviation: '航空',
+            geography: '地理',
+            territory: '行政區',
             about: '關於',
         },
         index: {
