@@ -344,6 +344,12 @@ async function openFlatMap(country: Country) {
 
         const payload = (await res.json()) as { features: any[] };
 
+        // 同 selectCountry 的守衛：抓幾何期間使用者可能已經按 Esc 退回世界層或改點
+        // 別國。不確認的話會在「沒有選取任何國家」的狀態下把平面圖打開。
+        if (selected.value?.qid !== country.qid) {
+            return;
+        }
+
         // level 0 是國家自己（跟世界層重複），level 2 是第二層（還沒做到那一步）
         flatFeatures.value = payload.features.filter(
             (f) => f?.properties?.level === 1,
@@ -473,11 +479,21 @@ async function selectCountry(country: Country) {
 
     tweenOffset(offsetForSelection());
 
+    // ⚠️ 連續點不同國家時，先發的請求可能後到。沒有這個守衛的話，A 的回應會蓋掉
+    // 已經選取的 B——面板標題是 B、清單卻是 A 的行政區，而且鏡頭會飛去 A。
+    // 每個寫回 state 的地方（含 catch 與 finally）都要先確認「我還是當前選取的那一國」。
+    const requestedQid = country.qid;
+    const isStale = () => selected.value?.qid !== requestedQid;
+
     try {
         const res = await fetch(api.territory.children(country.qid), {
             headers: { Accept: 'application/json' },
         });
         const json = await res.json();
+
+        if (isStale()) {
+            return;
+        }
 
         if (!res.ok) {
             throw new Error(json?.message || 'Failed to load subdivisions');
@@ -506,10 +522,17 @@ async function selectCountry(country: Country) {
             );
         }
     } catch (error) {
+        if (isStale()) {
+            return;
+        }
+
         loadError.value =
             error instanceof Error ? error.message : 'Failed to load';
     } finally {
-        isLoading.value = false;
+        // 過期的請求不能關掉「新」請求的載入狀態，否則面板會提早顯示成空的
+        if (!isStale()) {
+            isLoading.value = false;
+        }
     }
 }
 
