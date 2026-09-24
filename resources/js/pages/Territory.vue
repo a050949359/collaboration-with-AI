@@ -629,11 +629,31 @@ async function initGlobe() {
     // ConicPolygonGeometry，50m 是 1,616 塊／99,539 頂點，混合版是 436 塊／12,218
     // 頂點。這段是同一個 task 跑完才還給瀏覽器，換 50m 實測單一長任務 5.6 秒
     // （headless CPU），期間整頁凍住、連進度條都動不了。
-    const world = await fetch('/geo/countries-hybrid.json').then(
-        (r) => r.json() as Promise<{ features: any[] }>,
-    );
+    try {
+        const res = await fetch('/geo/countries-hybrid.json');
 
-    worldFeatures = world.features;
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        worldFeatures = ((await res.json()) as { features: any[] }).features;
+    } catch (error) {
+        // 抓不到國界時地球本身照樣轉，只是一個國家都點不到。要明講，
+        // 不然使用者只會看到一顆沒有反應的球，無從判斷是壞了還是沒資料。
+        countriesError.value = `國界資料載入失敗（${
+            error instanceof Error ? error.message : '未知錯誤'
+        }）`;
+
+        return;
+    }
+
+    // ⚠️ 跟上面 import 那處同一個防護：fetch 期間元件可能已經被卸載，
+    // onUnmounted 會把 globeInstance 設成 null，這裡不檢查就是對 null 取屬性。
+    // initGlobe 是被 await 在 onMounted 裡呼叫的，拋出來會變成未處理的 rejection。
+    if (!globeInstance) {
+        return;
+    }
+
     globeInstance.polygonsData(worldFeatures);
 }
 
