@@ -44,3 +44,5 @@ check_results.txt
 /database/codegraph.db
 /cmd/micro-heartbeat/micro-heartbeat
 /cmd/micro-heartbeat/micro-heartbeat.env
+# scripts/*.py 執行時產生
+/scripts/__pycache__

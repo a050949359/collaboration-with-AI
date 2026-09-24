@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // 機場地球（globe.gl，底層 Three.js）。國界 polygon 可點擊：高亮 + 鏡頭飛過去 + 抓該國機場。
-import * as topojson from 'topojson-client';
-import type { Topology } from 'topojson-specification';
+import * as THREE from 'three';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api } from '@/lib/routes';
@@ -23,6 +22,28 @@ const loadError = ref('');
 
 let Globe: any = null;
 let globeInstance: any = null;
+
+/**
+ * 所有 polygon 共用這兩份 cap 材質。
+ *
+ * three-globe 是逐「單一 polygon 塊」建物件的（MultiPolygon 會被拆開），這份國界拆完
+ * 約 436 塊，預設每塊都會自己 new 一份材質。改成共用實例後材質降到 2 份，draw call
+ * 之間不必再切換材質狀態。
+ *
+ * 未選取那份用 `colorWrite: false`：畫面上跟全透明一樣看不見，但它不是「透明物件」，
+ * 所以不進透明佇列、不做混合、也不必每幀重新深度排序。
+ * ⚠️ cap 不能省——點擊偵測就是對這片看不見的 cap 做 raycast，拿掉就點不到國家了。
+ */
+const idleCapMaterial = new THREE.MeshBasicMaterial({
+    colorWrite: false,
+    depthWrite: false,
+});
+const selectedCapMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00e5ff,
+    transparent: true,
+    opacity: 0.35,
+    depthWrite: false,
+});
 
 const alpha2ToNumeric: Record<string, string> = {
     AF: '004',
@@ -361,7 +382,7 @@ watch(selectedNumericId, () => {
         return;
     }
 
-    globeInstance.polygonCapColor(globeInstance.polygonCapColor());
+    globeInstance.polygonCapMaterial(globeInstance.polygonCapMaterial());
     globeInstance.polygonStrokeColor(globeInstance.polygonStrokeColor());
 });
 
@@ -382,22 +403,24 @@ async function initGlobe() {
     }
 
     globeInstance = new Globe(containerEl.value)
-        .backgroundImageUrl('/images/globe/night-sky.png')
+        .backgroundImageUrl('/images/globe/night-sky.jpg')
         // 用 NASA 夜間衛星圖（three-globe demo 素材），取代自訂純色 + bump 的組合——
         // 深藍海洋 + 城市燈光光點，海陸對比明顯，換過 earth-dark.jpg 才發現那張圖本身
         // 像素就幾乎全黑（不是燈光沒打夠），這張才是真的看得出細節的深色地球。
         .globeImageUrl('/images/globe/earth-night.jpg')
-        .bumpImageUrl('/images/globe/earth-topology.png')
         .showAtmosphere(true)
         .atmosphereColor('#00daf3')
         .atmosphereAltitude(0.15)
         .polygonAltitude(0.006)
-        .polygonCapColor((feat: any) =>
+        .polygonCapMaterial((feat: any) =>
             String(feat.id).padStart(3, '0') === selectedNumericId.value
-                ? 'rgba(0,229,255,0.35)'
-                : 'rgba(0,0,0,0)',
+                ? selectedCapMaterial
+                : idleCapMaterial,
         )
-        .polygonSideColor(() => 'rgba(0,0,0,0)')
+        // 側牆一定要 falsy 才不會建幾何：three-globe 的判斷是
+        // `hasSide = !!(sideColor || sideMaterial)`，回 'rgba(0,0,0,0)' 沒用（那是真值），
+        // 照樣會建出一圈看不見的三角形還多佔一份材質。
+        .polygonSideColor(() => false)
         .polygonStrokeColor((feat: any) =>
             String(feat.id).padStart(3, '0') === selectedNumericId.value
                 ? '#ffffff'
@@ -415,15 +438,40 @@ async function initGlobe() {
 
     resizeToContainer();
 
-    const world = await fetch(
-        'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
-    ).then((r) => r.json() as Promise<Topology>);
+    // 自架的混合國界（110m 骨架 + 50m 獨有的 61 個小島），由
+    // scripts/build-globe-geojson.py 產生。已經是 GeoJSON，不需要 topojson.feature()。
+    //
+    // ⚠️ 不要改成完整的 50m：瓶頸不是下載（本機實測 6 ms）也不是 JSON.parse（8 ms），
+    // 而是 three-globe 逐塊建 ConicPolygonGeometry——50m 是 1,616 塊／99,539 頂點，
+    // 實測是單一個 5.6 秒的長任務（headless CPU），期間整頁凍住。
+    // 混合版是 436 塊／12,218 頂點，沒有這種巨型任務。
+    let features: unknown[];
 
-    const countries = (
-        topojson.feature(world, (world.objects as any).countries) as any
-    ).features;
+    try {
+        const res = await fetch('/geo/countries-hybrid.json');
 
-    globeInstance.polygonsData(countries);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        features = ((await res.json()) as { features: unknown[] }).features;
+    } catch (error) {
+        // 抓不到國界時地球本身照樣轉，只是點不到國家——要明講，不然使用者
+        // 只會看到一顆沒有反應的球，無從判斷是壞了還是本來就這樣。
+        loadError.value = `Failed to load country borders (${
+            error instanceof Error ? error.message : 'unknown error'
+        })`;
+
+        return;
+    }
+
+    // ⚠️ 跟上面 import 那處同一個防護：fetch 期間元件可能已經被卸載，
+    // onUnmounted 會把 globeInstance 設成 null，這裡不檢查就是對 null 取屬性。
+    if (!globeInstance) {
+        return;
+    }
+
+    globeInstance.polygonsData(features);
 }
 
 function resizeToContainer() {
@@ -445,6 +493,8 @@ onUnmounted(() => {
     window.removeEventListener('resize', resizeToContainer);
     globeInstance?._destructor?.();
     globeInstance = null;
+    idleCapMaterial.dispose();
+    selectedCapMaterial.dispose();
 });
 </script>
 
