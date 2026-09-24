@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Territory;
 
+use App\Enums\Territory\CountryObservationType;
+use App\Enums\Territory\SubdivisionObservationType;
 use App\Http\Controllers\Controller;
 use App\Models\Territory\TerritoryEntity;
 use App\Models\Territory\TerritoryObservation;
 use App\Models\Territory\TerritoryRelation;
+use App\Support\TerritoryCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -18,22 +21,54 @@ use Illuminate\Support\Facades\DB;
  */
 class TerritoryBrowseController extends Controller
 {
-    /** 行政區資料幾乎不變，快取放長一點；匯入後可手動清 territory:countries。 */
-    private const COUNTRIES_TTL = 86400;
-
-    /** 國家層要帶出來的 observation 欄位 */
-    private const COUNTRY_FIELDS = [
-        'label_en', 'label_zh_tw', 'numeric', 'iso_code', 'continent', 'population',
-    ];
+    /**
+     * 要帶出來的 observation 欄位。
+     *
+     * 值一律取自 enum，不要在這裡寫字串字面值——專案慣例是「enum 是合法值的單一
+     * 來源」。寫死的話，之後改 enum 的 value 這裡不會有任何編譯期或執行期警告，
+     * 260 個國家會一起靜默變成 null。
+     *
+     * 這裡刻意只取用得到的**子集**（不是 `array_column(cases())`）：API 回傳什麼欄位
+     * 是這支端點的決定，跟「資料層存了哪些 type」是兩回事。
+     * 特別是 `layer2_gap` 絕不能進來——那是匯入流程的內部品管記錄（內容含日期與
+     * 內部工具名稱），屬於開發端資訊，不該從公開端點流出去。
+     *
+     * @return list<string>
+     */
+    private static function countryFields(): array
+    {
+        return array_map(fn (CountryObservationType $t) => $t->value, [
+            CountryObservationType::LabelEn,
+            CountryObservationType::LabelZhTw,
+            CountryObservationType::Numeric,
+            CountryObservationType::IsoCode,
+            CountryObservationType::Continent,
+            CountryObservationType::Population,
+        ]);
+    }
 
     /**
-     * 行政區層要帶出來的 observation 欄位。
-     * 刻意不含 layer2_gap：那是匯入流程的內部品管記錄（內容還含日期與內部工具名稱），
-     * 屬於開發端資訊，不該從公開端點流出去。
+     * 行政區層要帶出來的欄位。
+     *
+     * 除了 SubdivisionObservationType 那幾個，另外收 `label_en`——它屬於
+     * CountryObservationType，因為有些「子節點」本身是 country 型別的實體
+     * （法國的海外屬地就是這樣），它們身上掛的是國家版的欄位組合。
+     *
+     * @return list<string>
      */
-    private const NODE_FIELDS = [
-        'label', 'label_en', 'description', 'coordinates', 'population', 'area',
-    ];
+    private static function nodeFields(): array
+    {
+        return [
+            ...array_map(fn (SubdivisionObservationType $t) => $t->value, [
+                SubdivisionObservationType::Label,
+                SubdivisionObservationType::Description,
+                SubdivisionObservationType::Coordinates,
+                SubdivisionObservationType::Population,
+                SubdivisionObservationType::Area,
+            ]),
+            CountryObservationType::LabelEn->value,
+        ];
+    }
 
     /**
      * 公開：世界層摘要（約 260 個國家節點）。
@@ -41,16 +76,31 @@ class TerritoryBrowseController extends Controller
      */
     public function countries(): JsonResponse
     {
+        // ⚠️ 不要用 Cache::remember 包 try/catch。那樣寫在「closure 已經跑完、只是
+        // 存快取失敗」時（例如 Redis maxmemory + noeviction）會掉進 catch 再 build
+        // 一次，等於每個 request 打兩輪查詢、而且快取永遠填不回去——這支是公開端點，
+        // 路由層雖然有 throttle:60,1，但 60 次 × 兩輪查詢仍然是白費的放大。
+        //
+        // 拆成「讀 → build → 寫」三步，build 最多只會發生一次；讀寫各自的失敗都
+        // 只是退化成直接查 DB。DB 本身的例外不攔，直接往上拋。
+        $cached = null;
+
         try {
-            $countries = Cache::remember(
-                'territory:countries',
-                self::COUNTRIES_TTL,
-                fn () => $this->buildCountries(),
-            );
+            $cached = Cache::get(TerritoryCache::COUNTRIES_KEY);
         } catch (\Throwable) {
-            // 快取只是最佳化，資料本來就在 DB。Redis 掛掉時退化成直接查詢，
-            // 不要讓一個唯讀公開頁面因為快取層故障就整頁 500。
-            $countries = $this->buildCountries();
+            // 讀不到就當 miss
+        }
+
+        if (is_array($cached)) {
+            return response()->json($cached);
+        }
+
+        $countries = $this->buildCountries();
+
+        try {
+            Cache::put(TerritoryCache::COUNTRIES_KEY, $countries, TerritoryCache::COUNTRIES_TTL);
+        } catch (\Throwable) {
+            // 寫不進去不影響這次回應，下次再試
         }
 
         return response()->json($countries);
@@ -65,12 +115,17 @@ class TerritoryBrowseController extends Controller
      */
     private function buildCountries(): array
     {
-        $entities = TerritoryEntity::where('type', 'country')->get(['id', 'name']);
+        // ⚠️ 大小寫不敏感比對：`type` 是 create_entity 傳進來的自由字串，
+        // WriteTerritoryObservationJob 已經用 strtolower() 防過同一件事。這裡若用
+        // `where('type', 'country')`，一個存成 'Country' 的實體會照樣拿到完整的國家版
+        // observation，卻在這支端點上憑空消失（生產是 SQLite，`=` 對大小寫敏感）。
+        $entities = TerritoryEntity::whereRaw('LOWER(type) = ?', ['country'])
+            ->get(['id', 'name']);
         $ids = $entities->pluck('id');
 
         // 一次撈完所有需要的 observation，避免逐國 N+1
         $obs = TerritoryObservation::whereIn('entity_id', $ids)
-            ->whereIn('type', self::COUNTRY_FIELDS)
+            ->whereIn('type', self::countryFields())
             ->get(['entity_id', 'type', 'content'])
             ->groupBy('entity_id');
 
@@ -117,7 +172,7 @@ class TerritoryBrowseController extends Controller
         $children = TerritoryEntity::whereIn('id', $childIds)->get(['id', 'name', 'type']);
 
         $obs = TerritoryObservation::whereIn('entity_id', $children->pluck('id'))
-            ->whereIn('type', self::NODE_FIELDS)
+            ->whereIn('type', self::nodeFields())
             ->get(['entity_id', 'type', 'content'])
             ->groupBy('entity_id');
 
