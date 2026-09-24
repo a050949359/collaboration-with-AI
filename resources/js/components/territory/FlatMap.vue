@@ -29,9 +29,14 @@ const props = defineProps<{
     features: any[];
     /**
      * 交接當下「這個經緯度畫在螢幕的哪裡」，由父層用地球的相機算。
-     * 回 null 代表這個點當下不在畫面上（轉到球背面），該環會被略過。
+     * 回 null 代表這個點當下不在畫面上（轉到球背面）。
      */
     project: (lng: number, lat: number) => [number, number] | null;
+    /**
+     * 該國「本土那一群」的外接框 [w, s, e, n]，來自 public/geo/admin/index.json。
+     * ⚠️ 經度是展開過的，可能超出 ±180（俄羅斯 190.3、斐濟 180.2）。
+     */
+    mainlandBbox?: [number, number, number, number];
     activeQid: string | null;
     labelOf: (feat: any) => string;
     /** 用來上色的量值（目前是人口），null 代表沒資料 */
@@ -130,67 +135,54 @@ function ringCenter(ring: number[][]): [number, number] {
 }
 
 /**
- * 只留本土那一團。
+ * 只留本土那一團，用 manifest 已經算好的本土 bbox 判斷。
  *
- * 法國的第一層含法屬圭亞那（南美）和留尼旺（印度洋），整包丟給 `fitExtent` 會
- * 框出跨越 100 度經度的範圍，本土就被縮成畫面上的一小撮——實測就是這樣壞的。
- * 作法是先找全國最大的一環當錨點，再留下中心距離錨點 25 度以內的 feature。
- * 被排除的只是不畫，資料面板那邊照樣列得到。
+ * 為什麼要濾：法國的第一層含法屬圭亞那（南美）和留尼旺（印度洋），整包丟給
+ * `fitExtent` 會框出跨越 100 度經度的範圍，本土就被縮成畫面上的一小撮。
+ *
+ * ⚠️ **不要退回「找最大的一環當錨點、再取周圍 N 度」那種寫法**（本檔曾經是這樣，
+ * 實測災難級）：那個檔案裡裝的是行政區，所以「最大的一環」是最大的**行政區**——
+ * 美國會錨定到阿拉斯加，於是 54 個州只畫出 5 個；俄羅斯 84 個掉 65 個（含莫斯科州）、
+ * 中國掉廣東江蘇浙江、澳洲掉 NSW 與維多利亞。而且它們會被提示文字誤稱為「海外屬地」。
+ *
+ * bbox 是 scripts/build-admin-manifest.py 用「bbox 間距 ≤ 2° 的單一連結分群、取總面積
+ * 最大那群」算出來的，那套邏輯已經在 Python 那邊驗過，這裡直接用結果、不重寫一次。
+ * 改用 bbox 之後被排除的就真的只剩外島（美國＝阿拉斯加/夏威夷/關島/波多黎各、
+ * 俄羅斯＝加里寧格勒飛地、斐濟＝Rotuma），提示文字才名副其實。
+ *
+ * 沒有 bbox（理論上不會，manifest 一定有）就全部保留，寧可畫得醜也不要無聲少東西。
  */
 function selectMainland(features: any[]): any[] {
-    let anchor: [number, number] | null = null;
-    let anchorArea = -1;
-    const centers = new Map<any, [number, number]>();
+    const bbox = props.mainlandBbox;
 
-    for (const feature of features) {
-        let best: number[][] | null = null;
-        let bestArea = -1;
-
-        for (const ring of ringsOf(feature)) {
-            const area = ringArea(ring);
-
-            if (area > bestArea) {
-                bestArea = area;
-                best = ring;
-            }
-        }
-
-        if (!best) {
-            continue;
-        }
-
-        const center = ringCenter(best);
-
-        centers.set(feature, center);
-
-        if (bestArea > anchorArea) {
-            anchorArea = bestArea;
-            anchor = center;
-        }
-    }
-
-    if (!anchor) {
+    if (!bbox) {
         return features;
     }
 
-    const [anchorLng, anchorLat] = anchor;
+    const [west, south, east, north] = bbox;
+    // 邊界上的行政區中心可能落在框外一點點，留一點寬容
+    const pad = 2;
 
     return features.filter((feature) => {
-        const center = centers.get(feature);
+        const rings = ringsOf(feature);
 
-        if (!center) {
+        if (!rings.length) {
             return false;
         }
 
-        // 經度差先繞回 -180..180，換日線兩側才算得出真實距離（俄羅斯的楚科奇被切成
-        // ±180 兩塊，直接相減會變成差 360 度而被誤判成地球另一端）。
-        // 再乘 cos(lat) 才是實際跨幅，不然高緯度會誤判成很遠。
-        const dLng =
-            (((((center[0] - anchorLng + 180) % 360) + 360) % 360) - 180) *
-            Math.cos((anchorLat * Math.PI) / 180);
-        const dLat = center[1] - anchorLat;
+        const biggest = rings.reduce((a, b) =>
+            ringArea(a) >= ringArea(b) ? a : b,
+        );
+        const [lng, lat] = ringCenter(biggest);
 
-        return Math.hypot(dLng, dLat) <= 25;
+        // bbox 的經度是**展開過的**（俄羅斯東界 190.3、斐濟 180.2），feature 的中心
+        // 卻在 -180..180。先把它繞進 bbox 所在的那一圈才比得了。
+        const shifted = west + ((((lng - west) % 360) + 360) % 360);
+        const inLng =
+            (shifted >= west - pad && shifted <= east + pad) ||
+            (shifted - 360 >= west - pad && shifted - 360 <= east + pad);
+
+        return inLng && lat >= south - pad && lat <= north + pad;
     });
 }
 
@@ -244,6 +236,8 @@ function buildShapes() {
 
     shapes = [];
     maxValue = 1;
+    // 只算「本土過濾掉的」。⚠️ 這個數字最後要跟 shapes.length 一起回報，兩者相加
+    // 必須等於 props.features.length，否則就是有東西無聲消失了——emit 前會驗。
     droppedCount = props.features.length - mainland.length;
 
     for (const feature of mainland) {
@@ -258,19 +252,33 @@ function buildShapes() {
             let sumX = 0;
             let sumY = 0;
 
+            // ⚠️ 只要有一個點在球背面（project 回 null），這一環就沒有可信的「起點」。
+            // 舊版的作法是整環丟掉——但那等於**無聲地少畫一塊行政區**，而且不計入
+            // dropped 的統計。使用者只要在按「展開行政區」之前把地球轉一下，就可能
+            // 少掉幾塊，畫面上完全沒有線索。
+            //
+            // 改成：起點算不出來就讓這一環「不做 morph」（start = end），它會直接出現在
+            // 平面圖的正確位置，只是少了展開動畫。少一段動畫遠比少一塊地好。
+            let morphable = true;
+
             for (const [lng, lat] of ring) {
-                const from = props.project(lng, lat);
                 const to = projection([lng, lat]);
 
-                // 任一端算不出來就整環放棄：補插一個假點會讓形狀扭曲，
-                // 寧可少畫一個小島也不要畫出一條穿過畫面的線
-                if (!from || !to) {
-                    start.length = 0;
+                // 目標位置算不出來才是真的沒救（投影把這個點裁掉了），整環放棄
+                if (!to) {
+                    end.length = 0;
 
                     break;
                 }
 
-                start.push(from[0], from[1]);
+                const from = props.project(lng, lat);
+
+                if (from) {
+                    start.push(from[0], from[1]);
+                } else {
+                    morphable = false;
+                }
+
                 end.push(to[0], to[1]);
                 minX = Math.min(minX, to[0]);
                 maxX = Math.max(maxX, to[0]);
@@ -278,12 +286,12 @@ function buildShapes() {
                 sumY += to[1];
             }
 
-            if (start.length < 6) {
+            if (end.length < 6) {
                 continue;
             }
 
             rings.push({
-                start: new Float32Array(start),
+                start: new Float32Array(morphable ? start : end),
                 end: new Float32Array(end),
             });
 
@@ -570,7 +578,15 @@ onMounted(() => {
 
     resizeCanvas();
     buildShapes();
-    emit('ready', { shown: shapes.length, dropped: droppedCount });
+    // 對帳：畫出來的 + 本土過濾掉的，應該等於收到的 feature 數。對不上代表有 feature
+    // 在建形狀的過程中被無聲丟掉（例如所有環的目標位置都算不出來），把差額也報出去，
+    // 不要讓它靜靜消失。
+    const unaccounted = props.features.length - shapes.length - droppedCount;
+
+    emit('ready', {
+        shown: shapes.length,
+        dropped: droppedCount + Math.max(0, unaccounted),
+    });
     draw(0);
     animate(0, 1, 900, () => emit('done'));
 

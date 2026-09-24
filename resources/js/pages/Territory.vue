@@ -329,7 +329,16 @@ function focusOnBbox(bbox: [number, number, number, number]) {
  * 不必再飛一趟。鏡頭該就位的時機是「選取國家」那一步（見 selectCountry）。
  */
 async function openFlatMap(country: Country) {
-    if (!adminIndex.value[country.qid] || isDrilling.value || isFlat.value) {
+    // ⚠️ isLoading 也要擋。FlatMap 只在開啟的那一刻讀一次名稱與人口（buildShapes），
+    // 子節點清單還沒回來就開的話，整張圖會停在「沒有名字、全部同一個顏色」的狀態，
+    // 而且不會自己補上——要等到 resize 觸發重建為止。
+    // 兩個入口都會走到這裡：面板按鈕（已 disabled）與「再點一次同一國」的快捷。
+    if (
+        !adminIndex.value[country.qid] ||
+        isDrilling.value ||
+        isFlat.value ||
+        isLoading.value
+    ) {
         return;
     }
 
@@ -735,10 +744,17 @@ async function loadCountries() {
 
 onMounted(async () => {
     viewportWidth.value = window.innerWidth;
-    await Promise.all([loadCountries(), loadAdminIndex()]);
-    await initGlobe();
+
+    // ⚠️ listener 要在任何 await 之前掛。掛在 await 後面的話，使用者在載入完成前就
+    // 離開頁面時，onUnmounted 會**先**跑完（那時還沒有東西可移除），接著這裡才把
+    // listener 掛上去——然後整個 session 都不會再有人移除它。
+    // 兩個 handler 都對「還沒初始化」是安全的：resizeToContainer 會檢查 globeInstance，
+    // onKeydown 只讀 state。
     window.addEventListener('resize', resizeToContainer);
     window.addEventListener('keydown', onKeydown);
+
+    await Promise.all([loadCountries(), loadAdminIndex()]);
+    await initGlobe();
 });
 
 onUnmounted(() => {
@@ -777,6 +793,9 @@ onUnmounted(() => {
                 :active-qid="activeRegionQid"
                 :label-of="regionName"
                 :value-of="regionPopulation"
+                :mainland-bbox="
+                    selected ? adminIndex[selected.qid]?.bbox : undefined
+                "
                 :inset-left="panelInset.left"
                 :inset-top="panelInset.top"
                 :inset-bottom="panelInset.bottom"
@@ -1015,10 +1034,14 @@ onUnmounted(() => {
                                     v-if="canDrill && !isFlat"
                                     type="button"
                                     class="binary-ghost-button ml-auto shrink-0 border border-[var(--binary-primary)]/50 py-1 disabled:opacity-50"
-                                    :disabled="isDrilling"
+                                    :disabled="isDrilling || isLoading"
                                     @click="selected && openFlatMap(selected)"
                                 >
-                                    {{ isDrilling ? '載入中…' : '展開行政區' }}
+                                    {{
+                                        isDrilling || isLoading
+                                            ? '載入中…'
+                                            : '展開行政區'
+                                    }}
                                 </button>
                                 <span
                                     v-else-if="isFlat"
