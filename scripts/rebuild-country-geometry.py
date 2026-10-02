@@ -201,6 +201,80 @@ def resolve_by_iso_3166_2(codes: list[str]) -> dict[str, str]:
     return {row["code"]["value"]: row["x"]["value"].rsplit("/", 1)[-1] for row in rows}
 
 
+def p131_into(qids: list[str], parents: set[str]) -> dict[str, tuple[str, str]]:
+    """配不到的 NE feature，問它的 P131 上層是不是我們的第一層節點。
+
+    回傳 {QID: (父節點QID, 該實體的 P31)}。
+
+    為什麼要這條：有些國家的父子關係在 Wikidata 上**只編碼在往上的 P131**，往下的
+    P150 是空的。斯里蘭卡就是——9 個省的 P150 幾乎都是 0，但 NE 給的 24 個「區」
+    每一個的 P131 都指向其中一個省（24/24）。只走 P150 就一塊都畫不出來。
+
+    ⚠️ 界線：**圖譜仍然決定「有什麼」**（父節點必須已經在圖譜第一層裡），
+    Wikidata 只回答「這塊形狀歸誰」。這跟先前特意改掉的「用 wdt:P150 判層級」不同——
+    不會憑空多出圖譜沒有的節點，只是把已有節點的形狀拼出來。
+    """
+    if not qids:
+        return {}
+
+    found: dict[str, tuple[str, str]] = {}
+
+    for start in range(0, len(qids), 250):
+        values = " ".join(f"wd:{qid}" for qid in sorted(set(qids))[start : start + 250])
+        rows = sparql(
+            f"SELECT ?x ?p ?t WHERE {{ VALUES ?x {{ {values} }}"
+            f" ?x wdt:P131 ?p ; wdt:P31 ?t . }}"
+        )
+
+        for row in rows:
+            item = row["x"]["value"].rsplit("/", 1)[-1]
+            parent = row["p"]["value"].rsplit("/", 1)[-1]
+
+            if parent in parents:
+                found.setdefault(item, (parent, row["t"]["value"].rsplit("/", 1)[-1]))
+
+    return found
+
+
+def sibling_counts(pairs: set[tuple[str, str]]) -> dict[str, int]:
+    """每個 (父節點, P31) 組合底下「應該」有幾個同類實體，當 dissolve 的覆蓋率分母。
+
+    不能直接用「我們配到幾個」當分母——那樣永遠是 100%，等於沒有門檻。
+    已解散的不算（它們不該出現在現行的拼圖裡）。
+    """
+    expected: dict[str, int] = {}
+
+    for parent, kind in pairs:
+        rows = sparql(
+            f"SELECT (COUNT(DISTINCT ?d) AS ?n) WHERE {{"
+            f" ?d wdt:P131 wd:{parent} ; wdt:P31 wd:{kind} ."
+            f" FILTER NOT EXISTS {{ ?d wdt:P576 ?dis }} }}"
+        )
+        count = int(rows[0]["n"]["value"]) if rows else 0
+        expected[parent] = max(expected.get(parent, 0), count)
+
+    return expected
+
+
+def dissolved_entities(qids: list[str]) -> set[str]:
+    """哪些 QID 有 P576（解散日期）。
+
+    用來擋掉**危險的換 id**：NE 的形狀是跟著它自己那筆 wikidataid 的，如果那個實體
+    已經解散，手上這塊就是**改制前的邊界**，不能因為 ISO 代碼被新單位沿用就貼上
+    新實體的 QID——畫出來會是舊形狀配新名字，而且零警告。
+
+    實測兩個案例：拉脫維亞 2021 把 119 個市鎮併成 43 個、摩洛哥 2015 把 16 個大區
+    改成 12 個，ISO 代碼都被沿用，結果 30 個 feature 被貼上新 QID。
+    """
+    if not qids:
+        return set()
+
+    values = " ".join(f"wd:{qid}" for qid in sorted(set(qids)))
+    rows = sparql(f"SELECT ?x WHERE {{ VALUES ?x {{ {values} }} ?x wdt:P576 ?d }}")
+
+    return {row["x"]["value"].rsplit("/", 1)[-1] for row in rows}
+
+
 def countries_of(qids: list[str]) -> dict[str, set[str]]:
     """每個 QID 的 P17（所屬國家）。NE 的 wikidataid 會靜默配錯，用這個擋下來。"""
     if not qids:
@@ -261,13 +335,14 @@ def simplify(features: list[dict], percent: float, tag: str) -> list[dict]:
 
 
 def dissolve_into_parents(
-    level2_features: list[dict], have_geometry: set[str], level2: dict[str, str],
+    level2_features: list[dict], have_geometry: set[str], expected: dict[str, int],
     labels: dict[str, str], threshold: float, tag: str,
 ) -> list[dict]:
     """把第二層併成第一層的形狀。詳見檔頭「把第二層併成第一層」那節。
 
-    `level2` 是圖譜的 {子節點: 父節點}，用來數「這個父節點**應該**有幾個子節點」——
-    全量管線得另外去問 Wikidata 的 P150 child count，我們直接數圖譜就好。
+    `expected` 是每個父節點**應該**有幾個子節點，當覆蓋率的分母。來源有二：圖譜自己的
+    第二層數量（全量管線得另外去問 Wikidata 的 P150 child count，我們直接數圖譜），
+    以及 P131 那條路用 sibling_counts() 問回來的同類實體數。
     """
     groups: dict[str, list[dict]] = {}
 
@@ -279,11 +354,6 @@ def dissolve_into_parents(
 
     if not groups:
         return []
-
-    expected: dict[str, int] = {}
-
-    for parent in level2.values():
-        expected[parent] = expected.get(parent, 0) + 1
 
     usable = {p: fs for p, fs in groups.items() if len(fs) >= threshold * expected.get(p, len(fs))}
     skipped = [
@@ -421,12 +491,28 @@ def rebuild(
     ]
     by_code = resolve_by_iso_3166_2([f["properties"]["iso_3166_2"] for f in needs_code])
 
+    # NE 原本指的實體若已解散，手上這塊就是改制前的邊界，不准換（見 dissolved_entities()）
+    gone = dissolved_entities([
+        f["properties"]["wikidataid"] for f in needs_code if f["properties"].get("wikidataid")
+    ])
+
     print(f"  NE admin-1 候選 {len(candidates)} 個"
           f"（adm0_a3：{'、'.join(sorted(c for c in codes if c))}）")
 
+    if gone:
+        stale = [f for f in needs_code if f["properties"].get("wikidataid") in gone]
+        print(f"  ⛔ {len(stale)} 個 feature 的 NE 實體已解散（形狀是改制前的），不換 id："
+              f"{'、'.join(str(f['properties'].get('name')) for f in stale[:5])}"
+              + ("…" if len(stale) > 5 else ""))
+
+        for feature in stale:
+            by_code.pop(feature["properties"].get("iso_3166_2"), None)
+
     if needs_code:
         rescued = [
-            f for f in needs_code if by_code.get(f["properties"]["iso_3166_2"]) in wanted
+            f for f in needs_code
+            if by_code.get(f["properties"]["iso_3166_2"]) in wanted
+            and f["properties"].get("wikidataid") not in gone
         ]
         wrong = [f for f in rescued if f["properties"].get("wikidataid")]
         print(f"  QID 對不到圖譜的 {len(needs_code)} 個 → P300 救回 {len(rescued)} 個"
@@ -438,13 +524,13 @@ def rebuild(
                   f"依 {properties['iso_3166_2']} 改用 {by_code[properties['iso_3166_2']]}")
 
     matched: list[dict] = []
-    unmatched: list[str] = []
+    leftover: list[tuple[dict, str | None]] = []
 
     for feature in candidates:
         properties = feature["properties"]
         qid = properties.get("wikidataid")
 
-        if qid not in wanted:
+        if qid not in wanted and qid not in gone:
             qid = by_code.get(properties.get("iso_3166_2"), qid)
 
         if qid in children:
@@ -452,7 +538,7 @@ def rebuild(
         elif qid in level2:
             level, parent = 2, level2[qid]
         else:
-            unmatched.append(f"{properties.get('name')}（{qid or '無 QID'}）")
+            leftover.append((feature, qid))
             continue
 
         matched.append(
@@ -475,6 +561,31 @@ def rebuild(
             print(f"  ⚠️ {feature['properties']['name']}（{qid}）的 P17 不是 {country_qid}，"
                   "可能是 NE 配錯了")
 
+    # 配不到的，再問一次 P131：上層如果正好是我們的第一層節點，就當成第二層（見 p131_into）
+    by_p131 = p131_into([q for _, q in leftover if q and q not in gone], set(children))
+    unmatched: list[str] = []
+
+    for feature, qid in leftover:
+        found = by_p131.get(qid or "")
+
+        if not found:
+            unmatched.append(f"{feature['properties'].get('name')}（{qid or '無 QID'}）")
+            continue
+
+        matched.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "qid": qid, "name": feature["properties"].get("name"),
+                    "level": 2, "parent": found[0],
+                },
+                "geometry": feature["geometry"],
+            }
+        )
+
+    if by_p131:
+        print(f"  P131 歸屬：{len(by_p131)} 個 NE feature 的上層是我們的第一層節點，當成第二層")
+
     own = [f for f in matched if f["properties"]["level"] == 1]
     children_features = [f for f in matched if f["properties"]["level"] == 2]
     print(f"  配對成功 {len(matched)}（第一層 {len(own)}／{len(children)}、"
@@ -485,11 +596,49 @@ def rebuild(
 
     # dissolve 要在簡化「之前」做：消線靠邊界精確重合，簡化過就對不齊了
     have_geometry = {f["properties"]["qid"] for f in own}
+    # 覆蓋率的分母：圖譜自己的第二層數量，加上 P131 那條路問回來的同類實體數
+    expected: dict[str, int] = {}
+
+    for parent in level2.values():
+        expected[parent] = expected.get(parent, 0) + 1
+
+    expected.update(sibling_counts({(p, t) for p, t in by_p131.values()}))
+
     dissolved = dissolve_into_parents(
-        children_features, have_geometry, level2, children, coverage, country_qid
+        children_features, have_geometry, expected, children, coverage, country_qid
     )
 
+    # 還沒有形狀的第一層節點，回頭查 NE 的 **admin-0**。NE 把不少屬地／特別行政區當成
+    # 獨立國家處理（香港、奧蘭、法屬玻里尼西亞、美屬薩摩亞、澳洲的外部領地…），所以它們
+    # 的形狀在 admin-0 而不是 admin-1。admin-0 與 admin-1 是同一份底圖，跟著一起丟進
+    # mapshaper 簡化就會對齊，不會露出雙線。
     drawn = have_geometry | {f["properties"]["qid"] for f in dissolved}
+    from_admin0 = [
+        {
+            "type": "Feature",
+            "properties": {"qid": qid, "name": f["properties"].get("NAME"), "level": 1},
+            "geometry": f["geometry"],
+        }
+        for qid in children
+        if qid not in drawn and qid != country_qid
+        for f in admin0["features"]
+        if f["properties"].get("WIKIDATAID") == qid
+    ]
+
+    if from_admin0:
+        print(f"  從 admin-0 補回 {len(from_admin0)} 個（NE 把它們當成獨立國家）："
+              f"{'、'.join(str(f['properties']['name']) for f in from_admin0)}")
+        drawn |= {f["properties"]["qid"] for f in from_admin0}
+
+    # 一塊行政區都配不到時，只剩國家輪廓——那種檔 build-admin-manifest.py 不會收進索引
+    # （沒有第一層就不給下鑽），寫出來也沒人讀。摩洛哥就是這樣：NE 的 16 個 feature
+    # 全是 2015 改制前的大區，一個都不能用。檢查要放在 admin-0 退路**之後**，
+    # 否則只能靠那條退路救回的國家會被提早略過。
+    if not matched and not from_admin0:
+        print("  沒有任何行政區配得上，略過（只剩輪廓的檔不值得寫）")
+
+        return False
+
     no_geometry = [f"{children[q]}（{q}）" for q in children if q not in drawn]
 
     if no_geometry:
@@ -503,6 +652,7 @@ def rebuild(
         },
         *matched,
         *dissolved,
+        *from_admin0,
     ]
 
     print(f"  簡化前頂點 {count_vertices(payload):,} → ", end="", flush=True)
