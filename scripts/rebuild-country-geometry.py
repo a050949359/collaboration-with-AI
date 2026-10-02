@@ -102,10 +102,14 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import math
+import re
 import subprocess
+import time
 import sys
 import urllib.parse
 import urllib.request
+import unicodedata
 from pathlib import Path
 
 from territory_lib import call_tool, resolve_endpoint, resolve_token
@@ -120,8 +124,16 @@ USER_AGENT = "ohya-territory-geometry/1.0 (https://ohya.vip)"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = REPO_ROOT / "public" / "geo" / "admin"
 CACHE_DIR = Path("/tmp/territory-geometry-cache")
-# NE 沒填 wikidataid 時的人工對照表（NE 的 name → 圖譜 QID）。理由見該檔的 _readme。
+# 名稱正規化時要剝掉的通用型別字（NE 寫 "Eastern"、圖譜寫 "Eastern District"）。
+# ⚠️ 剝完若變成空字串就退回原字串——香港的「Islands」「City」整個就是型別字，
+# 剝掉會變成空的、跟其他同樣變空的名稱撞在一起（實測把離島區配成油尖旺區）。
+# NE 把名字打錯、別名比對跨不過去時的例外清單。理由見該檔的 _readme。
 NAME_OVERRIDES = Path(__file__).resolve().parent / "ne-name-overrides.json"
+
+NAME_TYPE_WORDS = (
+    r"\b(district|province|region|municipality|parish|county|city|islands?"
+    r"|komuna|opstina|prefecture|governorate|department)\b"
+)
 
 # 跟全量管線一致，不然同一個目錄裡會混著兩種精細度
 PRECISION = 0.001
@@ -129,6 +141,8 @@ DEFAULT_SIMPLIFY = 6.0
 # dissolve 的子節點覆蓋率門檻。只有一半的 département 併出來的 région 會缺一角，
 # 看起來卻像正確資料——寧可不畫。
 DEFAULT_COVERAGE = 0.8
+# 別名查詢一次問幾個節點。見 alias_index() 的說明。
+ALIAS_CHUNK = 40
 
 
 def get_json(url: str, timeout: int = 180) -> dict | list:
@@ -156,10 +170,25 @@ def fetch_source(url: str, name: str) -> dict:
     return json.loads(cached.read_text(encoding="utf-8"))
 
 
-def sparql(query: str) -> list[dict]:
+def sparql(query: str, attempts: int = 3) -> list[dict]:
+    """WDQS 查詢，帶重試。
+
+    大批次的別名查詢（一次問幾十個節點的所有語言 label／altLabel）回應可以到數 MB，
+    實測會偶發 IncompleteRead——連線被截斷而不是查詢失敗。重試一次通常就過。
+    """
     url = SPARQL_ENDPOINT + "?" + urllib.parse.urlencode({"query": query, "format": "json"})
 
-    return get_json(url)["results"]["bindings"]
+    for attempt in range(attempts):
+        try:
+            return get_json(url)["results"]["bindings"]
+        except Exception as error:                      # noqa: BLE001 — 連線層什麼都可能丟
+            if attempt == attempts - 1:
+                raise
+
+            print(f"    SPARQL 失敗（{type(error).__name__}），{2 ** attempt} 秒後重試")
+            time.sleep(2 ** attempt)
+
+    return []
 
 
 def graph_levels(country_qid: str) -> tuple[dict[str, str], dict[str, str]]:
@@ -205,11 +234,10 @@ def resolve_by_iso_3166_2(codes: list[str]) -> dict[str, str]:
 
 
 def load_name_overrides() -> dict[str, dict[str, str]]:
-    """讀人工對照表：{adm0_a3: {NE 的 name: QID}}。底線開頭的鍵是說明文字，略過。
+    """例外清單：{adm0_a3: {NE 的 name: QID}}。底線開頭的鍵是說明文字，略過。
 
-    這張表只處理「NE 連 wikidataid 都沒填」的 feature——它們的 iso_3166_2 是 NE 自填的
-    佔位碼（結尾帶 `~`），**沒有任何識別碼可查**，P300 與 P131 都無從下手。
-    跟 P300 退路刻意不寫死「地名 → QID」不同：那裡有通則可用（ISO 3166-2），這裡沒有。
+    通則是 alias_index() 的多語名稱比對，這裡只收它跨不過去的——目前只有一筆，
+    NE 把 Manuʻa 打成 Manu's。
     """
     if not NAME_OVERRIDES.exists():
         return {}
@@ -221,6 +249,47 @@ def load_name_overrides() -> dict[str, dict[str, str]]:
         for a3, table in raw.items()
         if not a3.startswith("_") and isinstance(table, dict)
     }
+
+
+def normalise_name(name: str) -> str:
+    """地名正規化：去掉重音與非英數、剝掉通用型別字。見 NAME_TYPE_WORDS 的警告。"""
+    folded = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode().lower()
+    bare = re.sub(r"[^a-z0-9]", "", re.sub(NAME_TYPE_WORDS, "", folded))
+
+    return bare or re.sub(r"[^a-z0-9]", "", folded)
+
+
+def alias_index(qids: list[str]) -> dict[str, str]:
+    """圖譜節點的**多語 label 與 alias** → QID，用來配 NE 沒填 wikidataid 的 feature。
+
+    為什麼要多語：NE 的地名用的語言不固定。科索沃用塞爾維亞語（Dečani、Đakovica），
+    我們圖譜用阿爾巴尼亞語（Deçan、Gjakova）——只比英文 label 一個都配不上，
+    把 Wikidata 的 altLabel 一起拉進來就是 26/26。
+
+    ⚠️ 同一個正規化鍵對到多個實體時整個丟掉，寧可不配也不要配錯——這類 feature
+    沒有任何識別碼可以事後驗證，配錯了是靜默的。
+    """
+    if not qids:
+        return {}
+
+    buckets: dict[str, set[str]] = {}
+
+    # 批次刻意小：一次問幾十個節點的**所有語言** label／altLabel，回應很容易到數 MB，
+    # 200 個一批實測會被截斷（斯洛維尼亞 212 個市鎮）。
+    for start in range(0, len(qids), ALIAS_CHUNK):
+        values = " ".join(
+            f"wd:{qid}" for qid in sorted(set(qids))[start : start + ALIAS_CHUNK]
+        )
+        rows = sparql(
+            f"SELECT ?x ?n WHERE {{ VALUES ?x {{ {values} }}"
+            f" {{ ?x rdfs:label ?n }} UNION {{ ?x skos:altLabel ?n }} }}"
+        )
+
+        for row in rows:
+            key = normalise_name(row["n"]["value"])
+            buckets.setdefault(key, set()).add(row["x"]["value"].rsplit("/", 1)[-1])
+
+    return {key: next(iter(v)) for key, v in buckets.items() if len(v) == 1}
 
 
 def p131_into(qids: list[str], parents: set[str]) -> dict[str, tuple[str, str]]:
@@ -449,6 +518,30 @@ def assert_clockwise(features: list[dict]) -> None:
         )
 
 
+def rough_area(geometry: dict | None) -> float:
+    """鞋帶公式加緯度修正。只拿來比大小，不需要是真實球面面積。"""
+    if not geometry:
+        return 0.0
+
+    coordinates = geometry.get("coordinates") or []
+    polygons = coordinates if geometry.get("type") == "MultiPolygon" else [coordinates]
+    total = 0.0
+
+    for polygon in polygons:
+        for index, ring in enumerate(polygon):
+            if len(ring) < 4:
+                continue
+
+            shoelace = sum(
+                x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(ring, ring[1:])
+            )
+            mid_lat = sum(p[1] for p in ring) / len(ring)
+            area = abs(shoelace) / 2 * math.cos(math.radians(mid_lat))
+            total += area if index == 0 else -area      # 內環扣掉
+
+    return total
+
+
 def count_vertices(features: list[dict]) -> int:
     total = 0
 
@@ -480,6 +573,7 @@ def rebuild(
         return False
 
     wanted = set(children) | set(level2)
+    aliases = alias_index(sorted(children))
     overrides = load_name_overrides()
 
     # ⚠️ 不要用 adm0_a3 圈候選。法國的海外省在 NE 裡掛在自己的 adm0 代碼底下
@@ -554,9 +648,12 @@ def rebuild(
         qid = properties.get("wikidataid")
 
         if qid not in wanted and qid not in gone:
-            # 人工對照優先：它處理的是「NE 連 ID 都沒有」，P300 在那種情況下也查不到
+            # 名稱比對優先：它處理的是「NE 連 ID 都沒有」，P300 在那種情況下也查不到。
+            # 例外清單排在別名之前——那是人為確認過的判斷，不該被通則蓋掉。
+            name = properties.get("name")
             qid = (
-                overrides.get(properties.get("adm0_a3"), {}).get(properties.get("name"))
+                overrides.get(properties.get("adm0_a3"), {}).get(name)
+                or (aliases.get(normalise_name(name)) if name else None)
                 or by_code.get(properties.get("iso_3166_2"), qid)
             )
 
@@ -623,6 +720,79 @@ def rebuild(
 
     if by_p131:
         print(f"  P131 歸屬：{len(by_p131)} 個 NE feature 的上層是我們的第一層節點，當成第二層")
+
+    # 多個 NE feature 解到同一個 QID 時**合併**，不要挑一個。兩種成因都該合：
+    #
+    #   1. NE 把獨立市從省裡挖出來另給 feature（菲律賓的 Butuan 與 Agusan del Norte
+    #      同為 PH-AGN、匈牙利的 Veszprém 州與同名市、愛爾蘭的科克郡與科克市）。
+    #      省的多邊形因此缺了一塊，合起來才是完整的省——而我們圖譜只有省那個節點。
+    #   2. 實體本身不連續，NE 用多塊表示（波士尼亞的塞族共和國）。
+    #
+    # ⚠️ 一度改成「取面積最大的」，結果波士尼亞從 55% 國土掉到 11%——塞族共和國的
+    # 其餘各塊全被當成雜訊丟掉。數量看起來還是 3/3 全中，面積才看得出來。
+    #
+    # 用 mapshaper -dissolve 真正消掉內部界線，不是塞進同一個 MultiPolygon——
+    # 後者會在科克郡中間留下科克市的輪廓。
+    grouped: dict[str, list[dict]] = {}
+
+    for feature in matched:
+        grouped.setdefault(feature["properties"]["qid"], []).append(feature)
+
+    ambiguous = {qid: fs for qid, fs in grouped.items() if len(fs) > 1}
+
+    if ambiguous:
+        print(f"  ⊕ {len(ambiguous)} 個節點對應多個 NE feature，合併：")
+
+        for qid, fs in list(ambiguous.items())[:4]:
+            print(f"     {qid} ← {'、'.join(str(f['properties']['name']) for f in fs)}")
+
+        if len(ambiguous) > 4:
+            print(f"     …共 {len(ambiguous)} 個")
+
+        merged = run_mapshaper(
+            [
+                {"type": "Feature", "properties": {"qid": qid}, "geometry": f["geometry"]}
+                for qid, fs in ambiguous.items()
+                for f in fs
+            ],
+            ["-dissolve", "qid"],
+            f"{country_qid}-merge",
+        )
+        # 名稱／層級沿用該組面積最大的那一筆（省會大於被挖出去的市）
+        template = {
+            qid: max(fs, key=lambda f: rough_area(f["geometry"]))["properties"]
+            for qid, fs in ambiguous.items()
+        }
+        matched = [f for f in matched if f["properties"]["qid"] not in ambiguous] + [
+            {
+                "type": "Feature",
+                "properties": {**template[f["properties"]["qid"]]},
+                "geometry": f["geometry"],
+            }
+            for f in merged
+            if f.get("geometry") and f["properties"]["qid"] in template
+        ]
+
+    # NE 的 wikidataid 會靜默配錯，用 P17 擋。
+    #
+    # ⚠️ 不能直接拿 country_qid 當期望值——**屬地的 P17 是宗主國**：香港十八區的 P17 是
+    # 中國 Q148、奧蘭市鎮的是芬蘭 Q33、北馬里亞納的是美國 Q30。那樣會對整個屬地噴出
+    # 一整排假警報（實測香港 18 個全中）。改成多數決：同一國的行政區絕大多數會共用
+    # 同一個 P17，偏離主流的那幾個才是可疑的——那正是這個檢查原本要抓的
+    # 「NE 指到別國的實體」。
+    p17 = countries_of([f["properties"]["qid"] for f in matched])
+    tally = collections.Counter(c for codes_ in p17.values() for c in codes_)
+    expected_country = tally.most_common(1)[0][0] if tally else country_qid
+    odd = [
+        f for f in matched
+        if f["properties"]["qid"] in p17
+        and expected_country not in p17[f["properties"]["qid"]]
+    ]
+
+    for feature in odd:
+        qid = feature["properties"]["qid"]
+        print(f"  ⚠️ {feature['properties']['name']}（{qid}）的 P17 是 "
+              f"{'／'.join(sorted(p17[qid]))}，這一國其餘是 {expected_country}，可能配錯了")
 
     own = [f for f in matched if f["properties"]["level"] == 1]
     children_features = [f for f in matched if f["properties"]["level"] == 2]
@@ -729,11 +899,14 @@ def rebuild(
     # 裡常有圖譜沒有的節點（美國的華盛頓市 Q61、利比亞的班加西市 Q40816、法國的克利伯頓島
     # Q161258…），那些本來就不該畫——面板列不出來。用原始筆數比會把「拿掉它們」誤判成倒退：
     # 馬爾地夫實測 20 → 19 被擋，但對得上圖譜的其實是 18 → 19，是改善。
-    before = sum(
-        1 for f in existing
+    # 數**不重複的節點**，不是 feature 筆數。舊管線留下的檔案裡有同一個 QID 出現兩三次的
+    # （NE 給獨立市跟省相同的 iso_3166_2 造成的），照筆數比會把「去掉重複」誤判成倒退
+    # ——愛爾蘭實測 34 → 29 被擋，但那 34 裡有 5 筆是重複的。
+    before = len({
+        f.get("id") for f in existing
         if f["properties"].get("level") == 1 and f.get("id") in children
-    )
-    after = sum(1 for f in features if f["properties"]["level"] == 1)
+    })
+    after = len({f["id"] for f in features if f["properties"]["level"] == 1})
     print(f"  {out_path.relative_to(REPO_ROOT)}：{len(existing)} → {len(features)} feature"
           f"（第一層 {before} → {after}）／{len(text.encode()) / 1024:.0f} KB")
 
