@@ -28,6 +28,20 @@
 行政職能），我們圖譜的第一層是 60 個市鎮，NE 沒有市鎮幾何——那就畫 0 塊，不要畫出
 一組跟面板對不起來的過時邊界。
 
+## ⚠️ 還沒實作：把第二層併成第一層
+
+全量管線有一段 `dissolve_into_parents`：NE 給法國的是 101 個 département、給義大利的
+是 110 個 provincia，都是我們的**第二層**，那些國家的第一層（région / regione）一條
+邊界都畫不出來，所以它用 mapshaper `-dissolve` 把子節點併起來生出第一層的形狀，
+淨賺 107 個第一層行政區。
+
+這支**沒有**那段。對這類國家跑下去，結果會是「NE 的 QID 都不在圖譜第一層 → 全丟」：
+法國 123 → 6 feature、義大利 127 → 3 feature，等於把既有產出毀掉。
+
+因此預設會擋：新結果的第一層數量比現有檔少就拒寫，要覆蓋得明確加 `--force`。
+把 dissolve 補進來之前，這支只適用於「NE 的切法本來就等於我們第一層」的國家
+（台灣、沙烏地、冰島那類）。
+
 ## NE 的 wikidataid 缺漏怎麼補
 
 缺 QID 的 feature 100% 都有 `iso_3166_2`，拿去問 Wikidata P300（ISO 3166-2 code）
@@ -42,6 +56,7 @@
     python3 scripts/rebuild-country-geometry.py Q865           # 重產台灣
     python3 scripts/rebuild-country-geometry.py Q865 Q851      # 一次多國
     python3 scripts/rebuild-country-geometry.py Q865 --check   # 只印對照結果，不寫檔
+    python3 scripts/rebuild-country-geometry.py Q142 --force   # 明知會變少仍要覆蓋
 
 寫檔後記得重跑 `python3 scripts/build-admin-manifest.py` 更新 index.json
 （前端靠它知道哪一國能下鑽、鏡頭要對到哪個 bbox）。
@@ -97,7 +112,7 @@ def fetch_source(url: str, name: str) -> dict:
     else:
         print(f"  沿用快取 {cached}")
 
-    return json.loads(cached.read_text())
+    return json.loads(cached.read_text(encoding="utf-8"))
 
 
 def sparql(query: str) -> list[dict]:
@@ -156,7 +171,8 @@ def run_mapshaper(features: list[dict], percent: float, tag: str) -> list[dict]:
     dst = CACHE_DIR / f"{tag}-out.geojson"
     dst.unlink(missing_ok=True)
     src.write_text(
-        json.dumps({"type": "FeatureCollection", "features": features}, ensure_ascii=False)
+        json.dumps({"type": "FeatureCollection", "features": features}, ensure_ascii=False),
+        encoding="utf-8",
     )
 
     result = subprocess.run(
@@ -175,7 +191,7 @@ def run_mapshaper(features: list[dict], percent: float, tag: str) -> list[dict]:
     if not dst.exists():
         raise RuntimeError(f"mapshaper 失敗：\n{result.stderr[-2000:]}")
 
-    return json.loads(dst.read_text())["features"]
+    return json.loads(dst.read_text(encoding="utf-8"))["features"]
 
 
 def assert_clockwise(features: list[dict]) -> None:
@@ -220,7 +236,10 @@ def count_vertices(features: list[dict]) -> int:
     return total
 
 
-def rebuild(country_qid: str, admin0: dict, admin1: dict, percent: float, check: bool) -> None:
+def rebuild(
+    country_qid: str, admin0: dict, admin1: dict, percent: float, check: bool, force: bool
+) -> bool:
+    """回傳有沒有真的寫檔——呼叫端靠它決定要不要提醒重跑 manifest。"""
     children = graph_children(country_qid)
     print(f"\n{country_qid}：圖譜第一層 {len(children)} 個")
 
@@ -232,7 +251,7 @@ def rebuild(country_qid: str, admin0: dict, admin1: dict, percent: float, check:
     if outline is None:
         print("  ⚠️ NE admin-0 找不到這個國家的輪廓（WIKIDATAID 對不到），略過")
 
-        return
+        return False
 
     # NE 用 adm0_a3 分國，拿輪廓那筆的 ADM0_A3 去圈出它的 admin-1
     adm0_a3 = outline["properties"].get("ADM0_A3")
@@ -326,20 +345,35 @@ def rebuild(country_qid: str, admin0: dict, admin1: dict, percent: float, check:
         separators=(",", ":"),
     )
     out_path = OUT_DIR / f"{country_qid}.json"
-    before = (
-        len(json.loads(out_path.read_text())["features"]) if out_path.exists() else 0
+    existing = (
+        json.loads(out_path.read_text(encoding="utf-8"))["features"]
+        if out_path.exists()
+        else []
     )
-    print(f"  {out_path.relative_to(REPO_ROOT)}：{before} → {len(features)} feature"
-          f"／{len(text.encode()) / 1024:.0f} KB")
+    before = sum(1 for f in existing if f["properties"].get("level") == 1)
+    after = sum(1 for f in features if f["properties"]["level"] == 1)
+    print(f"  {out_path.relative_to(REPO_ROOT)}：{len(existing)} → {len(features)} feature"
+          f"（第一層 {before} → {after}）／{len(text.encode()) / 1024:.0f} KB")
 
     if check:
         print("  --check：沒有寫檔")
 
-        return
+        return False
+
+    # 這支還沒有 dissolve_into_parents（見檔頭）。對法國、義大利那種「NE 給的是我們的
+    # 第二層」的國家，結果會是全丟 → 把既有產出毀掉。變少就擋下來，不要靜默覆蓋。
+    if after < before and not force:
+        print(f"  ❌ 拒絕寫入：第一層會從 {before} 掉到 {after}。"
+              "多半是 NE 的切法等於我們的第二層、需要 dissolve（本支未實作）。"
+              "確定要覆蓋請加 --force。")
+
+        return False
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(text, encoding="utf-8")
     print("  已寫入")
+
+    return True
 
 
 def main() -> int:
@@ -350,16 +384,23 @@ def main() -> int:
         help=f"保留頂點比例（%%），預設 {DEFAULT_SIMPLIFY}——跟全量管線一致，不要隨意改",
     )
     parser.add_argument("--check", action="store_true", help="只印對照結果，不寫檔")
+    parser.add_argument(
+        "--force", action="store_true",
+        help="即使第一層數量會變少也照寫。預設擋下來，避免靜默毀掉需要 dissolve 的國家",
+    )
     args = parser.parse_args()
 
     print("來源：")
     admin0 = fetch_source(NE_ADMIN0, "ne_10m_admin_0.geojson")
     admin1 = fetch_source(NE_ADMIN1, "ne_10m_admin_1.geojson")
 
-    for country_qid in args.countries:
-        rebuild(country_qid, admin0, admin1, args.simplify, args.check)
+    written = [
+        country_qid
+        for country_qid in args.countries
+        if rebuild(country_qid, admin0, admin1, args.simplify, args.check, args.force)
+    ]
 
-    if not args.check:
+    if written:
         print("\n⚠️ 記得重跑 python3 scripts/build-admin-manifest.py 更新 index.json")
 
     return 0
