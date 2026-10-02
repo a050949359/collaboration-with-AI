@@ -1,0 +1,78 @@
+{
+  "_readme": [
+    "NE admin-1 沒填 wikidataid 的 feature，用 NE 的 `name` 欄位對到圖譜的 QID。",
+    "",
+    "為什麼需要人工對照：這些 feature 的 iso_3166_2 是 NE 自填的佔位碼（結尾帶 ~），",
+    "wikidataid 是空的——**沒有任何識別碼可查**，P300 與 P131 都無從下手。",
+    "跟 P300 退路刻意不寫死「地名→QID」不同：那裡有通則可用，這裡根本沒有。",
+    "",
+    "只收「NE feature 數與圖譜第一層一對一、名稱正規化後完全吻合」的國家。",
+    "名稱有雙語差異（科索沃的塞爾維亞語 vs 阿爾巴尼亞語）、層級不同（波士尼亞）、",
+    "或 NE 給的是聚落而非行政區（安奎拉）的，一律不收——那些要換資料來源或補圖譜。",
+    "",
+    "鍵是 NE 的 adm0_a3，值是 {NE 的 name: 圖譜 QID}。底線開頭的鍵會被略過。"
+  ],
+  "_source": "scripts/rebuild-country-geometry.py 讀這個檔；2026-10-02 建立，47 筆",
+  "HKG": {
+    "_note": "香港十八區。NE 把 HKG 當獨立 adm0，18 筆全部沒有 wikidataid",
+    "Central and Western": "Q312485",
+    "Eastern": "Q727054",
+    "Islands": "Q752523",
+    "Kowloon City": "Q986415",
+    "Kwai Tsing": "Q877132",
+    "Kwun Tong": "Q875773",
+    "North": "Q868032",
+    "Sai Kung": "Q155697",
+    "Sha Tin": "Q15019",
+    "Sham Shui Po": "Q655626",
+    "Southern": "Q986431",
+    "Tai Po": "Q877813",
+    "Tsuen Wan": "Q878514",
+    "Tuen Mun": "Q986383",
+    "Wan Chai": "Q986434",
+    "Wong Tai Sin": "Q878503",
+    "Yau Tsim Mong": "Q157669",
+    "Yuen Long": "Q871442"
+  },
+  "ALD": {
+    "_note": "奧蘭的市鎮。圖譜 16 個、NE 只有 11 個，缺的那 5 個 NE 沒有形狀",
+    "Brändö": "Q179706",
+    "Eckerö": "Q51909",
+    "Föglö": "Q179722",
+    "Jomala": "Q176178",
+    "Kumlinge": "Q179726",
+    "Kökar": "Q179730",
+    "Lemland": "Q176186",
+    "Lumparland": "Q176191",
+    "Mariehamn": "Q48329",
+    "Sottunga": "Q179739",
+    "Vårdö": "Q179749"
+  },
+  "COK": {
+    "_note": "庫克群島的島嶼。圖譜 15 個、NE 10 個",
+    "Atiu": "Q755982",
+    "Mangaia": "Q1359323",
+    "Manihiki": "Q967796",
+    "Mauke": "Q511978",
+    "Mitiaro": "Q596542",
+    "Palmerston": "Q2048265",
+    "Penrhyn": "Q950725",
+    "Pukapuka": "Q1130629",
+    "Rakahanga": "Q1345121",
+    "Rarotonga": "Q471793"
+  },
+  "MNP": {
+    "_note": "北馬里亞納群島的自治市。圖譜 4 個、NE 3 個（缺 Northern Islands）",
+    "Rota": "Q27728202",
+    "Saipan": "Q9332790",
+    "Tinian": "Q7808227"
+  },
+  "ASM": {
+    "_note": "美屬薩摩亞。NE 的 Manu's 是 Manuʻa 的誤寫",
+    "Eastern": "Q2625563",
+    "Manu's": "Q1247537",
+    "Rose Atoll": "Q1636779",
+    "Swain's Island": "Q1128488",
+    "Western": "Q2437227"
+  }
+}
