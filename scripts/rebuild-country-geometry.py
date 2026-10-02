@@ -935,18 +935,13 @@ def rebuild(
               f"{'、'.join(str(f['properties']['name']) for f in from_admin0)}")
         drawn |= {f["properties"]["qid"] for f in from_admin0}
 
-    # 一塊行政區都配不到時，退而用國家輪廓當唯一的第一層，讓前端至少點得進去看到國土
-    # （沒有第一層 build-admin-manifest.py 不收進索引，整個下鑽入口就不會出現）。
-    #
-    # ⚠️ 這塊 feature 的 id 是**國家的 QID**，不在圖譜第一層清單裡——前端點它不會有
-    # 反應、面板也對不上（波多黎各面板列 78 個、地圖只有一塊）。這是刻意的取捨：
-    # 顯示國土輪廓好過一片空白。NE 連輪廓都沒有的（馬丁尼克、馬約特、瓜地洛普）仍然略過。
-    outline_only = not own and not dissolved and not from_admin0
+    # 一塊第一層都產不出來時直接略過。曾經試過「用國家輪廓當唯一的第一層」讓前端至少
+    # 點得進去，但那塊 feature 的 id 是國家 QID、不在圖譜第一層裡——點它沒反應、面板也
+    # 對不上（波多黎各面板列 78 個、地圖只有一塊），比不給下鑽入口更像壞掉。
+    if not own and not dissolved and not from_admin0:
+        print("  一塊第一層都產不出來，略過（只剩輪廓的檔 manifest 不會收）")
 
-    if outline_only:
-        print("  一塊第一層都產不出來 → 用國家輪廓當唯一的第一層")
-        # 第二層也不留了：併不出第一層的碎片留著沒意義，前端只畫 level 1
-        matched = []
+        return False
 
     no_geometry = [f"{children[q]}（{q}）" for q in children if q not in drawn]
 
@@ -958,12 +953,10 @@ def rebuild(
     # 節點、面板標不出名字，而前端目前也只畫 level 1（Territory.vue 的 filter）。
     # 留著純粹是死重量——實測 22 國、366 個 feature、1 MB。
     payload = [
-        # 輪廓替代時只寫一份：同一塊幾何不要同時當 level 0 和 level 1（id 會重複）
         {
             "type": "Feature",
             "properties": {
-                "qid": country_qid, "name": outline["properties"].get("NAME"),
-                "level": 1 if outline_only else 0,
+                "qid": country_qid, "name": outline["properties"].get("NAME"), "level": 0,
             },
             "geometry": outline["geometry"],
         },
