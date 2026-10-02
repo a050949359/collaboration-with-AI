@@ -201,6 +201,25 @@ def resolve_by_iso_3166_2(codes: list[str]) -> dict[str, str]:
     return {row["code"]["value"]: row["x"]["value"].rsplit("/", 1)[-1] for row in rows}
 
 
+def dissolved_entities(qids: list[str]) -> set[str]:
+    """哪些 QID 有 P576（解散日期）。
+
+    用來擋掉**危險的換 id**：NE 的形狀是跟著它自己那筆 wikidataid 的，如果那個實體
+    已經解散，手上這塊就是**改制前的邊界**，不能因為 ISO 代碼被新單位沿用就貼上
+    新實體的 QID——畫出來會是舊形狀配新名字，而且零警告。
+
+    實測兩個案例：拉脫維亞 2021 把 119 個市鎮併成 43 個、摩洛哥 2015 把 16 個大區
+    改成 12 個，ISO 代碼都被沿用，結果 30 個 feature 被貼上新 QID。
+    """
+    if not qids:
+        return set()
+
+    values = " ".join(f"wd:{qid}" for qid in sorted(set(qids)))
+    rows = sparql(f"SELECT ?x WHERE {{ VALUES ?x {{ {values} }} ?x wdt:P576 ?d }}")
+
+    return {row["x"]["value"].rsplit("/", 1)[-1] for row in rows}
+
+
 def countries_of(qids: list[str]) -> dict[str, set[str]]:
     """每個 QID 的 P17（所屬國家）。NE 的 wikidataid 會靜默配錯，用這個擋下來。"""
     if not qids:
@@ -421,12 +440,28 @@ def rebuild(
     ]
     by_code = resolve_by_iso_3166_2([f["properties"]["iso_3166_2"] for f in needs_code])
 
+    # NE 原本指的實體若已解散，手上這塊就是改制前的邊界，不准換（見 dissolved_entities()）
+    gone = dissolved_entities([
+        f["properties"]["wikidataid"] for f in needs_code if f["properties"].get("wikidataid")
+    ])
+
     print(f"  NE admin-1 候選 {len(candidates)} 個"
           f"（adm0_a3：{'、'.join(sorted(c for c in codes if c))}）")
 
+    if gone:
+        stale = [f for f in needs_code if f["properties"].get("wikidataid") in gone]
+        print(f"  ⛔ {len(stale)} 個 feature 的 NE 實體已解散（形狀是改制前的），不換 id："
+              f"{'、'.join(str(f['properties'].get('name')) for f in stale[:5])}"
+              + ("…" if len(stale) > 5 else ""))
+
+        for feature in stale:
+            by_code.pop(feature["properties"].get("iso_3166_2"), None)
+
     if needs_code:
         rescued = [
-            f for f in needs_code if by_code.get(f["properties"]["iso_3166_2"]) in wanted
+            f for f in needs_code
+            if by_code.get(f["properties"]["iso_3166_2"]) in wanted
+            and f["properties"].get("wikidataid") not in gone
         ]
         wrong = [f for f in rescued if f["properties"].get("wikidataid")]
         print(f"  QID 對不到圖譜的 {len(needs_code)} 個 → P300 救回 {len(rescued)} 個"
@@ -444,7 +479,7 @@ def rebuild(
         properties = feature["properties"]
         qid = properties.get("wikidataid")
 
-        if qid not in wanted:
+        if qid not in wanted and qid not in gone:
             qid = by_code.get(properties.get("iso_3166_2"), qid)
 
         if qid in children:
@@ -482,6 +517,14 @@ def rebuild(
 
     if unmatched:
         print(f"  NE 有形狀但圖譜沒有（不畫）：{'、'.join(unmatched)}")
+
+    # 一塊行政區都配不到時，只剩國家輪廓——那種檔 build-admin-manifest.py 不會收進索引
+    # （沒有第一層就不給下鑽），寫出來也沒人讀。摩洛哥就是這樣：NE 的 16 個 feature
+    # 全是 2015 改制前的大區，一個都不能用。
+    if not matched:
+        print("  沒有任何行政區配得上，略過（只剩輪廓的檔不值得寫）")
+
+        return False
 
     # dissolve 要在簡化「之前」做：消線靠邊界精確重合，簡化過就對不齊了
     have_geometry = {f["properties"]["qid"] for f in own}
