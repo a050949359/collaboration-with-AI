@@ -100,6 +100,7 @@ Token 解析沿用 territory_lib（`MCP_TERRITORY_TOKEN` > `MCP_TOKEN` > `.vscod
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import subprocess
 import sys
@@ -119,6 +120,8 @@ USER_AGENT = "ohya-territory-geometry/1.0 (https://ohya.vip)"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = REPO_ROOT / "public" / "geo" / "admin"
 CACHE_DIR = Path("/tmp/territory-geometry-cache")
+# NE 沒填 wikidataid 時的人工對照表（NE 的 name → 圖譜 QID）。理由見該檔的 _readme。
+NAME_OVERRIDES = Path(__file__).resolve().parent / "ne-name-overrides.json"
 
 # 跟全量管線一致，不然同一個目錄裡會混著兩種精細度
 PRECISION = 0.001
@@ -199,6 +202,25 @@ def resolve_by_iso_3166_2(codes: list[str]) -> dict[str, str]:
     rows = sparql(f"SELECT ?x ?code WHERE {{ VALUES ?code {{ {values} }} ?x wdt:P300 ?code . }}")
 
     return {row["code"]["value"]: row["x"]["value"].rsplit("/", 1)[-1] for row in rows}
+
+
+def load_name_overrides() -> dict[str, dict[str, str]]:
+    """讀人工對照表：{adm0_a3: {NE 的 name: QID}}。底線開頭的鍵是說明文字，略過。
+
+    這張表只處理「NE 連 wikidataid 都沒填」的 feature——它們的 iso_3166_2 是 NE 自填的
+    佔位碼（結尾帶 `~`），**沒有任何識別碼可查**，P300 與 P131 都無從下手。
+    跟 P300 退路刻意不寫死「地名 → QID」不同：那裡有通則可用（ISO 3166-2），這裡沒有。
+    """
+    if not NAME_OVERRIDES.exists():
+        return {}
+
+    raw = json.loads(NAME_OVERRIDES.read_text(encoding="utf-8"))
+
+    return {
+        a3: {k: v for k, v in table.items() if not k.startswith("_")}
+        for a3, table in raw.items()
+        if not a3.startswith("_") and isinstance(table, dict)
+    }
 
 
 def p131_into(qids: list[str], parents: set[str]) -> dict[str, tuple[str, str]]:
@@ -458,6 +480,7 @@ def rebuild(
         return False
 
     wanted = set(children) | set(level2)
+    overrides = load_name_overrides()
 
     # ⚠️ 不要用 adm0_a3 圈候選。法國的海外省在 NE 裡掛在自己的 adm0 代碼底下
     # （GLP / MTQ / REU / GUF / MAF / BLM / SPM、克利伯頓島…），照 adm0_a3 濾會把它們
@@ -531,7 +554,11 @@ def rebuild(
         qid = properties.get("wikidataid")
 
         if qid not in wanted and qid not in gone:
-            qid = by_code.get(properties.get("iso_3166_2"), qid)
+            # 人工對照優先：它處理的是「NE 連 ID 都沒有」，P300 在那種情況下也查不到
+            qid = (
+                overrides.get(properties.get("adm0_a3"), {}).get(properties.get("name"))
+                or by_code.get(properties.get("iso_3166_2"), qid)
+            )
 
         if qid in children:
             level, parent = 1, None
@@ -551,15 +578,26 @@ def rebuild(
             }
         )
 
-    # NE 的 wikidataid 會靜默配錯，驗一下 P17 真的指向這個國家
+    # NE 的 wikidataid 會靜默配錯，用 P17 擋。
+    #
+    # ⚠️ 不能直接拿 country_qid 當期望值——**屬地的 P17 是宗主國**：香港十八區的 P17 是
+    # 中國 Q148、奧蘭市鎮的是芬蘭 Q33、北馬里亞納的是美國 Q30。那樣會對整個屬地噴出
+    # 一整排假警報（實測香港 18 個全中）。改成多數決：同一國的行政區絕大多數會共用
+    # 同一個 P17，偏離主流的那幾個才是可疑的——那正是這個檢查原本要抓的
+    # 「NE 指到別國的實體」。
     p17 = countries_of([f["properties"]["qid"] for f in matched])
+    tally = collections.Counter(c for codes_ in p17.values() for c in codes_)
+    expected_country = tally.most_common(1)[0][0] if tally else country_qid
+    odd = [
+        f for f in matched
+        if f["properties"]["qid"] in p17
+        and expected_country not in p17[f["properties"]["qid"]]
+    ]
 
-    for feature in matched:
+    for feature in odd:
         qid = feature["properties"]["qid"]
-
-        if qid in p17 and country_qid not in p17[qid]:
-            print(f"  ⚠️ {feature['properties']['name']}（{qid}）的 P17 不是 {country_qid}，"
-                  "可能是 NE 配錯了")
+        print(f"  ⚠️ {feature['properties']['name']}（{qid}）的 P17 是 "
+              f"{'／'.join(sorted(p17[qid]))}，這一國其餘是 {expected_country}，可能配錯了")
 
     # 配不到的，再問一次 P131：上層如果正好是我們的第一層節點，就當成第二層（見 p131_into）
     by_p131 = p131_into([q for _, q in leftover if q and q not in gone], set(children))
