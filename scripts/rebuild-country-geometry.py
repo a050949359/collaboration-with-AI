@@ -28,19 +28,40 @@
 行政職能），我們圖譜的第一層是 60 個市鎮，NE 沒有市鎮幾何——那就畫 0 塊，不要畫出
 一組跟面板對不起來的過時邊界。
 
-## ⚠️ 還沒實作：把第二層併成第一層
+## 把第二層併成第一層（dissolve）
 
-全量管線有一段 `dissolve_into_parents`：NE 給法國的是 101 個 département、給義大利的
-是 110 個 provincia，都是我們的**第二層**，那些國家的第一層（région / regione）一條
-邊界都畫不出來，所以它用 mapshaper `-dissolve` 把子節點併起來生出第一層的形狀，
-淨賺 107 個第一層行政區。
+NE 給法國的是 101 個 département、給義大利的是 110 個 provincia，都是我們的**第二層**，
+那些國家的第一層（région / regione）一條邊界都畫不出來。作法是用 mapshaper `-dissolve`
+把子節點併起來生出第一層的形狀——它會真的消掉共用邊界，不是把多塊塞進同一個 MultiPolygon。
 
-這支**沒有**那段。對這類國家跑下去，結果會是「NE 的 QID 都不在圖譜第一層 → 全丟」：
-法國 123 → 6 feature、義大利 127 → 3 feature，等於把既有產出毀掉。
+兩個前提，缺一不可：
 
-因此預設會擋：新結果的第一層數量比現有檔少就拒寫，要覆蓋得明確加 `--force`。
-把 dissolve 補進來之前，這支只適用於「NE 的切法本來就等於我們第一層」的國家
-（台灣、沙烏地、冰島那類）。
+1. **dissolve 要在簡化「之前」做**。消線靠的是邊界精確重合，簡化過就對不齊了。併完
+   一起簡化，父子形狀共用的邊界才會被簡成同一條。
+2. **子節點要夠齊**（預設門檻 80%）。只有一半的 département 併出來的 région 會缺一角，
+   看起來卻像正確資料——寧可不畫。這裡的「應該有幾個」直接數**圖譜**的子節點，
+   不像全量管線要另外去問 Wikidata 的 P150 child count。
+
+只在「父節點自己沒有幾何」時才併，已經有自己形狀的不會被蓋掉。
+
+## ⚠️ NE 的國家欄位不能拿來圈候選
+
+**不要**用 `adm0_a3 == 目標國家` 去濾 admin-1。法國的海外領地在 NE 裡掛在自己的 adm0
+代碼底下（MAF / BLM / SPM / NCL / WLF…），照 adm0_a3 濾會把它們整批丟掉——實測第一層
+會從 23 掉到 18。作法是先用 QID 全域比對（精確比對，本來就不需要先圈國家），再從
+配到的那幾個 adm0 代碼回推候選範圍，P300 退路只在那個範圍裡跑。
+
+## 安全閥
+
+預設會擋：新結果的第一層數量比現有檔少就拒寫，要覆蓋得明確加 `--force`。
+
+變少不一定是壞事，所以是擋下來讓人看、不是直接失敗。實測兩種情況都有：
+
+- **法國 23 → 22**：少掉的是克利伯頓島 Q161258，它**不在我們圖譜裡**。舊檔畫得出來
+  是因為舊管線照 Wikidata 判層，面板卻沒有它——少畫那一塊反而是對的，該加 `--force`。
+- **義大利 18 → 16**：圖譜的 Friuli 與 Sicily 第二層是 0 個（NE 有那些省，圖譜沒匯），
+  Sardinia 只有改制後的 3 個而 NE 是舊的 8 省、Aosta Valley 的子節點是 74 個 comuni
+  而非省。這是圖譜資料缺口，**不該** `--force`，要先補圖譜。
 
 ## NE 的 wikidataid 缺漏怎麼補
 
@@ -58,6 +79,8 @@
     python3 scripts/rebuild-country-geometry.py Q865 --check   # 只印對照結果，不寫檔
     python3 scripts/rebuild-country-geometry.py Q142 --force   # 明知會變少仍要覆蓋
 
+Token 解析沿用 territory_lib（`MCP_TERRITORY_TOKEN` > `MCP_TOKEN` > `.vscode/mcp.json`）。
+
 寫檔後記得重跑 `python3 scripts/build-admin-manifest.py` 更新 index.json
 （前端靠它知道哪一國能下鑽、鏡頭要對到哪個 bbox）。
 """
@@ -66,12 +89,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
+
+from territory_lib import call_tool, resolve_endpoint, resolve_token
 
 NE_BASE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/"
 NE_ADMIN1 = NE_BASE + "ne_10m_admin_1_states_provinces.geojson"
@@ -79,7 +103,6 @@ NE_ADMIN0 = NE_BASE + "ne_10m_admin_0_countries.geojson"
 SPARQL_ENDPOINT = "https://query.wikidata.org/sparql"
 # Cloudflare 會擋 urllib 的預設 User-Agent（HTTP 403），一定要自己帶一個
 USER_AGENT = "ohya-territory-geometry/1.0 (https://ohya.vip)"
-API_BASE = os.environ.get("TERRITORY_API_BASE", "https://ohya.vip")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = REPO_ROOT / "public" / "geo" / "admin"
@@ -88,6 +111,9 @@ CACHE_DIR = Path("/tmp/territory-geometry-cache")
 # 跟全量管線一致，不然同一個目錄裡會混著兩種精細度
 PRECISION = 0.001
 DEFAULT_SIMPLIFY = 6.0
+# dissolve 的子節點覆蓋率門檻。只有一半的 département 併出來的 région 會缺一角，
+# 看起來卻像正確資料——寧可不畫。
+DEFAULT_COVERAGE = 0.8
 
 
 def get_json(url: str, timeout: int = 180) -> dict | list:
@@ -121,14 +147,35 @@ def sparql(query: str) -> list[dict]:
     return get_json(url)["results"]["bindings"]
 
 
-def graph_children(country_qid: str) -> dict[str, str]:
-    """圖譜裡這個國家的第一層：{QID: 顯示名稱}。走公開唯讀 REST，不需要 api-key。"""
-    payload = get_json(f"{API_BASE}/api/territory/nodes/{country_qid}/children", timeout=60)
+def graph_levels(country_qid: str) -> tuple[dict[str, str], dict[str, str]]:
+    """圖譜裡這個國家的前兩層。回傳 (第一層 {QID: 名稱}, 第二層 {QID: 父節點QID})。
 
-    return {
-        child["qid"]: (child.get("observations") or {}).get("label") or child["qid"]
-        for child in payload["children"]
-    }
+    用 MCP 的 `read_subtree` 一次吃兩層——公開 REST 的 children 端點只能一次一個節點，
+    法國要打 26 次、還跟 v1/airports 共用同一個 60/min 的節流桶。
+    """
+    error, text = call_tool(
+        resolve_endpoint(), resolve_token(), "read_subtree",
+        {"entity_name": country_qid, "depth": 2},
+    )
+
+    if error:
+        raise RuntimeError(f"read_subtree({country_qid}) 失敗：{text}")
+
+    payload = json.loads(text)
+
+    if payload.get("truncated"):
+        print("  ⚠️ read_subtree 回報 truncated，第二層可能不完整，dissolve 的覆蓋率會失真")
+
+    level1: dict[str, str] = {}
+    level2: dict[str, str] = {}
+
+    for child in payload["tree"].get("children") or []:
+        level1[child["qid"]] = (child.get("observations") or {}).get("label") or child["qid"]
+
+        for grandchild in child.get("children") or []:
+            level2[grandchild["qid"]] = child["qid"]
+
+    return level1, level2
 
 
 def resolve_by_iso_3166_2(codes: list[str]) -> dict[str, str]:
@@ -159,13 +206,7 @@ def countries_of(qids: list[str]) -> dict[str, set[str]]:
     return result
 
 
-def run_mapshaper(features: list[dict], percent: float, tag: str) -> list[dict]:
-    """保拓樸簡化。各自跑 Douglas-Peucker 會讓相鄰行政區的共用邊界簡出不一致的線、
-    變成一條條縫；mapshaper 先建拓樸再簡化，共用邊界只簡一次。
-
-    國家輪廓要跟行政區**在同一次**簡化裡（NE 的 admin-0 與 admin-1 是同一份底圖），
-    共用的海岸線才會被簡成同一條弧，疊起來不會露出雙線。
-    """
+def run_mapshaper(features: list[dict], steps: list[str], tag: str) -> list[dict]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     src = CACHE_DIR / f"{tag}-in.geojson"
     dst = CACHE_DIR / f"{tag}-out.geojson"
@@ -177,9 +218,7 @@ def run_mapshaper(features: list[dict], percent: float, tag: str) -> list[dict]:
 
     result = subprocess.run(
         [
-            "npx", "-y", "mapshaper", str(src),
-            # keep-shapes：再小的行政區也不准簡到消失（否則城市型單位會整個不見）
-            "-simplify", "visvalingam", f"{percent}%", "keep-shapes",
+            "npx", "-y", "mapshaper", str(src), *steps,
             # gj2008 ← 不要拿掉。mapshaper 預設輸出 RFC 7946（外環逆時針），
             # 但 three-globe/globe.gl 吃舊 d3 慣例（外環順時針）。繞向在球面上決定
             # 哪一側是「內部」，反了會把每一塊畫成「整顆球扣掉那塊」。
@@ -192,6 +231,88 @@ def run_mapshaper(features: list[dict], percent: float, tag: str) -> list[dict]:
         raise RuntimeError(f"mapshaper 失敗：\n{result.stderr[-2000:]}")
 
     return json.loads(dst.read_text(encoding="utf-8"))["features"]
+
+
+def simplify(features: list[dict], percent: float, tag: str) -> list[dict]:
+    """保拓樸簡化。各自跑 Douglas-Peucker 會讓相鄰行政區的共用邊界簡出不一致的線、
+    變成一條條縫；mapshaper 先建拓樸再簡化，共用邊界只簡一次。
+
+    國家輪廓要跟行政區**在同一次**簡化裡（NE 的 admin-0 與 admin-1 是同一份底圖），
+    共用的海岸線才會被簡成同一條弧，疊起來不會露出雙線。
+    """
+    return run_mapshaper(
+        features,
+        # keep-shapes：再小的行政區也不准簡到消失（否則城市型單位會整個不見）
+        ["-simplify", "visvalingam", f"{percent}%", "keep-shapes"],
+        f"{tag}-simplify",
+    )
+
+
+def dissolve_into_parents(
+    level2_features: list[dict], have_geometry: set[str], level2: dict[str, str],
+    labels: dict[str, str], threshold: float, tag: str,
+) -> list[dict]:
+    """把第二層併成第一層的形狀。詳見檔頭「把第二層併成第一層」那節。
+
+    `level2` 是圖譜的 {子節點: 父節點}，用來數「這個父節點**應該**有幾個子節點」——
+    全量管線得另外去問 Wikidata 的 P150 child count，我們直接數圖譜就好。
+    """
+    groups: dict[str, list[dict]] = {}
+
+    for feature in level2_features:
+        parent = feature["properties"]["parent"]
+
+        if parent not in have_geometry:
+            groups.setdefault(parent, []).append(feature)
+
+    if not groups:
+        return []
+
+    expected: dict[str, int] = {}
+
+    for parent in level2.values():
+        expected[parent] = expected.get(parent, 0) + 1
+
+    usable = {p: fs for p, fs in groups.items() if len(fs) >= threshold * expected.get(p, len(fs))}
+    skipped = [
+        f"{labels.get(p, p)} {len(fs)}/{expected.get(p, len(fs))}"
+        for p, fs in groups.items()
+        if p not in usable
+    ]
+
+    print(f"  併第二層 → 第一層：{len(usable)} 個父節點")
+
+    if skipped:
+        print(f"    子節點不齊而跳過（門檻 {threshold:.0%}）：{'、'.join(skipped)}")
+
+    if not usable:
+        return []
+
+    dissolved = run_mapshaper(
+        [
+            {"type": "Feature", "properties": {"parent": parent}, "geometry": f["geometry"]}
+            for parent, fs in usable.items()
+            for f in fs
+        ],
+        ["-dissolve", "parent"],
+        f"{tag}-dissolve",
+    )
+
+    return [
+        {
+            "type": "Feature",
+            "properties": {
+                "qid": f["properties"]["parent"],
+                # 名稱留空：併出來的是父節點，NE 的子節點名稱不適用。
+                # 前端顯示走圖譜的 label，這裡本來就不是名稱來源。
+                "name": None,
+                "level": 1,
+            },
+            "geometry": f["geometry"],
+        }
+        for f in dissolved
+        if f.get("geometry")
+    ]
 
 
 def assert_clockwise(features: list[dict]) -> None:
@@ -237,11 +358,12 @@ def count_vertices(features: list[dict]) -> int:
 
 
 def rebuild(
-    country_qid: str, admin0: dict, admin1: dict, percent: float, check: bool, force: bool
+    country_qid: str, admin0: dict, admin1: dict, percent: float, coverage: float,
+    check: bool, force: bool,
 ) -> bool:
     """回傳有沒有真的寫檔——呼叫端靠它決定要不要提醒重跑 manifest。"""
-    children = graph_children(country_qid)
-    print(f"\n{country_qid}：圖譜第一層 {len(children)} 個")
+    children, level2 = graph_levels(country_qid)
+    print(f"\n{country_qid}：圖譜第一層 {len(children)} 個、第二層 {len(level2)} 個")
 
     outline = next(
         (f for f in admin0["features"] if f["properties"].get("WIKIDATAID") == country_qid),
@@ -253,73 +375,99 @@ def rebuild(
 
         return False
 
-    # NE 用 adm0_a3 分國，拿輪廓那筆的 ADM0_A3 去圈出它的 admin-1
-    adm0_a3 = outline["properties"].get("ADM0_A3")
-    candidates = [f for f in admin1["features"] if f["properties"].get("adm0_a3") == adm0_a3]
-    print(f"  NE admin-1 候選 {len(candidates)} 個（adm0_a3={adm0_a3}）")
+    wanted = set(children) | set(level2)
 
-    # 先用 NE 自帶的 wikidataid 配，沒有的再用 iso_3166_2 問 P300
-    missing_codes = [
-        f["properties"]["iso_3166_2"]
-        for f in candidates
+    # ⚠️ 不要用 adm0_a3 圈候選。法國的海外省在 NE 裡掛在自己的 adm0 代碼底下
+    # （GLP / MTQ / REU / GUF / MAF / BLM / SPM、克利伯頓島…），照 adm0_a3 濾會把它們
+    # 全丟掉——實測第一層會從 23 掉到 18。舊管線沒這問題是因為它靠 Wikidata 回的
+    # ?country 分檔，不靠 NE 的國家欄位。QID 是精確比對，本來就不需要先圈國家。
+    by_qid = [f for f in admin1["features"] if f["properties"].get("wikidataid") in wanted]
+
+    # P300 退路只在「已經配到東西的那幾個 adm0 代碼」裡找，不對全世界 264 筆缺 ID 的
+    # feature 跑 SPARQL。加上這個國家自己的代碼，否則第一次配不到任何東西就沒機會救。
+    codes = {f["properties"].get("adm0_a3") for f in by_qid}
+    codes.add(outline["properties"].get("ADM0_A3"))
+    candidates = [f for f in admin1["features"] if f["properties"].get("adm0_a3") in codes]
+    no_qid = [
+        f for f in candidates
         if not f["properties"].get("wikidataid") and f["properties"].get("iso_3166_2")
     ]
-    by_code = resolve_by_iso_3166_2(missing_codes)
+    by_code = resolve_by_iso_3166_2([f["properties"]["iso_3166_2"] for f in no_qid])
 
-    if missing_codes:
-        print(f"  沒有 wikidataid 的 {len(missing_codes)} 個 → P300 救回 {len(by_code)} 個")
+    print(f"  NE admin-1 候選 {len(candidates)} 個"
+          f"（adm0_a3：{'、'.join(sorted(c for c in codes if c))}）")
 
-    matched: list[tuple[dict, str]] = []
+    if no_qid:
+        recovered = sum(1 for f in no_qid if by_code.get(f["properties"]["iso_3166_2"]) in wanted)
+        print(f"  其中沒有 wikidataid 的 {len(no_qid)} 個 → P300 救回 {recovered} 個")
+
+    matched: list[dict] = []
     unmatched: list[str] = []
 
     for feature in candidates:
         properties = feature["properties"]
         qid = properties.get("wikidataid") or by_code.get(properties.get("iso_3166_2"))
 
-        if qid and qid in children:
-            matched.append((feature, qid))
+        if qid in children:
+            level, parent = 1, None
+        elif qid in level2:
+            level, parent = 2, level2[qid]
         else:
             unmatched.append(f"{properties.get('name')}（{qid or '無 QID'}）")
+            continue
+
+        matched.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "qid": qid, "name": properties.get("name"), "level": level, "parent": parent,
+                },
+                "geometry": feature["geometry"],
+            }
+        )
 
     # NE 的 wikidataid 會靜默配錯，驗一下 P17 真的指向這個國家
-    p17 = countries_of([qid for _, qid in matched])
-    suspicious = [
-        (feature["properties"].get("name"), qid)
-        for feature, qid in matched
-        if qid in p17 and country_qid not in p17[qid]
-    ]
+    p17 = countries_of([f["properties"]["qid"] for f in matched])
 
-    for name, qid in suspicious:
-        print(f"  ⚠️ {name}（{qid}）的 P17 不是 {country_qid}，可能是 NE 配錯了")
+    for feature in matched:
+        qid = feature["properties"]["qid"]
 
-    drawn = {qid for _, qid in matched}
-    no_geometry = [f"{children[q]}（{q}）" for q in children if q not in drawn]
+        if qid in p17 and country_qid not in p17[qid]:
+            print(f"  ⚠️ {feature['properties']['name']}（{qid}）的 P17 不是 {country_qid}，"
+                  "可能是 NE 配錯了")
 
-    print(f"  配對成功 {len(matched)}／{len(children)}")
+    own = [f for f in matched if f["properties"]["level"] == 1]
+    children_features = [f for f in matched if f["properties"]["level"] == 2]
+    print(f"  配對成功 {len(matched)}（第一層 {len(own)}／{len(children)}、"
+          f"第二層 {len(children_features)}／{len(level2)}）")
 
     if unmatched:
         print(f"  NE 有形狀但圖譜沒有（不畫）：{'、'.join(unmatched)}")
 
+    # dissolve 要在簡化「之前」做：消線靠邊界精確重合，簡化過就對不齊了
+    have_geometry = {f["properties"]["qid"] for f in own}
+    dissolved = dissolve_into_parents(
+        children_features, have_geometry, level2, children, coverage, country_qid
+    )
+
+    drawn = have_geometry | {f["properties"]["qid"] for f in dissolved}
+    no_geometry = [f"{children[q]}（{q}）" for q in children if q not in drawn]
+
     if no_geometry:
-        print(f"  圖譜有但 NE 沒形狀：{'、'.join(no_geometry)}")
+        print(f"  第一層沒有形狀（不畫）：{'、'.join(no_geometry)}")
 
     payload = [
         {
             "type": "Feature",
             "properties": {"qid": country_qid, "name": outline["properties"].get("NAME"), "level": 0},
             "geometry": outline["geometry"],
-        }
-    ] + [
-        {
-            "type": "Feature",
-            "properties": {"qid": qid, "name": feature["properties"].get("name"), "level": 1},
-            "geometry": feature["geometry"],
-        }
-        for feature, qid in matched
+        },
+        *matched,
+        *dissolved,
     ]
 
     print(f"  簡化前頂點 {count_vertices(payload):,} → ", end="", flush=True)
-    simplified = run_mapshaper(payload, percent, country_qid)
+    simplified = simplify(payload, percent, country_qid)
     assert_clockwise(simplified)
     print(f"簡化後 {count_vertices(simplified):,}")
 
@@ -360,12 +508,12 @@ def rebuild(
 
         return False
 
-    # 這支還沒有 dissolve_into_parents（見檔頭）。對法國、義大利那種「NE 給的是我們的
-    # 第二層」的國家，結果會是全丟 → 把既有產出毀掉。變少就擋下來，不要靜默覆蓋。
+    # 幾何缺漏是靜默的——配不到就少一塊，畫面上看起來只是「這國行政區比較少」。
+    # 第一層變少幾乎都是上游出了事（NE 改版、圖譜關係被刪、dissolve 覆蓋率掉到門檻下），
+    # 擋下來讓人看一眼，不要默默覆蓋掉好的產出。
     if after < before and not force:
         print(f"  ❌ 拒絕寫入：第一層會從 {before} 掉到 {after}。"
-              "多半是 NE 的切法等於我們的第二層、需要 dissolve（本支未實作）。"
-              "確定要覆蓋請加 --force。")
+              "先確認是上游資料真的變了，還是配對出問題。確定要覆蓋請加 --force。")
 
         return False
 
@@ -383,6 +531,10 @@ def main() -> int:
         "--simplify", type=float, default=DEFAULT_SIMPLIFY,
         help=f"保留頂點比例（%%），預設 {DEFAULT_SIMPLIFY}——跟全量管線一致，不要隨意改",
     )
+    parser.add_argument(
+        "--coverage", type=float, default=DEFAULT_COVERAGE,
+        help=f"dissolve 的子節點覆蓋率門檻，預設 {DEFAULT_COVERAGE}（低於此比例就不併）",
+    )
     parser.add_argument("--check", action="store_true", help="只印對照結果，不寫檔")
     parser.add_argument(
         "--force", action="store_true",
@@ -397,7 +549,9 @@ def main() -> int:
     written = [
         country_qid
         for country_qid in args.countries
-        if rebuild(country_qid, admin0, admin1, args.simplify, args.check, args.force)
+        if rebuild(
+            country_qid, admin0, admin1, args.simplify, args.coverage, args.check, args.force
+        )
     ]
 
     if written:
