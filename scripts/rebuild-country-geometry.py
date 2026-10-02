@@ -397,8 +397,12 @@ def rebuild(
 
     # P300 退路只在「已經配到東西的那幾個 adm0 代碼」裡找，不對全世界 264 筆缺 ID 的
     # feature 跑 SPARQL。加上這個國家自己的代碼，否則第一次配不到任何東西就沒機會救。
+    # 濾掉空值：None 進了 codes，下面那行會把「所有沒填 adm0_a3 的 feature」全拉進候選
+    # （None in codes 成立）。目前 NE 兩個檔都 100% 有填，所以是潛伏問題，但防護是免費的。
     codes = {f["properties"].get("adm0_a3") for f in by_qid}
     codes.add(outline["properties"].get("ADM0_A3"))
+    codes.discard(None)
+    codes.discard("")
     candidates = [f for f in admin1["features"] if f["properties"].get("adm0_a3") in codes]
     no_qid = [
         f for f in candidates
