@@ -143,6 +143,9 @@ DEFAULT_SIMPLIFY = 6.0
 DEFAULT_COVERAGE = 0.8
 # 別名查詢一次問幾個節點。見 alias_index() 的說明。
 ALIAS_CHUNK = 40
+# 遞移 P131 拼裝的門檻：該國有 QID 的 NE feature 至少這個比例能歸到第一層節點才動手。
+# 零散幾塊拼出來是殘缺形狀，比不畫更像壞掉。
+ASSEMBLE_RATIO = 0.9
 
 
 def get_json(url: str, timeout: int = 180) -> dict | list:
@@ -327,6 +330,37 @@ def p131_into(qids: list[str], parents: set[str]) -> dict[str, tuple[str, str]]:
     return found
 
 
+def p131_ancestor(qids: list[str], parents: set[str]) -> dict[str, str]:
+    """沿 P131 **遞移**往上找，看最後落在哪個第一層節點。回傳 {QID: 第一層QID}。
+
+    跟 p131_into() 的單跳版差在深度。英國的區要走「區 → 郡 → 大區 → 英格蘭」好幾層，
+    單跳一個都接不上；用 `wdt:P131+` 實測 230 筆裡 229 筆都追得到（英格蘭 150、
+    蘇格蘭 32、威爾斯 21、北愛 26）。
+
+    ⚠️ 這條只在「整個國家幾乎都歸得出去」時才採用——見呼叫端的 ASSEMBLE_RATIO。
+    零散的幾塊拼起來會是殘缺的形狀，看起來像資料壞掉；要嘛整國拼得起來，要嘛不拼。
+    """
+    if not qids or not parents:
+        return {}
+
+    found: dict[str, str] = {}
+    values_parents = " ".join(f"wd:{qid}" for qid in sorted(parents))
+
+    for start in range(0, len(qids), 120):
+        values = " ".join(f"wd:{qid}" for qid in sorted(set(qids))[start : start + 120])
+        rows = sparql(
+            f"SELECT ?x ?p WHERE {{ VALUES ?x {{ {values} }}"
+            f" VALUES ?p {{ {values_parents} }} ?x wdt:P131+ ?p . }}"
+        )
+
+        for row in rows:
+            found.setdefault(
+                row["x"]["value"].rsplit("/", 1)[-1], row["p"]["value"].rsplit("/", 1)[-1]
+            )
+
+    return found
+
+
 def sibling_counts(pairs: set[tuple[str, str]]) -> dict[str, int]:
     """每個 (父節點, P31) 組合底下「應該」有幾個同類實體，當 dissolve 的覆蓋率分母。
 
@@ -426,7 +460,7 @@ def simplify(features: list[dict], percent: float, tag: str) -> list[dict]:
 
 
 def dissolve_into_parents(
-    level2_features: list[dict], have_geometry: set[str], expected: dict[str, int],
+    level2_features: list[dict], own_features: list[dict], expected: dict[str, int],
     labels: dict[str, str], threshold: float, tag: str,
 ) -> list[dict]:
     """把第二層併成第一層的形狀。詳見檔頭「把第二層併成第一層」那節。
@@ -438,10 +472,17 @@ def dissolve_into_parents(
     groups: dict[str, list[dict]] = {}
 
     for feature in level2_features:
-        parent = feature["properties"]["parent"]
+        groups.setdefault(feature["properties"]["parent"], []).append(feature)
 
-        if parent not in have_geometry:
-            groups.setdefault(parent, []).append(feature)
+    # 父節點自己也有一塊 NE feature 時，把它一起併進去取聯集，不要因此跳過 dissolve。
+    # 幾內亞踩過：NE 同時有「Labé 區域」與「Labé 縣」、解到同一個 QID，直接配到的那
+    # 一小塊若勝出，Labé 會從 1.825 掉到 0.171（只剩十分之一），而第一層數量不變、
+    # 安全閥看不出來。
+    for feature in own_features:
+        qid = feature["properties"]["qid"]
+
+        if qid in groups:
+            groups[qid].append(feature)
 
     if not groups:
         return []
@@ -574,6 +615,7 @@ def rebuild(
 
     wanted = set(children) | set(level2)
     aliases = alias_index(sorted(children))
+    expected_assemble: set[str] = set()
     overrides = load_name_overrides()
 
     # ⚠️ 不要用 adm0_a3 圈候選。法國的海外省在 NE 裡掛在自己的 adm0 代碼底下
@@ -697,7 +739,13 @@ def rebuild(
               f"{'／'.join(sorted(p17[qid]))}，這一國其餘是 {expected_country}，可能配錯了")
 
     # 配不到的，再問一次 P131：上層如果正好是我們的第一層節點，就當成第二層（見 p131_into）
-    by_p131 = p131_into([q for _, q in leftover if q and q not in gone], set(children))
+    #
+    # ⚠️ 這裡**不排除**已解散的實體，跟換 id 那條路不同。兩者的風險不一樣：
+    #   拿舊實體的形狀去標新 QID → 危險（舊邊界配新名字，拉脫維亞那個坑）
+    #   拿它當併入父節點的材料   → 安全，那塊地還在同一個父節點裡
+    # 菲律賓的 Maguindanao 2022 拆成南北兩省、兩個都還在 Bangsamoro 底下，少了它
+    # Bangsamoro 就只有 3/5、過不了覆蓋率門檻。但它自己不輸出（下面標 assembled）。
+    by_p131 = p131_into([q for _, q in leftover if q], set(children))
     unmatched: list[str] = []
 
     for feature, qid in leftover:
@@ -713,6 +761,8 @@ def rebuild(
                 "properties": {
                     "qid": qid, "name": feature["properties"].get("name"),
                     "level": 2, "parent": found[0],
+                    # 已解散的只當材料，不單獨輸出——否則地圖上會留著廢除的行政區
+                    "assembled": qid in gone,
                 },
                 "geometry": feature["geometry"],
             }
@@ -720,6 +770,45 @@ def rebuild(
 
     if by_p131:
         print(f"  P131 歸屬：{len(by_p131)} 個 NE feature 的上層是我們的第一層節點，當成第二層")
+
+    # 單跳接不上的，再沿 P131 遞移往上追（見 p131_ancestor）。整國歸得出去才採用。
+    still = [(f, q) for f, q in leftover if q and q not in gone and q not in by_p131]
+
+    if still:
+        with_qid = [q for _, q in leftover if q] + [
+            f["properties"]["qid"] for f in matched if f["properties"].get("qid")
+        ]
+        ancestors = p131_ancestor([q for _, q in still], set(children))
+        assigned = len(ancestors) + sum(
+            1 for f in matched if f["properties"].get("qid")
+        )
+        ratio = assigned / len(set(with_qid)) if with_qid else 0
+
+        if ancestors and ratio >= ASSEMBLE_RATIO:
+            print(f"  P131 遞移拼裝：{len(ancestors)} 個 feature 歸到第一層"
+                  f"（整國歸出率 {ratio:.0%}）")
+
+            for feature, qid in still:
+                parent = ancestors.get(qid)
+
+                if not parent:
+                    continue
+
+                matched.append(
+                    {
+                        "type": "Feature",
+                        "properties": {
+                            "qid": qid, "name": feature["properties"].get("name"),
+                            "level": 2, "parent": parent, "assembled": True,
+                        },
+                        "geometry": feature["geometry"],
+                    }
+                )
+                # 拼裝路徑不另外問 sibling 數——整國歸出率已經保證了覆蓋
+                expected_assemble.add(parent)
+        elif ancestors:
+            print(f"  P131 遞移拼裝：整國歸出率只有 {ratio:.0%}，低於 "
+                  f"{ASSEMBLE_RATIO:.0%}，不拼（會是殘缺形狀）")
 
     # 多個 NE feature 解到同一個 QID 時**合併**，不要挑一個。兩種成因都該合：
     #
@@ -803,7 +892,6 @@ def rebuild(
         print(f"  NE 有形狀但圖譜沒有（不畫）：{'、'.join(unmatched)}")
 
     # dissolve 要在簡化「之前」做：消線靠邊界精確重合，簡化過就對不齊了
-    have_geometry = {f["properties"]["qid"] for f in own}
     # 覆蓋率的分母：圖譜自己的第二層數量，加上 P131 那條路問回來的同類實體數
     expected: dict[str, int] = {}
 
@@ -811,16 +899,25 @@ def rebuild(
         expected[parent] = expected.get(parent, 0) + 1
 
     expected.update(sibling_counts({(p, t) for p, t in by_p131.values()}))
+    # 拼裝路徑的父節點：覆蓋由「整國歸出率」保證，這裡不另設門檻
+    for parent in expected_assemble:
+        expected[parent] = 0
 
     dissolved = dissolve_into_parents(
-        children_features, have_geometry, expected, children, coverage, country_qid
+        children_features, own, expected, children, coverage, country_qid
     )
 
     # 還沒有形狀的第一層節點，回頭查 NE 的 **admin-0**。NE 把不少屬地／特別行政區當成
     # 獨立國家處理（香港、奧蘭、法屬玻里尼西亞、美屬薩摩亞、澳洲的外部領地…），所以它們
     # 的形狀在 admin-0 而不是 admin-1。admin-0 與 admin-1 是同一份底圖，跟著一起丟進
     # mapshaper 簡化就會對齊，不會露出雙線。
-    drawn = have_geometry | {f["properties"]["qid"] for f in dissolved}
+    merged_qids = {f["properties"]["qid"] for f in dissolved}
+    own = [f for f in own if f["properties"]["qid"] not in merged_qids]
+    matched = [
+        f for f in matched
+        if f["properties"]["level"] != 1 or f["properties"]["qid"] not in merged_qids
+    ]
+    drawn = {f["properties"]["qid"] for f in own} | merged_qids
     from_admin0 = [
         {
             "type": "Feature",
@@ -838,27 +935,39 @@ def rebuild(
               f"{'、'.join(str(f['properties']['name']) for f in from_admin0)}")
         drawn |= {f["properties"]["qid"] for f in from_admin0}
 
-    # 一塊行政區都配不到時，只剩國家輪廓——那種檔 build-admin-manifest.py 不會收進索引
-    # （沒有第一層就不給下鑽），寫出來也沒人讀。摩洛哥就是這樣：NE 的 16 個 feature
-    # 全是 2015 改制前的大區，一個都不能用。檢查要放在 admin-0 退路**之後**，
-    # 否則只能靠那條退路救回的國家會被提早略過。
-    if not matched and not from_admin0:
-        print("  沒有任何行政區配得上，略過（只剩輪廓的檔不值得寫）")
+    # 一塊行政區都配不到時，退而用國家輪廓當唯一的第一層，讓前端至少點得進去看到國土
+    # （沒有第一層 build-admin-manifest.py 不收進索引，整個下鑽入口就不會出現）。
+    #
+    # ⚠️ 這塊 feature 的 id 是**國家的 QID**，不在圖譜第一層清單裡——前端點它不會有
+    # 反應、面板也對不上（波多黎各面板列 78 個、地圖只有一塊）。這是刻意的取捨：
+    # 顯示國土輪廓好過一片空白。NE 連輪廓都沒有的（馬丁尼克、馬約特、瓜地洛普）仍然略過。
+    outline_only = not own and not dissolved and not from_admin0
 
-        return False
+    if outline_only:
+        print("  一塊第一層都產不出來 → 用國家輪廓當唯一的第一層")
+        # 第二層也不留了：併不出第一層的碎片留著沒意義，前端只畫 level 1
+        matched = []
 
     no_geometry = [f"{children[q]}（{q}）" for q in children if q not in drawn]
 
     if no_geometry:
         print(f"  第一層沒有形狀（不畫）：{'、'.join(no_geometry)}")
 
+    # 第二層只輸出圖譜有的節點。配不到圖譜的那些（英國拼裝用的 155 塊地方政府單位、
+    # 菲律賓的 78 個省、馬爾他的 67 個地方議會…）只是併出第一層的材料，本身沒有圖譜
+    # 節點、面板標不出名字，而前端目前也只畫 level 1（Territory.vue 的 filter）。
+    # 留著純粹是死重量——實測 22 國、366 個 feature、1 MB。
     payload = [
+        # 輪廓替代時只寫一份：同一塊幾何不要同時當 level 0 和 level 1（id 會重複）
         {
             "type": "Feature",
-            "properties": {"qid": country_qid, "name": outline["properties"].get("NAME"), "level": 0},
+            "properties": {
+                "qid": country_qid, "name": outline["properties"].get("NAME"),
+                "level": 1 if outline_only else 0,
+            },
             "geometry": outline["geometry"],
         },
-        *matched,
+        *(f for f in matched if f["properties"]["level"] != 2 or f["properties"]["qid"] in level2),
         *dissolved,
         *from_admin0,
     ]
