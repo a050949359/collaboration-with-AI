@@ -404,25 +404,48 @@ def rebuild(
     codes.discard(None)
     codes.discard("")
     candidates = [f for f in admin1["features"] if f["properties"].get("adm0_a3") in codes]
-    no_qid = [
+
+    # P300 退路涵蓋**兩種**情況，不是只有「NE 沒填 wikidataid」：
+    #   1. 沒填（臺中市）
+    #   2. 填了但指錯實體 —— 日本的北海道 NE 指到 Q35581（P31=日本島嶼、沒有 ISO 碼），
+    #      正確的都道府縣是 Q1037393（P31=都道府縣、P300=JP-01）。NE 的 iso_3166_2
+    #      欄位填的是 JP-01，所以拿它查 P300 就能換回對的實體。
+    # 判準統一成「解出來的 QID 不在圖譜裡」。這樣安全：P300 的結果仍然要在 wanted 裡
+    # 才會被採用，不會憑空配出圖譜沒有的節點。
+    # 跳過 NE 自填的佔位碼（科索沃 XK-X02~ 那種帶波浪號的），查了也沒有。
+    needs_code = [
         f for f in candidates
-        if not f["properties"].get("wikidataid") and f["properties"].get("iso_3166_2")
+        if f["properties"].get("wikidataid") not in wanted
+        and f["properties"].get("iso_3166_2")
+        and not f["properties"]["iso_3166_2"].endswith("~")
     ]
-    by_code = resolve_by_iso_3166_2([f["properties"]["iso_3166_2"] for f in no_qid])
+    by_code = resolve_by_iso_3166_2([f["properties"]["iso_3166_2"] for f in needs_code])
 
     print(f"  NE admin-1 候選 {len(candidates)} 個"
           f"（adm0_a3：{'、'.join(sorted(c for c in codes if c))}）")
 
-    if no_qid:
-        recovered = sum(1 for f in no_qid if by_code.get(f["properties"]["iso_3166_2"]) in wanted)
-        print(f"  其中沒有 wikidataid 的 {len(no_qid)} 個 → P300 救回 {recovered} 個")
+    if needs_code:
+        rescued = [
+            f for f in needs_code if by_code.get(f["properties"]["iso_3166_2"]) in wanted
+        ]
+        wrong = [f for f in rescued if f["properties"].get("wikidataid")]
+        print(f"  QID 對不到圖譜的 {len(needs_code)} 個 → P300 救回 {len(rescued)} 個"
+              + (f"（其中 {len(wrong)} 個是 NE 指錯實體）" if wrong else ""))
+
+        for feature in wrong:
+            properties = feature["properties"]
+            print(f"    ⚠️ {properties.get('name')}：NE 給 {properties['wikidataid']}，"
+                  f"依 {properties['iso_3166_2']} 改用 {by_code[properties['iso_3166_2']]}")
 
     matched: list[dict] = []
     unmatched: list[str] = []
 
     for feature in candidates:
         properties = feature["properties"]
-        qid = properties.get("wikidataid") or by_code.get(properties.get("iso_3166_2"))
+        qid = properties.get("wikidataid")
+
+        if qid not in wanted:
+            qid = by_code.get(properties.get("iso_3166_2"), qid)
 
         if qid in children:
             level, parent = 1, None
@@ -514,7 +537,14 @@ def rebuild(
         if out_path.exists()
         else []
     )
-    before = sum(1 for f in existing if f["properties"].get("level") == 1)
+    # 只數「對得上圖譜第一層」的，不要數原始筆數。舊管線照 Wikidata 判層，產出的檔案
+    # 裡常有圖譜沒有的節點（美國的華盛頓市 Q61、利比亞的班加西市 Q40816、法國的克利伯頓島
+    # Q161258…），那些本來就不該畫——面板列不出來。用原始筆數比會把「拿掉它們」誤判成倒退：
+    # 馬爾地夫實測 20 → 19 被擋，但對得上圖譜的其實是 18 → 19，是改善。
+    before = sum(
+        1 for f in existing
+        if f["properties"].get("level") == 1 and f.get("id") in children
+    )
     after = sum(1 for f in features if f["properties"]["level"] == 1)
     print(f"  {out_path.relative_to(REPO_ROOT)}：{len(existing)} → {len(features)} feature"
           f"（第一層 {before} → {after}）／{len(text.encode()) / 1024:.0f} KB")
