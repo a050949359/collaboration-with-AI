@@ -13,5 +13,9 @@
   "ASM": {
     "_note": "NE 把 Manuʻa 打成 Manu's。正規化後是 manus vs manua，差一個字母，別名比對配不上",
     "Manu's": "Q1247537"
+  },
+  "OMN": {
+    "_note": "NE 少一個 i：Al Batnah North vs 圖譜的 Al Batinah North Governorate",
+    "Al Batnah North": "Q4703564"
   }
 }
