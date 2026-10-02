@@ -1,0 +1,369 @@
+#!/usr/bin/env python3
+"""重產**單一國家**的行政區幾何檔 `public/geo/admin/{國家QID}.json`。
+
+## 為什麼不是用 build-territory-geojson.py
+
+那支是全量管線（在 wip/territory-admin-geometry 分支），一次重算 258 國，而且會先
+`shutil.rmtree(public/geo/admin)`。要補一國的缺漏用它風險不成比例。這支只碰一個檔。
+
+更重要的是**層級來源不同**，這才是這支存在的理由：
+
+| | build-territory-geojson.py | 這支 |
+|---|---|---|
+| 哪些 QID 算第一層 | Wikidata 的 `wdt:P150` | **我們的圖譜**（part_of 關係） |
+
+`wdt:` 是 truthy prefix——只要某個屬性上有任何一筆 statement 被標成 preferred rank，
+它就**只回 preferred 的那些**，其餘靜默消失。實測後果：
+
+- 台灣 Q865 的 P150 有 15 筆 claim，7 筆 preferred（6 直轄市 + 臺灣地區）、8 筆 normal。
+  被藏起來的 normal 裡就有「臺灣省 Q32081」，而 13 縣 3 市全掛在它底下。於是全量管線
+  把那 16 個判成「不屬於前兩層」丟掉，台灣只畫得出 5 塊。
+- 沙烏地 Q851 有 14 筆 P150 claim，`wdt:` 只回 1 筆 → 13 個省在地圖上整批消失。
+
+而 NE 那邊其實是齊的（台灣 21 個 feature、20 個自帶正確 wikidataid）。**形狀一直都在，
+是層級判定把它們扔了。** 改以圖譜為準就不必跟 Wikidata 的 rank 慣例角力——圖譜是我們
+能修、修了就算數的那一邊。
+
+反過來說，圖譜沒有的就不畫。立陶宛是這個取捨的範例：NE 給 10 個縣（2010 年就被廢掉
+行政職能），我們圖譜的第一層是 60 個市鎮，NE 沒有市鎮幾何——那就畫 0 塊，不要畫出
+一組跟面板對不起來的過時邊界。
+
+## NE 的 wikidataid 缺漏怎麼補
+
+缺 QID 的 feature 100% 都有 `iso_3166_2`，拿去問 Wikidata P300（ISO 3166-2 code）
+可以救回一部分（台灣的臺中市 TW-TXG → Q245023 就是這樣救的）。**刻意不寫死任何
+「地名 → QID」對照**：P300 是通則，一次解一類。
+
+配對成功後會驗 P17（所屬國家）對不對得上——NE 的 wikidataid 不只會缺、還會**錯**，
+而且是靜默錯（立陶宛的 Alytaus 縣標成一個市鎮的 QID，形狀是縣、名字是市鎮，零警告）。
+
+## 用法
+
+    python3 scripts/rebuild-country-geometry.py Q865           # 重產台灣
+    python3 scripts/rebuild-country-geometry.py Q865 Q851      # 一次多國
+    python3 scripts/rebuild-country-geometry.py Q865 --check   # 只印對照結果，不寫檔
+
+寫檔後記得重跑 `python3 scripts/build-admin-manifest.py` 更新 index.json
+（前端靠它知道哪一國能下鑽、鏡頭要對到哪個 bbox）。
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+NE_BASE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/"
+NE_ADMIN1 = NE_BASE + "ne_10m_admin_1_states_provinces.geojson"
+NE_ADMIN0 = NE_BASE + "ne_10m_admin_0_countries.geojson"
+SPARQL_ENDPOINT = "https://query.wikidata.org/sparql"
+# Cloudflare 會擋 urllib 的預設 User-Agent（HTTP 403），一定要自己帶一個
+USER_AGENT = "ohya-territory-geometry/1.0 (https://ohya.vip)"
+API_BASE = os.environ.get("TERRITORY_API_BASE", "https://ohya.vip")
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+OUT_DIR = REPO_ROOT / "public" / "geo" / "admin"
+CACHE_DIR = Path("/tmp/territory-geometry-cache")
+
+# 跟全量管線一致，不然同一個目錄裡會混著兩種精細度
+PRECISION = 0.001
+DEFAULT_SIMPLIFY = 6.0
+
+
+def get_json(url: str, timeout: int = 180) -> dict | list:
+    request = urllib.request.Request(
+        url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"}
+    )
+
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode())
+
+
+def fetch_source(url: str, name: str) -> dict:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cached = CACHE_DIR / name
+
+    if not cached.exists():
+        print(f"  下載 {name}（39 MB 的那份要一分鐘左右）")
+        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+
+        with urllib.request.urlopen(request, timeout=600) as response:
+            cached.write_bytes(response.read())
+    else:
+        print(f"  沿用快取 {cached}")
+
+    return json.loads(cached.read_text())
+
+
+def sparql(query: str) -> list[dict]:
+    url = SPARQL_ENDPOINT + "?" + urllib.parse.urlencode({"query": query, "format": "json"})
+
+    return get_json(url)["results"]["bindings"]
+
+
+def graph_children(country_qid: str) -> dict[str, str]:
+    """圖譜裡這個國家的第一層：{QID: 顯示名稱}。走公開唯讀 REST，不需要 api-key。"""
+    payload = get_json(f"{API_BASE}/api/territory/nodes/{country_qid}/children", timeout=60)
+
+    return {
+        child["qid"]: (child.get("observations") or {}).get("label") or child["qid"]
+        for child in payload["children"]
+    }
+
+
+def resolve_by_iso_3166_2(codes: list[str]) -> dict[str, str]:
+    """ISO 3166-2 代碼 → QID。用來救 NE 沒填 wikidataid 的 feature。"""
+    if not codes:
+        return {}
+
+    values = " ".join(f'"{code}"' for code in sorted(set(codes)))
+    rows = sparql(f"SELECT ?x ?code WHERE {{ VALUES ?code {{ {values} }} ?x wdt:P300 ?code . }}")
+
+    return {row["code"]["value"]: row["x"]["value"].rsplit("/", 1)[-1] for row in rows}
+
+
+def countries_of(qids: list[str]) -> dict[str, set[str]]:
+    """每個 QID 的 P17（所屬國家）。NE 的 wikidataid 會靜默配錯，用這個擋下來。"""
+    if not qids:
+        return {}
+
+    values = " ".join(f"wd:{qid}" for qid in sorted(set(qids)))
+    rows = sparql(f"SELECT ?x ?c WHERE {{ VALUES ?x {{ {values} }} ?x wdt:P17 ?c . }}")
+
+    result: dict[str, set[str]] = {}
+
+    for row in rows:
+        item = row["x"]["value"].rsplit("/", 1)[-1]
+        result.setdefault(item, set()).add(row["c"]["value"].rsplit("/", 1)[-1])
+
+    return result
+
+
+def run_mapshaper(features: list[dict], percent: float, tag: str) -> list[dict]:
+    """保拓樸簡化。各自跑 Douglas-Peucker 會讓相鄰行政區的共用邊界簡出不一致的線、
+    變成一條條縫；mapshaper 先建拓樸再簡化，共用邊界只簡一次。
+
+    國家輪廓要跟行政區**在同一次**簡化裡（NE 的 admin-0 與 admin-1 是同一份底圖），
+    共用的海岸線才會被簡成同一條弧，疊起來不會露出雙線。
+    """
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    src = CACHE_DIR / f"{tag}-in.geojson"
+    dst = CACHE_DIR / f"{tag}-out.geojson"
+    dst.unlink(missing_ok=True)
+    src.write_text(
+        json.dumps({"type": "FeatureCollection", "features": features}, ensure_ascii=False)
+    )
+
+    result = subprocess.run(
+        [
+            "npx", "-y", "mapshaper", str(src),
+            # keep-shapes：再小的行政區也不准簡到消失（否則城市型單位會整個不見）
+            "-simplify", "visvalingam", f"{percent}%", "keep-shapes",
+            # gj2008 ← 不要拿掉。mapshaper 預設輸出 RFC 7946（外環逆時針），
+            # 但 three-globe/globe.gl 吃舊 d3 慣例（外環順時針）。繞向在球面上決定
+            # 哪一側是「內部」，反了會把每一塊畫成「整顆球扣掉那塊」。
+            "-o", f"precision={PRECISION}", "gj2008", str(dst),
+        ],
+        capture_output=True, text=True, timeout=1800,
+    )
+
+    if not dst.exists():
+        raise RuntimeError(f"mapshaper 失敗：\n{result.stderr[-2000:]}")
+
+    return json.loads(dst.read_text())["features"]
+
+
+def assert_clockwise(features: list[dict]) -> None:
+    """外環必須順時針。繞向錯了不會有任何錯誤訊息，只會在畫面上炸成一片色塊。"""
+    ccw = 0
+
+    for feature in features:
+        geometry = feature.get("geometry") or {}
+        coordinates = geometry.get("coordinates") or []
+        polygons = coordinates if geometry.get("type") == "MultiPolygon" else [coordinates]
+
+        for polygon in polygons:
+            if not polygon:
+                continue
+
+            ring = polygon[0]
+            # shoelace：>0 順時針，<0 逆時針
+            area = sum(
+                (ring[i + 1][0] - ring[i][0]) * (ring[i + 1][1] + ring[i][1])
+                for i in range(len(ring) - 1)
+            )
+
+            if area < 0:
+                ccw += 1
+
+    if ccw:
+        raise RuntimeError(
+            f"有 {ccw} 個外環是逆時針，three-globe 會把它畫成整顆球。"
+            "檢查 mapshaper 的 -o 是否還帶著 gj2008。"
+        )
+
+
+def count_vertices(features: list[dict]) -> int:
+    total = 0
+
+    for feature in features:
+        geometry = feature.get("geometry") or {}
+        coordinates = geometry.get("coordinates") or []
+        polygons = coordinates if geometry.get("type") == "MultiPolygon" else [coordinates]
+        total += sum(len(ring) for polygon in polygons for ring in polygon)
+
+    return total
+
+
+def rebuild(country_qid: str, admin0: dict, admin1: dict, percent: float, check: bool) -> None:
+    children = graph_children(country_qid)
+    print(f"\n{country_qid}：圖譜第一層 {len(children)} 個")
+
+    outline = next(
+        (f for f in admin0["features"] if f["properties"].get("WIKIDATAID") == country_qid),
+        None,
+    )
+
+    if outline is None:
+        print("  ⚠️ NE admin-0 找不到這個國家的輪廓（WIKIDATAID 對不到），略過")
+
+        return
+
+    # NE 用 adm0_a3 分國，拿輪廓那筆的 ADM0_A3 去圈出它的 admin-1
+    adm0_a3 = outline["properties"].get("ADM0_A3")
+    candidates = [f for f in admin1["features"] if f["properties"].get("adm0_a3") == adm0_a3]
+    print(f"  NE admin-1 候選 {len(candidates)} 個（adm0_a3={adm0_a3}）")
+
+    # 先用 NE 自帶的 wikidataid 配，沒有的再用 iso_3166_2 問 P300
+    missing_codes = [
+        f["properties"]["iso_3166_2"]
+        for f in candidates
+        if not f["properties"].get("wikidataid") and f["properties"].get("iso_3166_2")
+    ]
+    by_code = resolve_by_iso_3166_2(missing_codes)
+
+    if missing_codes:
+        print(f"  沒有 wikidataid 的 {len(missing_codes)} 個 → P300 救回 {len(by_code)} 個")
+
+    matched: list[tuple[dict, str]] = []
+    unmatched: list[str] = []
+
+    for feature in candidates:
+        properties = feature["properties"]
+        qid = properties.get("wikidataid") or by_code.get(properties.get("iso_3166_2"))
+
+        if qid and qid in children:
+            matched.append((feature, qid))
+        else:
+            unmatched.append(f"{properties.get('name')}（{qid or '無 QID'}）")
+
+    # NE 的 wikidataid 會靜默配錯，驗一下 P17 真的指向這個國家
+    p17 = countries_of([qid for _, qid in matched])
+    suspicious = [
+        (feature["properties"].get("name"), qid)
+        for feature, qid in matched
+        if qid in p17 and country_qid not in p17[qid]
+    ]
+
+    for name, qid in suspicious:
+        print(f"  ⚠️ {name}（{qid}）的 P17 不是 {country_qid}，可能是 NE 配錯了")
+
+    drawn = {qid for _, qid in matched}
+    no_geometry = [f"{children[q]}（{q}）" for q in children if q not in drawn]
+
+    print(f"  配對成功 {len(matched)}／{len(children)}")
+
+    if unmatched:
+        print(f"  NE 有形狀但圖譜沒有（不畫）：{'、'.join(unmatched)}")
+
+    if no_geometry:
+        print(f"  圖譜有但 NE 沒形狀：{'、'.join(no_geometry)}")
+
+    payload = [
+        {
+            "type": "Feature",
+            "properties": {"qid": country_qid, "name": outline["properties"].get("NAME"), "level": 0},
+            "geometry": outline["geometry"],
+        }
+    ] + [
+        {
+            "type": "Feature",
+            "properties": {"qid": qid, "name": feature["properties"].get("name"), "level": 1},
+            "geometry": feature["geometry"],
+        }
+        for feature, qid in matched
+    ]
+
+    print(f"  簡化前頂點 {count_vertices(payload):,} → ", end="", flush=True)
+    simplified = run_mapshaper(payload, percent, country_qid)
+    assert_clockwise(simplified)
+    print(f"簡化後 {count_vertices(simplified):,}")
+
+    features = sorted(
+        (
+            {
+                "type": "Feature",
+                # id 放 QID：globe.gl 的 polygon 物件直接帶著它，前端比對子節點時
+                # 不用再挖 properties
+                "id": f["properties"]["qid"],
+                "properties": {"name": f["properties"]["name"], "level": f["properties"]["level"]},
+                "geometry": f["geometry"],
+            }
+            for f in simplified
+            if f.get("geometry")
+        ),
+        key=lambda f: (f["properties"]["level"], f["id"]),
+    )
+
+    text = json.dumps(
+        {"type": "FeatureCollection", "features": features},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    out_path = OUT_DIR / f"{country_qid}.json"
+    before = (
+        len(json.loads(out_path.read_text())["features"]) if out_path.exists() else 0
+    )
+    print(f"  {out_path.relative_to(REPO_ROOT)}：{before} → {len(features)} feature"
+          f"／{len(text.encode()) / 1024:.0f} KB")
+
+    if check:
+        print("  --check：沒有寫檔")
+
+        return
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(text, encoding="utf-8")
+    print("  已寫入")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("countries", nargs="+", help="國家 QID，例如 Q865")
+    parser.add_argument(
+        "--simplify", type=float, default=DEFAULT_SIMPLIFY,
+        help=f"保留頂點比例（%%），預設 {DEFAULT_SIMPLIFY}——跟全量管線一致，不要隨意改",
+    )
+    parser.add_argument("--check", action="store_true", help="只印對照結果，不寫檔")
+    args = parser.parse_args()
+
+    print("來源：")
+    admin0 = fetch_source(NE_ADMIN0, "ne_10m_admin_0.geojson")
+    admin1 = fetch_source(NE_ADMIN1, "ne_10m_admin_1.geojson")
+
+    for country_qid in args.countries:
+        rebuild(country_qid, admin0, admin1, args.simplify, args.check)
+
+    if not args.check:
+        print("\n⚠️ 記得重跑 python3 scripts/build-admin-manifest.py 更新 index.json")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
