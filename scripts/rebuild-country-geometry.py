@@ -518,21 +518,43 @@ def rebuild(
     if unmatched:
         print(f"  NE 有形狀但圖譜沒有（不畫）：{'、'.join(unmatched)}")
 
-    # 一塊行政區都配不到時，只剩國家輪廓——那種檔 build-admin-manifest.py 不會收進索引
-    # （沒有第一層就不給下鑽），寫出來也沒人讀。摩洛哥就是這樣：NE 的 16 個 feature
-    # 全是 2015 改制前的大區，一個都不能用。
-    if not matched:
-        print("  沒有任何行政區配得上，略過（只剩輪廓的檔不值得寫）")
-
-        return False
-
     # dissolve 要在簡化「之前」做：消線靠邊界精確重合，簡化過就對不齊了
     have_geometry = {f["properties"]["qid"] for f in own}
     dissolved = dissolve_into_parents(
         children_features, have_geometry, level2, children, coverage, country_qid
     )
 
+    # 還沒有形狀的第一層節點，回頭查 NE 的 **admin-0**。NE 把不少屬地／特別行政區當成
+    # 獨立國家處理（香港、奧蘭、法屬玻里尼西亞、美屬薩摩亞、澳洲的外部領地…），所以它們
+    # 的形狀在 admin-0 而不是 admin-1。admin-0 與 admin-1 是同一份底圖，跟著一起丟進
+    # mapshaper 簡化就會對齊，不會露出雙線。
     drawn = have_geometry | {f["properties"]["qid"] for f in dissolved}
+    from_admin0 = [
+        {
+            "type": "Feature",
+            "properties": {"qid": qid, "name": f["properties"].get("NAME"), "level": 1},
+            "geometry": f["geometry"],
+        }
+        for qid in children
+        if qid not in drawn and qid != country_qid
+        for f in admin0["features"]
+        if f["properties"].get("WIKIDATAID") == qid
+    ]
+
+    if from_admin0:
+        print(f"  從 admin-0 補回 {len(from_admin0)} 個（NE 把它們當成獨立國家）："
+              f"{'、'.join(str(f['properties']['name']) for f in from_admin0)}")
+        drawn |= {f["properties"]["qid"] for f in from_admin0}
+
+    # 一塊行政區都配不到時，只剩國家輪廓——那種檔 build-admin-manifest.py 不會收進索引
+    # （沒有第一層就不給下鑽），寫出來也沒人讀。摩洛哥就是這樣：NE 的 16 個 feature
+    # 全是 2015 改制前的大區，一個都不能用。檢查要放在 admin-0 退路**之後**，
+    # 否則只能靠那條退路救回的國家會被提早略過。
+    if not matched and not from_admin0:
+        print("  沒有任何行政區配得上，略過（只剩輪廓的檔不值得寫）")
+
+        return False
+
     no_geometry = [f"{children[q]}（{q}）" for q in children if q not in drawn]
 
     if no_geometry:
@@ -546,6 +568,7 @@ def rebuild(
         },
         *matched,
         *dissolved,
+        *from_admin0,
     ]
 
     print(f"  簡化前頂點 {count_vertices(payload):,} → ", end="", flush=True)
