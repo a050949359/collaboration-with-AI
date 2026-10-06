@@ -146,6 +146,13 @@ ALIAS_CHUNK = 40
 # 遞移 P131 拼裝的門檻：該國有 QID 的 NE feature 至少這個比例能歸到第一層節點才動手。
 # 零散幾塊拼出來是殘缺形狀，比不畫更像壞掉。
 ASSEMBLE_RATIO = 0.9
+# 地理回查（locate_by_occupants）的參數。
+# MAX：一國最多問幾次 WDQS，避免英國那種「候選涵蓋整個 GBR」的情況打爆端點。
+# VOTES／RATIO：多數決的門檻。Dungannon 實測 11:1 要收，但 6:5 這種就該棄——
+# 改制常常是一個舊區拆進兩個新區，票數接近時猜錯比不畫更糟。
+LOCATE_MAX = 100
+LOCATE_MIN_VOTES = 3
+LOCATE_MIN_RATIO = 0.65
 
 
 def get_json(url: str, timeout: int = 180) -> dict | list:
@@ -497,6 +504,103 @@ def outline_from_parts(features: list[dict], qid: str, tag: str) -> dict | None:
     return merged[0] if merged else None
 
 
+def geo_bbox(geometry: dict) -> tuple[float, float, float, float]:
+    """(西, 南, 東, 北)。"""
+    coords = geometry["coordinates"]
+    polygons = [coords] if geometry["type"] == "Polygon" else coords
+    points = [p for poly in polygons for ring in poly for p in ring]
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def point_in_geometry(point: tuple[float, float], geometry: dict) -> bool:
+    """射線法。外環命中、內環（洞）命中則取消。"""
+    x, y = point
+    coords = geometry["coordinates"]
+    polygons = [coords] if geometry["type"] == "Polygon" else coords
+
+    for polygon in polygons:
+        hit = False
+
+        for index, ring in enumerate(polygon):
+            crossings = False
+
+            for i in range(len(ring) - 1):
+                x1, y1 = ring[i]
+                x2, y2 = ring[i + 1]
+
+                if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+                    crossings = not crossings
+
+            if index == 0:
+                hit = crossings
+            elif crossings:
+                hit = False
+
+        if hit:
+            return True
+
+    return False
+
+
+def locate_by_occupants(
+    features: list[dict], parents: set[str], tag: str,
+) -> dict[int, str]:
+    """改制後 Wikidata 兩個方向都沒留連結時，改問「現在站在這塊地上的東西屬於誰」。
+
+    北愛 2015 改制是典型：Magherafelt／Dungannon 有 P576 但沒有 P1366，Derry／Strabane
+    連 P576 都沒有，而新區的 P1365／P155／P527 全空——知識圖譜那條路到此為止。
+    但那塊地還在，地上的城鎮村莊的 P131 是最新的，拿它們回推就得到答案。
+    實測四個舊區全部回推正確（Derry 16:0、Strabane 6:0、Dungannon 11:1、Magherafelt 6:0）。
+
+    ⚠️ **一定要做點在多邊形內的判斷，不能只用 bbox**。Dungannon 的外接矩形蓋到隔壁
+    Armagh 的地，只用 bbox 篩會投成 Armagh 12:11——剛好投反。
+
+    回傳 {features 的索引: 父節點 QID}。只收過得了票數與比例門檻的。
+    """
+    if not features or not parents:
+        return {}
+
+    values = " ".join(f"wd:{qid}" for qid in sorted(parents))
+    found: dict[int, str] = {}
+
+    for index, feature in list(enumerate(features))[:LOCATE_MAX]:
+        west, south, east, north = geo_bbox(feature["geometry"])
+        rows = sparql(f"""
+          SELECT ?parent ?loc WHERE {{
+            SERVICE wikibase:box {{
+              ?i wdt:P625 ?loc .
+              bd:serviceParam wikibase:cornerSouthWest "Point({west} {south})"^^geo:wktLiteral .
+              bd:serviceParam wikibase:cornerNorthEast "Point({east} {north})"^^geo:wktLiteral .
+            }}
+            ?i wdt:P131 ?parent .
+            VALUES ?parent {{ {values} }}
+          }}""")
+        tally: collections.Counter = collections.Counter()
+
+        for row in rows:
+            longitude, latitude = row["loc"]["value"][len("Point("):-1].split()
+
+            if point_in_geometry((float(longitude), float(latitude)), feature["geometry"]):
+                tally[row["parent"]["value"].rsplit("/", 1)[-1]] += 1
+
+        total = sum(tally.values())
+
+        if not total:
+            continue
+
+        parent, votes = tally.most_common(1)[0]
+
+        if votes >= LOCATE_MIN_VOTES and votes / total >= LOCATE_MIN_RATIO:
+            found[index] = parent
+
+        time.sleep(1.5)
+
+    return found
+
+
 def dissolve_into_parents(
     level2_features: list[dict], own_features: list[dict], expected: dict[str, int],
     labels: dict[str, str], threshold: float, tag: str,
@@ -555,9 +659,10 @@ def dissolve_into_parents(
             "type": "Feature",
             "properties": {
                 "qid": f["properties"]["parent"],
-                # 名稱留空：併出來的是父節點，NE 的子節點名稱不適用。
-                # 前端顯示走圖譜的 label，這裡本來就不是名稱來源。
-                "name": None,
+                # NE 的子節點名稱不適用（併出來的是父節點），改用圖譜的 label。
+                # 前端顯示本來就走圖譜，這裡只是讓檔案自己看得懂——原本寫死 None，
+                # 北愛 11 塊有 10 塊叫 null，debug 時只能拿 QID 人工對照。
+                "name": labels.get(f["properties"]["parent"]),
                 "level": 1,
             },
             "geometry": f["geometry"],
@@ -848,6 +953,65 @@ def rebuild(
         elif ancestors:
             print(f"  P131 遞移拼裝：整國歸出率只有 {ratio:.0%}，低於 "
                   f"{ASSEMBLE_RATIO:.0%}，不拼（會是殘缺形狀）")
+
+    # 最後一條退路：P131 也接不上時改問地理（見 locate_by_occupants）。
+    # ⚠️ 先用「已配到的那些形狀」圈出國家範圍再篩候選。不篩的話北愛會拿著整個 GBR
+    # 的 200 多個 feature 去問 WDQS。候選的中心點要落在範圍內才送。
+    taken = {id(f["geometry"]) for f in matched}
+    # ⚠️ 範圍要以 NE 的**國家輪廓**為主，不能只用「已配到的形狀」。肯亞只配到奈洛比
+    # 一塊，拿它圈範圍等於只有市區那一小格，7 個舊省的中心點全落在外面，一次都問不到。
+    # 輪廓不存在時（英蘇威北愛）才退回用已配到的，北愛實測那樣就夠。
+    placed = ([outline["geometry"]] if outline else []) + [
+        f["geometry"] for f in matched
+    ]
+    orphans = [
+        f for f, _ in leftover
+        if id(f["geometry"]) not in taken and f.get("geometry")
+    ]
+
+    if orphans and placed and any(q not in {
+        f["properties"]["qid"] for f in matched if f["properties"]["level"] == 1
+    } for q in children):
+        boxes = [geo_bbox(g) for g in placed]
+        west, south = min(b[0] for b in boxes), min(b[1] for b in boxes)
+        east, north = max(b[2] for b in boxes), max(b[3] for b in boxes)
+        near = []
+
+        for feature in orphans:
+            w, s, e, n = geo_bbox(feature["geometry"])
+            cx, cy = (w + e) / 2, (s + n) / 2
+
+            if west <= cx <= east and south <= cy <= north:
+                near.append(feature)
+
+        if near:
+            print(f"  地理回查：{len(near)} 個 feature 落在國界範圍內，問它們地上的實體歸屬"
+                  f"{'（只問前 %d 個）' % LOCATE_MAX if len(near) > LOCATE_MAX else ''}…")
+            located = locate_by_occupants(near, set(children), country_qid)
+
+            for index, parent in located.items():
+                feature = near[index]
+                matched.append(
+                    {
+                        "type": "Feature",
+                        "properties": {
+                            "qid": feature["properties"].get("wikidataid")
+                            or f"_geo{index}",
+                            "name": feature["properties"].get("name"),
+                            "level": 2, "parent": parent, "assembled": True,
+                        },
+                        "geometry": feature["geometry"],
+                    }
+                )
+                expected_assemble.add(parent)
+                unmatched = [
+                    u for u in unmatched
+                    if not u.startswith(f"{feature['properties'].get('name')}（")
+                ]
+
+            if located:
+                print(f"    回推成功 {len(located)} 個："
+                      f"{'、'.join(sorted({children[p] for p in located.values()}))}")
 
     # 多個 NE feature 解到同一個 QID 時**合併**，不要挑一個。兩種成因都該合：
     #
