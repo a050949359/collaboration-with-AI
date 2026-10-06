@@ -194,8 +194,11 @@ def sparql(query: str, attempts: int = 3) -> list[dict]:
     return []
 
 
-def graph_levels(country_qid: str) -> tuple[dict[str, str], dict[str, str]]:
-    """圖譜裡這個國家的前兩層。回傳 (第一層 {QID: 名稱}, 第二層 {QID: 父節點QID})。
+def graph_levels(country_qid: str) -> tuple[dict[str, str], dict[str, str], str]:
+    """圖譜裡這個國家的前兩層。回傳 (第一層 {QID: 名稱}, 第二層 {QID: 父節點QID}, 自己的名稱)。
+
+    自己的名稱是給 outline_from_parts() 產出的輪廓當 name 用的——走那條路時沒有
+    NE feature 可以抄 NAME。
 
     用 MCP 的 `read_subtree` 一次吃兩層——公開 REST 的 children 端點只能一次一個節點，
     法國要打 26 次、還跟 v1/airports 共用同一個 60/min 的節流桶。
@@ -216,13 +219,20 @@ def graph_levels(country_qid: str) -> tuple[dict[str, str], dict[str, str]]:
     level1: dict[str, str] = {}
     level2: dict[str, str] = {}
 
+    # ⚠️ 兩種鍵都要試：國家層存 label_en（巴勒斯坦、荷蘭王國），行政區層存 label
+    # （蘇格蘭）。只讀其中一個，另一層會整排退化成 QID。
+    def label_of(node: dict) -> str:
+        obs = node.get("observations") or {}
+
+        return obs.get("label") or obs.get("label_en") or node["qid"]
+
     for child in payload["tree"].get("children") or []:
-        level1[child["qid"]] = (child.get("observations") or {}).get("label") or child["qid"]
+        level1[child["qid"]] = label_of(child)
 
         for grandchild in child.get("children") or []:
             level2[grandchild["qid"]] = child["qid"]
 
-    return level1, level2
+    return level1, level2, label_of(payload["tree"])
 
 
 def resolve_by_iso_3166_2(codes: list[str]) -> dict[str, str]:
@@ -459,6 +469,34 @@ def simplify(features: list[dict], percent: float, tag: str) -> list[dict]:
     )
 
 
+def outline_from_parts(features: list[dict], qid: str, tag: str) -> dict | None:
+    """NE admin-0 對不到時，拿已配對的第一層取聯集當輪廓。
+
+    ⚠️ 不要改成「寫死一張 QID 對照表」。admin-0 只收**國家**，所以凡是第一層節點
+    自己也要單獨成圖（蘇格蘭的 32 個議會區、法國某個 région 的 département…），
+    admin-0 一定對不到，而那個集合會隨下鑽層級一直長——現有帶第二層的 5 國底下就有
+    72 個第一層節點。而且 NE 給得出同名實體的那幾個，對過去反而是錯的：
+    荷蘭王國 Q29999 對到的 Q55 只有本土、北愛 Q26 對到的 Q27 是愛爾蘭共和國。
+
+    輪廓本來就是自己行政區的聯集，而且跟它們同一次簡化，天生對齊。
+    """
+    parts = [f for f in features if f["properties"].get("level") == 1]
+
+    if not parts:
+        return None
+
+    merged = run_mapshaper(
+        [
+            {"type": "Feature", "properties": {"qid": qid}, "geometry": f["geometry"]}
+            for f in parts
+        ],
+        ["-dissolve", "qid"],
+        f"{tag}-outline",
+    )
+
+    return merged[0] if merged else None
+
+
 def dissolve_into_parents(
     level2_features: list[dict], own_features: list[dict], expected: dict[str, int],
     labels: dict[str, str], threshold: float, tag: str,
@@ -600,7 +638,7 @@ def rebuild(
     check: bool, force: bool,
 ) -> bool:
     """回傳有沒有真的寫檔——呼叫端靠它決定要不要提醒重跑 manifest。"""
-    children, level2 = graph_levels(country_qid)
+    children, level2, country_name = graph_levels(country_qid)
     print(f"\n{country_qid}：圖譜第一層 {len(children)} 個、第二層 {len(level2)} 個")
 
     outline = next(
@@ -609,9 +647,7 @@ def rebuild(
     )
 
     if outline is None:
-        print("  ⚠️ NE admin-0 找不到這個國家的輪廓（WIKIDATAID 對不到），略過")
-
-        return False
+        print("  NE admin-0 沒有這個單位的輪廓，改用第一層聯集（見 outline_from_parts）")
 
     wanted = set(children) | set(level2)
     aliases = alias_index(sorted(children))
@@ -629,7 +665,10 @@ def rebuild(
     # 濾掉空值：None 進了 codes，下面那行會把「所有沒填 adm0_a3 的 feature」全拉進候選
     # （None in codes 成立）。目前 NE 兩個檔都 100% 有填，所以是潛伏問題，但防護是免費的。
     codes = {f["properties"].get("adm0_a3") for f in by_qid}
-    codes.add(outline["properties"].get("ADM0_A3"))
+
+    if outline is not None:
+        codes.add(outline["properties"].get("ADM0_A3"))
+
     codes.discard(None)
     codes.discard("")
     candidates = [f for f in admin1["features"] if f["properties"].get("adm0_a3") in codes]
@@ -952,18 +991,32 @@ def rebuild(
     # 菲律賓的 78 個省、馬爾他的 67 個地方議會…）只是併出第一層的材料，本身沒有圖譜
     # 節點、面板標不出名字，而前端目前也只畫 level 1（Territory.vue 的 filter）。
     # 留著純粹是死重量——實測 22 國、366 個 feature、1 MB。
-    payload = [
-        {
+    body = [
+        *(f for f in matched if f["properties"]["level"] != 2 or f["properties"]["qid"] in level2),
+        *dissolved,
+        *from_admin0,
+    ]
+
+    if outline is not None:
+        head = {
             "type": "Feature",
             "properties": {
                 "qid": country_qid, "name": outline["properties"].get("NAME"), "level": 0,
             },
             "geometry": outline["geometry"],
-        },
-        *(f for f in matched if f["properties"]["level"] != 2 or f["properties"]["qid"] in level2),
-        *dissolved,
-        *from_admin0,
-    ]
+        }
+    else:
+        derived = outline_from_parts(body, country_qid, country_qid)
+        head = derived and {
+            "type": "Feature",
+            "properties": {"qid": country_qid, "name": country_name, "level": 0},
+            "geometry": derived["geometry"],
+        }
+
+        if head:
+            print(f"  輪廓由第一層聯集產生（{country_name}）")
+
+    payload = ([head] if head else []) + body
 
     print(f"  簡化前頂點 {count_vertices(payload):,} → ", end="", flush=True)
     simplified = simplify(payload, percent, country_qid)
