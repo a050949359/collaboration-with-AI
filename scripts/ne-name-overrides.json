@@ -17,5 +17,23 @@
   "OMN": {
     "_note": "NE 少一個 i：Al Batnah North vs 圖譜的 Al Batinah North Governorate",
     "Al Batnah North": "Q4703564"
+  },
+  "BIH": {
+    "_note": [
+      "波赫第一層是兩個「實體」＋布爾奇科特區，NE 給的卻是聯邦的 10 個州＋塞族共和國的 7 個區。",
+      "州那邊靠 iso_3166_2=BA-BIH 經 P300 併進聯邦 Q11198，但塞族共和國那 7 個區",
+      "wikidataid 全是 null、iso 是 BA-X0n~ 佔位碼，兩條退路都接不住 → 整個塞族共和國只剩",
+      "一塊 367 km²（應為 24,857），全國面積覆蓋只有 55%。這 7 筆是人工確認的地理歸屬。",
+      "另外 NE 把 Posavina 州的 iso 標成 BA-SRP（塞族共和國），實際上它是聯邦的州——",
+      "P300 會把它塞給 Q11196，聯邦少一塊、塞族共和國拿到錯的形狀，所以一併改掉。"
+    ],
+    "Trebinje": "Q11196",
+    "Foča": "Q11196",
+    "Banja Luka": "Q11196",
+    "Doboj": "Q11196",
+    "Bijeljina": "Q11196",
+    "Vlasenica": "Q11196",
+    "Sarajevo-romanija": "Q11196",
+    "Posavina": "Q11198"
   }
 }
